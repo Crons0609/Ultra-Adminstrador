@@ -10,10 +10,9 @@ export class Router {
     this.currentRoute = null;
     this.currentViewInstance = null;
 
-    // Listen to hash change and load events
+    // Listen to hash change events
     window.addEventListener('hashchange', () => this.handleRouteChange());
-    window.addEventListener('load', () => this.handleRouteChange());
-
+ 
     // Execute initial route resolution immediately
     this.handleRouteChange();
   }
