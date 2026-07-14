@@ -1,10 +1,3 @@
-/**
- * @file companies.view.js
- * @description SuperAdmin Companies View. Shows the responsive PageLayout, Sidebar, Header,
- * and a fully functional dynamic Modal to register, edit, and parameterize multi-tenant businesses.
- * Supports status administration (Activo, Inactivo, Falta de Pago).
- */
-
 import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { DataTable } from '../../../components/ui/table.js';
@@ -12,20 +5,32 @@ import { Modal } from '../../../components/ui/modal.js';
 import { Company } from '../../../models/company.model.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { AuthService } from '../../../services/auth.service.js';
+import { db } from '../../../config/firebase.config.js';
+
+// Firestore functions (CDN v12.16.0)
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  updateDoc,
+  serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
 
 export class CompaniesView extends Component {
   constructor(params = {}) {
     super(params);
 
-    // Initialize mock database in GlobalStore if not present
+    // Initial mock fallback state
+    const defaultCompanies = [
+      { id: '1', name: 'Burger & Co.', plan: 'PREMIUM', status: 'ACTIVO', branches: 3, users: 12, businessType: 'Restaurante', config: { enableKDS: true, enableWhatsApp: true, enableBilling: true, enableQR: true } },
+      { id: '2', name: 'La Cantina del Sol', plan: 'BASIC', status: 'FALTA_PAGO', branches: 1, users: 5, businessType: 'Bar', config: { enableKDS: false, enableWhatsApp: true, enableBilling: true, enableQR: true } },
+      { id: '3', name: 'Café Bistro Madrid', plan: 'FREE', status: 'INACTIVO', branches: 2, users: 4, businessType: 'Cafetería', config: { enableKDS: true, enableWhatsApp: false, enableBilling: false, enableQR: true } }
+    ];
+
     if (!GlobalStore.getState().companies) {
-      GlobalStore.set({
-        companies: [
-          { id: '1', name: 'Burger & Co.', plan: 'PREMIUM', status: 'ACTIVO', branches: 3, users: 12, businessType: 'Restaurante', config: { enableKDS: true, enableWhatsApp: true, enableBilling: true, enableQR: true } },
-          { id: '2', name: 'La Cantina del Sol', plan: 'BASIC', status: 'FALTA_PAGO', branches: 1, users: 5, businessType: 'Bar', config: { enableKDS: false, enableWhatsApp: true, enableBilling: true, enableQR: true } },
-          { id: '3', name: 'Café Bistro Madrid', plan: 'FREE', status: 'INACTIVO', branches: 2, users: 4, businessType: 'Cafetería', config: { enableKDS: true, enableWhatsApp: false, enableBilling: false, enableQR: true } }
-        ]
-      });
+      GlobalStore.set({ companies: defaultCompanies });
     }
 
     // Initialize DataTable
@@ -95,6 +100,41 @@ export class CompaniesView extends Component {
     this.modalInstance = null;
   }
 
+  /**
+   * Load companies directly from Firestore if available
+   */
+  async loadCompanies() {
+    if (!db) {
+      console.warn('[CompaniesView] Firestore no conectado. Ejecutando en modo simulación local.');
+      return;
+    }
+
+    try {
+      const querySnapshot = await getDocs(collection(db, 'companies'));
+      const companies = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        companies.push({
+          id: docSnap.id,
+          name: data.name,
+          plan: data.plan,
+          status: data.status,
+          branches: data.branches || 1,
+          users: data.users || 1,
+          businessType: data.config?.businessType || 'Restaurante',
+          config: data.config || {}
+        });
+      });
+
+      // Update store and trigger table redraw
+      GlobalStore.set({ companies });
+      console.log('[CompaniesView] ✅ Carga exitosa desde Firestore. Total:', companies.length);
+    } catch (e) {
+      console.error('[CompaniesView] Fallo al leer de Firestore:', e);
+      NotificationService.error('Error al sincronizar con la base de datos remota.');
+    }
+  }
+
   mount() {
     const element = this.layout.mount();
 
@@ -106,6 +146,9 @@ export class CompaniesView extends Component {
 
     // Call afterMount manually to bind events since mount is overridden
     this.afterMount();
+
+    // Sync with Firestore asynchronously
+    this.loadCompanies();
 
     return element;
   }
@@ -135,7 +178,7 @@ export class CompaniesView extends Component {
    */
   openAddCompanyModal() {
     const formHTML = `
-      <form id="add-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
+      <form id="add-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary); max-height: 70vh; overflow-y: auto; padding-right: 4px;">
         <div class="form-group">
           <label class="form-label" for="comp-name">Nombre de la Empresa / Local</label>
           <input type="text" id="comp-name" class="input input-md" placeholder="Ej. Pizzería San Pedro" required />
@@ -243,11 +286,17 @@ export class CompaniesView extends Component {
   }
 
   /**
-   * Processes the form inputs, instantiates Company model, and pushes it to GlobalStore
+   * Processes the form inputs, saves in Firebase Auth + Firestore, and updates local state.
    */
-  submitNewCompany() {
+  async submitNewCompany() {
     const form = this.modalInstance.$('#add-company-form');
     if (!form || !form.reportValidity()) return;
+
+    const submitBtn = this.modalInstance.$('#modal-submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando en la nube...';
+    }
 
     const name = this.modalInstance.$('#comp-name').value.trim();
     const ownerEmail = this.modalInstance.$('#owner-email').value.trim();
@@ -261,65 +310,91 @@ export class CompaniesView extends Component {
     const enableWhatsApp = this.modalInstance.$('#mod-whatsapp').checked;
     const enableBilling = this.modalInstance.$('#mod-billing').checked;
 
-    // Instantiate model Company safely
     const newCompanyId = String(Date.now());
-    const companyInstance = new Company({
-      id: newCompanyId,
+    const companyData = {
       name: name,
       plan: plan,
       status: status,
+      branches: 1,
+      users: 1,
       config: {
         enableKDS,
         enableQR,
         enableWhatsApp,
         enableBilling,
-        businessType // Customized dynamic param
+        businessType
       }
-    });
+    };
 
-    // Save dynamic owner credentials locally for test logins
     try {
-      const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-      dynamicUsers.push({
-        uid: `owner-${Date.now()}`,
-        email: ownerEmail,
-        password: ownerPassword,
-        displayName: `Dueño - ${name}`,
-        role: 'OWNER',
-        companyId: newCompanyId,
-        branchId: 'main'
-      });
-      localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
-    } catch (e) {
-      console.error('[CompaniesView] Error registering owner credentials locally:', e);
-    }
+      // 1. Save company document in Cloud Firestore
+      if (db) {
+        console.log('[CompaniesView] Guardando negocio en Firestore...');
+        await setDoc(doc(db, 'companies', newCompanyId), {
+          ...companyData,
+          createdAt: serverTimestamp()
+        });
 
-    // Update global state reactive array
-    const currentCompanies = GlobalStore.getState().companies || [];
-    const updatedCompanies = [
-      ...currentCompanies,
-      {
-        id: companyInstance.id,
-        name: companyInstance.name,
-        plan: companyInstance.plan,
-        status: companyInstance.status,
-        branches: 1, // Default initial branch
-        users: 1,    // Default initial owner
-        businessType: businessType,
-        config: companyInstance.config
+        // 2. Create the Owner user account in Firebase Auth (using secondary App)
+        console.log('[CompaniesView] Creando cuenta del dueño en Firebase Auth...');
+        await AuthService.createUser(ownerEmail, ownerPassword, {
+          displayName: `Dueño - ${name}`,
+          role: 'OWNER',
+          companyId: newCompanyId,
+          branchId: 'main'
+        });
+      } else {
+        // Fallback local persistence if offline
+        const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
+        dynamicUsers.push({
+          uid: `owner-${Date.now()}`,
+          email: ownerEmail,
+          password: ownerPassword,
+          displayName: `Dueño - ${name}`,
+          role: 'OWNER',
+          companyId: newCompanyId,
+          branchId: 'main'
+        });
+        localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
       }
-    ];
 
-    GlobalStore.set({ companies: updatedCompanies });
+      // 3. Update global store reactive array
+      const currentCompanies = GlobalStore.getState().companies || [];
+      const updatedCompanies = [
+        ...currentCompanies,
+        {
+          id: newCompanyId,
+          ...companyData,
+          businessType
+        }
+      ];
+      GlobalStore.set({ companies: updatedCompanies });
 
-    // Close the registration modal
-    this.modalInstance.close();
+      // Close registration modal
+      this.modalInstance.close();
 
-    // Build the owner access URL
+      // Show confirmation URL modal
+      this.showOwnerCredentialsModal(name, ownerEmail, ownerPassword);
+
+    } catch (error) {
+      console.error('[CompaniesView] Error en el registro completo del negocio:', error);
+      alert(`Error al registrar el negocio: ${error.message || error}`);
+      
+      // Reset button state on error
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar Empresa';
+      }
+    }
+  }
+
+  /**
+   * Helper to display credentials and access URL copy dialog
+   */
+  showOwnerCredentialsModal(name, ownerEmail, ownerPassword) {
     const baseUrl = window.location.origin + window.location.pathname;
     const ownerLoginUrl = `${baseUrl}#/login`;
 
-    // Show confirmation modal with the owner's credentials and access link
     const confirmHTML = `
       <div class="d-flex flex-column gap-4" style="color: var(--color-text-primary);">
         <div style="text-align: center; font-size: 2.5rem;">🎉</div>
@@ -372,7 +447,6 @@ export class CompaniesView extends Component {
         navigator.clipboard.writeText(ownerLoginUrl)
           .then(() => NotificationService.success('Enlace de acceso copiado al portapapeles.'))
           .catch(() => {
-            // Fallback for non-HTTPS contexts
             const el = document.createElement('textarea');
             el.value = ownerLoginUrl;
             document.body.appendChild(el);
@@ -487,12 +561,18 @@ export class CompaniesView extends Component {
   }
 
   /**
-   * Processes company edits and updates GlobalStore
+   * Processes company edits and updates Firestore and GlobalStore
    * @param {string} id 
    */
-  submitEditCompany(id) {
+  async submitEditCompany(id) {
     const form = this.modalInstance.$('#edit-company-form');
     if (!form || !form.reportValidity()) return;
+
+    const saveBtn = this.modalInstance.$('#edit-company-form').parentNode.parentNode.querySelector('#modal-save-btn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Actualizando nube...';
+    }
 
     const name = this.modalInstance.$('#edit-comp-name').value.trim();
     const businessType = this.modalInstance.$('#edit-comp-type').value;
@@ -504,31 +584,51 @@ export class CompaniesView extends Component {
     const enableWhatsApp = this.modalInstance.$('#edit-mod-whatsapp').checked;
     const enableBilling = this.modalInstance.$('#edit-mod-billing').checked;
 
-    const currentCompanies = GlobalStore.getState().companies || [];
-    const updatedCompanies = currentCompanies.map(c => {
-      if (c.id === id) {
-        return {
-          ...c,
-          name: name,
-          businessType: businessType,
-          plan: plan,
-          status: status,
-          config: {
-            enableKDS,
-            enableQR,
-            enableWhatsApp,
-            enableBilling,
-            businessType
-          }
-        };
+    const companyData = {
+      name: name,
+      plan: plan,
+      status: status,
+      config: {
+        enableKDS,
+        enableQR,
+        enableWhatsApp,
+        enableBilling,
+        businessType
       }
-      return c;
-    });
+    };
 
-    GlobalStore.set({ companies: updatedCompanies });
+    try {
+      // 1. Update in Cloud Firestore
+      if (db) {
+        const docRef = doc(db, 'companies', id);
+        await updateDoc(docRef, companyData);
+      }
 
-    NotificationService.success(`Cambios guardados para "${name}". Estado: ${status}`);
-    this.modalInstance.close();
+      // 2. Update local state
+      const currentCompanies = GlobalStore.getState().companies || [];
+      const updatedCompanies = currentCompanies.map(c => {
+        if (c.id === id) {
+          return {
+            ...c,
+            ...companyData,
+            businessType
+          };
+        }
+        return c;
+      });
+      GlobalStore.set({ companies: updatedCompanies });
+
+      NotificationService.success(`Cambios aplicados en la nube para "${name}".`);
+      this.modalInstance.close();
+    } catch (e) {
+      console.error('[CompaniesView] Error updating company:', e);
+      alert(`Error al actualizar el negocio en Firebase: ${e.message || e}`);
+      
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar Cambios';
+      }
+    }
   }
 
   unmount() {

@@ -1,7 +1,6 @@
 /**
  * @file employees.view.js
- * @description Employees Management view for Managers and Owners.
- * Allows adding new employees (Waiters, Cashiers, Chefs, Managers) and configures their credentials.
+ * @description Employees Management view for Managers and Owners with full Firebase Auth + Firestore integration.
  */
 
 import { Component } from '../../../core/component.js';
@@ -10,17 +9,32 @@ import { DataTable } from '../../../components/ui/table.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { AuthService } from '../../../services/auth.service.js';
+import { db } from '../../../config/firebase.config.js';
+
+// Firestore functions (CDN v12.16.0)
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  query,
+  where,
+  serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
     super(params);
 
-    // Get current logged-in user to filter employees by tenant (companyId)
-    const currentUser = GlobalStore.getState().currentUser || { companyId: 'company-test' };
-    this.companyId = currentUser.companyId;
+    const currentUser = GlobalStore.getState().currentUser || {};
+    this.companyId = currentUser.companyId || 'company-test';
+    this.branchId = currentUser.branchId || 'main';
 
-    // Load initial mock employees for this tenant if not present
-    this.initMockEmployees();
+    // Initialize state
+    this.state = {
+      employees: []
+    };
 
     // Initialize DataTable
     this.table = new DataTable({
@@ -46,7 +60,7 @@ export class EmployeesView extends Component {
           render: () => `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-success-light);color:var(--color-success);">Activo</span>`
         }
       ],
-      data: this.getTenantEmployees()
+      data: this.state.employees
     });
 
     // PageLayout setup
@@ -73,45 +87,47 @@ export class EmployeesView extends Component {
   }
 
   /**
-   * Initializes local employees list in localStorage if empty
+   * Loads employees from Cloud Firestore
    */
-  initMockEmployees() {
-    try {
+  async loadEmployees() {
+    if (!db) {
+      // Fallback local simulation if Firebase is offline
       const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-      
-      // Add default mock employees for the test tenant if empty
-      const testEmployees = [
-        { uid: 'emp-1', email: 'mesero@test.com', password: 'password', displayName: 'Juan Pérez', role: 'WAITER', companyId: this.companyId, branchId: 'main' },
-        { uid: 'emp-2', email: 'cocina@test.com', password: 'password', displayName: 'Chef María', role: 'KITCHEN', companyId: this.companyId, branchId: 'main' },
-        { uid: 'emp-3', email: 'cajero@test.com', password: 'password', displayName: 'Carlos López', role: 'CASHIER', companyId: this.companyId, branchId: 'main' }
-      ];
+      const localEmployees = dynamicUsers.filter(u => u.companyId === this.companyId && u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER');
+      this.state.employees = localEmployees;
+      this.refreshTable(localEmployees);
+      return;
+    }
 
-      let added = false;
-      testEmployees.forEach(mockEmp => {
-        if (!dynamicUsers.some(u => u.email === mockEmp.email)) {
-          dynamicUsers.push(mockEmp);
-          added = true;
+    try {
+      console.log('[EmployeesView] Cargando empleados desde Firestore para la empresa:', this.companyId);
+      const usersRef = collection(db, 'users');
+      // Query users of this company where role is an employee role
+      const q = query(usersRef, where('companyId', '==', this.companyId));
+      
+      const querySnapshot = await getDocs(q);
+      const employees = [];
+      querySnapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        // Exclude owner themselves
+        if (data.role !== 'OWNER' && data.role !== 'SUPER_ADMIN') {
+          employees.push({
+            uid: docSnap.id,
+            email: data.email,
+            displayName: data.displayName,
+            role: data.role,
+            companyId: data.companyId,
+            branchId: data.branchId || 'main'
+          });
         }
       });
 
-      if (added) {
-        localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
-      }
+      this.state.employees = employees;
+      this.refreshTable(employees);
+      console.log('[EmployeesView] ✅ Carga exitosa de empleados. Total:', employees.length);
     } catch (e) {
-      console.error(e);
-    }
-  }
-
-  /**
-   * Filter and return employees belonging to the current tenant (companyId)
-   */
-  getTenantEmployees() {
-    try {
-      const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-      // Filter out SUPER_ADMIN and users from other companies
-      return dynamicUsers.filter(u => u.companyId === this.companyId && u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER');
-    } catch (e) {
-      return [];
+      console.error('[EmployeesView] Fallo al cargar empleados:', e);
+      NotificationService.error('Error al sincronizar lista de empleados.');
     }
   }
 
@@ -123,6 +139,11 @@ export class EmployeesView extends Component {
     if (tableWrapper) {
       tableWrapper.appendChild(this.table.mount());
     }
+
+    this.afterMount();
+
+    // Load data from Cloud Firestore
+    this.loadEmployees();
 
     return element;
   }
@@ -137,11 +158,11 @@ export class EmployeesView extends Component {
   /**
    * Refreshes the Table inside DOM using updated data
    */
-  refreshTable() {
+  refreshTable(employees) {
     const tableWrapper = this.layout.$('#employees-table-wrapper');
     if (tableWrapper) {
       tableWrapper.innerHTML = '';
-      this.table.props.data = this.getTenantEmployees();
+      this.table.props.data = employees;
       tableWrapper.appendChild(this.table.mount());
     }
   }
@@ -194,7 +215,6 @@ export class EmployeesView extends Component {
 
     document.body.appendChild(this.modalInstance.mount());
 
-    // Bind footer actions
     const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => this.modalInstance.close());
@@ -207,11 +227,17 @@ export class EmployeesView extends Component {
   }
 
   /**
-   * Processes input values and saves them dynamically in localStorage database
+   * Processes input values and saves them in Firebase Auth + Firestore
    */
-  submitNewEmployee() {
+  async submitNewEmployee() {
     const form = this.modalInstance.$('#add-employee-form');
     if (!form || !form.reportValidity()) return;
+
+    const submitBtn = this.modalInstance.$('#modal-submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creando cuenta...';
+    }
 
     const name = this.modalInstance.$('#emp-name').value.trim();
     const role = this.modalInstance.$('#emp-role').value;
@@ -219,34 +245,53 @@ export class EmployeesView extends Component {
     const password = this.modalInstance.$('#emp-password').value;
 
     try {
-      const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-      
-      // Avoid duplicate emails
-      if (dynamicUsers.some(u => u.email === email)) {
-        alert('Este correo ya está registrado en el sistema.');
-        return;
+      // 1. Create user in Firebase Auth and profile in Firestore
+      if (db) {
+        console.log('[EmployeesView] Creando cuenta del empleado en la nube...');
+        await AuthService.createUser(email, password, {
+          displayName: name,
+          role: role,
+          companyId: this.companyId,
+          branchId: this.branchId
+        });
+      } else {
+        // Fallback local persistence if offline
+        const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
+        if (dynamicUsers.some(u => u.email === email)) {
+          alert('Este correo ya está registrado.');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Guardar Empleado';
+          }
+          return;
+        }
+        dynamicUsers.push({
+          uid: `emp-${Date.now()}`,
+          email: email,
+          password: password,
+          displayName: name,
+          role: role,
+          companyId: this.companyId,
+          branchId: this.branchId
+        });
+        localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
       }
 
-      // Add new employee dynamic schema
-      dynamicUsers.push({
-        uid: `emp-${Date.now()}`,
-        email: email,
-        password: password,
-        displayName: name,
-        role: role,
-        companyId: this.companyId,
-        branchId: 'main'
-      });
-
-      localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
       NotificationService.success(`Trabajador "${name}" agregado exitosamente.`);
       
-      // Close modal and redraw table
+      // Close modal
       this.modalInstance.close();
-      this.refreshTable();
+
+      // Reload data
+      this.loadEmployees();
     } catch (e) {
-      console.error(e);
-      alert('Error al guardar el empleado.');
+      console.error('[EmployeesView] Error al crear empleado:', e);
+      alert(`Error al registrar el empleado en la nube: ${e.message || e}`);
+      
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar Empleado';
+      }
     }
   }
 

@@ -1,18 +1,19 @@
 /**
  * @file app.js
  * @description Application bootstrap entry point.
- * 
+ *
  * Responsibilities:
  * 1. Apply saved theme preference
  * 2. Register Service Worker for PWA
- * 3. Initialize the SPA Router with all routes
- * 4. Restore user session if previously authenticated
+ * 3. Wait for Firebase Auth to resolve session (replaces localStorage hack)
+ * 4. Initialize the SPA Router once session is determined
  */
 
 import { Router } from './core/router.js';
 import { ROUTES } from './config/routes.config.js';
 import { GlobalStore } from './core/state.js';
 import { APP_CONFIG } from './config/app.config.js';
+import { AuthService } from './services/auth.service.js';
 
 class App {
   constructor() {
@@ -29,13 +30,28 @@ class App {
     // 2. Register service worker for PWA capabilities
     this.registerServiceWorker();
 
-    // 3. Restore persisted session from localStorage
-    this.restoreSession();
+    // 3. Show loading indicator while Firebase resolves session
+    this.showLoadingScreen();
 
-    // 4. Initialize SPA router
+    // 4. Wait for Firebase Auth to determine current session state.
+    //    This replaces the unreliable localStorage cache approach.
+    //    onAuthStateChanged fires once immediately with the current user or null.
+    await new Promise((resolve) => {
+      AuthService.watchAuthState((userSession) => {
+        if (userSession) {
+          console.log('[App] 🔒 Firebase session restored for:', userSession.email);
+        } else {
+          console.log('[App] 🔓 No active Firebase session — showing login.');
+        }
+        resolve();
+      });
+    });
+
+    // 5. Remove loading screen and initialize SPA router
+    this.hideLoadingScreen();
     this.router = new Router(ROUTES, 'app');
 
-    console.log(`[App] ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);
+    console.log(`[App] ✅ ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);
   }
 
   /**
@@ -59,23 +75,44 @@ class App {
   }
 
   /**
-   * Attempt to restore a previously authenticated session from localStorage cache.
-   * Full Firebase session persistence will be implemented in Phase 3.
+   * Show a full-screen loading overlay while Firebase initializes.
+   * Prevents the login page from flashing briefly before session is known.
    */
-  restoreSession() {
-    try {
-      const cachedUser = localStorage.getItem('ua_session');
-      if (cachedUser) {
-        const user = JSON.parse(cachedUser);
-        GlobalStore.set({
-          currentUser: user,
-          activeRole: user.role,
-          isAuthenticated: true
-        });
-        console.log('[App] Session restored for:', user.email);
-      }
-    } catch (e) {
-      localStorage.removeItem('ua_session');
+  showLoadingScreen() {
+    const loader = document.createElement('div');
+    loader.id = 'app-loader';
+    loader.style.cssText = `
+      position: fixed; inset: 0;
+      background: var(--color-bg-primary, #0a0a0b);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 9999;
+      color: var(--color-text-primary, #f8fafc);
+      font-family: 'Inter', sans-serif;
+    `;
+    loader.innerHTML = `
+      <div style="
+        width: 48px; height: 48px;
+        border: 3px solid rgba(139,92,246,0.3);
+        border-top-color: #8b5cf6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      "></div>
+      <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">Cargando Ultra Administrador...</p>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+    document.body.appendChild(loader);
+  }
+
+  /**
+   * Remove the loading overlay with a smooth fade-out.
+   */
+  hideLoadingScreen() {
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+      loader.style.transition = 'opacity 0.3s ease';
+      loader.style.opacity = '0';
+      setTimeout(() => loader.remove(), 350);
     }
   }
 }
