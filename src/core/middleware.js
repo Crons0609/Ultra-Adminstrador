@@ -55,10 +55,10 @@ export function roleGuard(allowedRoles) {
 export function redirectUserDashboard(role, router) {
   switch (role) {
     case 'SUPER_ADMIN':
-      router.navigate('/super-admin/dashboard');
+      router.navigate('/super-admin/companies');
       break;
     case 'OWNER':
-      router.navigate('/owner/dashboard');
+      router.navigate('/owner/finance');
       break;
     case 'MANAGER':
       router.navigate('/manager/dashboard');

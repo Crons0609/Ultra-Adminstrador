@@ -65,10 +65,19 @@ export class NotificationService {
     if (!toast) return;
     toast.classList.remove('animate-slide-up');
     toast.classList.add('animate-fade-out');
-    toast.addEventListener('animationend', () => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
+    
+    let removed = false;
+    const forceRemove = () => {
+      if (!removed) {
+        removed = true;
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
       }
-    });
+    };
+
+    toast.addEventListener('animationend', forceRemove);
+    // Safety fallback: match transition duration (var(--transition-normal) is ~250-300ms)
+    setTimeout(forceRemove, 500);
   }
 }
