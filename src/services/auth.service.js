@@ -206,6 +206,9 @@ export class AuthService {
     const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword } = await import(
       'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js'
     );
+    const { getFirestore: getSecondaryFirestore, doc: secondaryDoc, setDoc: secondarySetDoc, serverTimestamp: secondaryTimestamp } = await import(
+      'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js'
+    );
 
     // Get the main app's config to initialize a secondary instance
     const mainApp = auth.app;
@@ -225,18 +228,31 @@ export class AuthService {
 
       const newUid = credential.user.uid;
 
-      // Save the user profile to Firestore with their role and companyId
-      const userDocRef = doc(db, 'users', newUid);
-      await setDoc(userDocRef, {
-        uid: newUid,
-        email: email,
-        displayName: profileData.displayName,
-        role: profileData.role,
-        customRole: profileData.customRole || '',
-        companyId: profileData.companyId,
-        branchId: profileData.branchId || 'main',
-        createdAt: serverTimestamp()
-      });
+      // ── CRITICAL FIX ──────────────────────────────────────────────────────
+      // Use the SECONDARY app's Firestore instance (where the new user IS
+      // authenticated) instead of the primary app's db (which has no active
+      // session when called from the login page). Without this, Firestore
+      // security rules reject the write silently and the button hangs forever.
+      // ─────────────────────────────────────────────────────────────────────
+      const secondaryDb = getSecondaryFirestore(secondaryApp);
+      const userDocRef  = secondaryDoc(secondaryDb, 'users', newUid);
+
+      // Write profile with a 10-second timeout so we never block forever
+      await Promise.race([
+        secondarySetDoc(userDocRef, {
+          uid: newUid,
+          email: email,
+          displayName: profileData.displayName,
+          role: profileData.role,
+          customRole: profileData.customRole || '',
+          companyId: profileData.companyId,
+          branchId: profileData.branchId || 'main',
+          createdAt: secondaryTimestamp()
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Firestore write timeout — revisa las reglas de seguridad.')), 10000)
+        )
+      ]);
 
       console.log('[AuthService] ✅ User created in Firebase Auth + Firestore:', email, '| UID:', newUid);
       return newUid;
