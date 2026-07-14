@@ -192,13 +192,15 @@ export class AuthService {
   }
 
   /**
-   * Creates a new Firebase Auth user using a secondary app instance
-   * to avoid signing out the current user (e.g. SuperAdmin).
+   * Creates a new Firebase Auth user using a secondary app instance,
+   * then writes the profile to Firestore via the REST API using the
+   * new user's ID token — bypassing all SDK timing issues.
    *
    * Strategy:
-   * 1. Create user in Firebase Auth via secondary app (CRITICAL - always required)
-   * 2. Cache profile in localStorage immediately (guarantees login works)
-   * 3. Try Firestore write via secondary app (best-effort, no failure if blocked)
+   * 1. Create user in Firebase Auth via secondary app (CRITICAL)
+   * 2. Get user's ID token immediately from the credential
+   * 3. Write Firestore profile via REST API with that token (reliable)
+   * 4. Cache profile in localStorage as permanent offline fallback
    *
    * @param {string} email
    * @param {string} password
@@ -208,7 +210,7 @@ export class AuthService {
   static async createUser(email, password, profileData) {
     console.log('[AuthService] 👤 Creating new user:', email, '| Role:', profileData.role);
 
-    if (!db || !auth) {
+    if (!auth) {
       // Fallback: save to localStorage for offline/demo use
       const uid = `local-${Date.now()}`;
       AuthService._cacheUserProfile(uid, email, password, profileData);
@@ -223,17 +225,10 @@ export class AuthService {
     const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword } = await import(
       'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js'
     );
-    const {
-      getFirestore: getSecondaryFirestore,
-      doc: secondaryDoc,
-      setDoc: secondarySetDoc,
-      serverTimestamp: secondaryTimestamp
-    } = await import(
-      'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js'
-    );
     // ─────────────────────────────────────────────────────────────────────────
 
     const mainApp = auth.app;
+    const projectId = mainApp.options.projectId; // 'super-administrador-df803'
     const secondaryAppName = `secondary-user-create-${Date.now()}`;
     let secondaryApp = null;
 
@@ -243,55 +238,64 @@ export class AuthService {
 
       // ── Step 1: Create user in Firebase Auth (CRITICAL) ───────────────────
       const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-      const newUid = credential.user.uid;
+      const newUser = credential.user;
+      const newUid = newUser.uid;
       console.log('[AuthService] ✅ Firebase Auth user created. UID:', newUid);
 
-      // ── Step 2: Cache profile in localStorage immediately ─────────────────
-      // This guarantees login works even if Firestore write is blocked.
-      AuthService._cacheUserProfile(newUid, email, password, profileData);
+      // ── Step 2: Get ID token from the new user immediately ────────────────
+      // This token proves the new user is authenticated and allows Firestore writes.
+      const idToken = await newUser.getIdToken();
 
-      // ── Step 3: Write profile to Firestore (best-effort, no throw) ───────
-      // Uses secondary app's Firestore where the new user IS authenticated.
-      // If Firestore rules block the write, we log a warning but do NOT fail —
-      // the user CAN log in using the localStorage cache above.
-      try {
-        const secondaryDb = getSecondaryFirestore(secondaryApp);
-        const userDocRef = secondaryDoc(secondaryDb, 'users', newUid);
+      // ── Step 3: Write profile via Firestore REST API with ID token ────────
+      // Using REST API instead of Firestore SDK avoids all timing/propagation
+      // issues with the secondary app pattern. The ID token is immediately valid.
+      const profilePayload = {
+        fields: {
+          uid: { stringValue: newUid },
+          email: { stringValue: email },
+          displayName: { stringValue: profileData.displayName || email },
+          role: { stringValue: profileData.role },
+          customRole: { stringValue: profileData.customRole || '' },
+          companyId: { stringValue: profileData.companyId || 'global' },
+          branchId: { stringValue: profileData.branchId || 'main' }
+        }
+      };
 
-        await Promise.race([
-          secondarySetDoc(userDocRef, {
-            uid: newUid,
-            email,
-            displayName: profileData.displayName,
-            role: profileData.role,
-            customRole: profileData.customRole || '',
-            companyId: profileData.companyId,
-            branchId: profileData.branchId || 'main',
-            createdAt: secondaryTimestamp()
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('firestore-timeout')), 8000)
-          )
-        ]);
-        console.log('[AuthService] ✅ Firestore profile saved. UID:', newUid);
-      } catch (firestoreErr) {
-        console.warn(
-          '[AuthService] ⚠️ Firestore write blocked (security rules). ' +
-          'Account created in Auth + localStorage cache. Update Firestore rules to persist permanently.',
-          firestoreErr.message
-        );
+      const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${newUid}`;
+
+      const response = await Promise.race([
+        fetch(firestoreUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(profilePayload)
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('REST timeout')), 10000)
+        )
+      ]);
+
+      if (response.ok) {
+        console.log('[AuthService] ✅ Firestore profile saved via REST API. UID:', newUid);
+      } else {
+        const errBody = await response.json().catch(() => ({}));
+        console.warn('[AuthService] ⚠️ Firestore REST write failed:', response.status, errBody?.error?.message);
       }
+
+      // ── Step 4: Always cache locally as permanent offline fallback ─────────
+      AuthService._cacheUserProfile(newUid, email, password, profileData);
 
       return newUid;
 
     } catch (authErr) {
-      // Firebase Auth creation failed — this is a real error
-      console.error('[AuthService] ❌ Firebase Auth user creation failed:', authErr);
+      console.error('[AuthService] ❌ User creation failed:', authErr);
       throw authErr;
 
     } finally {
       if (secondaryApp) {
-        await deleteApp(secondaryApp).catch(() => {});
+        await deleteApp(secondaryApp).catch(() => { });
       }
     }
   }
@@ -334,7 +338,7 @@ export class AuthService {
     console.log('[AuthService] 🚪 Signing out...');
 
     if (auth) {
-      await signOut(auth).catch(() => {});
+      await signOut(auth).catch(() => { });
     }
 
     GlobalStore.set({

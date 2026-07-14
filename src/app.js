@@ -14,6 +14,7 @@ import { ROUTES } from './config/routes.config.js';
 import { GlobalStore } from './core/state.js';
 import { APP_CONFIG } from './config/app.config.js';
 import { AuthService } from './services/auth.service.js';
+import { AnimationService } from './services/animation.service.js';
 
 class App {
   constructor() {
@@ -47,8 +48,9 @@ class App {
       });
     });
 
-    // 5. Remove loading screen and initialize SPA router
+    // 5. Remove loading screen, initialize smooth scroll and SPA router
     this.hideLoadingScreen();
+    AnimationService.initGlobalScroll();
     this.router = new Router(ROUTES, 'app');
 
     console.log(`[App] ✅ ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);

@@ -13,6 +13,8 @@ import { GlobalStore } from '../../../core/state.js';
 import { redirectUserDashboard } from '../../../core/middleware.js';
 import { isValidEmail } from '../../../utils/validators.js';
 import { APP_CONFIG } from '../../../config/app.config.js';
+import { AnimationService } from '../../../services/animation.service.js';
+import gsap from 'gsap';
 
 // ─── Developer Registration Secret Key ───────────────────────────────────────
 // Change this to any secret code only you know.
@@ -39,16 +41,16 @@ export class LoginView extends Component {
         background: var(--color-bg-primary);
         padding: var(--space-4);
       ">
-        <!-- Background subtle gradient -->
-        <div style="
+        <!-- Three.js 3D Background Container -->
+        <div id="three-bg-container" style="
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
           background: radial-gradient(ellipse 80% 60% at 50% -20%, var(--color-accent-light), transparent);
-          pointer-events: none;
           z-index: 0;
+          overflow: hidden;
         "></div>
 
-        <div class="animate-slide-up" style="
+        <div class="login-card-anim" style="
           width: 100%;
           max-width: 420px;
           position: relative;
@@ -56,7 +58,7 @@ export class LoginView extends Component {
         ">
           <!-- Logo / Brand -->
           <div style="text-align: center; margin-bottom: var(--space-8);">
-            <div style="
+            <div class="hero-logo" style="
               display: inline-flex;
               align-items: center;
               justify-content: center;
@@ -67,14 +69,14 @@ export class LoginView extends Component {
               margin-bottom: var(--space-4);
               font-size: 1.75rem;
             ">🍽️</div>
-            <h1 style="
+            <h1 class="hero-title" style="
               font-family: var(--font-display);
               font-size: 1.5rem;
               font-weight: 700;
               color: var(--color-text-primary);
               margin: 0 0 var(--space-1);
             ">${APP_CONFIG.name}</h1>
-            <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">
+            <p class="hero-subtitle" style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">
               Accede a tu panel de administración
             </p>
           </div>
@@ -261,6 +263,35 @@ export class LoginView extends Component {
   }
 
   afterMount() {
+    // ── Three.js & GSAP Premium Animations ───────────────────────────────────
+    this.cleanupThree = AnimationService.initThreeDBackground(this.$('#three-bg-container'));
+
+    // Hero & Form elements entry stagger animation with GSAP
+    gsap.fromTo(this.$('.hero-logo'),
+      { scale: 0, rotation: -45, opacity: 0 },
+      { scale: 1, rotation: 0, opacity: 1, duration: 0.8, ease: 'back.out(1.7)' }
+    );
+
+    gsap.fromTo([this.$('.hero-title'), this.$('.hero-subtitle')],
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out', delay: 0.2 }
+    );
+
+    gsap.fromTo(this.$('.login-card-anim'),
+      { opacity: 0, y: 40, scale: 0.97 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power4.out', delay: 0.4 }
+    );
+
+    gsap.fromTo(this.$$('#login-form .form-group'),
+      { opacity: 0, y: 15 },
+      { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out', delay: 0.6 }
+    );
+
+    gsap.fromTo(this.$('#login-submit-btn'),
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', delay: 0.8 }
+    );
+
     // ── Login Form ──────────────────────────────────────────────────────────
     const form = this.$('#login-form');
     if (form) {
@@ -426,5 +457,12 @@ export class LoginView extends Component {
       submitBtn.disabled    = false;
       submitBtn.textContent = '⚡ Crear Cuenta SuperAdmin';
     }
+  }
+
+  unmount() {
+    if (typeof this.cleanupThree === 'function') {
+      this.cleanupThree();
+    }
+    super.unmount();
   }
 }

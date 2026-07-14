@@ -3,6 +3,8 @@
  * @description Hash-based Single Page Application (SPA) Router with route guards and middleware execution.
  */
 
+import { AnimationService } from '../services/animation.service.js';
+
 export class Router {
   constructor(routes, rootElementId = 'app') {
     this.routes = routes;
@@ -66,8 +68,10 @@ export class Router {
         const renderedElement = await this.currentViewInstance.mount();
         if (renderedElement instanceof HTMLElement) {
           this.rootElement.appendChild(renderedElement);
+          AnimationService.animatePageEntrance(renderedElement);
         } else {
           this.rootElement.innerHTML = this.currentViewInstance.render();
+          AnimationService.animatePageEntrance(this.rootElement);
         }
       }
     } catch (error) {

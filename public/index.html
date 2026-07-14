@@ -17,6 +17,58 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <!-- Import Map for Native ES Modules -->
+  <script type="importmap">
+  {
+    "imports": {
+      "gsap": "https://esm.sh/gsap@3.12.5",
+      "lenis": "https://esm.sh/lenis@1.1.18",
+      "three": "https://esm.sh/three@0.160.0",
+      "motion": "https://esm.sh/motion@11.11.17"
+    }
+  }
+  </script>
+
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: {
+              primary: 'var(--color-bg-primary)',
+              secondary: 'var(--color-bg-secondary)',
+              tertiary: 'var(--color-bg-tertiary)'
+            },
+            surface: {
+              DEFAULT: 'var(--color-surface)',
+              hover: 'var(--color-surface-hover)'
+            },
+            accent: {
+              DEFAULT: 'var(--color-accent)',
+              hover: 'var(--color-accent-hover)',
+              light: 'var(--color-accent-light)'
+            },
+            text: {
+              primary: 'var(--color-text-primary)',
+              secondary: 'var(--color-text-secondary)',
+              tertiary: 'var(--color-text-tertiary)'
+            },
+            success: 'var(--color-success)',
+            warning: 'var(--color-warning)',
+            danger: 'var(--color-danger)',
+            info: 'var(--color-info)'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  
   <!-- CSS Stylesheet Entrypoint -->
   <link rel="stylesheet" href="/src/styles/main.css">
 </head>
