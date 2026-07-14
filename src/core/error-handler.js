@@ -48,7 +48,8 @@ export class ErrorHandler {
   static async reportErrorToBackend(message, context, stack) {
     // This will be implemented in DB/Firestore Phase
     // For now we just print to console
-    if (process.env.NODE_ENV === 'production') {
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isProduction) {
       console.log('Reporting error to centralized logs...', { message, context });
     }
   }
