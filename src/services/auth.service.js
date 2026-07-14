@@ -29,6 +29,8 @@ export class AuthService {
   /**
    * Login with email and password using Firebase Auth.
    * After auth, loads user profile (role, companyId) from Firestore.
+   * Falls back gracefully if Firestore is temporarily offline.
+   *
    * @param {string} email
    * @param {string} password
    * @returns {Promise<Object>} User session object
@@ -36,49 +38,61 @@ export class AuthService {
   static async login(email, password) {
     console.log('[AuthService] 🔑 Signing in with Firebase Auth:', email);
 
-    // Allow demo SuperAdmin without Firebase
-    if (email === 'super@admin.com' && !db) {
-      return AuthService._mockSuperAdminLogin();
+    // Allow demo SuperAdmin without Firebase (local-only fallback)
+    if (!auth) {
+      if (email === 'super@admin.com') {
+        return AuthService._mockSuperAdminLogin();
+      }
+      // Check local dynamic users (offline fallback)
+      return AuthService._localLogin(email, password);
     }
 
-    // Real Firebase Auth sign-in
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = credential.user;
 
-      // Load user profile from Firestore
+      // Load user profile from Firestore (with timeout safety)
       let userProfile = null;
       if (db) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        try {
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          // Race between Firestore read and a 5-second timeout
+          const userDocSnap = await Promise.race([
+            getDoc(userDocRef),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('firestore-timeout')), 5000))
+          ]);
 
-        if (userDocSnap.exists()) {
-          userProfile = userDocSnap.data();
-        } else {
-          // Profile not in Firestore — check if it's the superadmin by email
-          if (email === 'super@admin.com') {
-            userProfile = {
-              displayName: 'Super Administrador',
-              role: 'SUPER_ADMIN',
-              companyId: 'global',
-              branchId: 'global'
-            };
-            // Save profile to Firestore for future logins
-            await setDoc(userDocRef, {
+          if (userDocSnap.exists()) {
+            userProfile = userDocSnap.data();
+          }
+        } catch (firestoreErr) {
+          console.warn('[AuthService] Firestore profile load failed, using email detection:', firestoreErr.message);
+        }
+      }
+
+      // If Firestore profile is missing, detect role from email
+      if (!userProfile) {
+        if (email === 'super@admin.com') {
+          userProfile = {
+            displayName: 'Super Administrador',
+            role: 'SUPER_ADMIN',
+            customRole: '',
+            companyId: 'global',
+            branchId: 'global'
+          };
+          // Try to save to Firestore asynchronously (don't block login)
+          if (db) {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            setDoc(userDocRef, {
               ...userProfile,
+              uid: firebaseUser.uid,
               email: email,
               createdAt: serverTimestamp()
-            });
-          } else {
-            throw new Error('auth/profile-not-found');
+            }).catch(e => console.warn('[AuthService] Could not save SuperAdmin profile:', e.message));
           }
+        } else {
+          throw new Error('Tu perfil de usuario no está registrado en la base de datos. Contacta al administrador.');
         }
-      } else {
-        // Firebase offline — use demo data
-        if (email === 'super@admin.com') {
-          return AuthService._mockSuperAdminLogin();
-        }
-        throw new Error('auth/firebase-not-available');
       }
 
       const userSession = {
@@ -101,13 +115,57 @@ export class AuthService {
       return userSession;
 
     } catch (error) {
-      console.error('[AuthService] ❌ Login error:', error.code, error.message);
-      // Re-throw with user-friendly message
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      console.error('[AuthService] ❌ Login error:', error.code || '', error.message);
+
+      // Map Firebase Auth error codes to friendly Spanish messages
+      const code = error.code || '';
+      if (
+        code === 'auth/user-not-found' ||
+        code === 'auth/wrong-password' ||
+        code === 'auth/invalid-credential' ||
+        code === 'auth/invalid-email'
+      ) {
         throw new Error('Credenciales inválidas. Revisa tu correo y contraseña.');
+      }
+      if (code === 'auth/too-many-requests') {
+        throw new Error('Demasiados intentos fallidos. Espera unos minutos e intenta de nuevo.');
+      }
+      if (code === 'auth/network-request-failed') {
+        throw new Error('Sin conexión a internet. Verifica tu red y vuelve a intentar.');
       }
       throw error;
     }
+  }
+
+  /**
+   * Try to log in from locally cached dynamic users (offline fallback).
+   * @private
+   */
+  static _localLogin(email, password) {
+    const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
+    const user = dynamicUsers.find(u => u.email === email && u.password === password);
+
+    if (!user) {
+      throw new Error('Credenciales inválidas. Revisa tu correo y contraseña.');
+    }
+
+    const userSession = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || user.email,
+      role: user.role,
+      customRole: user.customRole || '',
+      companyId: user.companyId,
+      branchId: user.branchId || 'main'
+    };
+
+    GlobalStore.set({
+      currentUser: userSession,
+      activeRole: userSession.role,
+      isAuthenticated: true
+    });
+
+    return userSession;
   }
 
   /**
@@ -116,7 +174,7 @@ export class AuthService {
    *
    * @param {string} email
    * @param {string} password
-   * @param {Object} profileData - { displayName, role, companyId, branchId }
+   * @param {Object} profileData - { displayName, role, customRole, companyId, branchId }
    * @returns {Promise<string>} The new user's UID
    */
   static async createUser(email, password, profileData) {
@@ -142,7 +200,7 @@ export class AuthService {
     }
 
     // Use secondary Firebase App to create user WITHOUT signing out the current user
-    const { initializeApp, getApp, deleteApp } = await import(
+    const { initializeApp, deleteApp } = await import(
       'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js'
     );
     const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword } = await import(
@@ -198,7 +256,7 @@ export class AuthService {
     console.log('[AuthService] 🚪 Signing out...');
 
     if (auth) {
-      await signOut(auth);
+      await signOut(auth).catch(() => {});
     }
 
     GlobalStore.set({
@@ -223,58 +281,109 @@ export class AuthService {
   }
 
   /**
-   * Set up a Firebase Auth state observer. Automatically restores sessions
-   * on page reload without needing localStorage caching.
-   * @param {Function} onUserReady - Called with user session or null
+   * Set up a Firebase Auth state observer with a safety timeout.
+   * Automatically restores sessions on page reload.
+   * Never hangs — resolves within 6 seconds at most.
+   *
+   * @param {Function} onUserReady - Called once with user session or null
    */
   static watchAuthState(onUserReady) {
+    let resolved = false;
+
+    const resolve = (session) => {
+      if (resolved) return;
+      resolved = true;
+      onUserReady(session);
+    };
+
+    // Safety net: if Firebase Auth takes too long, unblock the app
+    const timeout = setTimeout(() => {
+      console.warn('[AuthService] ⚠️ Auth state timeout — proceeding without session.');
+      resolve(null);
+    }, 6000);
+
     if (!auth) {
-      onUserReady(null);
+      clearTimeout(timeout);
+      resolve(null);
       return;
     }
 
     onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
+      if (!firebaseUser) {
+        // No user is signed in
+        GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+        clearTimeout(timeout);
+        resolve(null);
+        return;
+      }
+
+      // User is signed in — try to load their profile from Firestore
+      try {
+        let userProfile = null;
+
+        if (db) {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          // 4-second timeout on Firestore read so we never hang
+          const snap = await Promise.race([
+            getDoc(userDocRef),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('firestore-timeout')), 4000))
+          ]);
 
-          if (userDocSnap.exists()) {
-            const profile = userDocSnap.data();
-            const userSession = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: profile.displayName || firebaseUser.displayName || 'Usuario',
-              role: profile.role,
-              customRole: profile.customRole || '',
-              companyId: profile.companyId,
-              branchId: profile.branchId || 'main'
-            };
-
-            GlobalStore.set({
-              currentUser: userSession,
-              activeRole: userSession.role,
-              isAuthenticated: true
-            });
-
-            onUserReady(userSession);
-          } else {
-            // User exists in Auth but not in Firestore — sign out for safety
-            await signOut(auth);
-            onUserReady(null);
+          if (snap.exists()) {
+            userProfile = snap.data();
           }
-        } catch (e) {
-          console.error('[AuthService] Error loading user profile:', e);
-          onUserReady(null);
         }
-      } else {
-        // No user signed in
-        GlobalStore.set({
-          currentUser: null,
-          activeRole: null,
-          isAuthenticated: false
-        });
-        onUserReady(null);
+
+        // Fallback: detect SuperAdmin from email if profile not found
+        if (!userProfile && firebaseUser.email === 'super@admin.com') {
+          userProfile = {
+            displayName: 'Super Administrador',
+            role: 'SUPER_ADMIN',
+            customRole: '',
+            companyId: 'global',
+            branchId: 'global'
+          };
+        }
+
+        if (userProfile) {
+          const userSession = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: userProfile.displayName || firebaseUser.displayName || 'Usuario',
+            role: userProfile.role,
+            customRole: userProfile.customRole || '',
+            companyId: userProfile.companyId,
+            branchId: userProfile.branchId || 'main'
+          };
+
+          GlobalStore.set({
+            currentUser: userSession,
+            activeRole: userSession.role,
+            isAuthenticated: true
+          });
+
+          clearTimeout(timeout);
+          resolve(userSession);
+        } else {
+          // User in Auth but profile not in Firestore — treat as unauthenticated
+          // Do NOT sign out here — user may just need to re-login to create their profile
+          GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+          clearTimeout(timeout);
+          resolve(null);
+        }
+
+      } catch (e) {
+        console.warn('[AuthService] Could not load Firestore profile during session restore:', e.message);
+        // If Firestore is offline, still let the user proceed if email is recognized
+        if (firebaseUser.email === 'super@admin.com') {
+          const fallbackSession = AuthService._mockSuperAdminLogin();
+          clearTimeout(timeout);
+          resolve(fallbackSession);
+        } else {
+          GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+          clearTimeout(timeout);
+          resolve(null);
+        }
       }
     });
   }
@@ -289,6 +398,7 @@ export class AuthService {
       email: 'super@admin.com',
       displayName: 'Super Administrador',
       role: 'SUPER_ADMIN',
+      customRole: '',
       companyId: 'global',
       branchId: 'global'
     };
