@@ -1,0 +1,58 @@
+/**
+ * @file page.css
+ * @description Main application layout, sidebar alignments, content bounds, and footer layouts.
+ */
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-bg-primary);
+}
+
+.main-content {
+  flex-grow: 1;
+  margin-left: 260px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevent flex items from overflowing */
+  min-height: 100vh;
+}
+
+.page-body {
+  flex-grow: 1;
+  padding: var(--space-6);
+  max-width: 1400px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.page-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+/* Adjust layout when sidebar is hidden on small screens */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  .page-body {
+    padding: var(--space-4);
+  }
+}

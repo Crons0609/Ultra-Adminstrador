@@ -1,0 +1,59 @@
+/**
+ * @file tables.css
+ * @description Data grid structures, custom rows, responsive containers and cell spacing.
+ */
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.th {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.tr:last-child .td {
+  border-bottom: none;
+}
+
+/* Hover & Zebra Striping */
+.tr-hover:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+.tr-selected {
+  background-color: var(--color-accent-light) !important;
+}
+
+/* Dense table variant */
+.table-dense .th {
+  padding: var(--space-2) var(--space-3);
+}
+
+.table-dense .td {
+  padding: var(--space-2) var(--space-3);
+}

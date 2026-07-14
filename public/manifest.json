@@ -1,0 +1,22 @@
+{
+  "name": "Ultra Administrador",
+  "short_name": "UltraAdmin",
+  "description": "SaaS Multiempresa de administración de restaurantes, bares y cafeterías en tiempo real.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

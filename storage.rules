@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'SUPER_ADMIN';
+    }
+
+    // Company specific uploads (images, menus, logo)
+    match /companies/{companyId}/{allPaths=**} {
+      allow read: if true; // Menus/logos are public
+      allow write: if isAuthenticated() && (request.auth.token.companyId == companyId || isSuperAdmin());
+    }
+    
+    // Fallback rule
+    match /{allPaths=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}

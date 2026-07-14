@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        (getUserData().role == 'SUPER_ADMIN' || request.auth.token.role == 'SUPER_ADMIN');
+    }
+    
+    function belongsToCompany(companyId) {
+      return isAuthenticated() && 
+        (getUserData().companyId == companyId || request.auth.token.companyId == companyId);
+    }
+
+    // Global Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+
+    // Companies & Tenant Aisle
+    match /companies/{companyId} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if isSuperAdmin();
+
+      // Sub-collections under Company (Multi-tenant isolation)
+      match /{document=**} {
+        allow read, write: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      }
+    }
+
+    // Superadmin configuration
+    match /superadmin/{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}

@@ -1,0 +1,42 @@
+/**
+ * @file main.css
+ * @description Master CSS index. Imports variables, typography, layouts, components and themes.
+ */
+
+/* 1. Design System Foundations */
+@import url('./design-system/tokens.css');
+@import url('./design-system/typography.css');
+@import url('./design-system/animations.css');
+@import url('./design-system/utilities.css');
+
+/* 2. Common Layout Wrappers */
+@import url('./layouts/sidebar.css');
+@import url('./layouts/header.css');
+@import url('./layouts/page.css');
+@import url('./layouts/grid.css');
+
+/* 3. Reusable UI Components */
+@import url('./components/buttons.css');
+@import url('./components/inputs.css');
+@import url('./components/modals.css');
+@import url('./components/cards.css');
+@import url('./components/tables.css');
+@import url('./components/navigation.css');
+@import url('./components/forms.css');
+@import url('./components/toasts.css');
+
+/* 4. Active Color Themes */
+@import url('./themes/light.css');
+@import url('./themes/dark.css');
+
+/* Reset base style options */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}

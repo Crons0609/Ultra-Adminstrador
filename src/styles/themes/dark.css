@@ -1,0 +1,35 @@
+/**
+ * @file dark.css
+ * @description Theme-specific overrides, body background settings, and custom dark shadow profiles.
+ */
+
+.theme-dark body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.theme-dark .card {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.theme-dark .header {
+  background-color: var(--color-bg-primary);
+  border-bottom-color: var(--color-border);
+}
+
+.theme-dark .sidebar {
+  background-color: var(--color-bg-secondary);
+  border-right-color: var(--color-border);
+}
+
+/* Dark Mode specific shadows and visual effects */
+.theme-dark .glass {
+  background-color: rgba(10, 10, 11, 0.7);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Specific component visual adjustment for Dark Mode */
+.theme-dark ::placeholder {
+  color: var(--color-text-tertiary);
+}

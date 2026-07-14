@@ -1,0 +1,13 @@
+# robots.txt for Ultra Administrador SaaS
+User-agent: *
+Disallow: /src/
+Disallow: /config/
+Disallow: /modules/
+Disallow: /core/
+Disallow: /services/
+Disallow: /models/
+Disallow: /components/
+Disallow: /utils/
+Disallow: /styles/
+
+Sitemap: /sitemap.xml
