@@ -42,16 +42,31 @@ export class EmployeesView extends Component {
         { key: 'displayName', label: 'Nombre Completo' },
         { key: 'email', label: 'Correo Electrónico' },
         { 
-          key: 'role', 
-          label: 'Rol de Trabajo',
-          render: (val) => {
+          key: 'customRole', 
+          label: 'Puesto / Cargo',
+          render: (val, row) => {
+            if (val) return `<span class="badge" style="background-color: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-md); font-weight: 500;">${val}</span>`;
+            
             const roleLabels = {
               MANAGER: 'Gerente',
               CASHIER: 'Cajero',
               WAITER: 'Mesero',
               KITCHEN: 'Cocinero'
             };
-            return `<span style="font-weight: 500;">${roleLabels[val] || val}</span>`;
+            return `<span style="color: var(--color-text-secondary);">${roleLabels[row.role] || row.role}</span>`;
+          }
+        },
+        { 
+          key: 'role', 
+          label: 'Permisos del Sistema',
+          render: (val) => {
+            const roleLabels = {
+              MANAGER: 'Acceso Total (Gerente)',
+              CASHIER: 'Caja Registradora',
+              WAITER: 'Toma de Pedidos (Mesero)',
+              KITCHEN: 'Pantalla de Cocina (Chef)'
+            };
+            return `<span style="font-size: 0.8rem; color: var(--color-accent); font-weight: 500;">${roleLabels[val] || val}</span>`;
           }
         },
         { 
@@ -116,6 +131,7 @@ export class EmployeesView extends Component {
             email: data.email,
             displayName: data.displayName,
             role: data.role,
+            customRole: data.customRole || '',
             companyId: data.companyId,
             branchId: data.branchId || 'main'
           });
@@ -178,14 +194,20 @@ export class EmployeesView extends Component {
           <input type="text" id="emp-name" class="input input-md" placeholder="Ej. Juan Gómez" required />
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="emp-role">Rol de Trabajo / Permisos</label>
-          <select id="emp-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-            <option value="WAITER">Mesero (Toma de pedidos)</option>
-            <option value="KITCHEN">Cocinero (Visualización KDS)</option>
-            <option value="CASHIER">Cajero (Punto de Venta / POS)</option>
-            <option value="MANAGER">Gerente (Acceso a métricas y personal)</option>
-          </select>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+          <div class="form-group">
+            <label class="form-label" for="emp-role">Rol / Permiso</label>
+            <select id="emp-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+              <option value="WAITER">Mesero (Toma de pedidos)</option>
+              <option value="KITCHEN">Cocinero (Visualización KDS)</option>
+              <option value="CASHIER">Cajero (Punto de Venta / POS)</option>
+              <option value="MANAGER">Gerente (Métricas y Personal)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="emp-custom-role">Puesto Personalizado (opcional)</label>
+            <input type="text" id="emp-custom-role" class="input input-md" placeholder="Ej. Barman, Hostess, Cajero Nocturno" />
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
@@ -241,6 +263,7 @@ export class EmployeesView extends Component {
 
     const name = this.modalInstance.$('#emp-name').value.trim();
     const role = this.modalInstance.$('#emp-role').value;
+    const customRole = this.modalInstance.$('#emp-custom-role').value.trim();
     const email = this.modalInstance.$('#emp-email').value.trim();
     const password = this.modalInstance.$('#emp-password').value;
 
@@ -251,6 +274,7 @@ export class EmployeesView extends Component {
         await AuthService.createUser(email, password, {
           displayName: name,
           role: role,
+          customRole: customRole,
           companyId: this.companyId,
           branchId: this.branchId
         });
@@ -271,6 +295,7 @@ export class EmployeesView extends Component {
           password: password,
           displayName: name,
           role: role,
+          customRole: customRole,
           companyId: this.companyId,
           branchId: this.branchId
         });

@@ -86,6 +86,7 @@ export class AuthService {
         email: firebaseUser.email,
         displayName: userProfile.displayName || firebaseUser.displayName || 'Usuario',
         role: userProfile.role,
+        customRole: userProfile.customRole || '',
         companyId: userProfile.companyId,
         branchId: userProfile.branchId || 'main'
       };
@@ -131,6 +132,7 @@ export class AuthService {
         password,
         displayName: profileData.displayName,
         role: profileData.role,
+        customRole: profileData.customRole || '',
         companyId: profileData.companyId,
         branchId: profileData.branchId || 'main'
       });
@@ -172,6 +174,7 @@ export class AuthService {
         email: email,
         displayName: profileData.displayName,
         role: profileData.role,
+        customRole: profileData.customRole || '',
         companyId: profileData.companyId,
         branchId: profileData.branchId || 'main',
         createdAt: serverTimestamp()
@@ -243,6 +246,7 @@ export class AuthService {
               email: firebaseUser.email,
               displayName: profile.displayName || firebaseUser.displayName || 'Usuario',
               role: profile.role,
+              customRole: profile.customRole || '',
               companyId: profile.companyId,
               branchId: profile.branchId || 'main'
             };
