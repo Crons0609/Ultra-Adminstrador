@@ -20,7 +20,7 @@ export class ForgotPasswordView extends Component {
 
     if (sent) {
       return `
-        <div class="login-page" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg-primary); padding: var(--space-4);">
+        <div class="login-page" style="min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-primary); padding: var(--space-4);">
           <div class="animate-scale-up card" style="max-width: 420px; width: 100%; padding: var(--space-8); text-align: center;">
             <div style="font-size: 3rem; margin-bottom: var(--space-4);">📧</div>
             <h2 style="font-family: var(--font-display); font-weight: 700; margin-bottom: var(--space-2);">Revisa tu correo</h2>
@@ -36,7 +36,7 @@ export class ForgotPasswordView extends Component {
     }
 
     return `
-      <div class="login-page" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-bg-primary); padding: var(--space-4);">
+      <div class="login-page" style="min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-primary); padding: var(--space-4);">
         <div style="width: 100%; max-width: 420px;" class="animate-slide-up">
           <div style="text-align: center; margin-bottom: var(--space-8);">
             <h1 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: var(--space-2);">Recuperar contraseña</h1>

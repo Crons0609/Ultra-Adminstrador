@@ -127,9 +127,9 @@ export const ROUTES = [
   { path: '/inventory/alerts', view: lazyView(getInventoryAlertsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Manager routes
-  { path: '/manager/dashboard', view: lazyView(getManagerDashboardView), middlewares: [roleGuard([USER_ROLES.MANAGER])] },
-  { path: '/manager/reports', view: lazyView(getManagerReportsView), middlewares: [roleGuard([USER_ROLES.MANAGER])] },
-  { path: '/manager/employees', view: lazyView(getManagerEmployeesView), middlewares: [roleGuard([USER_ROLES.MANAGER])] },
+  { path: '/manager/dashboard', view: lazyView(getManagerDashboardView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/reports', view: lazyView(getManagerReportsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/employees', view: lazyView(getManagerEmployeesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Owner routes
   { path: '/owner/finance', view: lazyView(getOwnerFinanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },

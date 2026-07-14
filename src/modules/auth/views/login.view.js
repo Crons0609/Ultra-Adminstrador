@@ -24,6 +24,7 @@ export class LoginView extends Component {
     return `
       <div class="login-page" style="
         min-height: 100vh;
+        width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;

@@ -54,6 +54,35 @@ export class AuthService {
       return mockUser;
     }
     
+    // Check dynamic users registered locally (Owners and Employees created in dev mode)
+    try {
+      const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
+      const match = dynamicUsers.find(u => u.email === email && u.password === password);
+      
+      if (match) {
+        const userSession = {
+          uid: match.uid || `user-${Date.now()}`,
+          email: match.email,
+          displayName: match.displayName || 'Usuario Registrado',
+          role: match.role,
+          companyId: match.companyId,
+          branchId: match.branchId || 'main'
+        };
+        
+        GlobalStore.set({
+          currentUser: userSession,
+          activeRole: userSession.role,
+          isAuthenticated: true
+        });
+        
+        // Persist session locally to restore it on page reload
+        localStorage.setItem('ua_session', JSON.stringify(userSession));
+        return userSession;
+      }
+    } catch (e) {
+      console.error('[AuthService] Error reading dynamic users:', e);
+    }
+    
     throw new Error('auth/user-not-found');
   }
 
@@ -64,6 +93,9 @@ export class AuthService {
     console.log('[AuthService] Logging out user');
     await new Promise(resolve => setTimeout(resolve, 300));
     
+    // Clear session cache
+    localStorage.removeItem('ua_session');
+
     GlobalStore.set({
       currentUser: null,
       activeRole: null,

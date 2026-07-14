@@ -24,10 +24,13 @@ export class Sidebar extends Component {
         { label: 'Ajustes', path: '#/super-admin/settings', icon: '⚙️' }
       ],
       OWNER: [
+        { label: 'Dashboard', path: '#/manager/dashboard', icon: '📊' },
         { label: 'Finanzas', path: '#/owner/finance', icon: '💰' },
         { label: 'Gastos', path: '#/owner/expenses', icon: '📉' },
         { label: 'Proyecciones', path: '#/owner/projections', icon: '📈' },
-        { label: 'Balance Gral.', path: '#/owner/balance', icon: '⚖️' }
+        { label: 'Balance Gral.', path: '#/owner/balance', icon: '⚖️' },
+        { label: 'Empleados', path: '#/manager/employees', icon: '👥' },
+        { label: 'Inventario', path: '#/inventory/products', icon: '📦' }
       ],
       MANAGER: [
         { label: 'Dashboard', path: '#/manager/dashboard', icon: '📊' },
