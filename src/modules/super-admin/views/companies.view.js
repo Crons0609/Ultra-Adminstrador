@@ -312,11 +312,82 @@ export class CompaniesView extends Component {
 
     GlobalStore.set({ companies: updatedCompanies });
 
-    // Success notifications
-    NotificationService.success(`Negocio "${name}" registrado. Dueño creado: ${ownerEmail}`);
-    
-    // Close modal
+    // Close the registration modal
     this.modalInstance.close();
+
+    // Build the owner access URL
+    const baseUrl = window.location.origin + window.location.pathname;
+    const ownerLoginUrl = `${baseUrl}#/login`;
+
+    // Show confirmation modal with the owner's credentials and access link
+    const confirmHTML = `
+      <div class="d-flex flex-column gap-4" style="color: var(--color-text-primary);">
+        <div style="text-align: center; font-size: 2.5rem;">🎉</div>
+        <div style="text-align: center;">
+          <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;">Negocio registrado exitosamente</h3>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary);">Envíale al dueño las siguientes credenciales para acceder a su panel.</p>
+        </div>
+
+        <!-- Credentials Card -->
+        <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4);">
+          <p style="font-size: 0.75rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-2);">DATOS DE ACCESO DEL DUEÑO</p>
+          <div style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 0.875rem;">
+            <div><span style="color: var(--color-text-secondary);">Empresa:</span> <strong>${name}</strong></div>
+            <div><span style="color: var(--color-text-secondary);">Correo:</span> <strong>${ownerEmail}</strong></div>
+            <div><span style="color: var(--color-text-secondary);">Contraseña inicial:</span> <strong>${ownerPassword}</strong></div>
+          </div>
+        </div>
+
+        <!-- Access URL -->
+        <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4);">
+          <p style="font-size: 0.75rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-2);">ENLACE DE ACCESO AL PANEL</p>
+          <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
+            <code id="owner-url-display" style="font-size: 0.75rem; word-break: break-all; flex: 1; color: var(--color-text-primary);">${ownerLoginUrl}</code>
+            <button class="btn btn-primary btn-sm" id="btn-copy-owner-url">📋 Copiar URL</button>
+          </div>
+        </div>
+
+        <p style="font-size: 0.75rem; color: var(--color-text-tertiary); text-align: center;">
+          💡 Guarda estas credenciales de manera segura. La contraseña puede ser cambiada más adelante.
+        </p>
+      </div>
+    `;
+
+    const confirmFooterHTML = `
+      <button class="btn btn-primary btn-md" id="modal-confirm-close-btn">✓ Entendido</button>
+    `;
+
+    this.modalInstance = new Modal({
+      title: 'Credenciales del Nuevo Negocio',
+      bodyHTML: confirmHTML,
+      footerHTML: confirmFooterHTML,
+      size: 'md'
+    });
+
+    document.body.appendChild(this.modalInstance.mount());
+
+    const copyUrlBtn = this.modalInstance.$('#btn-copy-owner-url');
+    if (copyUrlBtn) {
+      copyUrlBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(ownerLoginUrl)
+          .then(() => NotificationService.success('Enlace de acceso copiado al portapapeles.'))
+          .catch(() => {
+            // Fallback for non-HTTPS contexts
+            const el = document.createElement('textarea');
+            el.value = ownerLoginUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            NotificationService.success('Enlace copiado.');
+          });
+      });
+    }
+
+    const closConfirmBtn = this.modalInstance.$('#modal-confirm-close-btn');
+    if (closConfirmBtn) {
+      closConfirmBtn.addEventListener('click', () => this.modalInstance.close());
+    }
   }
 
   /**

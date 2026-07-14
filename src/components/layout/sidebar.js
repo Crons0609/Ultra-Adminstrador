@@ -30,12 +30,14 @@ export class Sidebar extends Component {
         { label: 'Proyecciones', path: '#/owner/projections', icon: '📈' },
         { label: 'Balance Gral.', path: '#/owner/balance', icon: '⚖️' },
         { label: 'Empleados', path: '#/manager/employees', icon: '👥' },
+        { label: 'Códigos QR', path: '#/manager/qr-codes', icon: '📱' },
         { label: 'Inventario', path: '#/inventory/products', icon: '📦' }
       ],
       MANAGER: [
         { label: 'Dashboard', path: '#/manager/dashboard', icon: '📊' },
         { label: 'Reportes', path: '#/manager/reports', icon: '📋' },
         { label: 'Empleados', path: '#/manager/employees', icon: '👥' },
+        { label: 'Códigos QR', path: '#/manager/qr-codes', icon: '📱' },
         { label: 'Inventario', path: '#/inventory/products', icon: '📦' }
       ],
       CASHIER: [

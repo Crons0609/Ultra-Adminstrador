@@ -48,6 +48,7 @@ const getInventoryAlertsView = () => import('../modules/inventory/views/alerts.v
 const getManagerDashboardView = () => import('../modules/manager/views/dashboard.view.js').then(m => m.ManagerDashboardView);
 const getManagerReportsView = () => import('../modules/manager/views/reports.view.js').then(m => m.ReportsView);
 const getManagerEmployeesView = () => import('../modules/manager/views/employees.view.js').then(m => m.EmployeesView);
+const getManagerQRCodesView = () => import('../modules/manager/views/qr-codes.view.js').then(m => m.QRCodesView);
 
 // Owner Module
 const getOwnerFinanceView = () => import('../modules/owner/views/finance.view.js').then(m => m.FinanceView);
@@ -130,6 +131,7 @@ export const ROUTES = [
   { path: '/manager/dashboard', view: lazyView(getManagerDashboardView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/reports', view: lazyView(getManagerReportsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/employees', view: lazyView(getManagerEmployeesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/qr-codes', view: lazyView(getManagerQRCodesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Owner routes
   { path: '/owner/finance', view: lazyView(getOwnerFinanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
