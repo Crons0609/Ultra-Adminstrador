@@ -1,7 +1,8 @@
 /**
  * @file companies.view.js
  * @description SuperAdmin Companies View. Shows the responsive PageLayout, Sidebar, Header,
- * and a fully functional dynamic Modal to register and parameterize new multi-tenant businesses.
+ * and a fully functional dynamic Modal to register, edit, and parameterize multi-tenant businesses.
+ * Supports status administration (Activo, Inactivo, Falta de Pago).
  */
 
 import { Component } from '../../../core/component.js';
@@ -20,9 +21,9 @@ export class CompaniesView extends Component {
     if (!GlobalStore.getState().companies) {
       GlobalStore.set({
         companies: [
-          { id: '1', name: 'Burger & Co.', plan: 'PREMIUM', status: 'ACTIVO', branches: 3, users: 12, businessType: 'Restaurante', config: { enableKDS: true, enableWhatsApp: true } },
-          { id: '2', name: 'La Cantina del Sol', plan: 'BASIC', status: 'ACTIVO', branches: 1, users: 5, businessType: 'Bar', config: { enableKDS: false, enableWhatsApp: true } },
-          { id: '3', name: 'Café Bistro Madrid', plan: 'FREE', status: 'SUSPENDIDO', branches: 2, users: 4, businessType: 'Cafetería', config: { enableKDS: true, enableWhatsApp: false } }
+          { id: '1', name: 'Burger & Co.', plan: 'PREMIUM', status: 'ACTIVO', branches: 3, users: 12, businessType: 'Restaurante', config: { enableKDS: true, enableWhatsApp: true, enableBilling: true, enableQR: true } },
+          { id: '2', name: 'La Cantina del Sol', plan: 'BASIC', status: 'FALTA_PAGO', branches: 1, users: 5, businessType: 'Bar', config: { enableKDS: false, enableWhatsApp: true, enableBilling: true, enableQR: true } },
+          { id: '3', name: 'Café Bistro Madrid', plan: 'FREE', status: 'INACTIVO', branches: 2, users: 4, businessType: 'Cafetería', config: { enableKDS: true, enableWhatsApp: false, enableBilling: false, enableQR: true } }
         ]
       });
     }
@@ -45,8 +46,16 @@ export class CompaniesView extends Component {
           key: 'status', 
           label: 'Estado',
           render: (val) => {
-            const variant = val === 'ACTIVO' ? 'success' : 'danger';
-            return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${variant}-light);color:var(--color-${variant});">${val}</span>`;
+            let label = 'Activo';
+            let variant = 'success';
+            if (val === 'INACTIVO') {
+              label = 'Inactivo';
+              variant = 'secondary';
+            } else if (val === 'FALTA_PAGO') {
+              label = 'Falta de Pago';
+              variant = 'danger';
+            }
+            return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${variant}-light);color:var(--color-${variant});">${label}</span>`;
           }
         },
         { key: 'branches', label: 'Sucursales' },
@@ -54,10 +63,7 @@ export class CompaniesView extends Component {
       ],
       data: GlobalStore.getState().companies,
       onRowClick: (row) => {
-        const configText = Object.entries(row.config || {})
-          .map(([k, v]) => `${k}: ${v ? '✅' : '❌'}`)
-          .join('\n');
-        alert(`Negocio: ${row.name}\nTipo: ${row.businessType || 'Restaurante'}\nPlan: ${row.plan}\nConfiguración:\n${configText}`);
+        this.openEditCompanyModal(row);
       }
     });
 
@@ -97,6 +103,9 @@ export class CompaniesView extends Component {
     if (tableWrapper) {
       tableWrapper.appendChild(this.table.mount());
     }
+
+    // Call afterMount manually to bind events since mount is overridden
+    this.afterMount();
 
     return element;
   }
@@ -169,6 +178,15 @@ export class CompaniesView extends Component {
           </div>
         </div>
 
+        <div class="form-group">
+          <label class="form-label" for="comp-status">Estado del Negocio</label>
+          <select id="comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+            <option value="ACTIVO">Activo (Cuenta normal)</option>
+            <option value="INACTIVO">Inactivo (Suspendido)</option>
+            <option value="FALTA_PAGO">Falta de Pago (Bloqueo de acceso)</option>
+          </select>
+        </div>
+
         <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
           <label class="form-label mb-2" style="font-weight: 600;">Parámetros y Módulos Habilitados</label>
           
@@ -236,6 +254,7 @@ export class CompaniesView extends Component {
     const ownerPassword = this.modalInstance.$('#owner-password').value;
     const businessType = this.modalInstance.$('#comp-type').value;
     const plan = this.modalInstance.$('#comp-plan').value;
+    const status = this.modalInstance.$('#comp-status').value;
 
     const enableKDS = this.modalInstance.$('#mod-kds').checked;
     const enableQR = this.modalInstance.$('#mod-qr').checked;
@@ -248,7 +267,7 @@ export class CompaniesView extends Component {
       id: newCompanyId,
       name: name,
       plan: plan,
-      status: 'ACTIVO',
+      status: status,
       config: {
         enableKDS,
         enableQR,
@@ -297,6 +316,147 @@ export class CompaniesView extends Component {
     NotificationService.success(`Negocio "${name}" registrado. Dueño creado: ${ownerEmail}`);
     
     // Close modal
+    this.modalInstance.close();
+  }
+
+  /**
+   * Opens the edit/status administration modal when clicking a row
+   * @param {Object} row 
+   */
+  openEditCompanyModal(row) {
+    const formHTML = `
+      <form id="edit-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
+        <div class="form-group">
+          <label class="form-label" for="edit-comp-name">Nombre de la Empresa</label>
+          <input type="text" id="edit-comp-name" class="input input-md" value="${row.name}" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+          <div class="form-group">
+            <label class="form-label" for="edit-comp-type">Tipo de Negocio</label>
+            <select id="edit-comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+              <option value="Restaurante" ${row.businessType === 'Restaurante' ? 'selected' : ''}>Restaurante</option>
+              <option value="Bar" ${row.businessType === 'Bar' ? 'selected' : ''}>Bar</option>
+              <option value="Cafetería" ${row.businessType === 'Cafetería' ? 'selected' : ''}>Cafetería</option>
+              <option value="Food Truck" ${row.businessType === 'Food Truck' ? 'selected' : ''}>Food Truck</option>
+              <option value="Tienda de Alimentos" ${row.businessType === 'Tienda de Alimentos' ? 'selected' : ''}>Tienda de Alimentos</option>
+              <option value="Discoteca" ${row.businessType === 'Discoteca' ? 'selected' : ''}>Discoteca / Club</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-comp-plan">Plan SaaS</label>
+            <select id="edit-comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+              <option value="PREMIUM" ${row.plan === 'PREMIUM' ? 'selected' : ''}>Premium ($999/mes)</option>
+              <option value="BASIC" ${row.plan === 'BASIC' ? 'selected' : ''}>Basic ($499/mes)</option>
+              <option value="FREE" ${row.plan === 'FREE' ? 'selected' : ''}>Free (Demo)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-comp-status">Estado del Negocio (Administración de Cuenta)</label>
+          <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+            <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
+            <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
+            <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
+          </select>
+        </div>
+
+        <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
+          <label class="form-label mb-2" style="font-weight: 600;">Parámetros y Módulos Habilitados</label>
+          
+          <div class="d-flex flex-column gap-2">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="edit-mod-kds" ${row.config?.enableKDS ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <span>Pantalla de Cocina (KDS)</span>
+            </label>
+            
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="edit-mod-qr" ${row.config?.enableQR ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <span>Menú Digital QR para mesas</span>
+            </label>
+            
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <span>Alertas e Informes automáticos vía WhatsApp</span>
+            </label>
+            
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
+            </label>
+          </div>
+        </div>
+      </form>
+    `;
+
+    const footerHTML = `
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-save-btn">Guardar Cambios</button>
+    `;
+
+    this.modalInstance = new Modal({
+      title: `Administrar Negocio: ${row.name}`,
+      bodyHTML: formHTML,
+      footerHTML: footerHTML,
+      size: 'md'
+    });
+
+    document.body.appendChild(this.modalInstance.mount());
+
+    const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => this.modalInstance.close());
+    }
+
+    const saveBtn = this.modalInstance.$('#modal-save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => this.submitEditCompany(row.id));
+    }
+  }
+
+  /**
+   * Processes company edits and updates GlobalStore
+   * @param {string} id 
+   */
+  submitEditCompany(id) {
+    const form = this.modalInstance.$('#edit-company-form');
+    if (!form || !form.reportValidity()) return;
+
+    const name = this.modalInstance.$('#edit-comp-name').value.trim();
+    const businessType = this.modalInstance.$('#edit-comp-type').value;
+    const plan = this.modalInstance.$('#edit-comp-plan').value;
+    const status = this.modalInstance.$('#edit-comp-status').value;
+
+    const enableKDS = this.modalInstance.$('#edit-mod-kds').checked;
+    const enableQR = this.modalInstance.$('#edit-mod-qr').checked;
+    const enableWhatsApp = this.modalInstance.$('#edit-mod-whatsapp').checked;
+    const enableBilling = this.modalInstance.$('#edit-mod-billing').checked;
+
+    const currentCompanies = GlobalStore.getState().companies || [];
+    const updatedCompanies = currentCompanies.map(c => {
+      if (c.id === id) {
+        return {
+          ...c,
+          name: name,
+          businessType: businessType,
+          plan: plan,
+          status: status,
+          config: {
+            enableKDS,
+            enableQR,
+            enableWhatsApp,
+            enableBilling,
+            businessType
+          }
+        };
+      }
+      return c;
+    });
+
+    GlobalStore.set({ companies: updatedCompanies });
+
+    NotificationService.success(`Cambios guardados para "${name}". Estado: ${status}`);
     this.modalInstance.close();
   }
 
