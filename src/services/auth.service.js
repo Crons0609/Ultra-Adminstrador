@@ -251,17 +251,24 @@ export class AuthService {
       // issues with the secondary app pattern. The ID token is immediately valid.
       const profilePayload = {
         fields: {
-          uid: { stringValue: newUid },
-          email: { stringValue: email },
+          uid:         { stringValue: newUid },
+          email:       { stringValue: email },
           displayName: { stringValue: profileData.displayName || email },
-          role: { stringValue: profileData.role },
-          customRole: { stringValue: profileData.customRole || '' },
-          companyId: { stringValue: profileData.companyId || 'global' },
-          branchId: { stringValue: profileData.branchId || 'main' }
+          role:        { stringValue: profileData.role },
+          customRole:  { stringValue: profileData.customRole || '' },
+          companyId:   { stringValue: profileData.companyId || 'global' },
+          branchId:    { stringValue: profileData.branchId || 'main' },
+          createdAt:   { timestampValue: new Date().toISOString() }
         }
       };
 
-      const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${newUid}`;
+      // Route to local emulator if detected at startup, otherwise production.
+      const useEmulator = window.__useFirebaseEmulator === true;
+      const firestoreUrl = useEmulator
+        ? `http://localhost:8080/v1/projects/${projectId}/databases/(default)/documents/users/${newUid}`
+        : `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${newUid}`;
+      console.log('[AuthService] Writing profile via REST ->', useEmulator ? 'EMULATOR' : 'PRODUCTION');
+
 
       const response = await Promise.race([
         fetch(firestoreUrl, {

@@ -1,43 +1,65 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+
+    // ── Helper: requires a signed-in request ────────────────────────────────
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
+    // ── Helper: read the caller's own user document ──────────────────────────
+    // Wrapped in exists() so it never throws on a missing document.
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    
+
+    // ── Helper: true only when the caller's user doc already exists AND
+    //    has role == 'SUPER_ADMIN' (or the custom token carries that claim).
+    //    Using exists() prevents a null-read crash for brand-new users whose
+    //    document has not been written yet.
     function isSuperAdmin() {
-      return isAuthenticated() && 
-        (getUserData().role == 'SUPER_ADMIN' || request.auth.token.role == 'SUPER_ADMIN');
-    }
-    
-    function belongsToCompany(companyId) {
-      return isAuthenticated() && 
-        (getUserData().companyId == companyId || request.auth.token.companyId == companyId);
+      return isAuthenticated() && (
+        request.auth.token.role == 'SUPER_ADMIN' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getUserData().role == 'SUPER_ADMIN'
+        )
+      );
     }
 
-    // Global Users collection
+    // ── Helper: true when the caller belongs to the given company ────────────
+    function belongsToCompany(companyId) {
+      return isAuthenticated() && (
+        request.auth.token.companyId == companyId ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getUserData().companyId == companyId
+        )
+      );
+    }
+
+    // ── /users/{userId} ──────────────────────────────────────────────────────
+    // Read:  any authenticated user
+    // Write: the user can ALWAYS write their own document (critical for first-
+    //        time profile creation), OR a SuperAdmin can write any user doc.
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow write: if (isAuthenticated() && request.auth.uid == userId)
+                   || isSuperAdmin();
     }
 
-    // Companies & Tenant Aisle
+    // ── /companies/{companyId} ───────────────────────────────────────────────
     match /companies/{companyId} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if isSuperAdmin();
 
-      // Sub-collections under Company (Multi-tenant isolation)
+      // Sub-collections (multi-tenant isolation)
       match /{document=**} {
         allow read, write: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       }
     }
 
-    // Superadmin configuration
+    // ── /superadmin/* ────────────────────────────────────────────────────────
     match /superadmin/{document=**} {
       allow read, write: if isSuperAdmin();
     }

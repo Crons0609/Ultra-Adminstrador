@@ -29,6 +29,7 @@ import { getMessaging, isSupported as isMessagingSupported }
 const firebaseConfig = {
   apiKey:            'AIzaSyBepg-SWU0O0pQotFi5dBy66QCe8LdgksM',
   authDomain:        'super-administrador-df803.firebaseapp.com',
+  databaseURL:       'https://super-administrador-df803-default-rtdb.firebaseio.com',
   projectId:         'super-administrador-df803',
   storageBucket:     'super-administrador-df803.firebasestorage.app',
   messagingSenderId: '417717665818',
@@ -39,6 +40,9 @@ const firebaseConfig = {
 
 // ─── Detect environment ───────────────────────────────────────────────────────
 const IS_LOCAL = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+// Expose emulator flag globally so auth.service.js can route REST calls correctly.
+window.__useFirebaseEmulator = false;
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Exported Firebase Service Instances ─────────────────────────────────────
@@ -69,14 +73,25 @@ try {
   // 5. Cloud Functions (us-central1 default region)
   functions = getFunctions(firebaseApp, 'us-central1');
 
-  // ─── Local Emulators (only on localhost) ────────────────────────────────────
-  // Uncomment ONLY if you have run: firebase emulators:start
+  // ─── Local Emulators — auto-detected on localhost ──────────────────────────
+  // If 'firebase emulators:start' is running, connects automatically.
+  // No manual uncommenting required.
   if (IS_LOCAL) {
-    console.log('[Firebase] 🧪 Modo desarrollo local. Emuladores disponibles (descomentarlos en firebase.config.js si los activas).');
-    // connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-    // connectFirestoreEmulator(db, 'localhost', 8080);
-    // connectStorageEmulator(storage, 'localhost', 9199);
-    // connectFunctionsEmulator(functions, 'localhost', 5001);
+    fetch('http://localhost:8080/', { method: 'GET', mode: 'no-cors' })
+      .then(() => {
+        // Emulator responded — connect all SDK services
+        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+        connectFirestoreEmulator(db, 'localhost', 8080);
+        connectStorageEmulator(storage, 'localhost', 9199);
+        connectFunctionsEmulator(functions, 'localhost', 5001);
+        window.__useFirebaseEmulator = true;
+        console.log('[Firebase] 🧪 Emuladores locales conectados (Auth:9099 · Firestore:8080 · Storage:9199 · Functions:5001).');
+      })
+      .catch(() => {
+        // Emulator not running — use production Firebase normally
+        window.__useFirebaseEmulator = false;
+        console.log('[Firebase] ☁️  Sin emuladores activos — conectado a producción.');
+      });
   }
   // ─────────────────────────────────────────────────────────────────────────────
 
