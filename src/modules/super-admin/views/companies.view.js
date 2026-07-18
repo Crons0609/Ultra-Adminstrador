@@ -7,6 +7,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { AuthService } from '../../../services/auth.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { getBusinessTypeOptions } from '../../../config/business-types.config.js';
 
 export class CompaniesView extends Component {
   constructor(params = {}) {
@@ -161,12 +162,7 @@ export class CompaniesView extends Component {
           <div class="form-group">
             <label class="form-label" for="comp-type">Tipo de Negocio</label>
             <select id="comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="Restaurante">Restaurante</option>
-              <option value="Bar">Bar</option>
-              <option value="Cafetería">Cafetería</option>
-              <option value="Food Truck">Food Truck</option>
-              <option value="Tienda de Alimentos">Tienda de Alimentos</option>
-              <option value="Discoteca">Discoteca / Club</option>
+              ${getBusinessTypeOptions()}
             </select>
           </div>
           <div class="form-group">
@@ -450,12 +446,7 @@ export class CompaniesView extends Component {
             <div class="form-group">
               <label class="form-label" for="edit-comp-type">Tipo de Negocio</label>
               <select id="edit-comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                <option value="Restaurante" ${row.businessType === 'Restaurante' ? 'selected' : ''}>Restaurante</option>
-                <option value="Bar" ${row.businessType === 'Bar' ? 'selected' : ''}>Bar</option>
-                <option value="Cafetería" ${row.businessType === 'Cafetería' ? 'selected' : ''}>Cafetería</option>
-                <option value="Food Truck" ${row.businessType === 'Food Truck' ? 'selected' : ''}>Food Truck</option>
-                <option value="Tienda de Alimentos" ${row.businessType === 'Tienda de Alimentos' ? 'selected' : ''}>Tienda de Alimentos</option>
-                <option value="Discoteca" ${row.businessType === 'Discoteca' ? 'selected' : ''}>Discoteca / Club</option>
+                ${getBusinessTypeOptions(row.businessType)}
               </select>
             </div>
             <div class="form-group">
