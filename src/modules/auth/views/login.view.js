@@ -263,6 +263,14 @@ export class LoginView extends Component {
   }
 
   afterMount() {
+    // If user is already authenticated, redirect them automatically to their dashboard
+    const currentUser = GlobalStore.getState().currentUser;
+    if (currentUser) {
+      console.log('[LoginView] User is already authenticated. Redirecting to dashboard...');
+      redirectUserDashboard(currentUser.role, { navigate: (path) => { window.location.hash = path; } });
+      return;
+    }
+
     // ── Three.js & GSAP Premium Animations ───────────────────────────────────
     this.cleanupThree = AnimationService.initThreeDBackground(this.$('#three-bg-container'));
 

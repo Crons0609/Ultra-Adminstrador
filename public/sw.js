@@ -3,7 +3,7 @@
  * @description Service Worker base for PWA installation, offline capabilities, and static assets caching.
  */
 
-const CACHE_NAME = 'ultra-admin-v1';
+const CACHE_NAME = 'ultra-admin-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -27,6 +27,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting old cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -40,34 +41,41 @@ self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
   
-  // Exclude Firebase API endpoints or WebSocket calls
-  if (event.request.url.indexOf('firestore.googleapis.com') !== -1 || event.request.url.indexOf('identitytoolkit') !== -1) {
+  // Exclude Firebase API endpoints, real-time database, auth, and emulators
+  const url = event.request.url;
+  if (
+    url.includes('firestore.googleapis.com') ||
+    url.includes('identitytoolkit') ||
+    url.includes('firebaseio.com') ||
+    url.includes('localhost:9000') ||
+    url.includes('localhost:9099')
+  ) {
     return;
   }
 
+  // Network First Strategy: try network, fallback to cache
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        // Check if we received a valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+    fetch(event.request)
+      .then((response) => {
+        // Only cache successful basic responses
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return response;
-      }).catch(() => {
-        // Fallback index.html for SPA router when client is offline
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Serve index.html fallback for SPA navigation when offline
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+        });
+      })
   );
 });
