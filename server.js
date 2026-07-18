@@ -9,6 +9,35 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'Ultra Administrador',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/cron/ping', (req, res) => {
+  const configuredToken = process.env.CRON_JOB_TOKEN || '';
+  const incomingToken = req.query.token || req.get('x-cron-token') || '';
+
+  if (configuredToken && incomingToken !== configuredToken) {
+    return res.status(401).json({
+      ok: false,
+      error: 'Token de cron job inválido'
+    });
+  }
+
+  res.json({
+    ok: true,
+    message: 'Keep alive recibido correctamente',
+    service: 'Ultra Administrador',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Serve static assets from public and src directories
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/src', express.static(path.join(__dirname, 'src')));
