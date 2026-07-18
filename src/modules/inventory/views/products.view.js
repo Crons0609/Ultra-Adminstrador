@@ -28,9 +28,15 @@ export class ProductsView extends Component {
           key: 'name', 
           label: 'Producto',
           render: (val, row) => `
-            <div style="display: flex; flex-direction: column;">
-              <span class="font-semibold text-primary">${val}</span>
-              <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Sin categoría'}</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              ${row.image 
+                ? `<img src="${row.image}" alt="" style="width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'" />` 
+                : `<div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📦</div>`
+              }
+              <div style="display: flex; flex-direction: column;">
+                <span class="font-semibold text-primary">${val}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Sin categoría'}</span>
+              </div>
             </div>
           `
         },
@@ -412,6 +418,25 @@ export class ProductsView extends Component {
             <input type="number" id="prod-price" class="input input-md" min="0" step="0.01" placeholder="0.00" value="${isEdit ? product.price : '0'}" required />
           </div>
         </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-description">Descripción (visible en catálogo público)</label>
+          <textarea id="prod-description" class="input input-md" rows="2" style="resize:vertical;" placeholder="Describe brevemente el producto para tus clientes...">${isEdit ? (product.description || '') : ''}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-image">🖼️ URL de Imagen del Producto (opcional)</label>
+          <input type="url" id="prod-image" class="input input-md" placeholder="https://ejemplo.com/imagen.jpg" value="${isEdit ? (product.image || '') : ''}" />
+          <div id="prod-image-preview" style="margin-top: var(--space-2); display: ${isEdit && product.image ? 'flex' : 'none'}; align-items: center; gap: var(--space-3);">
+            <img id="prod-image-thumb" src="${isEdit ? (product.image || '') : ''}" alt="Vista previa" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--color-border);" />
+            <span style="font-size:0.78rem;color:var(--color-text-secondary);">Vista previa de la imagen</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <input type="checkbox" id="prod-on-sale" ${isEdit && product.onSale ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--color-accent);" />
+          <label for="prod-on-sale" class="form-label" style="margin:0;">Marcar como <strong>En Oferta</strong> en el catálogo público</label>
+        </div>
       </form>
     `;
 
@@ -438,6 +463,22 @@ export class ProductsView extends Component {
     const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => this.modalInstance.close());
+    }
+
+    // Live image preview
+    const imageInput = this.modalInstance.$('#prod-image');
+    if (imageInput) {
+      imageInput.addEventListener('input', () => {
+        const url = imageInput.value.trim();
+        const preview = this.modalInstance.$('#prod-image-preview');
+        const thumb = this.modalInstance.$('#prod-image-thumb');
+        if (url && preview && thumb) {
+          thumb.src = url;
+          preview.style.display = 'flex';
+        } else if (preview) {
+          preview.style.display = 'none';
+        }
+      });
     }
 
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
@@ -479,6 +520,9 @@ export class ProductsView extends Component {
       minStock,
       purchasePrice,
       price,
+      description: (this.modalInstance.$('#prod-description')?.value.trim()) || '',
+      image: (this.modalInstance.$('#prod-image')?.value.trim()) || '',
+      onSale: this.modalInstance.$('#prod-on-sale')?.checked || false,
       updatedAt: Date.now()
     };
 

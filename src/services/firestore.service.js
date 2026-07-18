@@ -196,6 +196,25 @@ export class FirestoreService {
   }
 
   /**
+   * Helper to increment a numeric value at any database path.
+   * Useful for analytics counters.
+   *
+   * @param {string} path - Absolute RTDB path
+   * @param {number} [amount=1]
+   */
+  static async incrementPathValue(path, amount = 1) {
+    if (!db) return;
+    try {
+      const pathRef = ref(db, path);
+      const snap = await get(pathRef);
+      const val = Number(snap.val() || 0);
+      await set(pathRef, val + amount);
+    } catch (e) {
+      console.warn(`[DB] Failed to increment path ${path}:`, e.message);
+    }
+  }
+
+  /**
    * Read a document from a root-level path.
    * @param {string} collectionName
    * @param {string} id
@@ -596,6 +615,34 @@ export class FirestoreService {
     // Store for cleanup
     this._listeners.set(listenerId, { pathRef, handler });
     console.log(`[DB] 👂 Listener attached: ${path} (${listenerId})`);
+    return listenerId;
+  }
+
+  /**
+   * Subscribe to raw changes (retains object shape, no list conversion).
+   * Useful for single config nodes.
+   *
+   * @param {string} path
+   * @param {Function} callback
+   * @returns {string} Listener ID
+   */
+  static listenToPathRaw(path, callback) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const pathRef = ref(db, path);
+    const listenerId = `listener_raw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const handler = (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.val());
+      } else {
+        callback(null);
+      }
+    };
+
+    onValue(pathRef, handler);
+    this._listeners.set(listenerId, { pathRef, handler });
+    console.log(`[DB] 👂 Raw listener attached: ${path} (${listenerId})`);
     return listenerId;
   }
 

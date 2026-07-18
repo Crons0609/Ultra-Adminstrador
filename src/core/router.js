@@ -114,7 +114,11 @@ export class Router {
     const params = {};
     if (values) {
       keys.forEach((key, index) => {
-        params[key] = values[index + 1];
+        try {
+          params[key] = decodeURIComponent(values[index + 1]);
+        } catch (_) {
+          params[key] = values[index + 1];
+        }
       });
     }
     return params;

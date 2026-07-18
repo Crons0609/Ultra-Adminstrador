@@ -50,6 +50,11 @@ const getManagerReportsView = () => import('../modules/manager/views/reports.vie
 const getManagerEmployeesView = () => import('../modules/manager/views/employees.view.js').then(m => m.EmployeesView);
 const getManagerQRCodesView = () => import('../modules/manager/views/qr-codes.view.js').then(m => m.QRCodesView);
 
+// Public Catalog & Settings Views
+const getPublicCatalogView = () => import('../modules/customer/views/catalog.view.js').then(m => m.PublicCatalogView);
+const getPublicProductDetailView = () => import('../modules/customer/views/product-detail.view.js').then(m => m.PublicProductDetailView);
+const getCatalogSettingsView = () => import('../modules/manager/views/catalog-settings.view.js').then(m => m.CatalogSettingsView);
+
 // Owner Module
 const getOwnerFinanceView = () => import('../modules/owner/views/finance.view.js').then(m => m.FinanceView);
 const getOwnerExpensesView = () => import('../modules/owner/views/expenses.view.js').then(m => m.ExpensesView);
@@ -132,6 +137,7 @@ export const ROUTES = [
   { path: '/manager/reports', view: lazyView(getManagerReportsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/employees', view: lazyView(getManagerEmployeesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/qr-codes', view: lazyView(getManagerQRCodesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/catalog-settings', view: lazyView(getCatalogSettingsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Owner routes
   { path: '/owner/finance', view: lazyView(getOwnerFinanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
@@ -146,4 +152,8 @@ export const ROUTES = [
   { path: '/super-admin/billing', view: lazyView(getSuperAdminBillingView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/logs', view: lazyView(getSuperAdminLogsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/settings', view: lazyView(getSuperAdminSettingsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
+
+  // Public Catalog dynamic wildcard route (Keep at the very bottom)
+  { path: '/:companyId', view: lazyView(getPublicCatalogView), middlewares: [] },
+  { path: '/:companyId/producto/:productId', view: lazyView(getPublicProductDetailView), middlewares: [] },
 ];
