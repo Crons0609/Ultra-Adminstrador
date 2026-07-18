@@ -48,12 +48,52 @@ class App {
       });
     });
 
-    // 5. Remove loading screen, initialize smooth scroll and SPA router
+    // 5. Purge old local-DB cache keys — all data now lives in Firebase RTDB
+    this.clearLocalDbCache();
+
+    // 6. Remove loading screen, initialize smooth scroll and SPA router
     this.hideLoadingScreen();
     AnimationService.initGlobalScroll();
     this.router = new Router(ROUTES, 'app');
 
     console.log(`[App] ✅ ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);
+  }
+
+  /**
+   * Remove all legacy localStorage keys that used to store local DB data.
+   * Since the app now exclusively uses Firebase Realtime Database, these keys
+   * are obsolete and should be wiped on every startup to avoid stale state.
+   */
+  clearLocalDbCache() {
+    const legacyKeys = [
+      'ua_users',
+      'ua_dynamic_users',
+      'ua_companies',
+      'ua_branches',
+      'ua_employees',
+      'ua_session',
+      'ua_current_user',
+    ];
+    legacyKeys.forEach(key => {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        console.log(`[App] 🗑️ Caché local eliminado: ${key}`);
+      }
+    });
+
+    // Also purge CacheService localStorage keys (prefixed with cache_)
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('cache_'))
+        .forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`[App] 🗑️ Caché de servicio eliminado: ${key}`);
+        });
+    } catch (e) {
+      console.warn('[App] No se pudieron limpiar las claves cache_ de localStorage:', e);
+    }
+
+    console.log('[App] ✅ Limpieza de caché local completada.');
   }
 
   /**

@@ -1,16 +1,20 @@
 /**
  * @file auth.service.js
- * @description Authentication service — Firebase Auth integration.
+ * @description Authentication service — Firebase Auth + Realtime Database.
  *
- * Uses real Firebase Auth for login, logout, and password reset.
- * User roles are stored in Firestore under the 'users' collection.
- * Falls back to localStorage profile cache if Firestore rules are strict.
+ * - Login: Firebase Auth → profile from /users/{uid}
+ * - Create user: Firebase Auth (secondary app) → dual-write to /users/{uid} + /companies/{id}/employees/{uid}
+ * - Logout: Firebase Auth signOut + clear GlobalStore
+ * - Session restore: onAuthStateChanged → /users/{uid} profile lookup
+ *
+ * Super Admin (Programador) email: superadmin@ultraadmin.com
  */
 
 import { auth, db } from '../config/firebase.config.js';
 import { GlobalStore } from '../core/state.js';
+import { FirestoreService } from './firestore.service.js';
 
-// Firebase Auth & Firestore modular imports (CDN v12.16.0)
+// Firebase Auth modular imports (CDN v12.16.0)
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -19,94 +23,68 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
 
 import {
-  doc,
-  getDoc,
-  setDoc,
+  ref,
+  get,
+  set,
+  update,
   serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+} from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+
+// ─── Super Admin Constants ────────────────────────────────────────────────────
+const SUPER_ADMIN_EMAIL = 'superadmin@ultraadmin.com';
+const SUPER_ADMIN_PROFILE = {
+  displayName: 'Programador',
+  role: 'SUPER_ADMIN',
+  customRole: '',
+  companyId: 'global',
+  branchId: 'global'
+};
 
 export class AuthService {
 
   /**
    * Login with email and password using Firebase Auth.
-   * Profile lookup order: Firestore → localStorage cache → email detection.
+   * Profile lookup: RTDB /users/{uid} → SuperAdmin fallback → error.
    *
    * @param {string} email
    * @param {string} password
    * @returns {Promise<Object>} User session object
    */
   static async login(email, password) {
-    console.log('[AuthService] 🔑 Signing in with Firebase Auth:', email);
+    console.log('[AuthService] 🔑 Signing in:', email);
 
-    // Allow demo SuperAdmin without Firebase (local-only fallback)
     if (!auth) {
-      if (email === 'super@admin.com') {
-        return AuthService._mockSuperAdminLogin();
-      }
-      return AuthService._localLogin(email, password);
+      throw new Error('Servicio de autenticación no disponible.');
     }
 
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = credential.user;
 
-      // ── Profile lookup: Firestore first, then localStorage cache ──────────
+      // ── Profile lookup: Realtime Database ─────────────────────────────────
       let userProfile = null;
 
       if (db) {
         try {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userRef = ref(db, `users/${firebaseUser.uid}`);
           const userDocSnap = await Promise.race([
-            getDoc(userDocRef),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('firestore-timeout')), 5000))
+            get(userRef),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('database-timeout')), 5000))
           ]);
           if (userDocSnap.exists()) {
-            userProfile = userDocSnap.data();
+            userProfile = userDocSnap.val();
           }
-        } catch (firestoreErr) {
-          console.warn('[AuthService] Firestore profile load failed — trying cache:', firestoreErr.message);
+        } catch (dbErr) {
+          console.warn('[AuthService] RTDB profile load failed:', dbErr.message);
         }
       }
 
-      // ── Fallback 1: localStorage profile cache (populated on createUser) ──
-      if (!userProfile) {
-        const profileCache = JSON.parse(localStorage.getItem('ua_profile_cache') || '{}');
-        if (profileCache[firebaseUser.uid]) {
-          userProfile = profileCache[firebaseUser.uid];
-          console.log('[AuthService] 📦 Profile loaded from localStorage cache.');
-          // Async: try to write it back to Firestore now (user is authenticated)
-          if (db) {
-            setDoc(doc(db, 'users', firebaseUser.uid), {
-              ...userProfile,
-              createdAt: serverTimestamp()
-            }).then(() => {
-              console.log('[AuthService] ☁️ Profile synced to Firestore from cache.');
-            }).catch(e => console.warn('[AuthService] Could not sync profile:', e.message));
-          }
-        }
-      }
-
-      // ── Fallback 2: dynamic users list ─────────────────────────────────────
-      if (!userProfile) {
-        const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-        const localUser = dynamicUsers.find(u => u.email === email);
-        if (localUser) {
-          userProfile = localUser;
-          console.log('[AuthService] 📦 Profile loaded from ua_dynamic_users cache.');
-        }
-      }
-
-      // ── Fallback 3: SuperAdmin detection by email ──────────────────────────
-      if (!userProfile && email === 'super@admin.com') {
-        userProfile = {
-          displayName: 'Super Administrador',
-          role: 'SUPER_ADMIN',
-          customRole: '',
-          companyId: 'global',
-          branchId: 'global'
-        };
+      // ── Fallback: SuperAdmin detection by email ──────────────────────────
+      if (!userProfile && email === SUPER_ADMIN_EMAIL) {
+        userProfile = { ...SUPER_ADMIN_PROFILE };
+        // Persist SuperAdmin profile to RTDB if it doesn't exist yet
         if (db) {
-          setDoc(doc(db, 'users', firebaseUser.uid), {
+          set(ref(db, `users/${firebaseUser.uid}`), {
             ...userProfile,
             uid: firebaseUser.uid,
             email,
@@ -161,46 +139,12 @@ export class AuthService {
   }
 
   /**
-   * Try to log in from locally cached dynamic users (offline fallback).
-   * @private
-   */
-  static _localLogin(email, password) {
-    const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-    const user = dynamicUsers.find(u => u.email === email && u.password === password);
-
-    if (!user) {
-      throw new Error('Credenciales inválidas. Revisa tu correo y contraseña.');
-    }
-
-    const userSession = {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName || user.email,
-      role: user.role,
-      customRole: user.customRole || '',
-      companyId: user.companyId,
-      branchId: user.branchId || 'main'
-    };
-
-    GlobalStore.set({
-      currentUser: userSession,
-      activeRole: userSession.role,
-      isAuthenticated: true
-    });
-
-    return userSession;
-  }
-
-  /**
    * Creates a new Firebase Auth user using a secondary app instance,
-   * then writes the profile to Firestore via the REST API using the
-   * new user's ID token — bypassing all SDK timing issues.
+   * then performs a dual-write:
+   *   1. /users/{uid} — global user profile
+   *   2. /companies/{companyId}/employees/{uid} — company-scoped employee record
    *
-   * Strategy:
-   * 1. Create user in Firebase Auth via secondary app (CRITICAL)
-   * 2. Get user's ID token immediately from the credential
-   * 3. Write Firestore profile via REST API with that token (reliable)
-   * 4. Cache profile in localStorage as permanent offline fallback
+   * If the user is an OWNER, also updates /companies/{companyId}/info/ownerId.
    *
    * @param {string} email
    * @param {string} password
@@ -211,11 +155,7 @@ export class AuthService {
     console.log('[AuthService] 👤 Creating new user:', email, '| Role:', profileData.role);
 
     if (!auth) {
-      // Fallback: save to localStorage for offline/demo use
-      const uid = `local-${Date.now()}`;
-      AuthService._cacheUserProfile(uid, email, password, profileData);
-      console.log('[AuthService] ⚠️ Firebase not available — saved to localStorage only.');
-      return uid;
+      throw new Error('Servicio de autenticación no disponible.');
     }
 
     // ─── Load secondary app modules ──────────────────────────────────────────
@@ -225,10 +165,13 @@ export class AuthService {
     const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword } = await import(
       'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js'
     );
+    const { ref: dbRef, set: dbSet, serverTimestamp: dbServerTimestamp } = await import(
+      'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js'
+    );
     // ─────────────────────────────────────────────────────────────────────────
 
     const mainApp = auth.app;
-    const projectId = mainApp.options.projectId; // 'super-administrador-df803'
+    const projectId = mainApp.options.projectId;
     const secondaryAppName = `secondary-user-create-${Date.now()}`;
     let secondaryApp = null;
 
@@ -236,68 +179,116 @@ export class AuthService {
       secondaryApp = initializeApp(mainApp.options, secondaryAppName);
       const secondaryAuth = getSecondaryAuth(secondaryApp);
 
-      // ── Step 1: Create user in Firebase Auth (CRITICAL) ───────────────────
+      // ── Step 1: Create user in Firebase Auth via secondary app ────────────
       const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       const newUser = credential.user;
       const newUid = newUser.uid;
       console.log('[AuthService] ✅ Firebase Auth user created. UID:', newUid);
 
-      // ── Step 2: Get ID token from the new user immediately ────────────────
-      // This token proves the new user is authenticated and allows Firestore writes.
+      // ── Step 2: Get ID token from the new user ──────────────────────────
       const idToken = await newUser.getIdToken();
 
-      // ── Step 3: Write profile via Firestore REST API with ID token ────────
-      // Using REST API instead of Firestore SDK avoids all timing/propagation
-      // issues with the secondary app pattern. The ID token is immediately valid.
+      // ── Step 3: Build profile payload ──────────────────────────────────────
       const profilePayload = {
-        fields: {
-          uid:         { stringValue: newUid },
-          email:       { stringValue: email },
-          displayName: { stringValue: profileData.displayName || email },
-          role:        { stringValue: profileData.role },
-          customRole:  { stringValue: profileData.customRole || '' },
-          companyId:   { stringValue: profileData.companyId || 'global' },
-          branchId:    { stringValue: profileData.branchId || 'main' },
-          createdAt:   { timestampValue: new Date().toISOString() }
-        }
+        uid:         newUid,
+        email:       email,
+        displayName: profileData.displayName || email,
+        role:        profileData.role,
+        customRole:  profileData.customRole || '',
+        companyId:   profileData.companyId || 'global',
+        branchId:    profileData.branchId || 'main',
+        createdAt:   Date.now()
       };
 
-      // Route to local emulator if detected at startup, otherwise production.
+      // ── Step 4: Write to /users/{uid} via REST API ──────────────────────
       const useEmulator = window.__useFirebaseEmulator === true;
-      const firestoreUrl = useEmulator
-        ? `http://localhost:8080/v1/projects/${projectId}/databases/(default)/documents/users/${newUid}`
-        : `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${newUid}`;
-      console.log('[AuthService] Writing profile via REST ->', useEmulator ? 'EMULATOR' : 'PRODUCTION');
+      const rtdbUrl = useEmulator
+        ? `http://localhost:9000/users/${newUid}.json?ns=${projectId}-default-rtdb&auth=${idToken}`
+        : `https://${projectId}-default-rtdb.firebaseio.com/users/${newUid}.json?auth=${idToken}`;
 
+      let restOk = false;
+      try {
+        const response = await Promise.race([
+          fetch(rtdbUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profilePayload)
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('REST timeout')), 10000)
+          )
+        ]);
 
-      const response = await Promise.race([
-        fetch(firestoreUrl, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(profilePayload)
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('REST timeout')), 10000)
-        )
-      ]);
-
-      if (response.ok) {
-        console.log('[AuthService] ✅ Firestore profile saved via REST API. UID:', newUid);
-      } else {
-        const errBody = await response.json().catch(() => ({}));
-        console.warn('[AuthService] ⚠️ Firestore REST write failed:', response.status, errBody?.error?.message);
+        if (response.ok) {
+          console.log('[AuthService] ✅ /users/ profile saved via REST. UID:', newUid);
+          restOk = true;
+        } else {
+          const errBody = await response.json().catch(() => ({}));
+          console.warn('[AuthService] ⚠️ REST write failed:', response.status, errBody?.error?.message);
+        }
+      } catch (restErr) {
+        console.warn('[AuthService] ⚠️ REST write exception:', restErr.message);
       }
 
-      // ── Step 4: Always cache locally as permanent offline fallback ─────────
-      AuthService._cacheUserProfile(newUid, email, password, profileData);
+      // SDK fallback for /users/{uid} if REST failed
+      if (!restOk && db) {
+        try {
+          await dbSet(dbRef(db, `users/${newUid}`), {
+            ...profilePayload,
+            createdAt: dbServerTimestamp()
+          });
+          console.log('[AuthService] ✅ /users/ profile saved via SDK fallback. UID:', newUid);
+        } catch (sdkErr) {
+          console.warn('[AuthService] ⚠️ SDK fallback failed:', sdkErr.message);
+        }
+      }
+
+      // ── Step 5: Dual-write to /companies/{companyId}/employees/{uid} ────
+      const companyId = profileData.companyId;
+      if (companyId && companyId !== 'global') {
+        try {
+          await FirestoreService.addEmployeeToCompany(companyId, newUid, {
+            displayName: profileData.displayName || email,
+            email: email,
+            role: profileData.role,
+            customRole: profileData.customRole || '',
+            branchId: profileData.branchId || 'main'
+          });
+          console.log('[AuthService] ✅ Employee dual-write complete for company:', companyId);
+
+          // If the user is an OWNER, set them as the company owner
+          if (profileData.role === 'OWNER' || profileData.role === 'MANAGER') {
+            try {
+              await FirestoreService.updateCompanyInfo(companyId, { ownerId: newUid });
+              console.log('[AuthService] ✅ Company ownerId set to:', newUid);
+            } catch (ownerErr) {
+              console.warn('[AuthService] ⚠️ Could not set ownerId:', ownerErr.message);
+            }
+          }
+        } catch (empErr) {
+          console.warn('[AuthService] ⚠️ Employee dual-write failed:', empErr.message);
+        }
+      }
 
       return newUid;
 
     } catch (authErr) {
       console.error('[AuthService] ❌ User creation failed:', authErr);
+
+      // Translate Firebase Auth error codes to Spanish
+      const code = authErr.code || '';
+      if (code === 'auth/email-already-in-use') {
+        throw new Error(`El correo "${email}" ya está registrado en el sistema. Usa otro correo o recupera la contraseña.`);
+      }
+      if (code === 'auth/invalid-email') {
+        throw new Error('El formato del correo electrónico no es válido.');
+      }
+      if (code === 'auth/weak-password') {
+        throw new Error('La contraseña es muy débil. Usa al menos 6 caracteres.');
+      }
+      if (code === 'auth/network-request-failed') {
+        throw new Error('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      }
       throw authErr;
 
     } finally {
@@ -308,41 +299,13 @@ export class AuthService {
   }
 
   /**
-   * Save user profile to both ua_profile_cache and ua_dynamic_users in localStorage.
-   * @private
-   */
-  static _cacheUserProfile(uid, email, password, profileData) {
-    const entry = {
-      uid,
-      email,
-      password,
-      displayName: profileData.displayName,
-      role: profileData.role,
-      customRole: profileData.customRole || '',
-      companyId: profileData.companyId,
-      branchId: profileData.branchId || 'main'
-    };
-
-    // Profile cache keyed by UID
-    const profileCache = JSON.parse(localStorage.getItem('ua_profile_cache') || '{}');
-    profileCache[uid] = entry;
-    localStorage.setItem('ua_profile_cache', JSON.stringify(profileCache));
-
-    // Dynamic users list (for password-based local login)
-    const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-    const idx = dynamicUsers.findIndex(u => u.email === email);
-    if (idx >= 0) dynamicUsers[idx] = entry;
-    else dynamicUsers.push(entry);
-    localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
-
-    console.log('[AuthService] 💾 Profile cached in localStorage for:', email);
-  }
-
-  /**
    * Log out the current Firebase Auth user.
    */
   static async logout() {
     console.log('[AuthService] 🚪 Signing out...');
+
+    // Clean up all real-time listeners
+    FirestoreService.unsubscribeAll();
 
     if (auth) {
       await signOut(auth).catch(() => { });
@@ -409,47 +372,25 @@ export class AuthService {
       try {
         let userProfile = null;
 
-        // 1. Try Firestore
+        // 1. Try Realtime Database
         if (db) {
           try {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userRef = ref(db, `users/${firebaseUser.uid}`);
             const snap = await Promise.race([
-              getDoc(userDocRef),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('firestore-timeout')), 4000))
+              get(userRef),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('database-timeout')), 4000))
             ]);
             if (snap.exists()) {
-              userProfile = snap.data();
+              userProfile = snap.val();
             }
           } catch (e) {
-            console.warn('[AuthService] Firestore session restore failed:', e.message);
+            console.warn('[AuthService] RTDB session restore failed:', e.message);
           }
         }
 
-        // 2. localStorage profile cache
-        if (!userProfile) {
-          const profileCache = JSON.parse(localStorage.getItem('ua_profile_cache') || '{}');
-          if (profileCache[firebaseUser.uid]) {
-            userProfile = profileCache[firebaseUser.uid];
-            console.log('[AuthService] 📦 Session restored from localStorage cache.');
-          }
-        }
-
-        // 3. Dynamic users list
-        if (!userProfile) {
-          const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-          const localUser = dynamicUsers.find(u => u.uid === firebaseUser.uid || u.email === firebaseUser.email);
-          if (localUser) userProfile = localUser;
-        }
-
-        // 4. SuperAdmin fallback
-        if (!userProfile && firebaseUser.email === 'super@admin.com') {
-          userProfile = {
-            displayName: 'Super Administrador',
-            role: 'SUPER_ADMIN',
-            customRole: '',
-            companyId: 'global',
-            branchId: 'global'
-          };
+        // 2. SuperAdmin fallback
+        if (!userProfile && firebaseUser.email === SUPER_ADMIN_EMAIL) {
+          userProfile = { ...SUPER_ADMIN_PROFILE };
         }
 
         if (userProfile) {
@@ -484,27 +425,5 @@ export class AuthService {
         resolve(null);
       }
     });
-  }
-
-  /**
-   * Internal mock for SuperAdmin demo when Firebase is unavailable
-   * @private
-   */
-  static _mockSuperAdminLogin() {
-    const mockUser = {
-      uid: 'super-admin-local',
-      email: 'super@admin.com',
-      displayName: 'Super Administrador',
-      role: 'SUPER_ADMIN',
-      customRole: '',
-      companyId: 'global',
-      branchId: 'global'
-    };
-    GlobalStore.set({
-      currentUser: mockUser,
-      activeRole: 'SUPER_ADMIN',
-      isAuthenticated: true
-    });
-    return mockUser;
   }
 }

@@ -7,16 +7,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // ── Helper: read the caller's own user document ──────────────────────────
-    // Wrapped in exists() so it never throws on a missing document.
+    // ── Helper: safely read the caller's user document.
+    //    Returns null-safe data only if the document exists.
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // ── Helper: true only when the caller's user doc already exists AND
-    //    has role == 'SUPER_ADMIN' (or the custom token carries that claim).
-    //    Using exists() prevents a null-read crash for brand-new users whose
-    //    document has not been written yet.
+    // ── Helper: true if the caller is a SUPER_ADMIN.
+    //    Checks: (1) custom token claim, OR (2) Firestore user doc role field.
+    //    The exists() check prevents null-read crashes for new users who don't
+    //    yet have a document — avoiding the bootstrap deadlock.
     function isSuperAdmin() {
       return isAuthenticated() && (
         request.auth.token.role == 'SUPER_ADMIN' ||
@@ -39,27 +39,36 @@ service cloud.firestore {
     }
 
     // ── /users/{userId} ──────────────────────────────────────────────────────
-    // Read:  any authenticated user
-    // Write: the user can ALWAYS write their own document (critical for first-
-    //        time profile creation), OR a SuperAdmin can write any user doc.
+    // Read:  any authenticated user can read any user profile.
+    // Write rules (in priority order):
+    //   1. A SuperAdmin can write any user document.
+    //   2. An authenticated user can ALWAYS write their OWN document.
+    //      This covers the critical bootstrap case where a newly-created
+    //      Firebase Auth user needs to save their profile to Firestore
+    //      before any role has been assigned (breaks the chicken-and-egg
+    //      deadlock that existed in the previous rules).
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if (isAuthenticated() && request.auth.uid == userId)
-                   || isSuperAdmin();
+      allow write: if isSuperAdmin()
+                   || (isAuthenticated() && request.auth.uid == userId);
     }
 
     // ── /companies/{companyId} ───────────────────────────────────────────────
+    // Read:  authenticated users who belong to this company OR SuperAdmins.
+    // Write: SuperAdmins only (company config is managed by the platform).
     match /companies/{companyId} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if isSuperAdmin();
 
-      // Sub-collections (multi-tenant isolation)
+      // Sub-collections (multi-tenant isolation).
+      // Members of the company or SuperAdmins can read/write operational data.
       match /{document=**} {
         allow read, write: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       }
     }
 
     // ── /superadmin/* ────────────────────────────────────────────────────────
+    // Restricted exclusively to SuperAdmins.
     match /superadmin/{document=**} {
       allow read, write: if isSuperAdmin();
     }

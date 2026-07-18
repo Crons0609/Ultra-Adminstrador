@@ -10,18 +10,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { AuthService } from '../../../services/auth.service.js';
-import { db } from '../../../config/firebase.config.js';
-
-// Firestore functions (CDN v12.16.0)
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  query,
-  where,
-  serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+import { FirestoreService } from '../../../services/firestore.service.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
@@ -101,46 +90,28 @@ export class EmployeesView extends Component {
     this.modalInstance = null;
   }
 
-  /**
-   * Loads employees from Cloud Firestore
-   */
   async loadEmployees() {
-    if (!db) {
-      // Fallback local simulation if Firebase is offline
-      const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-      const localEmployees = dynamicUsers.filter(u => u.companyId === this.companyId && u.role !== 'SUPER_ADMIN' && u.role !== 'OWNER');
-      this.state.employees = localEmployees;
-      this.refreshTable(localEmployees);
-      return;
-    }
-
     try {
-      console.log('[EmployeesView] Cargando empleados desde Firestore para la empresa:', this.companyId);
-      const usersRef = collection(db, 'users');
-      // Query users of this company where role is an employee role
-      const q = query(usersRef, where('companyId', '==', this.companyId));
-      
-      const querySnapshot = await getDocs(q);
-      const employees = [];
-      querySnapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        // Exclude owner themselves
-        if (data.role !== 'OWNER' && data.role !== 'SUPER_ADMIN') {
-          employees.push({
-            uid: docSnap.id,
-            email: data.email,
-            displayName: data.displayName,
-            role: data.role,
-            customRole: data.customRole || '',
-            companyId: data.companyId,
-            branchId: data.branchId || 'main'
-          });
-        }
-      });
+      console.log('[EmployeesView] Cargando empleados desde /companies/', this.companyId, '/employees/');
+      const employees = await FirestoreService.getCompanyEmployees(this.companyId);
 
-      this.state.employees = employees;
-      this.refreshTable(employees);
-      console.log('[EmployeesView] ✅ Carga exitosa de empleados. Total:', employees.length);
+      // Filter out the OWNER and SUPER_ADMIN roles — they're not "employees" in this view
+      const filtered = employees
+        .filter(e => e.role !== 'OWNER' && e.role !== 'SUPER_ADMIN')
+        .map(e => ({
+          uid: e.uid || e.id,
+          email: e.email,
+          displayName: e.displayName,
+          role: e.role,
+          customRole: e.customRole || '',
+          companyId: this.companyId,
+          branchId: e.branchId || 'main',
+          active: e.active !== false
+        }));
+
+      this.state.employees = filtered;
+      this.refreshTable(filtered);
+      console.log('[EmployeesView] ✅ Empleados cargados. Total:', filtered.length);
     } catch (e) {
       console.error('[EmployeesView] Fallo al cargar empleados:', e);
       NotificationService.error('Error al sincronizar lista de empleados.');
@@ -268,39 +239,14 @@ export class EmployeesView extends Component {
     const password = this.modalInstance.$('#emp-password').value;
 
     try {
-      // 1. Create user in Firebase Auth and profile in Firestore
-      if (db) {
-        console.log('[EmployeesView] Creando cuenta del empleado en la nube...');
-        await AuthService.createUser(email, password, {
-          displayName: name,
-          role: role,
-          customRole: customRole,
-          companyId: this.companyId,
-          branchId: this.branchId
-        });
-      } else {
-        // Fallback local persistence if offline
-        const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-        if (dynamicUsers.some(u => u.email === email)) {
-          alert('Este correo ya está registrado.');
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Guardar Empleado';
-          }
-          return;
-        }
-        dynamicUsers.push({
-          uid: `emp-${Date.now()}`,
-          email: email,
-          password: password,
-          displayName: name,
-          role: role,
-          customRole: customRole,
-          companyId: this.companyId,
-          branchId: this.branchId
-        });
-        localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
-      }
+      console.log('[EmployeesView] Creando cuenta del empleado en la nube...');
+      await AuthService.createUser(email, password, {
+        displayName: name,
+        role: role,
+        customRole: customRole,
+        companyId: this.companyId,
+        branchId: this.branchId
+      });
 
       NotificationService.success(`Trabajador "${name}" agregado exitosamente.`);
       

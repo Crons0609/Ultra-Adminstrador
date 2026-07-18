@@ -2,11 +2,16 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { AuthService } from '../../../services/auth.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
-import { db } from '../../../config/firebase.config.js';
+import { FirestoreService } from '../../../services/firestore.service.js';
+import { GlobalStore } from '../../../core/state.js';
 
 export class SettingsView extends Component {
   constructor(params = {}) {
     super(params);
+
+    const currentUser = GlobalStore.getState().currentUser || {};
+    this.companyId = currentUser.companyId || 'global';
+
     this.layout = new PageLayout({
       title: 'Configuración Global',
       subtitle: 'Configuraciones de límites globales del servidor, variables del sistema y mantenimiento.',
@@ -18,21 +23,23 @@ export class SettingsView extends Component {
             <h3 class="text-lg font-semibold mb-4">⚙️ Ajustes del SaaS</h3>
             <form id="saas-settings-form" style="display: flex; flex-direction: column; gap: var(--space-4);">
               <div class="form-group">
-                <label class="form-label">Nombre del SaaS</label>
-                <input type="text" class="input input-md" value="Ultra Administrador" />
+                <label class="form-label" for="saas-name-input">Nombre del SaaS</label>
+                <input type="text" id="saas-name-input" class="input input-md" value="Ultra Administrador" required />
               </div>
               <div class="form-group">
-                <label class="form-label">Límite de Sucursales por Restaurante (Plan Basic)</label>
-                <input type="number" class="input input-md" value="1" />
+                <label class="form-label" for="saas-branch-limit-input">Límite de Sucursales por Restaurante (Plan Basic)</label>
+                <input type="number" id="saas-branch-limit-input" class="input input-md" value="1" required min="1" />
               </div>
               <div class="form-group">
                 <label class="form-label">Modo Mantenimiento</label>
                 <div style="display: flex; align-items: center; gap: var(--space-2); margin-top: 4px;">
                   <input type="checkbox" id="mantenimiento-toggle" />
-                  <label for="mantenimiento-toggle" class="text-sm">Activar pantalla de mantenimiento para todos los clientes</label>
+                  <label for="mantenimiento-toggle" class="text-sm" style="cursor: pointer;">Activar pantalla de mantenimiento para todos los clientes</label>
                 </div>
               </div>
-              <button class="btn btn-primary btn-md" style="align-self: flex-start; margin-top: var(--space-2);">Guardar Configuración</button>
+              <button type="submit" id="btn-save-settings" class="btn btn-primary btn-md" style="align-self: flex-start; margin-top: var(--space-2);">
+                Guardar Configuración
+              </button>
             </form>
           </div>
 
@@ -76,6 +83,9 @@ export class SettingsView extends Component {
     // Bind afterMount manually
     this.afterMount(element);
 
+    // Load SaaS configuration from Firebase Realtime Database
+    this.loadSaaSSettings(element);
+
     return element;
   }
 
@@ -85,10 +95,7 @@ export class SettingsView extends Component {
 
     const saasForm = root.querySelector('#saas-settings-form');
     if (saasForm) {
-      saasForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        NotificationService.success('Ajustes globales guardados.');
-      });
+      saasForm.addEventListener('submit', (e) => this.handleSaveSettings(e));
     }
 
     const createSaForm = root.querySelector('#create-superadmin-form');
@@ -98,7 +105,73 @@ export class SettingsView extends Component {
   }
 
   /**
-   * Registers a new SUPER_ADMIN user in Firebase Auth and Firestore
+   * Load SaaS Global Config from companies/global/config
+   */
+  async loadSaaSSettings(element) {
+    try {
+      console.log('[SettingsView] Cargando configuración global del SaaS...');
+      const config = await FirestoreService.getCompanyConfig(this.companyId);
+      
+      if (config) {
+        const nameInput = element.querySelector('#saas-name-input');
+        const limitInput = element.querySelector('#saas-branch-limit-input');
+        const maintInput = element.querySelector('#mantenimiento-toggle');
+        
+        if (nameInput) nameInput.value = config.saasName || 'Ultra Administrador';
+        if (limitInput) limitInput.value = config.branchLimit || 1;
+        if (maintInput) maintInput.checked = !!config.maintenanceMode;
+        
+        console.log('[SettingsView] ✅ Configuración cargada desde RTDB.');
+      }
+    } catch (err) {
+      console.warn('[SettingsView] No se pudo cargar la configuración de RTDB:', err.message);
+    }
+  }
+
+  /**
+   * Saves global settings to Firebase RTDB
+   */
+  async handleSaveSettings(e) {
+    e.preventDefault();
+    const root = this.layout.element;
+    if (!root) return;
+
+    const nameInput = root.querySelector('#saas-name-input');
+    const limitInput = root.querySelector('#saas-branch-limit-input');
+    const maintInput = root.querySelector('#mantenimiento-toggle');
+    const saveBtn = root.querySelector('#btn-save-settings');
+
+    if (!nameInput || !limitInput || !maintInput) return;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Guardando...';
+    }
+
+    const saasName = nameInput.value.trim();
+    const branchLimit = Number(limitInput.value);
+    const maintenanceMode = maintInput.checked;
+
+    try {
+      await FirestoreService.updateCompanyConfig(this.companyId, {
+        saasName,
+        branchLimit,
+        maintenanceMode
+      });
+      NotificationService.success('Ajustes globales guardados en Firebase.');
+    } catch (err) {
+      console.error('[SettingsView] Error al guardar configuración:', err);
+      alert(`Error al guardar configuración: ${err.message || err}`);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar Configuración';
+      }
+    }
+  }
+
+  /**
+   * Registers a new SUPER_ADMIN user in Firebase Auth and RTDB
    */
   async handleCreateSuperAdmin(e) {
     e.preventDefault();
@@ -121,30 +194,14 @@ export class SettingsView extends Component {
     submitBtn.textContent = 'Registrando en la nube...';
 
     try {
-      if (db) {
-        console.log('[SettingsView] Registrando nuevo SuperAdministrador...');
-        await AuthService.createUser(email, password, {
-          displayName: displayName,
-          role: 'SUPER_ADMIN',
-          companyId: 'global',
-          branchId: 'global'
-        });
-        NotificationService.success(`SuperAdministrador "${displayName}" registrado exitosamente.`);
-      } else {
-        // Fallback local persistence if offline
-        const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-        dynamicUsers.push({
-          uid: `sa-${Date.now()}`,
-          email: email,
-          password: password,
-          displayName: displayName,
-          role: 'SUPER_ADMIN',
-          companyId: 'global',
-          branchId: 'global'
-        });
-        localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
-        NotificationService.success(`[Offline] SuperAdministrador guardado localmente.`);
-      }
+      console.log('[SettingsView] Registrando nuevo SuperAdministrador...');
+      await AuthService.createUser(email, password, {
+        displayName: displayName,
+        role: 'SUPER_ADMIN',
+        companyId: 'global',
+        branchId: 'global'
+      });
+      NotificationService.success(`SuperAdministrador "${displayName}" registrado exitosamente.`);
 
       // Reset form fields
       nameInput.value = '';

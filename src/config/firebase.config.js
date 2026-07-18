@@ -13,8 +13,8 @@ import { initializeApp }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
 import { getAuth, connectAuthEmulator }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
-import { getFirestore, connectFirestoreEmulator }
-  from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+import { getDatabase, connectDatabaseEmulator }
+  from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { getStorage, connectStorageEmulator }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js';
 import { getFunctions, connectFunctionsEmulator }
@@ -38,7 +38,7 @@ const firebaseConfig = {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Detect environment ───────────────────────────────────────────────────────
+// Detect environment ───────────────────────────────────────────────────────
 const IS_LOCAL = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 // Expose emulator flag globally so auth.service.js can route REST calls correctly.
@@ -48,7 +48,7 @@ window.__useFirebaseEmulator = false;
 // ─── Exported Firebase Service Instances ─────────────────────────────────────
 export let firebaseApp = null;
 export let auth        = null;
-export let db          = null;
+export let db          = null; // Realtime Database Instance
 export let storage     = null;
 export let functions   = null;
 export let analytics   = null;
@@ -64,8 +64,8 @@ try {
   // 2. Authentication
   auth = getAuth(firebaseApp);
 
-  // 3. Firestore Database
-  db = getFirestore(firebaseApp);
+  // 3. Realtime Database
+  db = getDatabase(firebaseApp);
 
   // 4. Cloud Storage
   storage = getStorage(firebaseApp);
@@ -81,11 +81,11 @@ try {
       .then(() => {
         // Emulator responded — connect all SDK services
         connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-        connectFirestoreEmulator(db, 'localhost', 8080);
+        connectDatabaseEmulator(db, 'localhost', 9000);
         connectStorageEmulator(storage, 'localhost', 9199);
         connectFunctionsEmulator(functions, 'localhost', 5001);
         window.__useFirebaseEmulator = true;
-        console.log('[Firebase] 🧪 Emuladores locales conectados (Auth:9099 · Firestore:8080 · Storage:9199 · Functions:5001).');
+        console.log('[Firebase] 🧪 Emuladores locales conectados (Auth:9099 · Database:9000 · Storage:9199 · Functions:5001).');
       })
       .catch(() => {
         // Emulator not running — use production Firebase normally

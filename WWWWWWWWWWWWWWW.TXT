@@ -1,0 +1,52 @@
+la estructura estara asi en firebase. 
+
+el programador administrara todas y cada una de las cuentas de los negocios. al registrar un dueño o gerente. se creara una rama donde el dueño o gerente. creara subramas donde estaran alojados los empleados como cocina, mesero, caja, etc,etc
+
+ekl programador sera el que admnistre todo y vera los flujos tecnicos.
+
+
+
+
+
+Navigate to http://localhost:3000/#/login.
+1. Log in as Super Admin:
+   - Email: superadmin@ultraadmin.com
+   - Password: SuperAdmin@2024!
+2. Go to Configuración Global:
+   - Change 'Nombre del SaaS' to 'Ultra Administrador Pro' and click 'Guardar Configuración'.
+   - Verify success notification.
+3. Reload page and verify the name stays 'Ultra Administrador Pro'.
+4. Go to Gestión de Empresas (click 'Negocios' or similar sidebar option):
+   - Click 'Registrar Negocio'.
+   - Name: 'La Pizzería de la Nube'
+   - Owner Email: pizzero@lanube.com
+   - Owner Password: PizzaPassword123
+   - Leave other fields as defaults.
+   - Click 'Guardar Empresa'.
+   - Wait for the owner credentials modal, click 'Entendido'.
+5. In the companies table, find 'La Pizzería de la Nube' and click on its row.
+6. Verify the owner profile is loaded under 'Usuarios de este Negocio'.
+7. Click '+ Agregar Usuario' in the modal:
+   - Name: 'Carlos Mesero'
+   - Email: carlos@lanube.com
+   - Password: CarlosPassword123
+   - Role: Mesero
+   - Click 'Guardar Usuario en Firebase'.
+   - Wait for modal to refresh and verify Carlos is in the list.
+   - Close the company modal.
+8. Click 'Cerrar Sesión' (logout button).
+9. Log in as the newly created Owner:
+   - Email: pizzero@lanube.com
+   - Password: PizzaPassword123
+10. Verify you are logged in and the Dashboard displays successfully.
+11. Click on 'Personal' or 'Empleados' in the sidebar to go to the employee management view.
+12. Verify 'Carlos Mesero' is listed in the table.
+13. Click '+ Agregar Trabajador':
+    - Name: 'Ana Cocinera'
+    - Email: ana@lanube.com
+    - Password: AnaPassword123
+    - Role: Cocinero
+    - Click 'Guardar Empleado'.
+    - Verify Ana Cocinera is added to the table.
+14. Log out.
+Report all actions taken and whether all steps completed successfully.

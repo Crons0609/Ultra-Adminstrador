@@ -218,4 +218,21 @@ export class Chart extends Component {
       );
     });
   }
+
+  /**
+   * Dynamically update chart labels and datasets and trigger redraw.
+   * @param {Array<string>} labels
+   * @param {Array<Object>} datasets
+   */
+  updateData(labels, datasets) {
+    this.props.labels = labels;
+    this.props.datasets = datasets;
+    if (this.ctx && this.canvas) {
+      if (this.props.type === 'bar') {
+        this.drawBarChart();
+      } else if (this.props.type === 'line') {
+        this.drawLineChart();
+      }
+    }
+  }
 }

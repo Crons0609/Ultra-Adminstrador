@@ -6,32 +6,14 @@ import { Company } from '../../../models/company.model.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { AuthService } from '../../../services/auth.service.js';
-import { db } from '../../../config/firebase.config.js';
-
-// Firestore functions (CDN v12.16.0)
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  updateDoc,
-  serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+import { FirestoreService } from '../../../services/firestore.service.js';
 
 export class CompaniesView extends Component {
   constructor(params = {}) {
     super(params);
 
-    // Initial mock fallback state
-    const defaultCompanies = [
-      { id: '1', name: 'Burger & Co.', plan: 'PREMIUM', status: 'ACTIVO', branches: 3, users: 12, businessType: 'Restaurante', config: { enableKDS: true, enableWhatsApp: true, enableBilling: true, enableQR: true } },
-      { id: '2', name: 'La Cantina del Sol', plan: 'BASIC', status: 'FALTA_PAGO', branches: 1, users: 5, businessType: 'Bar', config: { enableKDS: false, enableWhatsApp: true, enableBilling: true, enableQR: true } },
-      { id: '3', name: 'Café Bistro Madrid', plan: 'FREE', status: 'INACTIVO', branches: 2, users: 4, businessType: 'Cafetería', config: { enableKDS: true, enableWhatsApp: false, enableBilling: false, enableQR: true } }
-    ];
-
-    if (!GlobalStore.getState().companies) {
-      GlobalStore.set({ companies: defaultCompanies });
-    }
+    // Initialize store with empty list — data will be loaded from Firebase RTDB
+    GlobalStore.set({ companies: [] });
 
     // Initialize DataTable
     this.table = new DataTable({
@@ -100,37 +82,13 @@ export class CompaniesView extends Component {
     this.modalInstance = null;
   }
 
-  /**
-   * Load companies directly from Firestore if available
-   */
   async loadCompanies() {
-    if (!db) {
-      console.warn('[CompaniesView] Firestore no conectado. Ejecutando en modo simulación local.');
-      return;
-    }
-
     try {
-      const querySnapshot = await getDocs(collection(db, 'companies'));
-      const companies = [];
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        companies.push({
-          id: docSnap.id,
-          name: data.name,
-          plan: data.plan,
-          status: data.status,
-          branches: data.branches || 1,
-          users: data.users || 1,
-          businessType: data.config?.businessType || 'Restaurante',
-          config: data.config || {}
-        });
-      });
-
-      // Update store and trigger table redraw
+      const companies = await FirestoreService.listAllCompanies();
       GlobalStore.set({ companies });
-      console.log('[CompaniesView] ✅ Carga exitosa desde Firestore. Total:', companies.length);
+      console.log('[CompaniesView] ✅ Carga desde RTDB. Total:', companies.length);
     } catch (e) {
-      console.error('[CompaniesView] Fallo al leer de Firestore:', e);
+      console.error('[CompaniesView] Fallo al leer de la base de datos:', e);
       NotificationService.error('Error al sincronizar con la base de datos remota.');
     }
   }
@@ -310,65 +268,39 @@ export class CompaniesView extends Component {
     const enableWhatsApp = this.modalInstance.$('#mod-whatsapp').checked;
     const enableBilling = this.modalInstance.$('#mod-billing').checked;
 
-    const newCompanyId = String(Date.now());
-    const companyData = {
-      name: name,
-      plan: plan,
-      status: status,
-      branches: 1,
-      users: 1,
-      config: {
+    // Generate a unique company ID
+    const newCompanyId = FirestoreService.generateCompanyId();
+
+    try {
+      // 1. Create full company branch structure in RTDB atomically
+      console.log('[CompaniesView] Creando rama de empresa en RTDB...');
+      await FirestoreService.createCompanyBranch(newCompanyId, {
+        name,
+        businessType,
+        plan,
+        status
+      }, {
         enableKDS,
         enableQR,
         enableWhatsApp,
-        enableBilling,
-        businessType
-      }
-    };
+        enableBilling
+      });
 
-    try {
-      // 1. Save company document in Cloud Firestore
-      if (db) {
-        console.log('[CompaniesView] Guardando negocio en Firestore...');
-        await setDoc(doc(db, 'companies', newCompanyId), {
-          ...companyData,
-          createdAt: serverTimestamp()
-        });
+      // 2. Create the Owner user in Firebase Auth + dual-write to /users + /companies/employees
+      console.log('[CompaniesView] Creando cuenta del dueño en Firebase Auth...');
+      const ownerUid = await AuthService.createUser(ownerEmail, ownerPassword, {
+        displayName: `Dueño - ${name}`,
+        role: 'OWNER',
+        companyId: newCompanyId,
+        branchId: 'main'
+      });
 
-        // 2. Create the Owner user account in Firebase Auth (using secondary App)
-        console.log('[CompaniesView] Creando cuenta del dueño en Firebase Auth...');
-        await AuthService.createUser(ownerEmail, ownerPassword, {
-          displayName: `Dueño - ${name}`,
-          role: 'OWNER',
-          companyId: newCompanyId,
-          branchId: 'main'
-        });
-      } else {
-        // Fallback local persistence if offline
-        const dynamicUsers = JSON.parse(localStorage.getItem('ua_dynamic_users') || '[]');
-        dynamicUsers.push({
-          uid: `owner-${Date.now()}`,
-          email: ownerEmail,
-          password: ownerPassword,
-          displayName: `Dueño - ${name}`,
-          role: 'OWNER',
-          companyId: newCompanyId,
-          branchId: 'main'
-        });
-        localStorage.setItem('ua_dynamic_users', JSON.stringify(dynamicUsers));
-      }
+      // 3. Set ownerId in the company info (AuthService does this for OWNER role,
+      //    but we ensure it here as well)
+      await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: ownerUid });
 
-      // 3. Update global store reactive array
-      const currentCompanies = GlobalStore.getState().companies || [];
-      const updatedCompanies = [
-        ...currentCompanies,
-        {
-          id: newCompanyId,
-          ...companyData,
-          businessType
-        }
-      ];
-      GlobalStore.set({ companies: updatedCompanies });
+      // 4. Reload companies from RTDB to get fresh state
+      await this.loadCompanies();
 
       // Close registration modal
       this.modalInstance.close();
@@ -465,74 +397,152 @@ export class CompaniesView extends Component {
   }
 
   /**
-   * Opens the edit/status administration modal when clicking a row
-   * @param {Object} row 
+   * Opens the edit/status administration modal when clicking a row.
+   * Loads company users from Firestore and shows them in the modal.
+   * @param {Object} row
    */
-  openEditCompanyModal(row) {
+  async openEditCompanyModal(row) {
+    // Load employees for this company from /companies/{id}/employees/
+    let companyUsers = [];
+    try {
+      companyUsers = await FirestoreService.getCompanyEmployees(row.id);
+    } catch (e) {
+      console.warn('[CompaniesView] Could not load company employees:', e.message);
+    }
+
+    const roleLabel = { OWNER: 'Dueño', MANAGER: 'Manager', CASHIER: 'Cajero', WAITER: 'Mesero', BARTENDER: 'Bartender', KITCHEN: 'Cocina' };
+
+    const usersListHTML = companyUsers.length > 0
+      ? companyUsers.map(u => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--color-bg-tertiary); border-radius: var(--radius-sm); font-size: 0.8rem;">
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <span style="width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;">${(u.displayName || u.email || '?')[0].toUpperCase()}</span>
+              <div>
+                <div style="font-weight: 600; color: var(--color-text-primary);">${u.displayName || 'Sin nombre'}</div>
+                <div style="color: var(--color-text-secondary); font-size: 0.7rem;">${u.email || ''}</div>
+              </div>
+            </div>
+            <span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-accent-muted, rgba(99,102,241,.15)); color: var(--color-accent);">${roleLabel[u.role] || u.role}</span>
+          </div>
+        `).join('')
+      : `<p style="font-size: 0.8rem; color: var(--color-text-secondary); text-align: center; padding: var(--space-3) 0;">No hay usuarios registrados para este negocio.</p>`;
+
     const formHTML = `
-      <form id="edit-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
-        <div class="form-group">
-          <label class="form-label" for="edit-comp-name">Nombre de la Empresa</label>
-          <input type="text" id="edit-comp-name" class="input input-md" value="${row.name}" required />
-        </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-4); max-height: 75vh; overflow-y: auto; padding-right: 4px;">
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+        <!-- Company Settings -->
+        <form id="edit-company-form" style="display: flex; flex-direction: column; gap: var(--space-3); color: var(--color-text-primary);">
           <div class="form-group">
-            <label class="form-label" for="edit-comp-type">Tipo de Negocio</label>
-            <select id="edit-comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="Restaurante" ${row.businessType === 'Restaurante' ? 'selected' : ''}>Restaurante</option>
-              <option value="Bar" ${row.businessType === 'Bar' ? 'selected' : ''}>Bar</option>
-              <option value="Cafetería" ${row.businessType === 'Cafetería' ? 'selected' : ''}>Cafetería</option>
-              <option value="Food Truck" ${row.businessType === 'Food Truck' ? 'selected' : ''}>Food Truck</option>
-              <option value="Tienda de Alimentos" ${row.businessType === 'Tienda de Alimentos' ? 'selected' : ''}>Tienda de Alimentos</option>
-              <option value="Discoteca" ${row.businessType === 'Discoteca' ? 'selected' : ''}>Discoteca / Club</option>
+            <label class="form-label" for="edit-comp-name">Nombre de la Empresa</label>
+            <input type="text" id="edit-comp-name" class="input input-md" value="${row.name}" required />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+            <div class="form-group">
+              <label class="form-label" for="edit-comp-type">Tipo de Negocio</label>
+              <select id="edit-comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                <option value="Restaurante" ${row.businessType === 'Restaurante' ? 'selected' : ''}>Restaurante</option>
+                <option value="Bar" ${row.businessType === 'Bar' ? 'selected' : ''}>Bar</option>
+                <option value="Cafetería" ${row.businessType === 'Cafetería' ? 'selected' : ''}>Cafetería</option>
+                <option value="Food Truck" ${row.businessType === 'Food Truck' ? 'selected' : ''}>Food Truck</option>
+                <option value="Tienda de Alimentos" ${row.businessType === 'Tienda de Alimentos' ? 'selected' : ''}>Tienda de Alimentos</option>
+                <option value="Discoteca" ${row.businessType === 'Discoteca' ? 'selected' : ''}>Discoteca / Club</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-comp-plan">Plan SaaS</label>
+              <select id="edit-comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                <option value="PREMIUM" ${row.plan === 'PREMIUM' ? 'selected' : ''}>Premium ($999/mes)</option>
+                <option value="BASIC" ${row.plan === 'BASIC' ? 'selected' : ''}>Basic ($499/mes)</option>
+                <option value="FREE" ${row.plan === 'FREE' ? 'selected' : ''}>Free (Demo)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-comp-status">Estado del Negocio</label>
+            <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+              <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
+              <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
+              <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="edit-comp-plan">Plan SaaS</label>
-            <select id="edit-comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="PREMIUM" ${row.plan === 'PREMIUM' ? 'selected' : ''}>Premium ($999/mes)</option>
-              <option value="BASIC" ${row.plan === 'BASIC' ? 'selected' : ''}>Basic ($499/mes)</option>
-              <option value="FREE" ${row.plan === 'FREE' ? 'selected' : ''}>Free (Demo)</option>
-            </select>
+
+          <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
+            <label class="form-label mb-2" style="font-weight: 600;">Módulos Habilitados</label>
+            <div class="d-flex flex-column gap-2">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-kds" ${row.config?.enableKDS ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Pantalla de Cocina (KDS)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-qr" ${row.config?.enableQR ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Menú Digital QR para mesas</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Alertas e Informes automáticos vía WhatsApp</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
+              </label>
+            </div>
+          </div>
+        </form>
+
+        <!-- Users Section -->
+        <div style="border-top: 2px solid var(--color-border); padding-top: var(--space-4);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3);">
+            <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-primary); margin: 0;">
+              👥 Usuarios de este Negocio
+              <span style="font-size: 0.75rem; font-weight: 400; color: var(--color-text-secondary); margin-left: 6px;">(${companyUsers.length} registrado${companyUsers.length !== 1 ? 's' : ''})</span>
+            </h4>
+            <button class="btn btn-primary btn-sm" id="btn-toggle-add-user" style="font-size: 0.75rem; padding: 4px 12px;">+ Agregar Usuario</button>
+          </div>
+
+          <!-- User List -->
+          <div id="company-users-list" style="display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3);">
+            ${usersListHTML}
+          </div>
+
+          <!-- Add User Form (hidden by default) -->
+          <div id="add-user-panel" style="display: none; border: 1px dashed var(--color-accent); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-bg-tertiary);">
+            <p style="font-size: 0.8rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-3);">➕ Nuevo Usuario para: ${row.name}</p>
+            <form id="add-user-form" style="display: flex; flex-direction: column; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem;">Nombre Completo</label>
+                <input type="text" id="new-user-name" class="input input-md" placeholder="Ej. Juan Pérez" required />
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.8rem;">Correo Electrónico</label>
+                  <input type="email" id="new-user-email" class="input input-md" placeholder="usuario@negocio.com" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.8rem;">Contraseña</label>
+                  <input type="password" id="new-user-password" class="input input-md" placeholder="Mín. 6 caracteres" minlength="6" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem;">Rol / Puesto</label>
+                <select id="new-user-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                  <option value="MANAGER">Manager (Administrador del local)</option>
+                  <option value="CASHIER">Cajero</option>
+                  <option value="WAITER">Mesero</option>
+                  <option value="BARTENDER">Bartender</option>
+                  <option value="KITCHEN">Personal de Cocina</option>
+                </select>
+              </div>
+              <button type="submit" id="btn-save-new-user" class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--space-1);">
+                💾 Guardar Usuario en Firebase
+              </button>
+              <p id="add-user-error" style="display:none; color: var(--color-danger, #ef4444); font-size: 0.78rem; text-align: center;"></p>
+            </form>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="edit-comp-status">Estado del Negocio (Administración de Cuenta)</label>
-          <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-            <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
-            <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
-            <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
-          </select>
-        </div>
-
-        <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
-          <label class="form-label mb-2" style="font-weight: 600;">Parámetros y Módulos Habilitados</label>
-          
-          <div class="d-flex flex-column gap-2">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="edit-mod-kds" ${row.config?.enableKDS ? 'checked' : ''} style="accent-color: var(--color-accent);" />
-              <span>Pantalla de Cocina (KDS)</span>
-            </label>
-            
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="edit-mod-qr" ${row.config?.enableQR ? 'checked' : ''} style="accent-color: var(--color-accent);" />
-              <span>Menú Digital QR para mesas</span>
-            </label>
-            
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp ? 'checked' : ''} style="accent-color: var(--color-accent);" />
-              <span>Alertas e Informes automáticos vía WhatsApp</span>
-            </label>
-            
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} style="accent-color: var(--color-accent);" />
-              <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
-            </label>
-          </div>
-        </div>
-      </form>
+      </div>
     `;
 
     const footerHTML = `
@@ -544,86 +554,145 @@ export class CompaniesView extends Component {
       title: `Administrar Negocio: ${row.name}`,
       bodyHTML: formHTML,
       footerHTML: footerHTML,
-      size: 'md'
+      size: 'lg'
     });
 
     document.body.appendChild(this.modalInstance.mount());
 
+    // Cancel button
     const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => this.modalInstance.close());
+    if (cancelBtn) cancelBtn.addEventListener('click', () => this.modalInstance.close());
+
+    // Save company settings button
+    const saveBtn = this.modalInstance.$('#modal-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', () => this.submitEditCompany(row.id));
+
+    // Toggle add-user panel
+    const toggleAddUser = this.modalInstance.$('#btn-toggle-add-user');
+    const addUserPanel = this.modalInstance.$('#add-user-panel');
+    if (toggleAddUser && addUserPanel) {
+      toggleAddUser.addEventListener('click', () => {
+        const isVisible = addUserPanel.style.display !== 'none';
+        addUserPanel.style.display = isVisible ? 'none' : 'block';
+        toggleAddUser.textContent = isVisible ? '+ Agregar Usuario' : '✕ Cancelar';
+      });
     }
 
-    const saveBtn = this.modalInstance.$('#modal-save-btn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => this.submitEditCompany(row.id));
+    // Add user form submission
+    const addUserForm = this.modalInstance.$('#add-user-form');
+    if (addUserForm) {
+      addUserForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.submitAddUserToCompany(row.id, row.name);
+      });
+    }
+  }
+
+  /**
+   * Creates a new user account and saves their profile linked to a company.
+   * @param {string} companyId
+   * @param {string} companyName
+   */
+  async submitAddUserToCompany(companyId, companyName) {
+    const saveBtn = this.modalInstance.$('#btn-save-new-user');
+    const errorEl = this.modalInstance.$('#add-user-error');
+
+    const displayName  = this.modalInstance.$('#new-user-name').value.trim();
+    const email        = this.modalInstance.$('#new-user-email').value.trim();
+    const password     = this.modalInstance.$('#new-user-password').value;
+    const role         = this.modalInstance.$('#new-user-role').value;
+
+    if (!displayName || !email || !password) return;
+
+    if (errorEl) errorEl.style.display = 'none';
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando en Firebase...'; }
+
+    try {
+      const newUid = await AuthService.createUser(email, password, {
+        displayName,
+        role,
+        companyId,
+        branchId: 'main'
+      });
+
+      console.log(`[CompaniesView] ✅ User "${email}" (${role}) added to company ${companyId}. UID: ${newUid}`);
+      NotificationService.success(`Usuario "${displayName}" registrado exitosamente en ${companyName}.`);
+
+      // Update the users count in GlobalStore
+      const companies = GlobalStore.getState().companies || [];
+      const updated = companies.map(c => {
+        if (c.id === companyId) return { ...c, users: (c.users || 0) + 1 };
+        return c;
+      });
+      GlobalStore.set({ companies: updated });
+
+      // Close modal and reopen to refresh user list
+      this.modalInstance.close();
+      // Small delay for UX — then reopen with refreshed data
+      setTimeout(() => {
+        const refreshedRow = (GlobalStore.getState().companies || []).find(c => c.id === companyId);
+        if (refreshedRow) this.openEditCompanyModal(refreshedRow);
+      }, 300);
+
+    } catch (err) {
+      console.error('[CompaniesView] Error adding user to company:', err);
+      if (errorEl) {
+        errorEl.textContent = err.message || 'Error desconocido al registrar el usuario.';
+        errorEl.style.display = 'block';
+      }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Guardar Usuario en Firebase'; }
     }
   }
 
   /**
    * Processes company edits and updates Firestore and GlobalStore
-   * @param {string} id 
+   * @param {string} id
    */
   async submitEditCompany(id) {
     const form = this.modalInstance.$('#edit-company-form');
     if (!form || !form.reportValidity()) return;
 
-    const saveBtn = this.modalInstance.$('#edit-company-form').parentNode.parentNode.querySelector('#modal-save-btn');
+    const saveBtn = this.modalInstance.$('#modal-save-btn');
     if (saveBtn) {
       saveBtn.disabled = true;
       saveBtn.textContent = 'Actualizando nube...';
     }
 
-    const name = this.modalInstance.$('#edit-comp-name').value.trim();
+    const name        = this.modalInstance.$('#edit-comp-name').value.trim();
     const businessType = this.modalInstance.$('#edit-comp-type').value;
-    const plan = this.modalInstance.$('#edit-comp-plan').value;
-    const status = this.modalInstance.$('#edit-comp-status').value;
+    const plan        = this.modalInstance.$('#edit-comp-plan').value;
+    const status      = this.modalInstance.$('#edit-comp-status').value;
 
-    const enableKDS = this.modalInstance.$('#edit-mod-kds').checked;
-    const enableQR = this.modalInstance.$('#edit-mod-qr').checked;
+    const enableKDS      = this.modalInstance.$('#edit-mod-kds').checked;
+    const enableQR       = this.modalInstance.$('#edit-mod-qr').checked;
     const enableWhatsApp = this.modalInstance.$('#edit-mod-whatsapp').checked;
-    const enableBilling = this.modalInstance.$('#edit-mod-billing').checked;
+    const enableBilling  = this.modalInstance.$('#edit-mod-billing').checked;
 
-    const companyData = {
-      name: name,
-      plan: plan,
-      status: status,
-      config: {
+    try {
+      // 1. Update company info in RTDB
+      await FirestoreService.updateCompanyInfo(id, {
+        name,
+        businessType,
+        plan,
+        status
+      });
+
+      // 2. Update company config in RTDB
+      await FirestoreService.updateCompanyConfig(id, {
         enableKDS,
         enableQR,
         enableWhatsApp,
-        enableBilling,
-        businessType
-      }
-    };
-
-    try {
-      // 1. Update in Cloud Firestore
-      if (db) {
-        const docRef = doc(db, 'companies', id);
-        await updateDoc(docRef, companyData);
-      }
-
-      // 2. Update local state
-      const currentCompanies = GlobalStore.getState().companies || [];
-      const updatedCompanies = currentCompanies.map(c => {
-        if (c.id === id) {
-          return {
-            ...c,
-            ...companyData,
-            businessType
-          };
-        }
-        return c;
+        enableBilling
       });
-      GlobalStore.set({ companies: updatedCompanies });
+
+      // 3. Reload companies from RTDB
+      await this.loadCompanies();
 
       NotificationService.success(`Cambios aplicados en la nube para "${name}".`);
       this.modalInstance.close();
     } catch (e) {
       console.error('[CompaniesView] Error updating company:', e);
       alert(`Error al actualizar el negocio en Firebase: ${e.message || e}`);
-      
       if (saveBtn) {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Guardar Cambios';
