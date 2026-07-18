@@ -113,6 +113,18 @@ export class AuthService {
         isAuthenticated: true
       });
 
+      // Load company metadata
+      if (userSession.companyId && userSession.companyId !== 'global') {
+        try {
+          const companyInfo = await FirestoreService.getCompanyInfo(userSession.companyId);
+          if (companyInfo) {
+            GlobalStore.set({ currentCompany: companyInfo });
+          }
+        } catch (e) {
+          console.warn('[AuthService] Could not load company info after login:', e.message);
+        }
+      }
+
       console.log('[AuthService] ✅ Login exitoso:', email, '| Rol:', userSession.role);
       return userSession;
 

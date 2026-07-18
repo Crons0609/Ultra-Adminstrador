@@ -268,8 +268,17 @@ export class CompaniesView extends Component {
     const enableWhatsApp = this.modalInstance.$('#mod-whatsapp').checked;
     const enableBilling = this.modalInstance.$('#mod-billing').checked;
 
-    // Generate a unique company ID
-    const newCompanyId = FirestoreService.generateCompanyId();
+    // Use the sanitised company name as the company ID (root branch name)
+    const newCompanyId = FirestoreService.sanitiseKey(name);
+
+    if (!newCompanyId) {
+      alert('El nombre del negocio contiene caracteres no válidos. Usa letras y números.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar Empresa';
+      }
+      return;
+    }
 
     try {
       // 1. Create full company branch structure in RTDB atomically

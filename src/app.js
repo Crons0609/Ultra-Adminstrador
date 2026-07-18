@@ -14,6 +14,7 @@ import { ROUTES } from './config/routes.config.js';
 import { GlobalStore } from './core/state.js';
 import { APP_CONFIG } from './config/app.config.js';
 import { AuthService } from './services/auth.service.js';
+import { FirestoreService } from './services/firestore.service.js';
 import { AnimationService } from './services/animation.service.js';
 
 class App {
@@ -38,9 +39,20 @@ class App {
     //    This replaces the unreliable localStorage cache approach.
     //    onAuthStateChanged fires once immediately with the current user or null.
     await new Promise((resolve) => {
-      AuthService.watchAuthState((userSession) => {
+      AuthService.watchAuthState(async (userSession) => {
         if (userSession) {
           console.log('[App] 🔒 Firebase session restored for:', userSession.email);
+          if (userSession.companyId && userSession.companyId !== 'global') {
+            try {
+              const companyInfo = await FirestoreService.getCompanyInfo(userSession.companyId);
+              if (companyInfo) {
+                GlobalStore.set({ currentCompany: companyInfo });
+                console.log('[App] 🏢 Company info restored:', companyInfo.name);
+              }
+            } catch (err) {
+              console.warn('[App] Failed to restore company info:', err.message);
+            }
+          }
         } else {
           console.log('[App] 🔓 No active Firebase session — showing login.');
         }

@@ -1,0 +1,231 @@
+/**
+ * @file dashboard.css
+ * @description Premium KPI cards, product bar rows, activity feed, and status chips for the Owner/Manager dashboard.
+ */
+
+/* ─── Status Chip (header badge) ─── */
+.header-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot-success {
+  background-color: var(--color-success);
+  box-shadow: 0 0 0 2px var(--color-success-light);
+}
+
+.status-dot-warning {
+  background-color: var(--color-warning);
+  box-shadow: 0 0 0 2px var(--color-warning-light);
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ─── KPI Cards ─── */
+.kpi-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle shimmer line at top */
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+.kpi-card:hover::before {
+  opacity: 1;
+}
+
+.kpi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-icon-success {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.kpi-icon-accent {
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+.kpi-icon-warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.kpi-icon-danger {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.kpi-change {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.kpi-change-up {
+  color: var(--color-success);
+}
+
+.kpi-change-down {
+  color: var(--color-danger);
+}
+
+/* Progress bar inside KPI card */
+.kpi-progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: 2px 0;
+}
+
+.kpi-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-warning), var(--color-success));
+  border-radius: var(--radius-full);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Top Products Bar Rows ─── */
+.product-row {
+  padding: var(--space-2) 0;
+}
+
+.product-bar-track {
+  width: 100%;
+  height: 4px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.product-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Activity Feed ─── */
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.activity-dot-success { background-color: var(--color-success); }
+.activity-dot-accent { background-color: var(--color-accent); }
+.activity-dot-warning { background-color: var(--color-warning); }
+.activity-dot-danger { background-color: var(--color-danger); }
+
+.activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+}
+
+.activity-text {
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+
+.activity-time {
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+}
+
+/* ─── Insight items (Proyecciones) ─── */
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.insight-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+

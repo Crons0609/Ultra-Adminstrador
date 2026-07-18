@@ -24,6 +24,7 @@
 @import url('./components/navigation.css');
 @import url('./components/forms.css');
 @import url('./components/toasts.css');
+@import url('./components/dashboard.css');
 
 /* 4. Active Color Themes */
 @import url('./themes/light.css');

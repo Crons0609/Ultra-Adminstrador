@@ -1,52 +1,198 @@
-la estructura estara asi en firebase. 
+# Estructura de las ramas en Firebase Realtime Database
 
-el programador administrara todas y cada una de las cuentas de los negocios. al registrar un dueño o gerente. se creara una rama donde el dueño o gerente. creara subramas donde estaran alojados los empleados como cocina, mesero, caja, etc,etc
+## Regla principal
 
-ekl programador sera el que admnistre todo y vera los flujos tecnicos.
+Cada negocio tendrá su propia rama dentro de Firebase.
 
+**El nombre de la rama será exactamente el nombre que el Dueño o Gerente escriba al momento de registrar su negocio.**
 
+Ejemplo:
 
+Si el negocio se registra con el nombre:
 
+**"¡Huy Qué Rico!"**
 
-Navigate to http://localhost:3000/#/login.
-1. Log in as Super Admin:
-   - Email: superadmin@ultraadmin.com
-   - Password: SuperAdmin@2024!
-2. Go to Configuración Global:
-   - Change 'Nombre del SaaS' to 'Ultra Administrador Pro' and click 'Guardar Configuración'.
-   - Verify success notification.
-3. Reload page and verify the name stays 'Ultra Administrador Pro'.
-4. Go to Gestión de Empresas (click 'Negocios' or similar sidebar option):
-   - Click 'Registrar Negocio'.
-   - Name: 'La Pizzería de la Nube'
-   - Owner Email: pizzero@lanube.com
-   - Owner Password: PizzaPassword123
-   - Leave other fields as defaults.
-   - Click 'Guardar Empresa'.
-   - Wait for the owner credentials modal, click 'Entendido'.
-5. In the companies table, find 'La Pizzería de la Nube' and click on its row.
-6. Verify the owner profile is loaded under 'Usuarios de este Negocio'.
-7. Click '+ Agregar Usuario' in the modal:
-   - Name: 'Carlos Mesero'
-   - Email: carlos@lanube.com
-   - Password: CarlosPassword123
-   - Role: Mesero
-   - Click 'Guardar Usuario en Firebase'.
-   - Wait for modal to refresh and verify Carlos is in the list.
-   - Close the company modal.
-8. Click 'Cerrar Sesión' (logout button).
-9. Log in as the newly created Owner:
-   - Email: pizzero@lanube.com
-   - Password: PizzaPassword123
-10. Verify you are logged in and the Dashboard displays successfully.
-11. Click on 'Personal' or 'Empleados' in the sidebar to go to the employee management view.
-12. Verify 'Carlos Mesero' is listed in the table.
-13. Click '+ Agregar Trabajador':
-    - Name: 'Ana Cocinera'
-    - Email: ana@lanube.com
-    - Password: AnaPassword123
-    - Role: Cocinero
-    - Click 'Guardar Empleado'.
-    - Verify Ana Cocinera is added to the table.
-14. Log out.
-Report all actions taken and whether all steps completed successfully.
+La estructura será:
+
+```text
+Firebase
+│
+└── ¡Huy Qué Rico!
+```
+
+Si otro cliente registra un negocio llamado:
+
+**"Pizza Express"**
+
+Se creará automáticamente otra rama independiente:
+
+```text
+Firebase
+│
+├── ¡Huy Qué Rico!
+└── Pizza Express
+```
+
+Cada negocio tendrá completamente separada su información y nunca compartirá datos con otro establecimiento.
+
+---
+
+# Estructura completa
+
+```text
+Firebase
+│
+├── ¡Huy Qué Rico!
+│   │
+│   ├── informacion_local
+│   │   ├── nombre
+│   │   ├── propietario
+│   │   ├── gerente
+│   │   ├── telefono
+│   │   ├── direccion
+│   │   ├── correo
+│   │   ├── horario
+│   │   ├── logo
+│   │   └── configuracion
+│   │
+│   ├── empleados
+│   │   ├── gerente
+│   │   ├── administradores
+│   │   ├── caja
+│   │   ├── cocina
+│   │   ├── meseros
+│   │   ├── bartender
+│   │   ├── inventario
+│   │   ├── compras
+│   │   ├── delivery
+│   │   └── otros
+│   │
+│   ├── usuarios
+│   ├── roles
+│   ├── permisos
+│   ├── productos
+│   ├── categorias
+│   ├── menu
+│   ├── inventario
+│   ├── proveedores
+│   ├── clientes
+│   ├── ventas
+│   ├── pedidos
+│   ├── compras
+│   ├── caja_local
+│   ├── movimientos_caja
+│   ├── sesiones
+│   ├── facturas
+│   ├── reportes
+│   ├── historial
+│   ├── auditoria
+│   ├── notificaciones
+│   ├── configuracion
+│   └── respaldos
+│
+├── Pizza Express
+│   └── (misma estructura)
+│
+├── Restaurante El Sabor
+│   └── (misma estructura)
+│
+└── ...
+```
+
+---
+
+# Administración del Sistema
+
+El Programador será el Administrador General de toda la plataforma.
+
+Tendrá acceso a todas las ramas creadas y podrá:
+
+* Crear nuevos negocios.
+* Registrar Dueños o Gerentes.
+* Ver el estado técnico de cada negocio.
+* Supervisar la base de datos.
+* Resolver problemas técnicos.
+* Administrar usuarios de alto nivel.
+* Realizar mantenimiento.
+* Actualizar el sistema.
+
+El Programador podrá visualizar todas las ramas existentes, mientras que cada Dueño o Gerente únicamente podrá acceder a la rama correspondiente a su propio negocio.
+
+---
+
+# Registro de Usuarios
+
+Los usuarios finales **NO podrán registrarse**.
+
+Únicamente existen dos tipos de cuentas con acceso al sistema administrativo:
+
+* Programador (Administrador General).
+* Dueño o Gerente del negocio.
+
+Una vez creado el negocio, el Dueño o Gerente podrá crear los usuarios internos de su establecimiento, como:
+
+* Administradores.
+* Caja.
+* Cocina.
+* Meseros.
+* Bartender.
+* Inventario.
+* Compras.
+* Delivery.
+* Otros empleados.
+
+Estos usuarios solo podrán acceder a los módulos permitidos según los permisos asignados.
+
+---
+
+# Clientes del Negocio
+
+Los clientes del restaurante **no tendrán cuentas ni podrán registrarse**.
+
+Su función será únicamente consultar la información pública del establecimiento.
+
+Podrán acceder, según la configuración del negocio, a:
+
+* Menú digital.
+* Productos disponibles.
+* Categorías.
+* Promociones.
+* Precios.
+* Imágenes de los productos.
+* Información del local.
+* Horarios.
+* Datos de contacto.
+* Ubicación.
+* Código QR del menú.
+
+Los clientes nunca tendrán acceso al panel administrativo ni a la información interna del negocio.
+
+---
+
+# Regla de almacenamiento
+
+Toda la información deberá guardarse únicamente dentro de la rama correspondiente al nombre del negocio.
+
+Ejemplo:
+
+```text
+Firebase
+│
+├── ¡Huy Qué Rico!
+│   ├── productos
+│   ├── empleados
+│   ├── ventas
+│   ├── caja_local
+│   ├── sesiones
+│   ├── inventario
+│   └── ...
+│
+├── Pizza Express
+│   ├── productos
+│   ├── empleados
+│   ├── ventas
+│   ├── caja_local
+│   └── ...
+```
+
+**Nunca deberán mezclarse datos entre negocios.** Cada establecimiento será completamente independiente dentro de Firebase y utilizará como raíz de almacenamiento el nombre del negocio registrado por su Dueño o Gerente.

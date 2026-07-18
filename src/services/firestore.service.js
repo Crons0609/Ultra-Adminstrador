@@ -47,7 +47,8 @@ export class FirestoreService {
     if (!currentUser || !currentUser.companyId) {
       throw new Error('Tenant context missing. Unable to perform Database query.');
     }
-    return `companies/${currentUser.companyId}/${collectionName}`;
+    // E.g. "Pizza Express/orders" instead of "companies/Pizza Express/orders"
+    return `${currentUser.companyId}/${collectionName}`;
   }
 
   /**
@@ -253,10 +254,14 @@ export class FirestoreService {
    * Generate a new unique company ID using push().
    * @returns {string} A Firebase push-key
    */
-  static generateCompanyId() {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-    const listRef = ref(db, 'companies');
-    return push(listRef).key;
+  /**
+   * Sanitise a string to be a valid Firebase Realtime Database key.
+   * Removes ".", "#", "$", "/", "[", or "]".
+   * @param {string} key
+   * @returns {string}
+   */
+  static sanitiseKey(key) {
+    return key.replace(/[\.\#\$\/\[\]]/g, '').trim();
   }
 
   /**
@@ -264,14 +269,12 @@ export class FirestoreService {
    * This is called when the Programador registers a new business.
    *
    * Structure created:
-   *   /companies/{companyId}/info/         → Company metadata
-   *   /companies/{companyId}/config/       → Feature toggles + defaults
-   *   /companies/{companyId}/branches/main → Default branch
-   *   /companies/{companyId}/employees/    → (empty, populated when users are added)
-   *   /companies/{companyId}/products/     → (empty placeholder)
-   *   ... etc.
+   *   /companies/{companyId}/             → Global index registry for Super Admin
+   *   /{companyId}/informacion_local/     → Local business info
+   *   /{companyId}/config/                → Business feature toggles
+   *   /{companyId}/branches/main/         → Default branch
    *
-   * @param {string} companyId - The unique company identifier
+   * @param {string} companyId - The unique company identifier (sanitised name)
    * @param {Object} companyData - { name, businessType, plan, status, ownerId }
    * @param {Object} [configData] - Optional custom config overrides
    * @returns {Promise<void>}
@@ -295,8 +298,9 @@ export class FirestoreService {
     };
 
     // Atomic multi-path update — all writes succeed or none do
+    // Note: Absolutely no ".init" dot keys are used to avoid Firebase key errors
     const updates = {};
-    updates[`companies/${companyId}/info`] = {
+    updates[`companies/${companyId}`] = {
       name: companyData.name,
       businessType: companyData.businessType || 'Restaurante',
       plan: companyData.plan || 'FREE',
@@ -305,34 +309,31 @@ export class FirestoreService {
       createdAt: now,
       updatedAt: now
     };
-    updates[`companies/${companyId}/config`] = {
+    updates[`${companyId}/informacion_local`] = {
+      nombre: companyData.name,
+      propietario: companyData.ownerId || '',
+      telefono: companyData.phone || '',
+      direccion: companyData.address || '',
+      correo: companyData.ownerEmail || '',
+      horario: '',
+      logo: '',
+      configuracion: defaultConfig
+    };
+    updates[`${companyId}/config`] = {
       ...defaultConfig,
       updatedAt: now
     };
-    updates[`companies/${companyId}/branches/main`] = {
+    updates[`${companyId}/branches/main`] = {
       name: 'Principal',
       address: companyData.address || '',
       phone: companyData.phone || '',
       active: true,
       createdAt: now
     };
-    // Initialize empty containers with placeholder
-    updates[`companies/${companyId}/employees/.init`] = true;
-    updates[`companies/${companyId}/products/.init`] = true;
-    updates[`companies/${companyId}/categories/.init`] = true;
-    updates[`companies/${companyId}/orders/.init`] = true;
-    updates[`companies/${companyId}/customers/.init`] = true;
-    updates[`companies/${companyId}/inventory/.init`] = true;
-    updates[`companies/${companyId}/purchases/.init`] = true;
-    updates[`companies/${companyId}/suppliers/.init`] = true;
-    updates[`companies/${companyId}/cash_sessions/.init`] = true;
-    updates[`companies/${companyId}/tables/.init`] = true;
-    updates[`companies/${companyId}/reports/.init`] = true;
-    updates[`companies/${companyId}/audit_logs/.init`] = true;
 
     const rootRef = ref(db);
     await update(rootRef, updates);
-    console.log(`[DB] ✅ Company branch created: companies/${companyId}`);
+    console.log(`[DB] ✅ Company branch created at root: /${companyId}`);
   }
 
   /**
@@ -347,7 +348,7 @@ export class FirestoreService {
   static async addEmployeeToCompany(companyId, uid, employeeData) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const empRef = ref(db, `companies/${companyId}/employees/${uid}`);
+    const empRef = ref(db, `${companyId}/employees/${uid}`);
     await set(empRef, {
       displayName: employeeData.displayName || '',
       email: employeeData.email || '',
@@ -358,7 +359,7 @@ export class FirestoreService {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    console.log(`[DB] ✅ Employee added: companies/${companyId}/employees/${uid}`);
+    console.log(`[DB] ✅ Employee added: /${companyId}/employees/${uid}`);
   }
 
   /**
@@ -370,9 +371,9 @@ export class FirestoreService {
   static async removeEmployeeFromCompany(companyId, uid) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const empRef = ref(db, `companies/${companyId}/employees/${uid}`);
+    const empRef = ref(db, `${companyId}/employees/${uid}`);
     await remove(empRef);
-    console.log(`[DB] ✅ Employee removed: companies/${companyId}/employees/${uid}`);
+    console.log(`[DB] ✅ Employee removed: /${companyId}/employees/${uid}`);
   }
 
   /**
@@ -383,7 +384,7 @@ export class FirestoreService {
   static async getCompanyEmployees(companyId) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const empRef = ref(db, `companies/${companyId}/employees`);
+    const empRef = ref(db, `${companyId}/employees`);
     const snapshot = await get(empRef);
 
     if (!snapshot.exists()) return [];
@@ -399,16 +400,27 @@ export class FirestoreService {
   }
 
   /**
-   * Get company info (the /info sub-node).
+   * Get company info (the /informacion_local sub-node).
    * @param {string} companyId
    * @returns {Promise<Object|null>}
    */
   static async getCompanyInfo(companyId) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const infoRef = ref(db, `companies/${companyId}/info`);
+    const infoRef = ref(db, `${companyId}/informacion_local`);
     const snap = await get(infoRef);
-    return snap.exists() ? { id: companyId, ...snap.val() } : null;
+    if (!snap.exists()) return null;
+
+    const data = snap.val();
+    return {
+      id: companyId,
+      name: data.nombre || data.name || companyId,
+      ownerId: data.propietario || data.ownerId || '',
+      phone: data.telefono || '',
+      address: data.direccion || '',
+      email: data.correo || '',
+      ...data
+    };
   }
 
   /**
@@ -420,9 +432,17 @@ export class FirestoreService {
   static async updateCompanyInfo(companyId, data) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const infoRef = ref(db, `companies/${companyId}/info`);
-    await update(infoRef, { ...data, updatedAt: serverTimestamp() });
-    console.log(`[DB] ✅ Company info updated: ${companyId}`);
+    // Map fields for informacion_local
+    const mappedData = {};
+    if (data.name !== undefined) mappedData.nombre = data.name;
+    if (data.ownerId !== undefined) mappedData.propietario = data.ownerId;
+    if (data.phone !== undefined) mappedData.telefono = data.phone;
+    if (data.address !== undefined) mappedData.direccion = data.address;
+    if (data.email !== undefined) mappedData.correo = data.email;
+
+    const infoRef = ref(db, `${companyId}/informacion_local`);
+    await update(infoRef, { ...mappedData, ...data, updatedAt: serverTimestamp() });
+    console.log(`[DB] ✅ Company info updated: /${companyId}/informacion_local`);
   }
 
   /**
@@ -433,7 +453,7 @@ export class FirestoreService {
   static async getCompanyConfig(companyId) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const configRef = ref(db, `companies/${companyId}/config`);
+    const configRef = ref(db, `${companyId}/config`);
     const snap = await get(configRef);
     return snap.exists() ? snap.val() : null;
   }
@@ -447,9 +467,9 @@ export class FirestoreService {
   static async updateCompanyConfig(companyId, data) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const configRef = ref(db, `companies/${companyId}/config`);
+    const configRef = ref(db, `${companyId}/config`);
     await update(configRef, { ...data, updatedAt: serverTimestamp() });
-    console.log(`[DB] ✅ Company config updated: ${companyId}`);
+    console.log(`[DB] ✅ Company config updated: /${companyId}/config`);
   }
 
   /**
@@ -464,40 +484,54 @@ export class FirestoreService {
 
     if (!snapshot.exists()) return [];
 
-    const results = [];
+    const promises = [];
     snapshot.forEach(companySnap => {
       const companyId = companySnap.key;
-      const data = companySnap.val();
-      const info = data.info || {};
-      const config = data.config || {};
+      const info = companySnap.val() || {};
 
-      // Count employees (exclude .init placeholder)
-      let employeeCount = 0;
-      if (data.employees) {
-        employeeCount = Object.keys(data.employees).filter(k => k !== '.init').length;
-      }
+      const p = (async () => {
+        let employeeCount = 0;
+        try {
+          const empSnap = await get(ref(db, `${companyId}/employees`));
+          if (empSnap.exists()) {
+            employeeCount = Object.keys(empSnap.val()).filter(k => k !== '.init').length;
+          }
+        } catch (e) {}
 
-      // Count branches
-      let branchCount = 0;
-      if (data.branches) {
-        branchCount = Object.keys(data.branches).filter(k => k !== '.init').length;
-      }
+        let branchCount = 0;
+        try {
+          const branchSnap = await get(ref(db, `${companyId}/branches`));
+          if (branchSnap.exists()) {
+            branchCount = Object.keys(branchSnap.val()).filter(k => k !== '.init').length;
+          }
+        } catch (e) {}
 
-      results.push({
-        id: companyId,
-        name: info.name || 'Sin nombre',
-        businessType: info.businessType || 'Restaurante',
-        plan: info.plan || 'FREE',
-        status: info.status || 'ACTIVO',
-        ownerId: info.ownerId || '',
-        branches: branchCount,
-        users: employeeCount,
-        config: config,
-        createdAt: info.createdAt,
-        updatedAt: info.updatedAt
-      });
+        let config = {};
+        try {
+          const configSnap = await get(ref(db, `${companyId}/config`));
+          if (configSnap.exists()) {
+            config = configSnap.val();
+          }
+        } catch (e) {}
+
+        return {
+          id: companyId,
+          name: info.name || companyId,
+          businessType: info.businessType || 'Restaurante',
+          plan: info.plan || 'FREE',
+          status: info.status || 'ACTIVO',
+          ownerId: info.ownerId || '',
+          branches: branchCount || 1,
+          users: employeeCount || 1,
+          config: config,
+          createdAt: info.createdAt,
+          updatedAt: info.updatedAt
+        };
+      })();
+      promises.push(p);
     });
 
+    const results = await Promise.all(promises);
     console.log(`[DB] ✅ Listed ${results.length} companies`);
     return results;
   }
@@ -510,9 +544,13 @@ export class FirestoreService {
   static async deleteCompany(companyId) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const companyRef = ref(db, `companies/${companyId}`);
-    await remove(companyRef);
-    console.log(`[DB] ✅ Company deleted: ${companyId}`);
+    const updates = {};
+    updates[`companies/${companyId}`] = null;
+    updates[`${companyId}`] = null;
+
+    const rootRef = ref(db);
+    await update(rootRef, updates);
+    console.log(`[DB] ✅ Company deleted: /${companyId}`);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

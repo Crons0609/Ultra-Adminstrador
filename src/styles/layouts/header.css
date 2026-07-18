@@ -1,6 +1,6 @@
 /**
  * @file header.css
- * @description Page top bar, profile menus, action triggers and mobile layout controls.
+ * @description Premium top header bar with glassmorphism, breadcrumb, user chip, and mobile controls.
  */
 
 .header {
@@ -14,20 +14,58 @@
   position: sticky;
   top: 0;
   z-index: 90;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
+/* ─── Left side ─── */
 .header-left {
   display: flex;
   align-items: center;
   gap: var(--space-4);
 }
 
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.header-greeting {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.header-divider {
+  color: var(--color-text-tertiary);
+}
+
+.header-page-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ─── Right side ─── */
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
+/* Real-time clock */
+.header-clock {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  min-width: 72px;
+  text-align: right;
+}
+
+/* ─── Hamburger ─── */
 .menu-toggle {
   background: transparent;
   border: none;
@@ -36,41 +74,70 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-text-primary);
+  transition: background-color var(--transition-fast);
 }
-
 .menu-toggle:hover {
-  background-color: var(--color-bg-secondary);
+  background-color: var(--color-surface-hover);
 }
 
-/* Header Action icons */
+/* ─── Header Action Buttons ─── */
 .header-action {
   background: transparent;
-  border: none;
+  border: 1px solid var(--color-border);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   width: 36px;
   height: 36px;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
-
 .header-action:hover {
-  background-color: var(--color-bg-secondary);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
   color: var(--color-text-primary);
 }
 
-.user-profile {
+/* ─── User Profile Chip ─── */
+.header-user-chip {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
   cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.header-user-chip:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
 }
 
+.header-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: white;
+}
+
+.header-user-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ─── Legacy user-avatar (for sidebar footer) ─── */
 .user-avatar {
   width: 32px;
   height: 32px;
@@ -84,11 +151,20 @@
   font-size: 0.875rem;
 }
 
+/* ─── Responsive ─── */
 @media (max-width: 768px) {
   .menu-toggle {
     display: flex;
   }
   .header {
     padding: 0 var(--space-4);
+  }
+  .header-greeting,
+  .header-divider,
+  .header-clock {
+    display: none;
+  }
+  .header-user-name {
+    display: none;
   }
 }

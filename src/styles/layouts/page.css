@@ -11,7 +11,7 @@
 
 .main-content {
   flex-grow: 1;
-  margin-left: 260px;
+  margin-left: 264px;
   display: flex;
   flex-direction: column;
   min-width: 0; /* Prevent flex items from overflowing */
@@ -48,6 +48,15 @@
 }
 
 /* Adjust layout when sidebar is hidden on small screens */
+/* Hover lift utility */
+.hover-lift {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
