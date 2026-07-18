@@ -1,3 +1,6 @@
+import { APP_CONFIG } from '../config/app.config.js';
+import { TimeService } from '../services/time.service.js';
+
 /**
  * @file formatters.js
  * @description Standard visual formatters for dates, currencies, values and phone numbers.
@@ -9,7 +12,7 @@
  * @param {string} currencyCode - Standard currency abbreviation (default: MXN)
  * @param {string} locale - Standard locale (default: es-MX)
  */
-export function formatCurrency(value, currencyCode = 'MXN', locale = 'es-MX') {
+export function formatCurrency(value, currencyCode = APP_CONFIG.currency, locale = APP_CONFIG.locale) {
   if (isNaN(value) || value === null || value === undefined) {
     value = 0;
   }
@@ -25,31 +28,7 @@ export function formatCurrency(value, currencyCode = 'MXN', locale = 'es-MX') {
  * @param {boolean} includeTime - If true, appends HH:MM to the returned string.
  */
 export function formatDate(date, includeTime = true) {
-  if (!date) return '';
-
-  let jsDate = date;
-  // Firestore timestamp support
-  if (date.seconds !== undefined) {
-    jsDate = new Date(date.seconds * 1000);
-  } else if (!(date instanceof Date)) {
-    jsDate = new Date(date);
-  }
-
-  if (isNaN(jsDate.getTime())) return '';
-
-  const options = {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  };
-
-  if (includeTime) {
-    options.hour = '2-digit';
-    options.minute = '2-digit';
-    options.hour12 = false;
-  }
-
-  return new Intl.DateTimeFormat('es-MX', options).format(jsDate);
+  return TimeService.formatDate(date, includeTime);
 }
 
 /**

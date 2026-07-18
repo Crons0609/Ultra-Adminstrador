@@ -17,10 +17,13 @@ export const APP_CONFIG = {
   defaultTheme: 'theme-dark',
 
   /** Supported locales */
-  locale: 'es-MX',
+  locale: 'es-NI',
+
+  /** Official business timezone for all SaaS modules */
+  timezone: 'America/Managua',
 
   /** Default currency code */
-  currency: 'MXN',
+  currency: 'NIO',
 
   /** Cache TTL in milliseconds (default: 5 minutes) */
   cacheTTL: 300000,

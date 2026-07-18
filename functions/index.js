@@ -9,3 +9,4 @@ exports.userTriggers = require('./triggers/user.triggers');
 exports.notificationsApi = require('./api/notifications.api');
 exports.reportsApi = require('./api/reports.api');
 exports.webhooksApi = require('./api/webhooks.api');
+exports.scheduledTasks = require('./scheduled/tasks.cron');

@@ -42,12 +42,32 @@ export class CompaniesView extends Component {
             } else if (val === 'FALTA_PAGO') {
               label = 'Falta de Pago';
               variant = 'danger';
+            } else if (val === 'SUSPENDIDO') {
+              label = 'Suspendido';
+              variant = 'warning';
+            } else if (val === 'ELIMINADO') {
+              label = 'Papelera';
+              variant = 'danger';
             }
             return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${variant}-light);color:var(--color-${variant});">${label}</span>`;
           }
         },
         { key: 'branches', label: 'Sucursales' },
-        { key: 'users', label: 'Usuarios' }
+        { key: 'users', label: 'Usuarios' },
+        {
+          key: 'id',
+          label: 'Acciones',
+          render: (_, row) => `
+            <div class="d-flex gap-2 flex-wrap" data-stop-row-click="true">
+              ${row.status === 'ELIMINADO'
+                ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}">Restaurar</button>
+                   <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}">Eliminar definitivo</button>`
+                : `<button class="btn btn-secondary btn-sm btn-company-action" data-action="deactivate" data-id="${row.id}">Desactivar</button>
+                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}">Suspender</button>
+                   <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}">Papelera</button>`}
+            </div>
+          `
+        }
       ],
       data: GlobalStore.getState().companies,
       onRowClick: (row) => {
@@ -116,6 +136,18 @@ export class CompaniesView extends Component {
     const addBtn = this.layout.$('#btn-add-company');
     if (addBtn) {
       addBtn.addEventListener('click', () => this.openAddCompanyModal());
+    }
+
+    const wrapper = this.layout.$('#companies-table-wrapper');
+    if (wrapper && !this._companyActionsBound) {
+      this._companyActionsBound = true;
+      wrapper.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-company-action');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleCompanyAction(btn.dataset.id, btn.dataset.action);
+      });
     }
   }
 
@@ -465,6 +497,8 @@ export class CompaniesView extends Component {
               <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
               <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
               <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
+              <option value="SUSPENDIDO" ${row.status === 'SUSPENDIDO' ? 'selected' : ''}>Suspendido temporalmente</option>
+              <option value="ELIMINADO" ${row.status === 'ELIMINADO' ? 'selected' : ''}>Papelera (eliminación lógica)</option>
             </select>
           </div>
 
@@ -669,8 +703,8 @@ export class CompaniesView extends Component {
     const enableBilling  = this.modalInstance.$('#edit-mod-billing').checked;
 
     try {
-      // 1. Update company info in RTDB
-      await FirestoreService.updateCompanyInfo(id, {
+      // 1. Update company registry and tenant mirrors in RTDB
+      await FirestoreService.updateCompany(id, {
         name,
         businessType,
         plan,
@@ -698,6 +732,50 @@ export class CompaniesView extends Component {
         saveBtn.textContent = 'Guardar Cambios';
       }
     }
+  }
+
+  async handleCompanyAction(companyId, action) {
+    const company = (GlobalStore.getState().companies || []).find(c => c.id === companyId);
+    const companyName = company?.name || companyId;
+    const reason = prompt(`Motivo para ${this.getCompanyActionLabel(action)} "${companyName}":`, '');
+    if (reason === null) return;
+
+    try {
+      if (action === 'deactivate') {
+        await FirestoreService.setCompanyLifecycle(companyId, 'INACTIVO', reason);
+        NotificationService.success('Empresa desactivada temporalmente.');
+      } else if (action === 'suspend') {
+        await FirestoreService.setCompanyLifecycle(companyId, 'SUSPENDIDO', reason);
+        NotificationService.success('Empresa suspendida.');
+      } else if (action === 'trash') {
+        if (!confirm(`¿Mover "${companyName}" a la papelera? La empresa podrá restaurarse más adelante.`)) return;
+        await FirestoreService.setCompanyLifecycle(companyId, 'ELIMINADO', reason);
+        NotificationService.success('Empresa enviada a papelera.');
+      } else if (action === 'restore') {
+        await FirestoreService.setCompanyLifecycle(companyId, 'ACTIVO', reason || 'Restauración desde papelera');
+        NotificationService.success('Empresa restaurada.');
+      } else if (action === 'hard-delete') {
+        const confirmation = prompt(`Para eliminar definitivamente "${companyName}" y todos sus datos, escribe ELIMINAR:`);
+        if (confirmation !== 'ELIMINAR') return;
+        await FirestoreService.permanentlyDeleteCompany(companyId, reason);
+        NotificationService.success('Empresa eliminada definitivamente.');
+      }
+      await this.loadCompanies();
+    } catch (error) {
+      console.error('[CompaniesView] Error changing lifecycle:', error);
+      NotificationService.error(error.message || 'No se pudo cambiar el estado de la empresa.');
+    }
+  }
+
+  getCompanyActionLabel(action) {
+    const labels = {
+      deactivate: 'desactivar',
+      suspend: 'suspender',
+      trash: 'enviar a papelera',
+      restore: 'restaurar',
+      'hard-delete': 'eliminar definitivamente'
+    };
+    return labels[action] || 'actualizar';
   }
 
   unmount() {

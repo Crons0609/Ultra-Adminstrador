@@ -5,6 +5,8 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { BarcodeScannerService } from '../../../services/barcode-scanner.service.js';
+import { TimeService } from '../../../services/time.service.js';
 
 export class ProductsView extends Component {
   constructor(params = {}) {
@@ -370,7 +372,8 @@ export class ProductsView extends Component {
           </div>
           <div class="form-group">
             <label class="form-label" for="prod-sku">Código de Barras / SKU</label>
-            <input type="text" id="prod-sku" class="input input-md" placeholder="Ej. 750105530007" value="${isEdit ? (product.sku || '') : ''}" />
+            <input type="text" id="prod-sku" class="input input-md" placeholder="Escanea o escribe el código" value="${isEdit ? (product.sku || product.barcode || '') : ''}" />
+            <span class="text-xs text-secondary">Compatible con lectores USB, Bluetooth e inalámbricos en modo teclado.</span>
           </div>
         </div>
 
@@ -485,6 +488,14 @@ export class ProductsView extends Component {
     if (submitBtn) {
       submitBtn.addEventListener('click', () => this.submitProduct(product));
     }
+
+    const skuInput = this.modalInstance.$('#prod-sku');
+    this._scannerCleanup = BarcodeScannerService.attach(skuInput, {
+      onScan: (code) => {
+        skuInput.value = code;
+        NotificationService.success(`Código escaneado: ${code}`);
+      }
+    });
   }
 
   async submitProduct(product = null) {
@@ -514,6 +525,7 @@ export class ProductsView extends Component {
     const payload = {
       name,
       sku,
+      barcode: sku,
       category,
       unit,
       stock,
@@ -523,7 +535,8 @@ export class ProductsView extends Component {
       description: (this.modalInstance.$('#prod-description')?.value.trim()) || '',
       image: (this.modalInstance.$('#prod-image')?.value.trim()) || '',
       onSale: this.modalInstance.$('#prod-on-sale')?.checked || false,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      updatedAtLocal: TimeService.timestamp()
     };
 
     try {
@@ -534,6 +547,7 @@ export class ProductsView extends Component {
       } else {
         // Create mode
         payload.createdAt = Date.now();
+        payload.createdAtLocal = TimeService.timestamp();
         await FirestoreService.create('productos', payload);
         NotificationService.success('Producto registrado correctamente en el inventario.');
       }
@@ -549,6 +563,7 @@ export class ProductsView extends Component {
   }
 
   unmount() {
+    if (this._scannerCleanup) this._scannerCleanup();
     this.listeners.forEach(id => FirestoreService.unsubscribe(id));
     this.listeners = [];
     this.table.unmount();

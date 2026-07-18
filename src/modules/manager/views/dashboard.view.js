@@ -10,6 +10,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { Chart } from '../../../components/data/chart.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { TimeService } from '../../../services/time.service.js';
 
 export class ManagerDashboardView extends Component {
   constructor(params = {}) {
@@ -230,7 +231,7 @@ export class ManagerDashboardView extends Component {
     this.isDemo = false;
     this._setBadge(element, true);
 
-    const todayStr = new Date().toDateString();
+    const todayStr = TimeService.todayKey();
     let salesToday = 0;
     let preparingCount = 0;
     let readyCount = 0;
@@ -239,7 +240,7 @@ export class ManagerDashboardView extends Component {
 
     orders.forEach(order => {
       const d = new Date(order.createdAt || order.updatedAt || Date.now());
-      if (d.toDateString() === todayStr && order.status === 'COMPLETED') salesToday += Number(order.total || 0);
+      if (TimeService.todayKey(d) === todayStr && order.status === 'COMPLETED') salesToday += Number(order.total || 0);
       if (order.status === 'PREPARING' || order.status === 'PENDING') preparingCount++;
       else if (order.status === 'READY') readyCount++;
       if (order.status === 'COMPLETED') {
@@ -282,7 +283,7 @@ export class ManagerDashboardView extends Component {
     );
 
     const updateEl = q('#chart-last-update');
-    if (updateEl) updateEl.textContent = `Actualizado: ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+    if (updateEl) updateEl.textContent = `Actualizado: ${TimeService.formatTime(new Date(), false)} NI`;
   }
 
   processTables(tables, element) {

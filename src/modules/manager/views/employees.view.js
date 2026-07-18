@@ -11,6 +11,8 @@ import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { AuthService } from '../../../services/auth.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { GeolocationService } from '../../../services/geolocation.service.js';
+import { TimeService } from '../../../services/time.service.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
@@ -22,7 +24,8 @@ export class EmployeesView extends Component {
 
     // Initialize state
     this.state = {
-      employees: []
+      employees: [],
+      locations: []
     };
 
     // Initialize DataTable
@@ -62,6 +65,24 @@ export class EmployeesView extends Component {
           key: 'status', 
           label: 'Estado',
           render: () => `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-success-light);color:var(--color-success);">Activo</span>`
+        },
+        {
+          key: 'locationStatus',
+          label: 'GPS',
+          render: (_, row) => {
+            const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
+            if (!location) return '<span class="text-xs text-secondary">Sin ubicación</span>';
+            return `<span class="text-xs text-secondary">${location.status || 'Disponible'} · ${TimeService.formatDate(location.updatedAt?.epochMs || location.updatedAt, true)}</span>`;
+          }
+        },
+        {
+          key: 'locationLink',
+          label: 'Mapa',
+          render: (_, row) => {
+            const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
+            if (!location?.latitude || !location?.longitude) return '';
+            return `<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${location.latitude},${location.longitude}">Ver</a>`;
+          }
         }
       ],
       data: this.state.employees
@@ -75,6 +96,8 @@ export class EmployeesView extends Component {
         <button class="btn btn-primary btn-sm" id="btn-add-employee">
           <span style="margin-right: var(--space-1);">+</span> Agregar Trabajador
         </button>
+        <button class="btn btn-secondary btn-sm" id="btn-start-gps">Activar mi GPS</button>
+        <button class="btn btn-secondary btn-sm" id="btn-stop-gps">Detener GPS</button>
       `,
       contentHTML: `
         <div class="card p-5">
@@ -88,6 +111,7 @@ export class EmployeesView extends Component {
     });
 
     this.modalInstance = null;
+    this.listeners = [];
   }
 
   async loadEmployees() {
@@ -131,6 +155,7 @@ export class EmployeesView extends Component {
 
     // Load data from Cloud Firestore
     this.loadEmployees();
+    this.subscribeToLocations(element);
 
     return element;
   }
@@ -140,6 +165,42 @@ export class EmployeesView extends Component {
     if (addBtn) {
       addBtn.addEventListener('click', () => this.openAddEmployeeModal());
     }
+
+    const startGpsBtn = this.layout.$('#btn-start-gps');
+    if (startGpsBtn) {
+      startGpsBtn.addEventListener('click', () => this.startOwnGpsTracking());
+    }
+
+    const stopGpsBtn = this.layout.$('#btn-stop-gps');
+    if (stopGpsBtn) {
+      stopGpsBtn.addEventListener('click', () => {
+        GeolocationService.stopTracking();
+        NotificationService.success('Seguimiento GPS detenido en este dispositivo.');
+      });
+    }
+  }
+
+  subscribeToLocations(element) {
+    try {
+      const listener = FirestoreService.listenToPath(`${this.companyId}/employee_locations`, (locations) => {
+        this.state.locations = locations || [];
+        this.refreshTable(this.state.employees);
+      });
+      this.listeners.push(listener);
+    } catch (error) {
+      console.warn('[EmployeesView] Error loading GPS locations:', error.message);
+    }
+  }
+
+  startOwnGpsTracking() {
+    const consent = confirm('¿Autorizas registrar tu ubicación GPS para seguimiento laboral en tiempo real? Puedes detenerlo desde este panel.');
+    if (!consent) return;
+
+    GeolocationService.startTracking({
+      status: 'DISPONIBLE',
+      onUpdate: () => NotificationService.success('Ubicación GPS actualizada.'),
+      onError: (error) => NotificationService.error(error.message || 'No se pudo obtener la ubicación.')
+    });
   }
 
   /**
@@ -267,6 +328,8 @@ export class EmployeesView extends Component {
   }
 
   unmount() {
+    this.listeners.forEach(id => FirestoreService.unsubscribe(id));
+    this.listeners = [];
     this.table.unmount();
     this.layout.unmount();
     super.unmount();

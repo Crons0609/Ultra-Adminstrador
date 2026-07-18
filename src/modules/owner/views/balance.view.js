@@ -2,6 +2,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { TimeService } from '../../../services/time.service.js';
 
 export class BalanceView extends Component {
   constructor(params = {}) {
@@ -128,7 +129,7 @@ export class BalanceView extends Component {
     // Income by day
     const dayMap = {};
     completedOrders.forEach(o => {
-      const day = new Date(o.createdAt || Date.now()).toLocaleDateString('es-MX', { weekday: 'short', month: 'short', day: 'numeric' });
+      const day = TimeService.dateFormatter({ weekday: 'short', month: 'short', day: 'numeric' }).format(TimeService.toDate(o.createdAt || Date.now()));
       dayMap[day] = (dayMap[day] || 0) + Number(o.total || 0);
     });
     const incomeEl = q('#income-breakdown');

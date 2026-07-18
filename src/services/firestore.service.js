@@ -13,6 +13,7 @@
 
 import { db } from '../config/firebase.config.js';
 import { GlobalStore } from '../core/state.js';
+import { TimeService } from './time.service.js';
 
 import {
   ref,
@@ -62,7 +63,13 @@ export class FirestoreService {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
     const path = this._getTenantPath(collectionName);
-    const payload = { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    const payload = {
+      ...data,
+      createdAt: data.createdAt || serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      createdAtLocal: data.createdAtLocal || TimeService.timestamp(),
+      updatedAtLocal: TimeService.timestamp()
+    };
 
     if (customId) {
       const docRef = ref(db, `${path}/${customId}`);
@@ -111,7 +118,7 @@ export class FirestoreService {
 
     const path = this._getTenantPath(collectionName);
     const docRef = ref(db, `${path}/${id}`);
-    await update(docRef, { ...data, updatedAt: serverTimestamp() });
+    await update(docRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
     console.log(`[DB] ✅ Updated ${path}/${id}`);
   }
 
@@ -188,9 +195,9 @@ export class FirestoreService {
 
     const docRef = ref(db, `${collectionName}/${id}`);
     if (merge) {
-      await update(docRef, { ...data, updatedAt: serverTimestamp() });
+      await update(docRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
     } else {
-      await set(docRef, { ...data, updatedAt: serverTimestamp() });
+      await set(docRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
     }
     console.log(`[DB] ✅ Global set ${collectionName}/${id}`);
   }
@@ -302,14 +309,15 @@ export class FirestoreService {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
     const now = serverTimestamp();
+    const localNow = TimeService.timestamp();
 
     const defaultConfig = {
       enableKDS: false,
       enableWhatsApp: false,
       enableBilling: false,
       enableQR: false,
-      currency: 'MXN',
-      timezone: 'America/Mexico_City',
+      currency: 'NIO',
+      timezone: TimeService.timezone,
       address: '',
       phone: '',
       logo: '',
@@ -326,7 +334,11 @@ export class FirestoreService {
       status: companyData.status || 'ACTIVO',
       ownerId: companyData.ownerId || '',
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      createdAtLocal: localNow,
+      updatedAtLocal: localNow,
+      deletedAt: null,
+      statusReason: ''
     };
     updates[`${companyId}/informacion_local`] = {
       nombre: companyData.name,
@@ -340,14 +352,16 @@ export class FirestoreService {
     };
     updates[`${companyId}/config`] = {
       ...defaultConfig,
-      updatedAt: now
+      updatedAt: now,
+      updatedAtLocal: localNow
     };
     updates[`${companyId}/branches/main`] = {
       name: 'Principal',
       address: companyData.address || '',
       phone: companyData.phone || '',
       active: true,
-      createdAt: now
+      createdAt: now,
+      createdAtLocal: localNow
     };
 
     const rootRef = ref(db);
@@ -376,7 +390,9 @@ export class FirestoreService {
       branchId: employeeData.branchId || 'main',
       active: true,
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      createdAtLocal: TimeService.timestamp(),
+      updatedAtLocal: TimeService.timestamp()
     });
     console.log(`[DB] ✅ Employee added: /${companyId}/employees/${uid}`);
   }
@@ -460,7 +476,7 @@ export class FirestoreService {
     if (data.email !== undefined) mappedData.correo = data.email;
 
     const infoRef = ref(db, `${companyId}/informacion_local`);
-    await update(infoRef, { ...mappedData, ...data, updatedAt: serverTimestamp() });
+    await update(infoRef, { ...mappedData, ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
     console.log(`[DB] ✅ Company info updated: /${companyId}/informacion_local`);
   }
 
@@ -487,7 +503,7 @@ export class FirestoreService {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
     const configRef = ref(db, `${companyId}/config`);
-    await update(configRef, { ...data, updatedAt: serverTimestamp() });
+    await update(configRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
     console.log(`[DB] ✅ Company config updated: /${companyId}/config`);
   }
 
@@ -539,6 +555,8 @@ export class FirestoreService {
           businessType: info.businessType || 'Restaurante',
           plan: info.plan || 'FREE',
           status: info.status || 'ACTIVO',
+          deletedAt: info.deletedAt || null,
+          statusReason: info.statusReason || '',
           ownerId: info.ownerId || '',
           branches: branchCount || 1,
           users: employeeCount || 1,
@@ -570,6 +588,150 @@ export class FirestoreService {
     const rootRef = ref(db);
     await update(rootRef, updates);
     console.log(`[DB] ✅ Company deleted: /${companyId}`);
+  }
+
+  /**
+   * Update the Super Admin company registry and tenant mirrors atomically.
+   * @param {string} companyId
+   * @param {Object} data
+   */
+  static async updateCompany(companyId, data) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const localNow = TimeService.timestamp();
+    const updates = {};
+    Object.entries(data).forEach(([key, value]) => {
+      updates[`companies/${companyId}/${key}`] = value;
+    });
+    updates[`companies/${companyId}/updatedAt`] = serverTimestamp();
+    updates[`companies/${companyId}/updatedAtLocal`] = localNow;
+
+    if (data.name !== undefined) {
+      updates[`${companyId}/informacion_local/nombre`] = data.name;
+      updates[`${companyId}/branches/main/name`] = 'Principal';
+    }
+    if (data.businessType !== undefined) {
+      updates[`${companyId}/informacion_local/businessType`] = data.businessType;
+    }
+    if (data.plan !== undefined) {
+      updates[`${companyId}/config/plan`] = data.plan;
+    }
+    if (data.status !== undefined) {
+      updates[`${companyId}/config/status`] = data.status;
+    }
+    updates[`${companyId}/informacion_local/updatedAt`] = serverTimestamp();
+    updates[`${companyId}/informacion_local/updatedAtLocal`] = localNow;
+
+    await update(ref(db), updates);
+    await this.logAudit({
+      action: 'COMPANY_UPDATE',
+      companyId,
+      description: `Empresa actualizada: ${companyId}`,
+      metadata: data
+    });
+    console.log(`[DB] ✅ Company registry updated: /companies/${companyId}`);
+  }
+
+  static async setCompanyLifecycle(companyId, status, reason = '') {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const localNow = TimeService.timestamp();
+    const deletedAt = status === 'ELIMINADO' ? serverTimestamp() : null;
+    const deletedAtLocal = status === 'ELIMINADO' ? localNow : null;
+    const updates = {};
+
+    updates[`companies/${companyId}/status`] = status;
+    updates[`companies/${companyId}/statusReason`] = reason;
+    updates[`companies/${companyId}/updatedAt`] = serverTimestamp();
+    updates[`companies/${companyId}/updatedAtLocal`] = localNow;
+    updates[`companies/${companyId}/deletedAt`] = deletedAt;
+    updates[`companies/${companyId}/deletedAtLocal`] = deletedAtLocal;
+    updates[`${companyId}/config/status`] = status;
+    updates[`${companyId}/config/statusReason`] = reason;
+    updates[`${companyId}/config/updatedAt`] = serverTimestamp();
+    updates[`${companyId}/config/updatedAtLocal`] = localNow;
+
+    await update(ref(db), updates);
+    await this.logAudit({
+      action: `COMPANY_${status}`,
+      companyId,
+      description: `Estado de empresa cambiado a ${status}. Motivo: ${reason || 'No especificado'}`,
+      metadata: { status, reason }
+    });
+  }
+
+  static async permanentlyDeleteCompany(companyId, reason = '') {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const companyData = await this.readPath(companyId);
+    const registryData = await this.getGlobal('companies', companyId);
+    const localNow = TimeService.timestamp();
+    const trashId = `${companyId}_${localNow.epochMs}`;
+    const updates = {};
+
+    updates[`deleted_companies/${trashId}`] = {
+      companyId,
+      registry: registryData || null,
+      data: companyData || null,
+      reason,
+      deletedAt: serverTimestamp(),
+      deletedAtLocal: localNow
+    };
+    updates[`companies/${companyId}`] = null;
+    updates[companyId] = null;
+
+    await update(ref(db), updates);
+    await this.logAudit({
+      action: 'COMPANY_PERMANENT_DELETE',
+      companyId,
+      description: `Empresa eliminada definitivamente. Motivo: ${reason || 'No especificado'}`,
+      metadata: { trashId, reason }
+    });
+  }
+
+  static async logAudit({ action, companyId = 'global', description = '', metadata = {} }) {
+    if (!db) return;
+    const { currentUser } = GlobalStore.getState();
+    const auditRef = push(ref(db, 'audit_logs'));
+    await set(auditRef, {
+      action,
+      companyId,
+      description,
+      metadata,
+      userId: currentUser?.uid || 'system',
+      userEmail: currentUser?.email || 'system',
+      createdAt: serverTimestamp(),
+      createdAtLocal: TimeService.timestamp()
+    });
+  }
+
+  static async listPlans() {
+    const plans = await this.queryGlobal('saas_plans');
+    return plans.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  }
+
+  static async savePlan(planId, data) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    await this.setGlobal('saas_plans', planId, {
+      ...data,
+      updatedAtLocal: TimeService.timestamp()
+    }, true);
+    await this.logAudit({
+      action: 'SAAS_PLAN_SAVE',
+      companyId: 'global',
+      description: `Plan SaaS guardado: ${planId}`,
+      metadata: { planId, ...data }
+    });
+  }
+
+  static async deletePlan(planId) {
+    await this.deleteGlobal('saas_plans', planId);
+    await this.logAudit({
+      action: 'SAAS_PLAN_DELETE',
+      companyId: 'global',
+      description: `Plan SaaS eliminado: ${planId}`,
+      metadata: { planId }
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

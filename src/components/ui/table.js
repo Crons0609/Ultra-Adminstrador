@@ -74,7 +74,8 @@ export class DataTable extends Component {
   afterMount() {
     if (this.props.onRowClick) {
       this.$$('.tr').forEach(rowNode => {
-        rowNode.addEventListener('click', () => {
+        rowNode.addEventListener('click', (event) => {
+          if (event.target.closest('[data-stop-row-click="true"]')) return;
           const index = parseInt(rowNode.getAttribute('data-row-index'));
           if (!isNaN(index) && this.props.data[index]) {
             this.props.onRowClick(this.props.data[index]);

@@ -6,6 +6,7 @@
 import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
+import { TimeService } from '../../services/time.service.js';
 
 export class Header extends Component {
   constructor(props = {}) {
@@ -47,7 +48,7 @@ export class Header extends Component {
   }
 
   getGreeting() {
-    const hour = new Date().getHours();
+    const hour = TimeService.getHour();
     if (hour < 12) return 'Buenos días';
     if (hour < 18) return 'Buenas tardes';
     return 'Buenas noches';
@@ -161,8 +162,7 @@ export class Header extends Component {
     const clockEl = this.$('#header-clock');
     const updateClock = () => {
       if (clockEl) {
-        const now = new Date();
-        clockEl.textContent = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        clockEl.textContent = `${TimeService.formatTime()} NI`;
       }
     };
     updateClock();

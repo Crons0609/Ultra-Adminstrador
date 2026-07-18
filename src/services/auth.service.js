@@ -13,6 +13,7 @@
 import { auth, db } from '../config/firebase.config.js';
 import { GlobalStore } from '../core/state.js';
 import { FirestoreService } from './firestore.service.js';
+import { TimeService } from './time.service.js';
 
 // Firebase Auth modular imports (CDN v12.16.0)
 import {
@@ -113,6 +114,16 @@ export class AuthService {
         isAuthenticated: true
       });
 
+      await FirestoreService.updatePath(`users/${firebaseUser.uid}`, {
+        lastLoginAt: serverTimestamp(),
+        lastLoginAtLocal: TimeService.timestamp()
+      }).catch(e => console.warn('[AuthService] Could not save login audit time:', e.message));
+      await FirestoreService.logAudit({
+        action: 'LOGIN',
+        companyId: userSession.companyId || 'global',
+        description: `Inicio de sesión: ${firebaseUser.email}`
+      }).catch(() => {});
+
       // Load company metadata
       if (userSession.companyId && userSession.companyId !== 'global') {
         try {
@@ -209,7 +220,8 @@ export class AuthService {
         customRole:  profileData.customRole || '',
         companyId:   profileData.companyId || 'global',
         branchId:    profileData.branchId || 'main',
-        createdAt:   Date.now()
+        createdAt:   Date.now(),
+        createdAtLocal: TimeService.timestamp()
       };
 
       // ── Step 4: Write to /users/{uid} via REST API ──────────────────────
@@ -315,6 +327,20 @@ export class AuthService {
    */
   static async logout() {
     console.log('[AuthService] 🚪 Signing out...');
+
+    // Clean up all real-time listeners
+    const currentUser = GlobalStore.getState().currentUser;
+    if (currentUser?.uid) {
+      await FirestoreService.updatePath(`users/${currentUser.uid}`, {
+        lastLogoutAt: serverTimestamp(),
+        lastLogoutAtLocal: TimeService.timestamp()
+      }).catch(() => {});
+      await FirestoreService.logAudit({
+        action: 'LOGOUT',
+        companyId: currentUser.companyId || 'global',
+        description: `Cierre de sesión: ${currentUser.email || currentUser.uid}`
+      }).catch(() => {});
+    }
 
     // Clean up all real-time listeners
     FirestoreService.unsubscribeAll();

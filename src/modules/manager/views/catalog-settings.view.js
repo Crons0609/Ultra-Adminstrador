@@ -4,6 +4,7 @@ import { Chart } from '../../../components/data/chart.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { TimeService } from '../../../services/time.service.js';
 
 export class CatalogSettingsView extends Component {
   constructor(params = {}) {
@@ -87,7 +88,7 @@ export class CatalogSettingsView extends Component {
   subscribeToData(element) {
     try {
       // 1. Listen to catalog settings config
-      const configListener = FirestoreService.listenToTenant('configuracion_catalogo', (config) => {
+      const configListener = FirestoreService.listenToPathRaw(`${this.companyId}/configuracion_catalogo`, (config) => {
         this.state.config = config || {};
         if (this.state.activeTab === 'customize') {
           this.renderTabContent(element || this.layout.element);
@@ -149,12 +150,45 @@ export class CatalogSettingsView extends Component {
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
+              <label class="form-label" for="cat-secondary-color">Color secundario</label>
+              <input type="color" id="cat-secondary-color" style="border:none; background:none; cursor:pointer; width:40px; height:40px; padding:0;" value="${cfg.colors?.secondary || '#16a34a'}" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cat-background-color">Color de fondo</label>
+              <input type="color" id="cat-background-color" style="border:none; background:none; cursor:pointer; width:40px; height:40px; padding:0;" value="${cfg.colors?.background || '#0f172a'}" />
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+            <div class="form-group">
               <label class="form-label" for="cat-logo">URL de Logotipo (Cuadrado)</label>
               <input type="url" id="cat-logo" class="input input-md" placeholder="https://ejemplo.com/mi-logo.png" value="${cfg.logo || ''}" />
             </div>
             <div class="form-group">
               <label class="form-label" for="cat-cover">URL de Imagen de Portada (Banner superior)</label>
               <input type="url" id="cat-cover" class="input input-md" placeholder="https://ejemplo.com/portada.jpg" value="${cfg.cover || ''}" />
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+            <div class="form-group">
+              <label class="form-label" for="cat-gallery">Galería (URLs separadas por coma)</label>
+              <input type="text" id="cat-gallery" class="input input-md" value="${(cfg.gallery || []).join(', ')}" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cat-video">Video promocional</label>
+              <input type="url" id="cat-video" class="input input-md" value="${cfg.video || ''}" />
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+            <div class="form-group">
+              <label class="form-label" for="cat-font">Tipografía</label>
+              <input type="text" id="cat-font" class="input input-md" value="${cfg.typography || ''}" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cat-favicon">Favicon</label>
+              <input type="url" id="cat-favicon" class="input input-md" value="${cfg.favicon || ''}" />
             </div>
           </div>
 
@@ -169,6 +203,28 @@ export class CatalogSettingsView extends Component {
             <div class="form-group">
               <label class="form-label" for="cat-telegram">Usuario de Telegram (Sin @)</label>
               <input type="text" id="cat-telegram" class="input input-md" placeholder="mi_negocio_tg" value="${cfg.socials?.telegram || ''}" />
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+            <div class="form-group">
+              <label class="form-label" for="cat-contact">Información de contacto</label>
+              <textarea id="cat-contact" class="input input-md" style="height:70px; padding:var(--space-2); resize:vertical;">${cfg.contactInfo || ''}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cat-hours">Horarios</label>
+              <textarea id="cat-hours" class="input input-md" style="height:70px; padding:var(--space-2); resize:vertical;">${cfg.hours || ''}</textarea>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+            <div class="form-group">
+              <label class="form-label" for="cat-seo-title">Título SEO</label>
+              <input type="text" id="cat-seo-title" class="input input-md" value="${cfg.seo?.title || ''}" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cat-seo-description">Descripción SEO</label>
+              <input type="text" id="cat-seo-description" class="input input-md" value="${cfg.seo?.description || ''}" />
             </div>
           </div>
 
@@ -335,23 +391,39 @@ export class CatalogSettingsView extends Component {
 
     const theme = this.layout.$('#cat-theme').value;
     const primaryColor = this.layout.$('#cat-primary-color').value;
+    const secondaryColor = this.layout.$('#cat-secondary-color')?.value || '#16a34a';
+    const backgroundColor = this.layout.$('#cat-background-color')?.value || '#0f172a';
     const logo = this.layout.$('#cat-logo').value.trim();
     const cover = this.layout.$('#cat-cover').value.trim();
+    const gallery = (this.layout.$('#cat-gallery')?.value || '').split(',').map(x => x.trim()).filter(Boolean);
+    const video = this.layout.$('#cat-video')?.value.trim() || '';
+    const typography = this.layout.$('#cat-font')?.value.trim() || '';
+    const favicon = this.layout.$('#cat-favicon')?.value.trim() || '';
     const whatsapp = this.layout.$('#cat-whatsapp').value.trim();
     const telegram = this.layout.$('#cat-telegram').value.trim();
     const facebook = this.layout.$('#cat-facebook').value.trim();
     const instagram = this.layout.$('#cat-instagram').value.trim();
     const tiktok = this.layout.$('#cat-tiktok').value.trim();
     const website = this.layout.$('#cat-website').value.trim();
+    const contactInfo = this.layout.$('#cat-contact')?.value.trim() || '';
+    const hours = this.layout.$('#cat-hours')?.value.trim() || '';
+    const seoTitle = this.layout.$('#cat-seo-title')?.value.trim() || '';
+    const seoDescription = this.layout.$('#cat-seo-description')?.value.trim() || '';
     const enableReviews = this.layout.$('#cat-enable-reviews').checked;
 
     const payload = {
       theme,
       colors: {
-        primary: primaryColor
+        primary: primaryColor,
+        secondary: secondaryColor,
+        background: backgroundColor
       },
       logo,
       cover,
+      gallery,
+      video,
+      typography,
+      favicon,
       socials: {
         whatsapp,
         telegram,
@@ -360,8 +432,15 @@ export class CatalogSettingsView extends Component {
         tiktok,
         website
       },
+      contactInfo,
+      hours,
+      seo: {
+        title: seoTitle,
+        description: seoDescription
+      },
       enableReviews,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      updatedAtLocal: TimeService.timestamp()
     };
 
     try {
