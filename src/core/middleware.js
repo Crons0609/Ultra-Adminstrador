@@ -32,9 +32,26 @@ export function roleGuard(allowedRoles) {
     const authenticated = await authGuard(route, router);
     if (!authenticated) return false;
 
-    // 2. Validate role scope
     const state = GlobalStore.getState();
     const userRole = state.activeRole || (state.currentUser && state.currentUser.role);
+
+    if (userRole !== 'SUPER_ADMIN') {
+      const company = state.currentCompany;
+      if (company) {
+        const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
+        const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
+        
+        if (isFaltaPago || isExpired) {
+          console.warn(`Access Denied: Company '${company.name}' is expired or inactive.`);
+          alert(`Acceso Suspendido: La suscripción de "${company.name}" ha vencido o se encuentra inactiva. Por favor, contacte al administrador.`);
+          
+          const { AuthService } = await import('../services/auth.service.js');
+          await AuthService.logout();
+          router.navigate('/login');
+          return false;
+        }
+      }
+    }
 
     if (!allowedRoles.includes(userRole)) {
       console.error(`Access Denied: Role '${userRole}' not allowed on '${route.path}'.`);

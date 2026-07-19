@@ -49,6 +49,10 @@ const getManagerDashboardView = () => import('../modules/manager/views/dashboard
 const getManagerReportsView = () => import('../modules/manager/views/reports.view.js').then(m => m.ReportsView);
 const getManagerEmployeesView = () => import('../modules/manager/views/employees.view.js').then(m => m.EmployeesView);
 const getManagerQRCodesView = () => import('../modules/manager/views/qr-codes.view.js').then(m => m.QRCodesView);
+const getVehiclesView = () => import('../modules/manager/views/vehicles.view.js').then(m => m.VehiclesView);
+const getRentalsView = () => import('../modules/manager/views/rentals.view.js').then(m => m.RentalsView);
+const getAppointmentsView = () => import('../modules/manager/views/appointments.view.js').then(m => m.AppointmentsView);
+const getServiceRequestsView = () => import('../modules/manager/views/service-requests.view.js').then(m => m.ServiceRequestsView);
 
 // Public Catalog & Settings Views
 const getPublicCatalogView = () => import('../modules/customer/views/catalog.view.js').then(m => m.PublicCatalogView);
@@ -138,6 +142,11 @@ export const ROUTES = [
   { path: '/manager/employees', view: lazyView(getManagerEmployeesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/qr-codes', view: lazyView(getManagerQRCodesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/catalog-settings', view: lazyView(getCatalogSettingsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  // Rubro-specific routes
+  { path: '/manager/vehicles', view: lazyView(getVehiclesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/rentals', view: lazyView(getRentalsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/appointments', view: lazyView(getAppointmentsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/service-requests', view: lazyView(getServiceRequestsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Owner routes
   { path: '/owner/finance', view: lazyView(getOwnerFinanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },

@@ -207,6 +207,9 @@ export class PublicCatalogView extends Component {
         <div class="pub-grid" id="pub-products-grid">
           <!-- Dynamically filtered products -->
         </div>
+
+        <!-- Service Request Form (shown when business has serviceRequests enabled) -->
+        <div id="pub-service-request-section"></div>
       </main>
 
       <!-- Minimal footer -->
@@ -217,6 +220,145 @@ export class PublicCatalogView extends Component {
 
     this.bindEvents(root);
     this.renderProducts(root);
+    this.renderServiceRequestSection(root);
+  }
+
+  renderServiceRequestSection(root) {
+    const cfg = this.state.info?.configuracion || {};
+    const businessType = this.state.info?.businessType || '';
+    if (!cfg.enableServiceRequests) return;
+
+    const section = root.querySelector('#pub-service-request-section');
+    if (!section) return;
+
+    // Detect service sub-type from businessType string
+    const typeLC = businessType.toLowerCase();
+    const isCarpinteria = typeLC.includes('carpintería') || typeLC.includes('carpinteria') || typeLC.includes('mueble') || typeLC.includes('madera');
+    const isCamaras = typeLC.includes('cámara') || typeLC.includes('camara') || typeLC.includes('seguridad') || typeLC.includes('vigilancia');
+
+    const extraFields = isCarpinteria ? `
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3);">
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Medidas (ancho x alto x largo)</label>
+          <input type="text" id="req-medidas" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Ej. 2m x 1.5m x 0.5m" />
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Material</label>
+          <input type="text" id="req-material" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Ej. MDF, Pino, Cedro" />
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Color o Acabado</label>
+          <input type="text" id="req-color" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Ej. Blanco mate, Roble" />
+        </div>
+      </div>
+    ` : isCamaras ? `
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3);">
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Teléfono de contacto</label>
+          <input type="tel" id="req-telefono" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Ej. +505 8888-1234" />
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Ubicación / Dirección</label>
+          <input type="text" id="req-ubicacion" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Ej. Calle Principal, Casa #12" />
+        </div>
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Número de cámaras</label>
+          <input type="number" id="req-num-camaras" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Ej. 4" min="1" />
+        </div>
+      </div>
+    ` : '';
+
+    section.innerHTML = `
+      <div style="margin-top: var(--space-8); padding: var(--space-6); background: var(--pub-surface); border: 1px solid var(--pub-border); border-radius: var(--radius-xl);">
+        <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--pub-text); margin-bottom: var(--space-2);">
+          ${isCarpinteria ? '🪵 Solicitar Trabajo de Carpintería' : isCamaras ? '📷 Solicitar Instalación de Cámaras' : '📋 Solicitar Cotización'}
+        </h2>
+        <p style="font-size: 0.85rem; color: var(--pub-text-sec); margin-bottom: var(--space-4);">
+          Llena el formulario y nos comunicaremos contigo a la brevedad para coordinar los detalles.
+        </p>
+
+        <form id="pub-service-request-form" style="display:flex; flex-direction:column; gap: var(--space-3);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+            <div>
+              <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Tu nombre *</label>
+              <input type="text" id="req-client-name" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="Nombre completo" required />
+            </div>
+            <div>
+              <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Correo electrónico</label>
+              <input type="email" id="req-client-email" class="input input-md" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%;" placeholder="tu@correo.com" />
+            </div>
+          </div>
+
+          ${extraFields}
+
+          <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:4px; color:var(--pub-text);">Descripción del trabajo *</label>
+            <textarea id="req-description" class="input" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); width:100%; min-height:90px; padding: var(--space-3); resize:vertical;" placeholder="Descríbenos qué necesitas con el mayor detalle posible..." required></textarea>
+          </div>
+
+          <div id="pub-req-feedback" style="display:none; font-size:0.85rem; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);"></div>
+
+          <button type="submit" id="pub-req-submit-btn" style="background: var(--pub-primary, #7c75ff); color: white; border: none; border-radius: var(--radius-md); padding: var(--space-3) var(--space-5); font-size: 0.9rem; font-weight: 600; cursor: pointer; align-self: flex-start; transition: opacity 0.2s;">
+            Enviar Solicitud ✉️
+          </button>
+        </form>
+      </div>
+    `;
+
+    // Bind form submission
+    const form = section.querySelector('#pub-service-request-form');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = section.querySelector('#pub-req-submit-btn');
+        const feedback = section.querySelector('#pub-req-feedback');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Enviando...'; }
+
+        const payload = {
+          clientName: section.querySelector('#req-client-name')?.value.trim() || '',
+          clientEmail: section.querySelector('#req-client-email')?.value.trim() || '',
+          description: section.querySelector('#req-description')?.value.trim() || '',
+          businessType,
+          status: 'PENDIENTE',
+          createdAtLocal: new Date().toISOString()
+        };
+
+        if (isCarpinteria) {
+          payload.serviceType = 'carpinteria';
+          payload.medidas = section.querySelector('#req-medidas')?.value.trim() || '';
+          payload.material = section.querySelector('#req-material')?.value.trim() || '';
+          payload.color = section.querySelector('#req-color')?.value.trim() || '';
+        } else if (isCamaras) {
+          payload.serviceType = 'camaras';
+          payload.telefono = section.querySelector('#req-telefono')?.value.trim() || '';
+          payload.ubicacion = section.querySelector('#req-ubicacion')?.value.trim() || '';
+          payload.numeroCamaras = section.querySelector('#req-num-camaras')?.value || '';
+        }
+
+        try {
+          await FirestoreService.createPublicServiceRequest(this.companyId, payload);
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#10b98122';
+            feedback.style.color = '#10b981';
+            feedback.style.border = '1px solid #10b98144';
+            feedback.textContent = '✅ ¡Solicitud enviada! Nos pondremos en contacto contigo pronto.';
+          }
+          form.reset();
+        } catch (err) {
+          console.error('[CatalogView] Error sending service request:', err);
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#ef444422';
+            feedback.style.color = '#ef4444';
+            feedback.style.border = '1px solid #ef444444';
+            feedback.textContent = 'Error al enviar la solicitud. Por favor intenta de nuevo.';
+          }
+        } finally {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Enviar Solicitud ✉️'; }
+        }
+      });
+    }
   }
 
   bindEvents(root) {

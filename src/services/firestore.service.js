@@ -316,6 +316,15 @@ export class FirestoreService {
       enableWhatsApp: false,
       enableBilling: false,
       enableQR: false,
+      enableVehiclesCatalog: false,
+      enableRentals: false,
+      enableRentalReminders: false,
+      enableAppointments: false,
+      enableSchedules: false,
+      enableReservations: false,
+      enableServiceRequests: false,
+      enableStaffRoles: false,
+      enableEmployeePricing: false,
       currency: 'NIO',
       timezone: TimeService.timezone,
       address: '',
@@ -332,6 +341,7 @@ export class FirestoreService {
       businessType: companyData.businessType || 'Restaurante',
       plan: companyData.plan || 'FREE',
       status: companyData.status || 'ACTIVO',
+      subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
       ownerId: companyData.ownerId || '',
       createdAt: now,
       updatedAt: now,
@@ -348,6 +358,8 @@ export class FirestoreService {
       correo: companyData.ownerEmail || '',
       horario: '',
       logo: '',
+      businessType: companyData.businessType || 'Restaurante',
+      subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
       configuracion: defaultConfig
     };
     updates[`${companyId}/config`] = {
@@ -447,6 +459,17 @@ export class FirestoreService {
     if (!snap.exists()) return null;
 
     const data = snap.val();
+
+    let status = 'ACTIVO';
+    try {
+      const configSnap = await get(ref(db, `${companyId}/config`));
+      if (configSnap.exists()) {
+        status = configSnap.val().status || 'ACTIVO';
+      }
+    } catch (e) {
+      console.warn('Failed to fetch status from config:', e.message);
+    }
+
     return {
       id: companyId,
       name: data.nombre || data.name || companyId,
@@ -454,6 +477,7 @@ export class FirestoreService {
       phone: data.telefono || '',
       address: data.direccion || '',
       email: data.correo || '',
+      status,
       ...data
     };
   }
@@ -619,6 +643,9 @@ export class FirestoreService {
     if (data.status !== undefined) {
       updates[`${companyId}/config/status`] = data.status;
     }
+    if (data.subscriptionExpiresAt !== undefined) {
+      updates[`${companyId}/informacion_local/subscriptionExpiresAt`] = data.subscriptionExpiresAt;
+    }
     updates[`${companyId}/informacion_local/updatedAt`] = serverTimestamp();
     updates[`${companyId}/informacion_local/updatedAtLocal`] = localNow;
 
@@ -708,6 +735,26 @@ export class FirestoreService {
   static async listPlans() {
     const plans = await this.queryGlobal('saas_plans');
     return plans.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  }
+
+  /**
+   * Write a service request from the public catalog into a company's RTDB branch.
+   * Does NOT require authentication — publicly accessible write path.
+   * @param {string} companyId
+   * @param {Object} payload
+   */
+  static async createPublicServiceRequest(companyId, payload) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const reqsRef = ref(db, `${companyId}/service_requests`);
+    const newRef = push(reqsRef);
+    await set(newRef, {
+      ...payload,
+      id: newRef.key,
+      createdAt: serverTimestamp(),
+      status: payload.status || 'PENDIENTE'
+    });
+    console.log(`[DB] ✅ Public service request created: ${companyId}/service_requests/${newRef.key}`);
+    return newRef.key;
   }
 
   static async savePlan(planId, data) {

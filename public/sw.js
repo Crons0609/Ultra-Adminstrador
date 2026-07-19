@@ -3,7 +3,7 @@
  * @description Service Worker base for PWA installation, offline capabilities, and static assets caching.
  */
 
-const CACHE_NAME = 'ultra-admin-v2';
+const CACHE_NAME = 'ultra-admin-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

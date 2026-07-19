@@ -50,12 +50,28 @@ export class ManagerDashboardView extends Component {
       || currentUser?.companyId
       || 'Mi Negocio';
 
+    let subscriptionNotice = '';
+    if (this.currentCompany?.subscriptionExpiresAt) {
+      const expDate = new Date(this.currentCompany.subscriptionExpiresAt);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const diffTime = expDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      const formattedDate = this.currentCompany.subscriptionExpiresAt.split('-').reverse().join('/');
+      if (diffDays <= 7 && diffDays >= 0) {
+        subscriptionNotice = ` <span style="background-color: var(--color-warning-light); color: var(--color-warning); font-size: 0.75rem; margin-left: var(--space-2); border-radius: var(--radius-sm); padding: 2px 8px; font-weight: 600;">⚠️ Vence en ${diffDays} días (${formattedDate})</span>`;
+      } else if (diffDays > 7) {
+        subscriptionNotice = ` <span style="background-color: var(--color-success-light); color: var(--color-success); font-size: 0.75rem; margin-left: var(--space-2); border-radius: var(--radius-sm); padding: 2px 8px; font-weight: 600;">✅ Suscripción activa hasta ${formattedDate}</span>`;
+      }
+    }
+
     const salesFormatted = this._currency(this.demo.salesToday);
     const changePercent = (((this.demo.salesToday - this.demo.salesYesterday) / this.demo.salesYesterday) * 100).toFixed(1);
 
     this.layout = new PageLayout({
       title: `Bienvenido, ${currentUser.displayName?.split(' ')[0] || 'Usuario'}`,
-      subtitle: `Resumen del rendimiento de ${companyDisplayName} en tiempo real.`,
+      subtitle: `Resumen del rendimiento de ${companyDisplayName} en tiempo real.${subscriptionNotice}`,
       actionHTML: `
         <span class="header-status-chip" id="db-mode-chip">
           <span class="status-dot status-dot-warning" id="db-status-dot"></span>

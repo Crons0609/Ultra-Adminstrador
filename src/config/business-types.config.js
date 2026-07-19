@@ -125,3 +125,100 @@ export function getBusinessTypeOptions(selectedValue = '') {
           </optgroup>`;
   }).join('');
 }
+
+/**
+ * Classifies a specific business type into one of five categories.
+ * @param {string} businessType
+ * @returns {'GASTRONOMIA'|'RENT_A_CAR'|'BARBERIA'|'VENTAS'|'SERVICIOS_PERSONALIZADOS'|'PERSONALIZADA'|'OTROS'}
+ */
+export function getBusinessCategory(businessType) {
+  if (!businessType) return 'OTROS';
+
+  const typeLower = businessType.toLowerCase().trim();
+
+  // Gastronomy & Drinks
+  if (
+    typeLower.includes('restaurante') ||
+    typeLower.includes('comida') ||
+    typeLower.includes('pizzer') ||
+    typeLower.includes('cafeter') ||
+    typeLower.includes('helader') ||
+    typeLower.includes('panader') ||
+    typeLower.includes('pasteler') ||
+    typeLower.includes('food truck') ||
+    typeLower.includes('cocina') ||
+    typeLower.includes('bar') ||
+    typeLower.includes('pub') ||
+    typeLower.includes('cervecer') ||
+    typeLower.includes('licor') ||
+    typeLower.includes('vino') ||
+    typeLower.includes('discoteca') ||
+    typeLower.includes('club')
+  ) {
+    return 'GASTRONOMIA';
+  }
+
+  // Rent a car / Transport
+  if (
+    typeLower.includes('alquiler de coc') ||
+    typeLower.includes('alquiler de mot') ||
+    typeLower.includes('rent a car') ||
+    typeLower.includes('transporte')
+  ) {
+    return 'RENT_A_CAR';
+  }
+
+  // Barber / Salon / Spa
+  if (
+    typeLower.includes('barber') ||
+    typeLower.includes('belleza') ||
+    typeLower.includes('spa') ||
+    typeLower.includes('estilista')
+  ) {
+    return 'BARBERIA';
+  }
+
+  // Retail / Commerce (ventas)
+  if (
+    typeLower.includes('tienda') ||
+    typeLower.includes('minimarket') ||
+    typeLower.includes('supermercado') ||
+    typeLower.includes('pulper') ||
+    typeLower.includes('conveniencia') ||
+    typeLower.includes('comercio') ||
+    typeLower.includes('ferreter') ||
+    typeLower.includes('farmacia') ||
+    typeLower.includes('ropa') ||
+    typeLower.includes('electrónica') ||
+    typeLower.includes('mascotas') ||
+    typeLower.includes('librería')
+  ) {
+    return 'VENTAS';
+  }
+
+  // Custom / Personalised Services
+  if (
+    typeLower.includes('carpinter') ||
+    typeLower.includes('cámara') ||
+    typeLower.includes('instalac') ||
+    typeLower.includes('herrer') ||
+    typeLower.includes('electric') ||
+    typeLower.includes('pintur') ||
+    typeLower.includes('construc') ||
+    typeLower.includes('diseño') ||
+    typeLower.includes('reparac') ||
+    typeLower.includes('limpieza') ||
+    typeLower.includes('mantenimiento') ||
+    typeLower.includes('taller') ||
+    typeLower.includes('lavado')
+  ) {
+    return 'SERVICIOS_PERSONALIZADOS';
+  }
+
+  if (typeLower.includes('personalizada')) {
+    return 'PERSONALIZADA';
+  }
+
+  return 'OTROS';
+}
+

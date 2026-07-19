@@ -7,7 +7,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { AuthService } from '../../../services/auth.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
-import { getBusinessTypeOptions } from '../../../config/business-types.config.js';
+import { getBusinessTypeOptions, getBusinessCategory } from '../../../config/business-types.config.js';
 
 export class CompaniesView extends Component {
   constructor(params = {}) {
@@ -52,6 +52,21 @@ export class CompaniesView extends Component {
             return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${variant}-light);color:var(--color-${variant});">${label}</span>`;
           }
         },
+        {
+          key: 'subscriptionExpiresAt',
+          label: 'Vencimiento',
+          render: (val) => {
+            if (!val) return '<span style="color:var(--color-text-secondary); font-style:italic;">Ilimitado</span>';
+            const expDate = new Date(val);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const isExpired = expDate < today;
+            const formatted = val.split('-').reverse().join('/'); // DD/MM/YYYY
+            return isExpired 
+              ? `<span style="color:var(--color-danger); font-weight:600;">⚠️ ${formatted} (Vencido)</span>`
+              : `<span style="color:var(--color-text-primary);">${formatted}</span>`;
+          }
+        },
         { key: 'branches', label: 'Sucursales' },
         { key: 'users', label: 'Usuarios' },
         {
@@ -62,7 +77,8 @@ export class CompaniesView extends Component {
               ${row.status === 'ELIMINADO'
                 ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}">Restaurar</button>
                    <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}">Eliminar definitivo</button>`
-                : `<button class="btn btn-secondary btn-sm btn-company-action" data-action="deactivate" data-id="${row.id}">Desactivar</button>
+                : `<button class="btn btn-primary btn-sm btn-company-action" data-action="edit" data-id="${row.id}" style="background-color: var(--color-accent); color: white; border: none;">Editar</button>
+                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="deactivate" data-id="${row.id}">Desactivar</button>
                    <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}">Suspender</button>
                    <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}">Papelera</button>`}
             </div>
@@ -107,6 +123,18 @@ export class CompaniesView extends Component {
     try {
       const companies = await FirestoreService.listAllCompanies();
       GlobalStore.set({ companies });
+      
+      let plans = await FirestoreService.listPlans();
+      if (!plans || !plans.length) {
+        const defaults = [
+          { id: 'BASIC', name: 'Plan Basic', price: 499, currency: 'NIO', duration: 'Mensual', description: 'Ideal para cafeterías pequeñas o un solo local.', benefits: '1 Sucursal, 3 Usuarios activos, Menú Digital QR', userLimit: 3, employeeLimit: 5, storageGb: 1, branchLimit: 1, productLimit: 100, status: 'ACTIVO', color: '#64748b', icon: 'store', order: 1, enabledFeatures: 'menu_qr,inventario' },
+          { id: 'PREMIUM', name: 'Plan Premium', price: 999, currency: 'NIO', duration: 'Mensual', description: 'El más popular para restaurantes en crecimiento.', benefits: '3 Sucursales, Usuarios ilimitados, Módulo KDS e Inventario', userLimit: 20, employeeLimit: 50, storageGb: 5, branchLimit: 3, productLimit: 1000, status: 'ACTIVO', color: '#7c75ff', icon: 'crown', order: 2, enabledFeatures: 'menu_qr,inventario,kds,reportes' },
+          { id: 'ENTERPRISE', name: 'Plan Enterprise', price: 1999, currency: 'NIO', duration: 'Mensual', description: 'Para franquicias y grandes cadenas de comida.', benefits: 'Sucursales ilimitadas, Soporte prioritario 24/7, API abierta e informes avanzados', userLimit: 0, employeeLimit: 0, storageGb: 25, branchLimit: 0, productLimit: 0, status: 'ACTIVO', color: '#16a34a', icon: 'building', order: 3, enabledFeatures: 'menu_qr,inventario,kds,reportes,api,soporte_prioritario' }
+        ];
+        await Promise.all(defaults.map(plan => FirestoreService.savePlan(plan.id, plan)));
+        plans = defaults;
+      }
+      GlobalStore.set({ plans });
       console.log('[CompaniesView] ✅ Carga desde RTDB. Total:', companies.length);
     } catch (e) {
       console.error('[CompaniesView] Fallo al leer de la base de datos:', e);
@@ -146,7 +174,14 @@ export class CompaniesView extends Component {
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
-        this.handleCompanyAction(btn.dataset.id, btn.dataset.action);
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        if (action === 'edit') {
+          const company = (GlobalStore.getState().companies || []).find(c => c.id === id);
+          if (company) this.openEditCompanyModal(company);
+        } else {
+          this.handleCompanyAction(id, action);
+        }
       });
     }
   }
@@ -165,18 +200,126 @@ export class CompaniesView extends Component {
   }
 
   /**
+   * Automatically select checkboxes in modal form based on business category.
+   */
+  autoConfigureModules(type, prefix = '') {
+    const category = getBusinessCategory(type);
+    const setChecked = (id, checked) => {
+      const el = this.modalInstance.$(`#${prefix}${id}`);
+      if (el) el.checked = checked;
+    };
+    
+    if (category === 'GASTRONOMIA') {
+      setChecked('mod-kds', true);
+      setChecked('mod-qr', true);
+      setChecked('mod-whatsapp', false);
+      setChecked('mod-billing', true);
+      setChecked('mod-vehicles-catalog', false);
+      setChecked('mod-rentals', false);
+      setChecked('mod-rental-reminders', false);
+      setChecked('mod-appointments', false);
+      setChecked('mod-schedules', false);
+      setChecked('mod-service-requests', false);
+      setChecked('mod-staff-roles', true);
+      setChecked('mod-employee-pricing', false);
+    } else if (category === 'RENT_A_CAR') {
+      setChecked('mod-kds', false);
+      setChecked('mod-qr', false);
+      setChecked('mod-whatsapp', true);
+      setChecked('mod-billing', true);
+      setChecked('mod-vehicles-catalog', true);
+      setChecked('mod-rentals', true);
+      setChecked('mod-rental-reminders', true);
+      setChecked('mod-appointments', false);
+      setChecked('mod-schedules', false);
+      setChecked('mod-service-requests', false);
+      setChecked('mod-staff-roles', false);
+      setChecked('mod-employee-pricing', false);
+    } else if (category === 'BARBERIA') {
+      setChecked('mod-kds', false);
+      setChecked('mod-qr', false);
+      setChecked('mod-whatsapp', true);
+      setChecked('mod-billing', true);
+      setChecked('mod-vehicles-catalog', false);
+      setChecked('mod-rentals', false);
+      setChecked('mod-rental-reminders', false);
+      setChecked('mod-appointments', true);
+      setChecked('mod-schedules', true);
+      setChecked('mod-service-requests', false);
+      setChecked('mod-staff-roles', false);
+      setChecked('mod-employee-pricing', false);
+    } else if (category === 'VENTAS') {
+      setChecked('mod-kds', false);
+      setChecked('mod-qr', false);
+      setChecked('mod-whatsapp', false);
+      setChecked('mod-billing', true);
+      setChecked('mod-vehicles-catalog', false);
+      setChecked('mod-rentals', false);
+      setChecked('mod-rental-reminders', false);
+      setChecked('mod-appointments', false);
+      setChecked('mod-schedules', false);
+      setChecked('mod-service-requests', false);
+      setChecked('mod-staff-roles', true);
+      setChecked('mod-employee-pricing', true);
+    } else if (category === 'SERVICIOS_PERSONALIZADOS') {
+      setChecked('mod-kds', false);
+      setChecked('mod-qr', false);
+      setChecked('mod-whatsapp', true);
+      setChecked('mod-billing', true);
+      setChecked('mod-vehicles-catalog', false);
+      setChecked('mod-rentals', false);
+      setChecked('mod-rental-reminders', false);
+      setChecked('mod-appointments', false);
+      setChecked('mod-schedules', false);
+      setChecked('mod-service-requests', true);
+      setChecked('mod-staff-roles', false);
+      setChecked('mod-employee-pricing', false);
+    }
+  }
+
+  /**
    * Opens the customizable modal form to add a parameterized business
    */
-  openAddCompanyModal() {
+  async openAddCompanyModal() {
+    // Always fetch fresh plans from Firebase RTDB (saas_plans collection)
+    let plans = [];
+    try {
+      console.log('[CompaniesView] Fetching plans from saas_plans...');
+      plans = await FirestoreService.listPlans();
+      console.log(`[CompaniesView] ✅ Loaded ${plans.length} plans:`, plans.map(p => `${p.name} $${p.price}`));
+      GlobalStore.set({ plans });
+    } catch (e) {
+      console.error('[CompaniesView] ❌ Could not fetch plans from Firebase:', e);
+      // Try GlobalStore as last resort
+      plans = GlobalStore.getState().plans || [];
+    }
+
+    if (!plans.length) {
+      console.warn('[CompaniesView] ⚠️ No plans found in saas_plans. Check Firebase DB path.');
+      NotificationService.warning('No se encontraron planes en Firebase. Ve a Planes SaaS y crea al menos uno.', 5000);
+    }
+
+    const planOptionsHTML = plans.length > 0
+      ? plans
+          .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+          .map(p => `<option value="${p.id}">${p.name} — ${p.currency || 'NIO'} $${p.price}/${p.duration || 'mes'}</option>`)
+          .join('\n')
+      : `
+        <option value="PREMIUM">Premium (NIO $999/Mensual)</option>
+        <option value="BASIC">Basic (NIO $499/Mensual)</option>
+        <option value="FREE">Free (Demo)</option>
+      `;
+
+
     const formHTML = `
-      <form id="add-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary); max-height: 70vh; overflow-y: auto; padding-right: 4px;">
+      <form id="add-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary); max-height: 80vh; overflow-y: auto; padding-right: 8px;">
         <div class="form-group">
           <label class="form-label" for="comp-name">Nombre de la Empresa / Local</label>
           <input type="text" id="comp-name" class="input input-md" placeholder="Ej. Pizzería San Pedro" required />
         </div>
 
         <!-- OWNER CREDENTIALS -->
-        <div style="border-top: 1px dashed var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
+        <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
           <label class="form-label mb-2" style="font-weight: 600; color: var(--color-accent);">Credenciales del Dueño (Owner)</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
             <div class="form-group">
@@ -190,6 +333,7 @@ export class CompaniesView extends Component {
           </div>
         </div>
 
+        <!-- TIPO + PLAN (2 col) -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
           <div class="form-group">
             <label class="form-label" for="comp-type">Tipo de Negocio</label>
@@ -200,20 +344,26 @@ export class CompaniesView extends Component {
           <div class="form-group">
             <label class="form-label" for="comp-plan">Plan SaaS</label>
             <select id="comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="PREMIUM">Premium ($999/mes)</option>
-              <option value="BASIC">Basic ($499/mes)</option>
-              <option value="FREE">Free (Demo)</option>
+              ${planOptionsHTML}
             </select>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="comp-status">Estado del Negocio</label>
-          <select id="comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-            <option value="ACTIVO">Activo (Cuenta normal)</option>
-            <option value="INACTIVO">Inactivo (Suspendido)</option>
-            <option value="FALTA_PAGO">Falta de Pago (Bloqueo de acceso)</option>
-          </select>
+        <!-- ESTADO + FECHA LÍMITE (2 col) — visible sin scroll -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
+          <div class="form-group">
+            <label class="form-label" for="comp-status">Estado del Negocio</label>
+            <select id="comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+              <option value="ACTIVO">Activo (Cuenta normal)</option>
+              <option value="INACTIVO">Inactivo (Suspendido)</option>
+              <option value="FALTA_PAGO">Falta de Pago (Bloqueo)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="comp-expiration">📅 Fecha Límite de Suscripción</label>
+            <input type="date" id="comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" />
+            <small style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 4px; display: block;">Dejar vacío si no tiene vencimiento</small>
+          </div>
         </div>
 
         <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
@@ -239,6 +389,46 @@ export class CompaniesView extends Component {
               <input type="checkbox" id="mod-billing" checked style="accent-color: var(--color-accent);" />
               <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
             </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-vehicles-catalog" style="accent-color: var(--color-accent);" />
+              <span>Catálogo de Vehículos (Rent a Car)</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-rentals" style="accent-color: var(--color-accent);" />
+              <span>Gestión de Alquileres</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-rental-reminders" style="accent-color: var(--color-accent);" />
+              <span>Recordatorios de Alquiler</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-appointments" style="accent-color: var(--color-accent);" />
+              <span>Citas y Reservas</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-schedules" style="accent-color: var(--color-accent);" />
+              <span>Horarios de Personal (Estilistas)</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-service-requests" style="accent-color: var(--color-accent);" />
+              <span>Solicitudes de Trabajo Personalizado</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-staff-roles" checked style="accent-color: var(--color-accent);" />
+              <span>Roles de Personal (Mesero/Cocina/Cajero)</span>
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-employee-pricing" style="accent-color: var(--color-accent);" />
+              <span>Precios Especiales Vendedor/Público</span>
+            </label>
           </div>
         </div>
       </form>
@@ -258,6 +448,16 @@ export class CompaniesView extends Component {
     });
 
     document.body.appendChild(this.modalInstance.mount());
+
+    // Bind dynamic auto-select logic
+    const compTypeSelect = this.modalInstance.$('#comp-type');
+    if (compTypeSelect) {
+      compTypeSelect.addEventListener('change', (e) => {
+        this.autoConfigureModules(e.target.value, '');
+      });
+      // Initial trigger
+      this.autoConfigureModules(compTypeSelect.value, '');
+    }
 
     // Bind footer actions
     const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
@@ -290,11 +490,20 @@ export class CompaniesView extends Component {
     const businessType = this.modalInstance.$('#comp-type').value;
     const plan = this.modalInstance.$('#comp-plan').value;
     const status = this.modalInstance.$('#comp-status').value;
+    const subscriptionExpiresAt = this.modalInstance.$('#comp-expiration').value || '';
 
     const enableKDS = this.modalInstance.$('#mod-kds').checked;
     const enableQR = this.modalInstance.$('#mod-qr').checked;
     const enableWhatsApp = this.modalInstance.$('#mod-whatsapp').checked;
     const enableBilling = this.modalInstance.$('#mod-billing').checked;
+    const enableVehiclesCatalog = this.modalInstance.$('#mod-vehicles-catalog').checked;
+    const enableRentals = this.modalInstance.$('#mod-rentals').checked;
+    const enableRentalReminders = this.modalInstance.$('#mod-rental-reminders').checked;
+    const enableAppointments = this.modalInstance.$('#mod-appointments').checked;
+    const enableSchedules = this.modalInstance.$('#mod-schedules').checked;
+    const enableServiceRequests = this.modalInstance.$('#mod-service-requests').checked;
+    const enableStaffRoles = this.modalInstance.$('#mod-staff-roles').checked;
+    const enableEmployeePricing = this.modalInstance.$('#mod-employee-pricing').checked;
 
     // Use the sanitised company name as the company ID (root branch name)
     const newCompanyId = FirestoreService.sanitiseKey(name);
@@ -315,12 +524,21 @@ export class CompaniesView extends Component {
         name,
         businessType,
         plan,
-        status
+        status,
+        subscriptionExpiresAt
       }, {
         enableKDS,
         enableQR,
         enableWhatsApp,
-        enableBilling
+        enableBilling,
+        enableVehiclesCatalog,
+        enableRentals,
+        enableRentalReminders,
+        enableAppointments,
+        enableSchedules,
+        enableServiceRequests,
+        enableStaffRoles,
+        enableEmployeePricing
       });
 
       // 2. Create the Owner user in Firebase Auth + dual-write to /users + /companies/employees
@@ -435,10 +653,17 @@ export class CompaniesView extends Component {
 
   /**
    * Opens the edit/status administration modal when clicking a row.
-   * Loads company users from Firestore and shows them in the modal.
-   * @param {Object} row
-   */
-  async openEditCompanyModal(row) {
+   * Loads company users from Fi  async openEditCompanyModal(row) {
+    // Fetch fresh plans from Firebase RTDB to guarantee synchronization
+    let plans = [];
+    try {
+      plans = await FirestoreService.listPlans();
+      GlobalStore.set({ plans });
+    } catch (e) {
+      console.warn('[CompaniesView] Could not load latest plans:', e.message);
+      plans = GlobalStore.getState().plans || [];
+    }
+
     // Load employees for this company from /companies/{id}/employees/
     let companyUsers = [];
     try {
@@ -484,22 +709,33 @@ export class CompaniesView extends Component {
             <div class="form-group">
               <label class="form-label" for="edit-comp-plan">Plan SaaS</label>
               <select id="edit-comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                <option value="PREMIUM" ${row.plan === 'PREMIUM' ? 'selected' : ''}>Premium ($999/mes)</option>
-                <option value="BASIC" ${row.plan === 'BASIC' ? 'selected' : ''}>Basic ($499/mes)</option>
-                <option value="FREE" ${row.plan === 'FREE' ? 'selected' : ''}>Free (Demo)</option>
+                ${plans.length > 0
+                  ? plans.map(p => `<option value="${p.id}" ${row.plan === p.id ? 'selected' : ''}>${p.name} (${p.currency || 'NIO'} $${p.price}/${p.duration || 'mes'})</option>`).join('\n')
+                  : `
+                    <option value="PREMIUM" ${row.plan === 'PREMIUM' ? 'selected' : ''}>Premium ($999/mes)</option>
+                    <option value="BASIC" ${row.plan === 'BASIC' ? 'selected' : ''}>Basic ($499/mes)</option>
+                    <option value="FREE" ${row.plan === 'FREE' ? 'selected' : ''}>Free (Demo)</option>
+                  `
+                }
               </select>
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="edit-comp-status">Estado del Negocio</label>
-            <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
-              <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
-              <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
-              <option value="SUSPENDIDO" ${row.status === 'SUSPENDIDO' ? 'selected' : ''}>Suspendido temporalmente</option>
-              <option value="ELIMINADO" ${row.status === 'ELIMINADO' ? 'selected' : ''}>Papelera (eliminación lógica)</option>
-            </select>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+            <div class="form-group">
+              <label class="form-label" for="edit-comp-status">Estado del Negocio</label>
+              <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
+                <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
+                <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
+                <option value="SUSPENDIDO" ${row.status === 'SUSPENDIDO' ? 'selected' : ''}>Suspendido temporalmente</option>
+                <option value="ELIMINADO" ${row.status === 'ELIMINADO' ? 'selected' : ''}>Papelera (eliminación lógica)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-comp-expiration">Fecha Límite de Suscripción (Opcional)</label>
+              <input type="date" id="edit-comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" value="${row.subscriptionExpiresAt || ''}" />
+            </div>
           </div>
 
           <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
@@ -520,6 +756,38 @@ export class CompaniesView extends Component {
               <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
                 <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} style="accent-color: var(--color-accent);" />
                 <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-vehicles-catalog" ${row.config?.enableVehiclesCatalog ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Catálogo de Vehículos (Rent a Car)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-rentals" ${row.config?.enableRentals ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Gestión de Alquileres</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-rental-reminders" ${row.config?.enableRentalReminders ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Recordatorios de Alquiler</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-appointments" ${row.config?.enableAppointments ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Citas y Reservas</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-schedules" ${row.config?.enableSchedules ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Horarios de Personal (Estilistas)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-service-requests" ${row.config?.enableServiceRequests ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Solicitudes de Trabajo Personalizado</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-staff-roles" ${row.config?.enableStaffRoles ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Roles de Personal (Mesero/Cocina/Cajero)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-employee-pricing" ${row.config?.enableEmployeePricing ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Precios Especiales Vendedor/Público</span>
               </label>
             </div>
           </div>
@@ -696,11 +964,20 @@ export class CompaniesView extends Component {
     const businessType = this.modalInstance.$('#edit-comp-type').value;
     const plan        = this.modalInstance.$('#edit-comp-plan').value;
     const status      = this.modalInstance.$('#edit-comp-status').value;
+    const subscriptionExpiresAt = this.modalInstance.$('#edit-comp-expiration').value || '';
 
     const enableKDS      = this.modalInstance.$('#edit-mod-kds').checked;
     const enableQR       = this.modalInstance.$('#edit-mod-qr').checked;
     const enableWhatsApp = this.modalInstance.$('#edit-mod-whatsapp').checked;
     const enableBilling  = this.modalInstance.$('#edit-mod-billing').checked;
+    const enableVehiclesCatalog   = this.modalInstance.$('#edit-mod-vehicles-catalog').checked;
+    const enableRentals           = this.modalInstance.$('#edit-mod-rentals').checked;
+    const enableRentalReminders   = this.modalInstance.$('#edit-mod-rental-reminders').checked;
+    const enableAppointments      = this.modalInstance.$('#edit-mod-appointments').checked;
+    const enableSchedules         = this.modalInstance.$('#edit-mod-schedules').checked;
+    const enableServiceRequests   = this.modalInstance.$('#edit-mod-service-requests').checked;
+    const enableStaffRoles        = this.modalInstance.$('#edit-mod-staff-roles').checked;
+    const enableEmployeePricing   = this.modalInstance.$('#edit-mod-employee-pricing').checked;
 
     try {
       // 1. Update company registry and tenant mirrors in RTDB
@@ -708,7 +985,8 @@ export class CompaniesView extends Component {
         name,
         businessType,
         plan,
-        status
+        status,
+        subscriptionExpiresAt
       });
 
       // 2. Update company config in RTDB
@@ -716,7 +994,15 @@ export class CompaniesView extends Component {
         enableKDS,
         enableQR,
         enableWhatsApp,
-        enableBilling
+        enableBilling,
+        enableVehiclesCatalog,
+        enableRentals,
+        enableRentalReminders,
+        enableAppointments,
+        enableSchedules,
+        enableServiceRequests,
+        enableStaffRoles,
+        enableEmployeePricing
       });
 
       // 3. Reload companies from RTDB
