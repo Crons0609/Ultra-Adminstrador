@@ -1,0 +1,310 @@
+/**
+ * @file pos.css
+ * @description Styles for Point of Sale (POS) view interface.
+ */
+
+.pos-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1.8fr;
+  gap: var(--space-4, 16px);
+  height: calc(100vh - 150px);
+  min-height: 550px;
+}
+
+@media (max-width: 1024px) {
+  .pos-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+/* Left Panel: Ticket & Billing */
+.pos-billing-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary, #111318);
+  border: 1px solid var(--color-border, #2a2d35);
+  border-radius: var(--radius-xl, 16px);
+  overflow: hidden;
+  height: 100%;
+}
+
+.pos-panel-header {
+  padding: var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border, #2a2d35);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pos-ticket-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3, 12px);
+}
+
+.pos-ticket-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-tertiary, #6b7280);
+  text-align: center;
+  padding: var(--space-8, 32px);
+}
+
+.pos-ticket-empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-2, 8px);
+}
+
+.pos-ticket-item {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px);
+  border-bottom: 1px solid var(--color-border, #2a2d35);
+  transition: background 0.2s ease;
+}
+
+.pos-ticket-item:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.pos-item-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text-primary, #f8fafc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-item-sku {
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary, #6b7280);
+  font-family: monospace;
+}
+
+.pos-item-qty-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.pos-qty-btn {
+  border: 1px solid var(--color-border, #2a2d35);
+  background: var(--color-bg-tertiary, #1e2028);
+  color: var(--color-text-primary, #f8fafc);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pos-qty-btn:hover {
+  background: var(--color-accent, #8b5cf6);
+  border-color: var(--color-accent, #8b5cf6);
+}
+
+.pos-qty-val {
+  font-weight: 600;
+  font-size: 0.85rem;
+  width: 24px;
+  text-align: center;
+}
+
+.pos-item-price, .pos-item-subtotal {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: right;
+}
+
+.pos-item-subtotal {
+  font-weight: 700;
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.pos-item-delete {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary, #9ca3af);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.pos-item-delete:hover {
+  color: var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Left Panel Footer: Totals and Checkout */
+.pos-billing-summary {
+  padding: var(--space-4, 16px);
+  border-top: 1px solid var(--color-border, #2a2d35);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pos-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2, 8px);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #9ca3af);
+}
+
+.pos-calc-total {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #10b981;
+}
+
+.pos-payment-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2, 8px);
+  margin: var(--space-3, 12px) 0;
+}
+
+.pos-payment-btn {
+  border: 1px solid var(--color-border, #2a2d35);
+  background: var(--color-bg-tertiary, #1e2028);
+  color: var(--color-text-secondary, #9ca3af);
+  padding: var(--space-2, 8px);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.pos-payment-btn:hover {
+  border-color: var(--color-accent, #8b5cf6);
+  color: var(--color-text-primary, #f8fafc);
+}
+
+.pos-payment-btn.active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+  color: #10b981;
+}
+
+.pos-checkout-btn {
+  width: 100%;
+  padding: var(--space-3, 12px);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+
+/* Right Panel: Catalog selection */
+.pos-catalog-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pos-catalog-toolbar {
+  display: flex;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.pos-categories-bar {
+  display: flex;
+  gap: var(--space-2, 8px);
+  overflow-x: auto;
+  padding-bottom: var(--space-2, 8px);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.pos-category-tab {
+  background: var(--color-bg-secondary, #111318);
+  border: 1px solid var(--color-border, #2a2d35);
+  color: var(--color-text-secondary, #9ca3af);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.pos-category-tab:hover, .pos-category-tab.active {
+  background: var(--color-accent, #8b5cf6);
+  border-color: var(--color-accent, #8b5cf6);
+  color: white;
+}
+
+.pos-catalog-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-3, 12px);
+  padding-right: 4px;
+}
+
+.pos-catalog-item {
+  background: var(--color-bg-secondary, #111318);
+  border: 1px solid var(--color-border, #2a2d35);
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-3, 12px);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pos-catalog-item:hover {
+  border-color: var(--color-accent, #8b5cf6);
+  transform: translateY(-2px);
+}
+
+.pos-catalog-item-image {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: var(--space-2, 8px);
+  background: var(--color-bg-tertiary, #1e2028);
+}
+
+.pos-catalog-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-catalog-item-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #f8fafc);
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.2em;
+}
+
+.pos-catalog-item-price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.pos-catalog-item-stock {
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary, #6b7280);
+  margin-top: auto;
+}

@@ -136,7 +136,20 @@ export function getBusinessCategory(businessType) {
 
   const typeLower = businessType.toLowerCase().trim();
 
-  // Gastronomy & Drinks
+  // Bares, Discotecas y Ocio Nocturno
+  if (
+    typeLower.includes('bar') ||
+    typeLower.includes('pub') ||
+    typeLower.includes('cervecer') ||
+    typeLower.includes('licor') ||
+    typeLower.includes('vino') ||
+    typeLower.includes('discoteca') ||
+    typeLower.includes('club')
+  ) {
+    return 'BAR_DISCOTECA';
+  }
+
+  // Gastronomy
   if (
     typeLower.includes('restaurante') ||
     typeLower.includes('comida') ||
@@ -146,14 +159,7 @@ export function getBusinessCategory(businessType) {
     typeLower.includes('panader') ||
     typeLower.includes('pasteler') ||
     typeLower.includes('food truck') ||
-    typeLower.includes('cocina') ||
-    typeLower.includes('bar') ||
-    typeLower.includes('pub') ||
-    typeLower.includes('cervecer') ||
-    typeLower.includes('licor') ||
-    typeLower.includes('vino') ||
-    typeLower.includes('discoteca') ||
-    typeLower.includes('club')
+    typeLower.includes('cocina')
   ) {
     return 'GASTRONOMIA';
   }
@@ -178,13 +184,19 @@ export function getBusinessCategory(businessType) {
     return 'BARBERIA';
   }
 
-  // Retail / Commerce (ventas)
+  // Supermercados, Tiendas, Pulperías y Tiendas de Conveniencia
   if (
     typeLower.includes('tienda') ||
     typeLower.includes('minimarket') ||
     typeLower.includes('supermercado') ||
     typeLower.includes('pulper') ||
-    typeLower.includes('conveniencia') ||
+    typeLower.includes('conveniencia')
+  ) {
+    return 'SUPERMERCADO_TIENDA';
+  }
+
+  // Generic Retail / Commerce (ventas)
+  if (
     typeLower.includes('comercio') ||
     typeLower.includes('ferreter') ||
     typeLower.includes('farmacia') ||
@@ -222,3 +234,110 @@ export function getBusinessCategory(businessType) {
   return 'OTROS';
 }
 
+/**
+ * @returns {'GASTRONOMIA'|'BAR_DISCOTECA'|'SUPERMERCADO_TIENDA'|'RENT_A_CAR'|'BARBERIA'|'VENTAS'|'SERVICIOS_PERSONALIZADOS'|'PERSONALIZADA'|'OTROS'}
+ */
+
+/**
+ * Returns module visibility flags for the sidebar based on the business type.
+ * These are AUTOMATIC defaults; the super-admin config (cfg) can override individual flags.
+ *
+ * @param {string} businessType  - Raw businessType string from Firebase
+ * @returns {Object}             - Map of feature flags (all boolean)
+ */
+export function getModuleGuards(businessType) {
+  const category = getBusinessCategory(businessType);
+
+  const base = {
+    enableQR:               false,
+    enableAppointments:     false,
+    enableServiceRequests:  false,
+    enableRentals:          false,
+    enableVehiclesCatalog:  false,
+    enableEmployeePricing:  false,
+    showInventory:          true,
+    showAssets:             true,
+    showTools:              false,
+    showSupplies:           false,
+    showScanHistory:        false,
+  };
+
+  switch (category) {
+    case 'BAR_DISCOTECA':
+      return {
+        ...base,
+        enableQR:           true,  // QR de mesas
+        showSupplies:       true,  // insumos de barra
+        showScanHistory:    true,
+      };
+
+    case 'GASTRONOMIA':
+      return {
+        ...base,
+        enableQR:           true,  // QR de mesas
+        showSupplies:       true,  // insumos de cocina
+        showScanHistory:    true,
+      };
+
+    case 'BARBERIA':
+      return {
+        ...base,
+        enableAppointments:    true,
+        enableServiceRequests: true,
+        showTools:             true,
+        showScanHistory:       true,
+      };
+
+    case 'SUPERMERCADO_TIENDA':
+      return {
+        ...base,
+        enableQR:           true,  // QR de acceso al catálogo digital
+        showScanHistory:    true,  // historial de escaneo de códigos
+        showInventory:      true,
+        showSupplies:       false,
+        enableEmployeePricing: true,
+      };
+
+    case 'VENTAS':
+      return {
+        ...base,
+        showScanHistory:    true,
+        showSupplies:       true,
+        enableEmployeePricing: true,
+      };
+
+    case 'RENT_A_CAR':
+      return {
+        ...base,
+        enableVehiclesCatalog: true,
+        enableRentals:         true,
+      };
+
+    case 'SERVICIOS_PERSONALIZADOS':
+      return {
+        ...base,
+        enableServiceRequests: true,
+        showTools:             true,
+        showSupplies:          true,
+        showScanHistory:       true,
+      };
+
+    case 'PERSONALIZADA':
+    case 'OTROS':
+    default:
+      // Show everything for generic/unknown businesses
+      return {
+        enableQR:               true,
+        enableAppointments:     true,
+        enableServiceRequests:  true,
+        enableRentals:          true,
+        enableVehiclesCatalog:  true,
+        enableEmployeePricing:  true,
+        showInventory:          true,
+        showAssets:             true,
+        showTools:              true,
+        showSupplies:           true,
+        showScanHistory:        true,
+      };
+  }
+}

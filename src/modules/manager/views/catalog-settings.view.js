@@ -88,7 +88,7 @@ export class CatalogSettingsView extends Component {
   subscribeToData(element) {
     try {
       // 1. Listen to catalog settings config
-      const configListener = FirestoreService.listenToPathRaw(`${this.companyId}/configuracion_catalogo`, (config) => {
+      const configListener = FirestoreService.listenToPathRaw(`configuracion_catalogo/${this.companyId}`, (config) => {
         this.state.config = config || {};
         if (this.state.activeTab === 'customize') {
           this.renderTabContent(element || this.layout.element);

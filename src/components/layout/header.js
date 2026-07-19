@@ -7,6 +7,8 @@ import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { TimeService } from '../../services/time.service.js';
+import { BarcodeScannerService } from '../../services/barcode-scanner.service.js';
+import { BarcodeRegistryService } from '../../services/barcode-registry.service.js';
 
 export class Header extends Component {
   constructor(props = {}) {
@@ -99,6 +101,13 @@ export class Header extends Component {
             </svg>
           </button>
 
+          <!-- Global Barcode Scanner Toggle -->
+          <button class="scanner-toggle-btn" id="global-scanner-toggle-btn" title="Activar Escáner Global (Ctrl+B)">
+            <div class="scanner-toggle-dot"></div>
+            <span>📊 Escáner</span>
+            <kbd class="scanner-toggle-kbd">Ctrl+B</kbd>
+          </button>
+
           <!-- User Profile Chip -->
           <div class="header-user-chip" id="header-user-chip">
             <div class="header-user-avatar">${userInitial}</div>
@@ -185,11 +194,176 @@ export class Header extends Component {
         }
       });
     }
+
+    // 6. Global Barcode Scanner setup
+    const scannerToggleBtn = this.$('#global-scanner-toggle-btn');
+    
+    const updateScannerUI = () => {
+      const active = BarcodeScannerService.isGlobalActive();
+      if (scannerToggleBtn) {
+        if (active) {
+          scannerToggleBtn.classList.add('scanner-active');
+        } else {
+          scannerToggleBtn.classList.remove('scanner-active');
+        }
+      }
+    };
+
+    const toggleScanner = () => {
+      const newState = BarcodeScannerService.toggleGlobal((code, format) => {
+        this.showGlobalScanOverlay(code, format);
+      });
+      updateScannerUI();
+      if (newState) {
+        NotificationService.info('Escáner global activado. Listo para recibir códigos.');
+      } else {
+        NotificationService.info('Escáner global desactivado.');
+      }
+    };
+
+    if (scannerToggleBtn) {
+      scannerToggleBtn.addEventListener('click', () => {
+        toggleScanner();
+      });
+    }
+
+    // Key shortcut listener (Ctrl+B)
+    this._kbdHandler = (e) => {
+      if (e.ctrlKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleScanner();
+      }
+    };
+    window.addEventListener('keydown', this._kbdHandler);
+
+    // Initial state sync
+    updateScannerUI();
+  }
+
+  showGlobalScanOverlay(code, format) {
+    const existing = document.getElementById('global-scan-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'global-scan-overlay';
+    overlay.className = 'global-scanner-overlay';
+
+    overlay.innerHTML = `
+      <div class="global-scanner-panel">
+        <div class="global-scanner-header">
+          <h3 class="global-scanner-title">
+            <span>📊</span> Código Detectado
+          </h3>
+          <button class="global-scanner-close" id="global-scan-overlay-close">&times;</button>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--color-text-secondary); font-family: monospace; margin-bottom: var(--space-3);">
+          Código: <span class="scan-code-badge">${code}</span> (${format})
+        </div>
+        <div id="global-scan-result-container">
+          <div style="display:flex; justify-content:center; padding: 20px; align-items:center; gap: 8px;">
+            <div class="barcode-pulse" style="width:12px;height:12px;"></div>
+            <span style="font-size:0.8rem; color:var(--color-text-secondary);">Buscando en la base de datos...</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const closeBtn = overlay.querySelector('#global-scan-overlay-close');
+    closeBtn.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    BarcodeRegistryService.findItemByCode(code).then(result => {
+      const container = overlay.querySelector('#global-scan-result-container');
+      if (!container) return;
+
+      if (result) {
+        const { item, type } = result;
+        const label = BarcodeRegistryService.getTypeLabel(type);
+        const icon = BarcodeRegistryService.getTypeIcon(type);
+        const name = item.name || `${item.brand || ''} ${item.model || ''}`.trim() || 'Elemento';
+
+        let extraHTML = '';
+        if (type === 'producto' || type === 'insumo') {
+          extraHTML = `
+            <div style="margin-top: 8px; font-size: 0.85rem;">
+              <strong>Stock:</strong> ${item.stock} ${item.unit || 'uds'} | 
+              <strong>Costo:</strong> ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(item.cost || item.purchasePrice || 0)}
+            </div>
+          `;
+        } else if (type === 'vehiculo') {
+          extraHTML = `
+            <div style="margin-top: 8px; font-size: 0.85rem;">
+              <strong>Placa:</strong> ${item.plate} | 
+              <strong>Estado:</strong> ${item.status || 'Disponible'}
+            </div>
+          `;
+        }
+
+        container.innerHTML = `
+          <div class="global-scanner-result global-scanner-result-found">
+            <div class="global-scanner-item-name">${name}</div>
+            <div class="global-scanner-item-meta">
+              <span class="scan-type-badge scan-type-${type}">${icon} ${label}</span>
+            </div>
+            ${extraHTML}
+            <div class="global-scanner-actions">
+              <button class="btn btn-primary btn-sm" id="global-scan-btn-view">Ver Detalles</button>
+              <button class="btn btn-secondary btn-sm" id="global-scan-btn-close">Cerrar</button>
+            </div>
+          </div>
+        `;
+
+        overlay.querySelector('#global-scan-btn-close').addEventListener('click', () => overlay.remove());
+        overlay.querySelector('#global-scan-btn-view').addEventListener('click', () => {
+          overlay.remove();
+          if (type === 'producto') {
+            window.location.hash = '#/inventory/products';
+          } else if (type === 'vehiculo') {
+            window.location.hash = '#/manager/vehicles';
+          } else if (type === 'activo') {
+            window.location.hash = '#/manager/assets';
+          } else if (type === 'herramienta') {
+            window.location.hash = '#/manager/tools';
+          } else if (type === 'insumo') {
+            window.location.hash = '#/manager/supplies';
+          }
+        });
+      } else {
+        container.innerHTML = `
+          <div class="global-scanner-result global-scanner-result-notfound">
+            <div style="font-weight:600; margin-bottom:8px; font-size:0.9rem;">Código no registrado</div>
+            <p style="font-size:0.8rem; color:var(--color-text-secondary); margin-bottom:12px;">
+              El código "${code}" no está vinculado a ningún producto o activo registrado.
+            </p>
+            <div class="global-scanner-actions">
+              <button class="btn btn-primary btn-sm" id="global-scan-btn-reg-prod">Registrar Producto</button>
+              <button class="btn btn-secondary btn-sm" id="global-scan-btn-close">Cerrar</button>
+            </div>
+          </div>
+        `;
+        overlay.querySelector('#global-scan-btn-close').addEventListener('click', () => overlay.remove());
+        overlay.querySelector('#global-scan-btn-reg-prod').addEventListener('click', () => {
+          overlay.remove();
+          window.location.hash = '#/inventory/products';
+        });
+      }
+    }).catch(err => {
+      const container = overlay.querySelector('#global-scan-result-container');
+      if (container) {
+        container.innerHTML = `<div class="text-danger" style="font-size:0.8rem;">Error: ${err.message}</div>`;
+      }
+    });
   }
 
   unmount() {
     if (this._clockInterval) clearInterval(this._clockInterval);
     if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
+    if (this._kbdHandler) window.removeEventListener('keydown', this._kbdHandler);
+    BarcodeScannerService.detachGlobal();
     super.unmount();
   }
 }

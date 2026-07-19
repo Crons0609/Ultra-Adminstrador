@@ -521,3 +521,344 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ─── Cover Container & Overlay ─── */
+.pub-cover-container {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+}
+.pub-cover-gradient {
+  background: linear-gradient(135deg, var(--pub-primary), #1e1b4b);
+}
+.pub-cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.6) 100%);
+  pointer-events: none;
+}
+
+/* ─── Toolbar (Search + Sort) ─── */
+.pub-toolbar {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.pub-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+.pub-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pub-text-sec);
+  pointer-events: none;
+}
+.pub-search-input {
+  width: 100%;
+  padding: 10px 12px 10px 38px;
+  background: var(--pub-surface);
+  border: 1.5px solid var(--pub-border);
+  border-radius: var(--pub-radius);
+  color: var(--pub-text);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.pub-search-input:focus {
+  border-color: var(--pub-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pub-primary) 20%, transparent);
+}
+.pub-sort-select {
+  padding: 10px 14px;
+  background: var(--pub-surface);
+  border: 1.5px solid var(--pub-border);
+  border-radius: var(--pub-radius);
+  color: var(--pub-text);
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-width: 150px;
+}
+.pub-sort-select:focus { border-color: var(--pub-primary); }
+
+/* ─── Category Chips — horizontal scroll ─── */
+.pub-category-carousel {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-5);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pub-category-carousel::-webkit-scrollbar { display: none; }
+.pub-cat-pill {
+  flex-shrink: 0;
+  padding: 7px 18px;
+  border-radius: 999px;
+  background: var(--pub-surface);
+  border: 1.5px solid var(--pub-border);
+  color: var(--pub-text-sec);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.pub-cat-pill:hover {
+  border-color: var(--pub-primary);
+  color: var(--pub-primary);
+  background: color-mix(in srgb, var(--pub-primary) 10%, transparent);
+}
+.pub-cat-pill.active {
+  background: var(--pub-primary);
+  border-color: var(--pub-primary);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--pub-primary) 45%, transparent);
+}
+
+/* ─── Card Staggered Entry Animation ─── */
+.pub-card {
+  animation: pubCardIn 0.35s ease both;
+}
+@keyframes pubCardIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Badges: Promo & Out-of-Stock ─── */
+.pub-card-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  z-index: 3;
+}
+.pub-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.pub-badge-promo {
+  background: var(--pub-primary);
+  color: #fff;
+}
+.pub-badge-out {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* ─── Out of Stock overlay ─── */
+.pub-card-out-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  border-radius: var(--pub-radius) var(--pub-radius) 0 0;
+}
+.pub-card-out-overlay span {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 6px;
+}
+
+/* ─── Card brand label ─── */
+.pub-card-brand {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--pub-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ─── Footer ─── */
+.pub-footer {
+  text-align: center;
+  padding: var(--space-6);
+  font-size: 0.75rem;
+  color: var(--pub-text-sec);
+  border-top: 1px solid var(--pub-border);
+  margin-top: var(--space-8);
+}
+
+/* ─── Empty State ─── */
+.pub-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+}
+.pub-empty-icon { opacity: 0.5; }
+.pub-empty-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--pub-text);
+  margin: 0;
+}
+.pub-empty-desc {
+  font-size: 0.85rem;
+  color: var(--pub-text-sec);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ─── Floating WhatsApp Button ─── */
+.pub-float-wa {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(37, 211, 102, 0.45);
+  z-index: 999;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: pubFloatIn 0.5s 0.8s ease both;
+}
+.pub-float-wa:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.6);
+}
+@keyframes pubFloatIn {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Service Request Card ─── */
+.pub-service-card {
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  background: var(--pub-surface);
+  border: 1px solid var(--pub-border);
+  border-radius: calc(var(--pub-radius) * 1.5);
+}
+.pub-section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--pub-text);
+  margin: 0 0 var(--space-2) 0;
+}
+.pub-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--pub-bg);
+  border: 1.5px solid var(--pub-border);
+  border-radius: var(--pub-radius);
+  color: var(--pub-text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.pub-form-input:focus {
+  border-color: var(--pub-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pub-primary) 20%, transparent);
+}
+.pub-submit-btn {
+  background: var(--pub-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--pub-radius);
+  padding: 11px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  align-self: flex-start;
+}
+.pub-submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.pub-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ─── Skeleton Loaders ─── */
+@keyframes pubShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.pub-skeleton-hero,
+.pub-skeleton-toolbar,
+.pub-skeleton-chip,
+.pub-skeleton-card-img,
+.pub-skeleton-line {
+  background: linear-gradient(90deg,
+    var(--pub-surface) 25%,
+    color-mix(in srgb, var(--pub-text-sec) 15%, var(--pub-surface)) 50%,
+    var(--pub-surface) 75%
+  );
+  background-size: 800px 100%;
+  animation: pubShimmer 1.4s infinite linear;
+  border-radius: var(--pub-radius);
+}
+.pub-skeleton-hero {
+  height: 260px;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+.pub-skeleton-toolbar {
+  height: 48px;
+  margin-bottom: var(--space-4);
+}
+.pub-skeleton-chips {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.pub-skeleton-chip {
+  height: 32px;
+  width: 80px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.pub-skeleton-card {
+  border-radius: var(--pub-radius);
+  background: var(--pub-surface);
+  border: 1px solid var(--pub-border);
+  overflow: hidden;
+}
+.pub-skeleton-card-img {
+  height: 180px;
+  border-radius: 0;
+}
+.pub-skeleton-card-body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.pub-skeleton-line {
+  height: 14px;
+  width: 100%;
+}
+.pub-skeleton-line.short { width: 40%; height: 18px; }

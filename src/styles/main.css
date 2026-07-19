@@ -27,6 +27,8 @@
 @import url('./components/dashboard.css');
 @import url('./components/inventory.css');
 @import url('./components/public-catalog.css');
+@import url('./components/barcode.css');
+@import url('./components/pos.css');
 
 /* 4. Active Color Themes */
 @import url('./themes/light.css');

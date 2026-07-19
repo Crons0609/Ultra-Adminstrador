@@ -53,6 +53,10 @@ const getVehiclesView = () => import('../modules/manager/views/vehicles.view.js'
 const getRentalsView = () => import('../modules/manager/views/rentals.view.js').then(m => m.RentalsView);
 const getAppointmentsView = () => import('../modules/manager/views/appointments.view.js').then(m => m.AppointmentsView);
 const getServiceRequestsView = () => import('../modules/manager/views/service-requests.view.js').then(m => m.ServiceRequestsView);
+const getAssetsView = () => import('../modules/manager/views/assets.view.js').then(m => m.AssetsView);
+const getToolsView = () => import('../modules/manager/views/tools.view.js').then(m => m.ToolsView);
+const getSuppliesView = () => import('../modules/manager/views/supplies.view.js').then(m => m.SuppliesView);
+const getScanHistoryView = () => import('../modules/manager/views/scan-history.view.js').then(m => m.ScanHistoryView);
 
 // Public Catalog & Settings Views
 const getPublicCatalogView = () => import('../modules/customer/views/catalog.view.js').then(m => m.PublicCatalogView);
@@ -147,6 +151,10 @@ export const ROUTES = [
   { path: '/manager/rentals', view: lazyView(getRentalsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/appointments', view: lazyView(getAppointmentsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/manager/service-requests', view: lazyView(getServiceRequestsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/assets', view: lazyView(getAssetsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/tools', view: lazyView(getToolsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/supplies', view: lazyView(getSuppliesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/manager/scan-history', view: lazyView(getScanHistoryView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Owner routes
   { path: '/owner/finance', view: lazyView(getOwnerFinanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },

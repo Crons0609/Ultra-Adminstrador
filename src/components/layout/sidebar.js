@@ -1,11 +1,13 @@
 /**
  * @file sidebar.js
  * @description Premium sidebar navigation with grouped sections, company branding, and role-based menus.
+ * Module visibility is automatically determined by the company's business type via getModuleGuards().
  */
 
 import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
+import { getModuleGuards } from '../../config/business-types.config.js';
 
 export class Sidebar extends Component {
   constructor(props = {}) {
@@ -16,6 +18,11 @@ export class Sidebar extends Component {
   getMenuConfig(role) {
     const { currentCompany } = GlobalStore.getState();
     const cfg = currentCompany?.config || {};
+
+    // Compute automatic guards from business type, then merge with super-admin cfg overrides.
+    // cfg values take precedence (super-admin can force-enable a module even if the rubro doesn't have it).
+    const autoGuards = getModuleGuards(currentCompany?.businessType || '');
+    const guards = { ...autoGuards, ...cfg };
 
     // Helper: build menu items filtered by their module guard
     const guardedItem = (label, path, icon, guard = true) => guard ? [{ label, path, icon }] : [];
@@ -37,6 +44,10 @@ export class Sidebar extends Component {
       expenses: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
       balance: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><path d="m3 12 9-9 9 9"/><path d="M5 20a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8H5z"/></svg>`,
       projections: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
+      assets: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="12" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>`,
+      tools: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+      supplies: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12M12 3v11M9 12h6M5 21h14c1 0 2-1 2-2L16 8V3H8v5L3 19c0 1 2-1 2-2z"/></svg>`,
+      history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
     };
 
     const menus = {
@@ -67,13 +78,17 @@ export class Sidebar extends Component {
             items: [
               { label: 'Dashboard', path: '#/manager/dashboard', icon: icons.dashboard },
               { label: 'Empleados', path: '#/manager/employees', icon: icons.employees },
-              { label: 'Inventario', path: '#/inventory/products', icon: icons.inventory },
-              ...guardedItem('Códigos QR', '#/manager/qr-codes', icons.qr, cfg.enableQR),
-              ...guardedItem('Solicitudes', '#/manager/service-requests', icons.inbox, cfg.enableServiceRequests),
-              ...guardedItem('Vehículos', '#/manager/vehicles', icons.car, cfg.enableVehiclesCatalog),
-              ...guardedItem('Alquileres', '#/manager/rentals', icons.calendar, cfg.enableRentals),
-              ...guardedItem('Citas', '#/manager/appointments', icons.calendar, cfg.enableAppointments),
-              ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, cfg.enableEmployeePricing),
+              ...guardedItem('Inventario', '#/inventory/products', icons.inventory, guards.showInventory),
+              ...guardedItem('Activos y Equipos', '#/manager/assets', icons.assets, guards.showAssets),
+              ...guardedItem('Vehículos', '#/manager/vehicles', icons.car, guards.enableVehiclesCatalog),
+              ...guardedItem('Herramientas', '#/manager/tools', icons.tools, guards.showTools),
+              ...guardedItem('Insumos', '#/manager/supplies', icons.supplies, guards.showSupplies),
+              ...guardedItem('Historial Escaneos', '#/manager/scan-history', icons.history, guards.showScanHistory),
+              ...guardedItem('Códigos QR', '#/manager/qr-codes', icons.qr, guards.enableQR),
+              ...guardedItem('Solicitudes', '#/manager/service-requests', icons.inbox, guards.enableServiceRequests),
+              ...guardedItem('Alquileres', '#/manager/rentals', icons.calendar, guards.enableRentals),
+              ...guardedItem('Citas', '#/manager/appointments', icons.calendar, guards.enableAppointments),
+              ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, guards.enableEmployeePricing),
               { label: 'Página Pública', path: '#/manager/catalog-settings', icon: icons.globe },
             ]
           },
@@ -95,13 +110,17 @@ export class Sidebar extends Component {
             items: [
               { label: 'Dashboard', path: '#/manager/dashboard', icon: icons.dashboard },
               { label: 'Empleados', path: '#/manager/employees', icon: icons.employees },
-              { label: 'Inventario', path: '#/inventory/products', icon: icons.inventory },
-              ...guardedItem('Códigos QR', '#/manager/qr-codes', icons.qr, cfg.enableQR),
-              ...guardedItem('Solicitudes', '#/manager/service-requests', icons.inbox, cfg.enableServiceRequests),
-              ...guardedItem('Vehículos', '#/manager/vehicles', icons.car, cfg.enableVehiclesCatalog),
-              ...guardedItem('Alquileres', '#/manager/rentals', icons.calendar, cfg.enableRentals),
-              ...guardedItem('Citas', '#/manager/appointments', icons.calendar, cfg.enableAppointments),
-              ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, cfg.enableEmployeePricing),
+              ...guardedItem('Inventario', '#/inventory/products', icons.inventory, guards.showInventory),
+              ...guardedItem('Activos y Equipos', '#/manager/assets', icons.assets, guards.showAssets),
+              ...guardedItem('Vehículos', '#/manager/vehicles', icons.car, guards.enableVehiclesCatalog),
+              ...guardedItem('Herramientas', '#/manager/tools', icons.tools, guards.showTools),
+              ...guardedItem('Insumos', '#/manager/supplies', icons.supplies, guards.showSupplies),
+              ...guardedItem('Historial Escaneos', '#/manager/scan-history', icons.history, guards.showScanHistory),
+              ...guardedItem('Códigos QR', '#/manager/qr-codes', icons.qr, guards.enableQR),
+              ...guardedItem('Solicitudes', '#/manager/service-requests', icons.inbox, guards.enableServiceRequests),
+              ...guardedItem('Alquileres', '#/manager/rentals', icons.calendar, guards.enableRentals),
+              ...guardedItem('Citas', '#/manager/appointments', icons.calendar, guards.enableAppointments),
+              ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, guards.enableEmployeePricing),
               { label: 'Reportes', path: '#/manager/reports', icon: icons.reports },
               { label: 'Página Pública', path: '#/manager/catalog-settings', icon: icons.globe },
             ]

@@ -204,6 +204,40 @@ export class PublicProductDetailView extends Component {
             </p>
           </div>
 
+          <!-- Store Info Block: Location, Brand, Presentation, Nutrition -->
+          ${(p.location || p.brand || p.presentation || p.nutritionInfo) ? `
+            <div style="background: rgba(22,163,74,0.06); border: 1px solid rgba(22,163,74,0.18); border-radius: var(--pub-radius); padding: var(--space-4); display: flex; flex-direction: column; gap: 10px;">
+              ${p.location ? `
+                <div>
+                  <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:4px;">📍 Ubicación en Tienda</span>
+                  <span class="text-sm font-semibold" style="color:var(--pub-text);">${p.location}</span>
+                </div>
+              ` : ''}
+              ${(p.brand || p.presentation) ? `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid rgba(22,163,74,0.12); padding-top: 10px;">
+                  ${p.brand ? `
+                    <div>
+                      <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:2px;">🏷️ Marca</span>
+                      <span class="text-sm" style="color:var(--pub-text);">${p.brand}</span>
+                    </div>
+                  ` : ''}
+                  ${p.presentation ? `
+                    <div>
+                      <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:2px;">📦 Presentación</span>
+                      <span class="text-sm" style="color:var(--pub-text);">${p.presentation}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+              ${p.nutritionInfo ? `
+                <div style="border-top: 1px solid rgba(22,163,74,0.12); padding-top: 10px;">
+                  <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:4px;">🍽️ Información Nutricional</span>
+                  <p class="text-xs text-secondary" style="line-height:1.5; white-space: pre-line;">${p.nutritionInfo}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
           <!-- Call to Actions -->
           <div class="d-flex flex-column gap-3 mt-2">
             <a href="${waUrl}" target="_blank" class="btn btn-primary btn-md btn-detail-wa-click" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:0.95rem; height:46px;">

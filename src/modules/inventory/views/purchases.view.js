@@ -5,6 +5,8 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { BarcodeInput } from '../../../components/forms/barcode-input.js';
+import { BarcodeScannerService } from '../../../services/barcode-scanner.service.js';
 
 export class PurchasesView extends Component {
   constructor(params = {}) {
@@ -249,6 +251,13 @@ export class PurchasesView extends Component {
           </select>
         </div>
 
+        <div style="margin-bottom: var(--space-2);">
+          <label class="form-label font-semibold" style="font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
+            <span>📊</span> Escanear Artículo para Agregar
+          </label>
+          <div id="pur-barcode-input-container"></div>
+        </div>
+
         <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-2);">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="form-label" style="font-weight: 600;">Detalle de Insumos / Productos</span>
@@ -276,10 +285,46 @@ export class PurchasesView extends Component {
       title: 'Registrar Orden de Compra',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
-      size: 'md'
+      size: 'md',
+      onClose: () => {
+        if (this._modalBarcodeInput) {
+          this._modalBarcodeInput.unmount();
+          this._modalBarcodeInput = null;
+        }
+      }
     });
 
     document.body.appendChild(this.modalInstance.mount());
+
+    // Initialize Barcode Input
+    const barcodeContainer = this.modalInstance.$('#pur-barcode-input-container');
+    if (barcodeContainer) {
+      this._modalBarcodeInput = new BarcodeInput({
+        id: 'pur-barcode-scan',
+        compact: true,
+        placeholder: 'Escanea código de barras o QR...',
+        onScan: (code, format) => {
+          const product = this.state.products.find(p =>
+            (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
+            (p.barcode && p.barcode.toLowerCase() === code.toLowerCase())
+          );
+          if (product) {
+            this.addItemRow(product.id, 1, product.purchasePrice || 0);
+            NotificationService.success(`Agregado: ${product.name}`);
+          } else {
+            NotificationService.warning(`Código "${code}" no registrado en productos.`);
+          }
+          // Clear and refocus input
+          setTimeout(() => {
+            if (this._modalBarcodeInput) {
+              this._modalBarcodeInput.setValue('');
+              this._modalBarcodeInput.focus();
+            }
+          }, 600);
+        }
+      });
+      barcodeContainer.appendChild(this._modalBarcodeInput.mount());
+    }
 
     const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
     if (cancelBtn) {
@@ -298,7 +343,7 @@ export class PurchasesView extends Component {
     }
   }
 
-  addItemRow() {
+  addItemRow(productId = '', qty = 1, price = null) {
     const container = this.modalInstance.$('#pur-items-container');
     if (!container) return;
 
@@ -306,19 +351,45 @@ export class PurchasesView extends Component {
     const emptyMsg = container.querySelector('p');
     if (emptyMsg) emptyMsg.remove();
 
-    const rowId = 'row-' + Date.now();
-    const productOptionsHTML = this.state.products.map(p => `<option value="${p.id}">${p.name} (SKU: ${p.sku || 'N/A'})</option>`).join('');
+    // Check if product row already exists
+    if (productId) {
+      const existingRows = container.querySelectorAll('div[id^="row-"]');
+      for (const row of existingRows) {
+        const prodSelect = row.querySelector('.pur-row-prod');
+        if (prodSelect && prodSelect.value === productId) {
+          const qtyInput = row.querySelector('.pur-row-qty');
+          if (qtyInput) {
+            qtyInput.value = Number(qtyInput.value || 0) + Number(qty);
+            this.recalculateModalTotal();
+            return;
+          }
+        }
+      }
+    }
+
+    const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+    const productOptionsHTML = this.state.products.map(p => `<option value="${p.id}" ${p.id === productId ? 'selected' : ''}>${p.name} (SKU: ${p.sku || 'N/A'})</option>`).join('');
 
     const rowHTML = document.createElement('div');
     rowHTML.id = rowId;
     rowHTML.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: center;';
+
+    // Resolve price
+    let initialPrice = '';
+    if (price !== null) {
+      initialPrice = price;
+    } else if (productId) {
+      const prod = this.state.products.find(p => p.id === productId);
+      if (prod) initialPrice = prod.purchasePrice || 0;
+    }
+
     rowHTML.innerHTML = `
       <select class="input input-sm pur-row-prod" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
         <option value="">Selecciona Artículo...</option>
         ${productOptionsHTML}
       </select>
-      <input type="number" class="input input-sm pur-row-qty" min="1" placeholder="Cant." required style="width:100%" />
-      <input type="number" class="input input-sm pur-row-price" min="0" step="0.01" placeholder="Costo" required style="width:100%" />
+      <input type="number" class="input input-sm pur-row-qty" min="1" value="${qty}" placeholder="Cant." required style="width:100%" />
+      <input type="number" class="input input-sm pur-row-price" min="0" step="0.01" value="${initialPrice}" placeholder="Costo" required style="width:100%" />
       <button type="button" class="btn btn-danger btn-xs btn-remove-row" style="padding:4px 8px;">🗑️</button>
     `;
 
@@ -458,6 +529,10 @@ export class PurchasesView extends Component {
   }
 
   unmount() {
+    if (this._modalBarcodeInput) {
+      this._modalBarcodeInput.unmount();
+      this._modalBarcodeInput = null;
+    }
     this.listeners.forEach(id => FirestoreService.unsubscribe(id));
     this.listeners = [];
     this.table.unmount();

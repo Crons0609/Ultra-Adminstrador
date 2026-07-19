@@ -21,6 +21,7 @@ export class EmployeesView extends Component {
     const currentUser = GlobalStore.getState().currentUser || {};
     this.companyId = currentUser.companyId || 'company-test';
     this.branchId = currentUser.branchId || 'main';
+    this.currentUser = currentUser;
 
     // Initialize state
     this.state = {
@@ -82,6 +83,14 @@ export class EmployeesView extends Component {
             const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
             if (!location?.latitude || !location?.longitude) return '';
             return `<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${location.latitude},${location.longitude}">Ver</a>`;
+          }
+        },
+        {
+          key: 'actions',
+          label: 'Acciones',
+          render: (_, row) => {
+            if (this.currentUser.role !== 'OWNER') return '<span class="text-xs text-secondary">Solo Dueño</span>';
+            return `<button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}">Dar de Baja</button>`;
           }
         }
       ],
@@ -176,6 +185,19 @@ export class EmployeesView extends Component {
       stopGpsBtn.addEventListener('click', () => {
         GeolocationService.stopTracking();
         NotificationService.success('Seguimiento GPS detenido en este dispositivo.');
+      });
+    }
+
+    // Event delegation for delete buttons
+    const tableWrapper = this.layout.$('#employees-table-wrapper');
+    if (tableWrapper) {
+      tableWrapper.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.btn-delete-employee');
+        if (deleteBtn) {
+          const uid = deleteBtn.getAttribute('data-uid');
+          const name = deleteBtn.getAttribute('data-name');
+          this.confirmDeleteEmployee(uid, name);
+        }
       });
     }
   }
@@ -324,6 +346,23 @@ export class EmployeesView extends Component {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Guardar Empleado';
       }
+    }
+  }
+
+  confirmDeleteEmployee(uid, name) {
+    if (confirm(`¿Estás seguro de que deseas dar de baja y eliminar al empleado "${name}" del negocio?`)) {
+      this.deleteEmployee(uid);
+    }
+  }
+
+  async deleteEmployee(uid) {
+    try {
+      await FirestoreService.removeEmployeeFromCompany(this.companyId, uid);
+      NotificationService.success('Empleado dado de baja exitosamente.');
+      this.loadEmployees();
+    } catch (e) {
+      console.error('[EmployeesView] Error deleting employee:', e);
+      alert(`Error al dar de baja al empleado: ${e.message || e}`);
     }
   }
 

@@ -11,6 +11,7 @@ import { Chart } from '../../../components/data/chart.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { getBusinessCategory } from '../../../config/business-types.config.js';
 
 export class ManagerDashboardView extends Component {
   constructor(params = {}) {
@@ -22,35 +23,19 @@ export class ManagerDashboardView extends Component {
     this.branchId = currentUser.branchId || 'main';
     this.currentUser = currentUser;
     this.currentCompany = state.currentCompany || {};
+    this.businessCategory = getBusinessCategory(this.currentCompany.businessType || '');
 
     this.listeners = [];
     this.isDemo = true;
 
-    // Rich demo data (shown when DB is empty)
-    this.demo = {
-      salesToday: 18450,
-      salesYesterday: 16400,
-      activeOrders: 24,
-      preparingOrders: 18,
-      readyOrders: 6,
-      occupancy: 78,
-      totalTables: 18,
-      occupiedTables: 14,
-      weeklyData: [12000, 15000, 14000, 18500, 22000, 29000, 24000],
-      topProducts: [
-        { name: 'Hamburguesa Especial', count: 48 },
-        { name: 'Pizza Pepperoni', count: 36 },
-        { name: 'Tacos de Pastor', count: 32 },
-        { name: 'Cerveza Nacional', count: 28 },
-        { name: 'Limonada Natural', count: 21 },
-      ]
-    };
+    // Rich demo data — customized per category
+    this.demo = this._buildDemoData(this.businessCategory);
 
     const companyDisplayName = this.currentCompany?.name
       || currentUser?.companyId
       || 'Mi Negocio';
 
-    let subscriptionNotice = '';
+    // Subscription notice
     if (this.currentCompany?.subscriptionExpiresAt) {
       const expDate = new Date(this.currentCompany.subscriptionExpiresAt);
       const today = new Date();
@@ -81,57 +66,16 @@ export class ManagerDashboardView extends Component {
       contentHTML: `
         <!-- KPI Cards -->
         <div class="grid-stats animate-fade-in">
-          <div class="kpi-card hover-lift">
-            <div class="kpi-card-header">
-              <span class="kpi-label">Ventas de Hoy</span>
-              <div class="kpi-icon kpi-icon-success">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <line x1="12" y1="1" x2="12" y2="23"/>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-              </div>
-            </div>
-            <h3 class="kpi-value" id="stat-sales-today">${salesFormatted}</h3>
-            <span class="kpi-change kpi-change-up" id="stat-sales-change">↑ +${changePercent}% vs. ayer</span>
-          </div>
-
-          <div class="kpi-card hover-lift">
-            <div class="kpi-card-header">
-              <span class="kpi-label">Pedidos Activos</span>
-              <div class="kpi-icon kpi-icon-accent">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-              </div>
-            </div>
-            <h3 class="kpi-value" id="stat-orders-active">${this.demo.activeOrders}</h3>
-            <span class="kpi-change" id="stat-orders-sub" style="color: var(--color-text-secondary);">${this.demo.preparingOrders} preparando · ${this.demo.readyOrders} listos</span>
-          </div>
-
-          <div class="kpi-card hover-lift">
-            <div class="kpi-card-header">
-              <span class="kpi-label">Ocupación de Mesas</span>
-              <div class="kpi-icon kpi-icon-warning">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-                </svg>
-              </div>
-            </div>
-            <h3 class="kpi-value" id="stat-tables-occ">${this.demo.occupancy}%</h3>
-            <div class="kpi-progress-bar">
-              <div class="kpi-progress-fill" id="stat-occ-bar" style="width: ${this.demo.occupancy}%;"></div>
-            </div>
-            <span class="kpi-change" id="stat-tables-sub" style="color: var(--color-text-secondary);">${this.demo.occupiedTables} de ${this.demo.totalTables} mesas</span>
-          </div>
+          ${this._buildKpiBlock()}
         </div>
 
-        <!-- Chart + Top Products -->
+        <!-- Chart + Top Items -->
         <div class="grid-responsive">
           <div class="col-8">
             <div class="card p-5">
               <div class="d-flex justify-content-between align-items-center mb-5">
                 <div>
-                  <h3 class="text-lg font-semibold">Flujo de Ventas Semanal</h3>
+                  <h3 class="text-lg font-semibold">${this._getCategoryMeta().chartTitle}</h3>
                   <p class="text-xs text-secondary mt-1">Ingresos diarios de la semana en curso</p>
                 </div>
                 <span class="text-xs text-secondary" id="chart-last-update">—</span>
@@ -142,14 +86,13 @@ export class ManagerDashboardView extends Component {
 
           <div class="col-4">
             <div class="card p-5" style="height: 100%;">
-              <h3 class="text-lg font-semibold mb-4">Top Productos</h3>
+              <h3 class="text-lg font-semibold mb-4">${this._getCategoryMeta().topLabel}</h3>
               <div class="d-flex flex-column gap-3" id="stat-top-products">
                 ${this.demo.topProducts.map((p, i) => this._productRow(p.name, p.count, i)).join('')}
               </div>
-
               <div class="mt-5" style="border-top: 1px solid var(--color-border); padding-top: var(--space-4);">
                 <p class="text-xs text-secondary">
-                  Basado en órdenes completadas. Los datos se actualizan en tiempo real desde Firebase.
+                  Datos actualizados en tiempo real desde Firebase.
                 </p>
               </div>
             </div>
@@ -191,6 +134,167 @@ export class ManagerDashboardView extends Component {
 
   _currency(v) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(v);
+  }
+
+  /**
+   * Returns category-specific metadata: chart title, top-list label, and KPI labels.
+   */
+  _getCategoryMeta() {
+    const meta = {
+      BAR_DISCOTECA:           { chartTitle: 'Ingresos por Taquilla y Consumo', topLabel: 'Top Bebidas',           kpi1: 'Ventas de Hoy',        kpi2: 'Cola en Barra (BDS)',     kpi3: 'Aforo en Vivo',         kpi3icon: '🕺', k3unit: ' pers' },
+      GASTRONOMIA:             { chartTitle: 'Flujo de Ventas Semanal',         topLabel: 'Top Platos',            kpi1: 'Ventas de Hoy',        kpi2: 'Pedidos Activos',         kpi3: 'Ocupación Mesas',       kpi3icon: '😫', k3unit: '%'     },
+      SUPERMERCADO_TIENDA:     { chartTitle: 'Ventas Semanales de Tienda',      topLabel: 'Productos Más Vendidos', kpi1: 'Ventas del Día',       kpi2: 'Productos Vendidos',      kpi3: 'Artículos Agotados',    kpi3icon: '⚠️', k3unit: ' items' },
+      BARBERIA:                { chartTitle: 'Ingresos Semanales',              topLabel: 'Servicios más pedidos', kpi1: 'Ingresos de Hoy',      kpi2: 'Citas de Hoy',            kpi3: 'Clientes Atendidos',    kpi3icon: '✂️',  k3unit: ''      },
+      VENTAS:                  { chartTitle: 'Ventas Semanales',                topLabel: 'Productos Más Vendidos', kpi1: 'Ventas de Hoy',       kpi2: 'Productos Vendidos',      kpi3: 'Stock Crítico',         kpi3icon: '📦', k3unit: ' items' },
+      RENT_A_CAR:              { chartTitle: 'Ingresos por Alquileres',         topLabel: 'Vehículos más alquilados', kpi1: 'Ingresos Hoy',     kpi2: 'Alquileres Activos',     kpi3: 'Vehículos Libres',      kpi3icon: '🚗', k3unit: ' veh.' },
+      SERVICIOS_PERSONALIZADOS:{ chartTitle: 'Ingresos por Servicios',         topLabel: 'Servicios Más Solicitados', kpi1: 'Ingresos Hoy',    kpi2: 'Solicitudes Activas',   kpi3: 'Completados Hoy',        kpi3icon: '✅', k3unit: ''      },
+    };
+    return meta[this.businessCategory] || meta.GASTRONOMIA;
+  }
+
+  /**
+   * Builds demo data tailored to the business category.
+   */
+  _buildDemoData(category) {
+    const demos = {
+      BAR_DISCOTECA: {
+        salesToday: 24500, salesYesterday: 21000, activeOrders: 35,
+        preparingOrders: 25, readyOrders: 10, occupancy: 82,
+        totalTables: 300, occupiedTables: 246,
+        weeklyData: [15000, 18000, 16000, 22000, 28000, 39000, 31000],
+        topProducts: [
+          { name: 'Gin Tonic Premium', count: 95 }, { name: 'Mojito Cubano', count: 84 },
+          { name: 'Cerveza Artesanal', count: 76 }, { name: 'Shot de Tequila', count: 68 },
+          { name: 'Papas Lounge', count: 42 },
+        ]
+      },
+      GASTRONOMIA: {
+        salesToday: 18450, salesYesterday: 16400, activeOrders: 24,
+        preparingOrders: 18, readyOrders: 6, occupancy: 78,
+        totalTables: 18, occupiedTables: 14,
+        weeklyData: [12000, 15000, 14000, 18500, 22000, 29000, 24000],
+        topProducts: [
+          { name: 'Hamburguesa Especial', count: 48 }, { name: 'Pizza Pepperoni', count: 36 },
+          { name: 'Tacos de Pastor', count: 32 }, { name: 'Cerveza Nacional', count: 28 },
+          { name: 'Limonada Natural', count: 21 },
+        ]
+      },
+      BARBERIA: {
+        salesToday: 4200, salesYesterday: 3800, activeOrders: 8,
+        preparingOrders: 3, readyOrders: 5, occupancy: 67,
+        totalTables: 6, occupiedTables: 4,
+        weeklyData: [2800, 3500, 3200, 4100, 4800, 6200, 4200],
+        topProducts: [
+          { name: 'Corte + Barba', count: 32 }, { name: 'Corte Clásico', count: 28 },
+          { name: 'Degradado', count: 21 }, { name: 'Barba completa', count: 18 },
+          { name: 'Cejas', count: 12 },
+        ]
+      },
+      SUPERMERCADO_TIENDA: {
+        salesToday: 9800, salesYesterday: 8700, activeOrders: 42,
+        preparingOrders: 0, readyOrders: 0, occupancy: 0,
+        totalTables: 0, occupiedTables: 8, // occupiedTables = agotados
+        weeklyData: [5800, 7200, 6500, 8900, 9200, 11500, 9800],
+        topProducts: [
+          { name: 'Refresco 600ml', count: 210 }, { name: 'Leche 1L', count: 188 },
+          { name: 'Pan Molde 680g', count: 154 }, { name: 'Arroz 1kg', count: 132 },
+          { name: 'Papel Higiénico x4', count: 98 },
+        ]
+      },
+      VENTAS: {
+        salesToday: 12800, salesYesterday: 11500, activeOrders: 15,
+        preparingOrders: 10, readyOrders: 5, occupancy: 45,
+        totalTables: 200, occupiedTables: 90,
+        weeklyData: [8500, 11000, 9500, 13000, 14500, 18000, 12800],
+        topProducts: [
+          { name: 'Refresco 2L', count: 120 }, { name: 'Leche Entera', count: 98 },
+          { name: 'Pan de Caja', count: 87 }, { name: 'Papel Higiénico', count: 76 },
+          { name: 'Aceite Vegetal', count: 64 },
+        ]
+      },
+      RENT_A_CAR: {
+        salesToday: 9500, salesYesterday: 8200, activeOrders: 5,
+        preparingOrders: 2, readyOrders: 3, occupancy: 62,
+        totalTables: 12, occupiedTables: 8,
+        weeklyData: [6000, 7500, 7000, 8800, 10000, 12500, 9500],
+        topProducts: [
+          { name: 'Sedan Compacto', count: 18 }, { name: 'SUV Familiar', count: 14 },
+          { name: 'Pickup', count: 10 }, { name: 'Van de Pasajeros', count: 7 },
+          { name: 'Moto', count: 5 },
+        ]
+      },
+      SERVICIOS_PERSONALIZADOS: {
+        salesToday: 7800, salesYesterday: 6500, activeOrders: 6,
+        preparingOrders: 4, readyOrders: 2, occupancy: 55,
+        totalTables: 0, occupiedTables: 0,
+        weeklyData: [4500, 6000, 5500, 7200, 8000, 10000, 7800],
+        topProducts: [
+          { name: 'Instalación cámara', count: 12 }, { name: 'Mantenimiento red', count: 9 },
+          { name: 'Configuración NVR', count: 8 }, { name: 'Cableado estructurado', count: 6 },
+          { name: 'Soporte remoto', count: 5 },
+        ]
+      },
+    };
+    return demos[category] || demos.GASTRONOMIA;
+  }
+
+  /**
+   * Builds the 3 KPI cards using category-specific labels.
+   */
+  _buildKpiBlock() {
+    const m = this._getCategoryMeta();
+    const salesFormatted = this._currency(this.demo.salesToday);
+    const changePercent = (((this.demo.salesToday - this.demo.salesYesterday) / this.demo.salesYesterday) * 100).toFixed(1);
+
+    const kpi3Val = this.businessCategory === 'GASTRONOMIA'
+      ? `${this.demo.occupancy}%`
+      : `${this.demo.occupiedTables}${m.k3unit}`;
+    const showBar = this.businessCategory === 'GASTRONOMIA';
+
+    return `
+      <div class="kpi-card hover-lift">
+        <div class="kpi-card-header">
+          <span class="kpi-label">${m.kpi1}</span>
+          <div class="kpi-icon kpi-icon-success">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+        </div>
+        <h3 class="kpi-value" id="stat-sales-today">${salesFormatted}</h3>
+        <span class="kpi-change kpi-change-up" id="stat-sales-change">↑ +${changePercent}% vs. ayer</span>
+      </div>
+
+      <div class="kpi-card hover-lift">
+        <div class="kpi-card-header">
+          <span class="kpi-label">${m.kpi2}</span>
+          <div class="kpi-icon kpi-icon-accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+        </div>
+        <h3 class="kpi-value" id="stat-orders-active">${this.demo.activeOrders}</h3>
+        <span class="kpi-change" id="stat-orders-sub" style="color: var(--color-text-secondary);">${this.demo.preparingOrders} en proceso · ${this.demo.readyOrders} listos</span>
+      </div>
+
+      <div class="kpi-card hover-lift">
+        <div class="kpi-card-header">
+          <span class="kpi-label">${m.kpi3}</span>
+          <div class="kpi-icon kpi-icon-warning">
+            <span style="font-size:1.2rem;">${m.kpi3icon}</span>
+          </div>
+        </div>
+        <h3 class="kpi-value" id="stat-tables-occ">${kpi3Val}</h3>
+        ${showBar ? `
+          <div class="kpi-progress-bar">
+            <div class="kpi-progress-fill" id="stat-occ-bar" style="width: ${this.demo.occupancy}%;"></div>
+          </div>
+          <span class="kpi-change" id="stat-tables-sub" style="color: var(--color-text-secondary);">${this.demo.occupiedTables} de ${this.demo.totalTables} mesas</span>
+        ` : `<span class="kpi-change" id="stat-tables-sub" style="color: var(--color-text-secondary);">Datos en vivo desde Firebase</span>`}
+      </div>
+    `;
   }
 
   _productRow(name, count, index) {

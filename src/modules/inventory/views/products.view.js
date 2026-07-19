@@ -6,6 +6,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeScannerService } from '../../../services/barcode-scanner.service.js';
+import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
 
 export class ProductsView extends Component {
@@ -155,12 +156,35 @@ export class ProductsView extends Component {
           </div>
         </div>
 
+        <!-- Barcode Scan Search Bar -->
+        <div class="card p-4 mb-4">
+          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3);">
+            <span style="font-size: 1rem;">📊</span>
+            <span class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;">Búsqueda por Escaneo</span>
+          </div>
+          <div class="barcode-input-wrapper barcode-input-compact">
+            <div class="barcode-input-container">
+              <div class="barcode-input-icon-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 5v14"/><path d="M6 5v14"/><path d="M9 5v14"/><path d="M12 5v14"/><path d="M16 5v14"/><path d="M19 5v14"/><path d="M21 5v14"/>
+                </svg>
+              </div>
+              <input type="text" id="inp-barcode-scan" class="input input-md barcode-input-field" placeholder="Escanea un código de barras o QR para buscar..." autocomplete="off" autocorrect="off" spellcheck="false" />
+              <div class="barcode-input-indicator"><span class="barcode-pulse"></span></div>
+            </div>
+            <div id="barcode-scan-feedback" class="barcode-input-feedback" style="display: none;">
+              <span id="barcode-scan-feedback-icon"></span>
+              <span id="barcode-scan-feedback-text"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- Filter and Search Toolbar -->
         <div class="card p-4 mb-4">
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search" class="input input-md" placeholder="Buscar por nombre o SKU..." />
+              <input type="text" id="inp-search" class="input input-md" placeholder="Buscar por nombre, SKU o código de barras..." />
             </div>
 
             <select id="sel-filter-category" class="inv-filter-select">
@@ -205,6 +229,14 @@ export class ProductsView extends Component {
   afterMount(element) {
     const root = element || this.layout.element;
     if (!root) return;
+
+    // Barcode scan search bar
+    const barcodeInput = root.querySelector('#inp-barcode-scan');
+    if (barcodeInput) {
+      this._scannerSearchCleanup = BarcodeScannerService.attach(barcodeInput, {
+        onScan: (code, format) => this._handleBarcodeScan(code, format, root)
+      });
+    }
 
     // Search and filters
     const inpSearch = root.querySelector('#inp-search');
@@ -326,10 +358,11 @@ export class ProductsView extends Component {
     const { searchQuery, selectedCategory, selectedStatus, products } = this.state;
 
     let filtered = products.filter(p => {
-      // 1. Search Query filter (matches name or SKU)
+      // 1. Search Query filter (matches name, SKU, or barcode)
       const matchesSearch = !searchQuery || 
         (p.name || '').toLowerCase().includes(searchQuery) ||
-        (p.sku || '').toLowerCase().includes(searchQuery);
+        (p.sku || '').toLowerCase().includes(searchQuery) ||
+        (p.barcode || '').toLowerCase().includes(searchQuery);
 
       // 2. Category filter
       const matchesCategory = !selectedCategory || p.category === selectedCategory;
@@ -357,7 +390,63 @@ export class ProductsView extends Component {
     }
   }
 
-  openProductModal(product = null) {
+  /**
+   * Handle a barcode scan from the dedicated scan search bar.
+   * Searches for the product and either opens its editor or offers to create it.
+   */
+  async _handleBarcodeScan(code, format, root) {
+    const feedback = root.querySelector('#barcode-scan-feedback');
+    const feedbackIcon = root.querySelector('#barcode-scan-feedback-icon');
+    const feedbackText = root.querySelector('#barcode-scan-feedback-text');
+
+    const showFeedback = (icon, text, type) => {
+      if (feedback && feedbackIcon && feedbackText) {
+        feedbackIcon.textContent = icon;
+        feedbackText.textContent = text;
+        feedback.className = `barcode-input-feedback barcode-feedback-${type}`;
+        feedback.style.display = 'flex';
+      }
+    };
+
+    showFeedback('🔍', `Buscando código: ${code}...`, 'info');
+
+    // Register the scan in Firebase
+    try {
+      await BarcodeRegistryService.registerCode(code, { format });
+    } catch (e) {
+      console.warn('[ProductsView] Could not register code:', e.message);
+    }
+
+    // Search for product by SKU/barcode
+    const product = this.state.products.find(p =>
+      (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
+      (p.barcode && p.barcode.toLowerCase() === code.toLowerCase())
+    );
+
+    if (product) {
+      showFeedback('✅', `Encontrado: ${product.name} — Stock: ${product.stock} ${product.unit || 'uds'}`, 'success');
+      NotificationService.success(`Producto encontrado: ${product.name}`);
+
+      // Scroll to product in the table or open edit modal
+      setTimeout(() => this.openProductModal(product), 500);
+    } else {
+      showFeedback('⚠️', `Código "${code}" no registrado. ¿Deseas crear un producto con este código?`, 'warning');
+      NotificationService.warning(`Código ${code} no encontrado.`);
+
+      // Auto-open creation modal with the code pre-filled
+      setTimeout(() => {
+        this.openProductModal(null, code);
+      }, 800);
+    }
+
+    // Clear the scan input for next scan
+    const scanInput = root.querySelector('#inp-barcode-scan');
+    if (scanInput) {
+      setTimeout(() => { scanInput.value = ''; scanInput.focus(); }, 1500);
+    }
+  }
+
+  openProductModal(product = null, prefilledCode = '') {
     const isEdit = !!product;
 
     const categoriesList = this.state.categories;
@@ -372,7 +461,7 @@ export class ProductsView extends Component {
           </div>
           <div class="form-group">
             <label class="form-label" for="prod-sku">Código de Barras / SKU</label>
-            <input type="text" id="prod-sku" class="input input-md" placeholder="Escanea o escribe el código" value="${isEdit ? (product.sku || product.barcode || '') : ''}" />
+            <input type="text" id="prod-sku" class="input input-md barcode-input-field" placeholder="Escanea o escribe el código" value="${isEdit ? (product.sku || product.barcode || '') : prefilledCode}" autocomplete="off" autocorrect="off" spellcheck="false" style="font-family: 'JetBrains Mono', 'Fira Code', monospace; letter-spacing: 0.5px;" />
             <span class="text-xs text-secondary">Compatible con lectores USB, Bluetooth e inalámbricos en modo teclado.</span>
           </div>
         </div>
@@ -427,6 +516,28 @@ export class ProductsView extends Component {
           <textarea id="prod-description" class="input input-md" rows="2" style="resize:vertical;" placeholder="Describe brevemente el producto para tus clientes...">${isEdit ? (product.description || '') : ''}</textarea>
         </div>
 
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+          <div class="form-group">
+            <label class="form-label" for="prod-brand">🏷️ Marca (opcional)</label>
+            <input type="text" id="prod-brand" class="input input-md" placeholder="Ej. Nestlé, Coca-Cola, Bimbo" value="${isEdit ? (product.brand || '') : ''}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prod-presentation">📦 Presentación / Tamaño (opcional)</label>
+            <input type="text" id="prod-presentation" class="input input-md" placeholder="Ej. 600ml, 1kg, Pack x6" value="${isEdit ? (product.presentation || '') : ''}" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-location">📍 Ubicación en Tienda (optional)</label>
+          <input type="text" id="prod-location" class="input input-md" placeholder="Ej. Pasillo 3 · Sección de Bebidas" value="${isEdit ? (product.location || '') : ''}" />
+          <span class="text-xs text-secondary" style="margin-top:2px; display:block;">Guía a los clientes a encontrar el producto en la tienda.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-nutrition">🍽️ Información Nutricional / Características (opcional)</label>
+          <textarea id="prod-nutrition" class="input input-md" rows="2" style="resize:vertical;" placeholder="Ej. Calorías: 150 kcal, Sin gluten, Producto orgánico...">${isEdit ? (product.nutritionInfo || '') : ''}</textarea>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="prod-image">🖼️ URL de Imagen del Producto (opcional)</label>
           <input type="url" id="prod-image" class="input input-md" placeholder="https://ejemplo.com/imagen.jpg" value="${isEdit ? (product.image || '') : ''}" />
@@ -436,9 +547,15 @@ export class ProductsView extends Component {
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: var(--space-2);">
-          <input type="checkbox" id="prod-on-sale" ${isEdit && product.onSale ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--color-accent);" />
-          <label for="prod-on-sale" class="form-label" style="margin:0;">Marcar como <strong>En Oferta</strong> en el catálogo público</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: center;">
+          <div style="display: flex; align-items: center; gap: var(--space-2);">
+            <input type="checkbox" id="prod-on-sale" ${isEdit && product.onSale ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--color-accent);" />
+            <label for="prod-on-sale" class="form-label" style="margin:0;">Marcar como <strong>En Oferta</strong></label>
+          </div>
+          <div class="form-group" id="prod-old-price-group" style="display: ${isEdit && product.onSale ? 'block' : 'none'}; margin-bottom: 0;">
+            <label class="form-label" for="prod-old-price">🏷️ Precio Anterior (antes del descuento)</label>
+            <input type="number" id="prod-old-price" class="input input-md" min="0" step="0.01" placeholder="0.00" value="${isEdit ? (product.oldPrice || '') : ''}" />
+          </div>
         </div>
       </form>
     `;
@@ -466,6 +583,15 @@ export class ProductsView extends Component {
     const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => this.modalInstance.close());
+    }
+
+    // Toggle old price field when on-sale checkbox changes
+    const onSaleCheck = this.modalInstance.$('#prod-on-sale');
+    if (onSaleCheck) {
+      onSaleCheck.addEventListener('change', () => {
+        const oldPriceGroup = this.modalInstance.$('#prod-old-price-group');
+        if (oldPriceGroup) oldPriceGroup.style.display = onSaleCheck.checked ? 'block' : 'none';
+      });
     }
 
     // Live image preview
@@ -526,7 +652,11 @@ export class ProductsView extends Component {
       name,
       sku,
       barcode: sku,
+      brand: (this.modalInstance.$('#prod-brand')?.value.trim()) || '',
       category,
+      presentation: (this.modalInstance.$('#prod-presentation')?.value.trim()) || '',
+      location: (this.modalInstance.$('#prod-location')?.value.trim()) || '',
+      nutritionInfo: (this.modalInstance.$('#prod-nutrition')?.value.trim()) || '',
       unit,
       stock,
       minStock,
@@ -535,21 +665,46 @@ export class ProductsView extends Component {
       description: (this.modalInstance.$('#prod-description')?.value.trim()) || '',
       image: (this.modalInstance.$('#prod-image')?.value.trim()) || '',
       onSale: this.modalInstance.$('#prod-on-sale')?.checked || false,
+      oldPrice: this.modalInstance.$('#prod-on-sale')?.checked
+        ? Number(this.modalInstance.$('#prod-old-price')?.value || 0)
+        : null,
       updatedAt: Date.now(),
       updatedAtLocal: TimeService.timestamp()
     };
+
+    // Register the barcode in the persistent registry
+    if (sku) {
+      try {
+        await BarcodeRegistryService.registerCode(sku, {
+          productName: name,
+          associatedWith: 'producto'
+        });
+      } catch (regErr) {
+        console.warn('[ProductsView] Could not register barcode:', regErr.message);
+      }
+    }
 
     try {
       if (product) {
         // Edit mode
         await FirestoreService.update('productos', product.id, payload);
         NotificationService.success('Producto actualizado correctamente.');
+
+        // Update registry association
+        if (sku) {
+          await BarcodeRegistryService.associateCode(sku, product.id, 'producto', name).catch(() => {});
+        }
       } else {
         // Create mode
         payload.createdAt = Date.now();
         payload.createdAtLocal = TimeService.timestamp();
-        await FirestoreService.create('productos', payload);
+        const newId = await FirestoreService.create('productos', payload);
         NotificationService.success('Producto registrado correctamente en el inventario.');
+
+        // Associate the code with the new product
+        if (sku && newId) {
+          await BarcodeRegistryService.associateCode(sku, newId, 'producto', name).catch(() => {});
+        }
       }
       this.modalInstance.close();
     } catch (err) {
@@ -564,6 +719,7 @@ export class ProductsView extends Component {
 
   unmount() {
     if (this._scannerCleanup) this._scannerCleanup();
+    if (this._scannerSearchCleanup) this._scannerSearchCleanup();
     this.listeners.forEach(id => FirestoreService.unsubscribe(id));
     this.listeners = [];
     this.table.unmount();
