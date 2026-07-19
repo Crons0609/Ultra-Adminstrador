@@ -209,7 +209,7 @@ export class CompaniesView extends Component {
       if (el) el.checked = checked;
     };
     
-    if (category === 'GASTRONOMIA') {
+    if (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA') {
       setChecked('mod-kds', true);
       setChecked('mod-qr', true);
       setChecked('mod-whatsapp', false);
@@ -222,6 +222,19 @@ export class CompaniesView extends Component {
       setChecked('mod-service-requests', false);
       setChecked('mod-staff-roles', true);
       setChecked('mod-employee-pricing', false);
+    } else if (category === 'SUPERMERCADO_TIENDA') {
+      setChecked('mod-kds', false);
+      setChecked('mod-qr', true); // Catálogo QR
+      setChecked('mod-whatsapp', false);
+      setChecked('mod-billing', true);
+      setChecked('mod-vehicles-catalog', false);
+      setChecked('mod-rentals', false);
+      setChecked('mod-rental-reminders', false);
+      setChecked('mod-appointments', false);
+      setChecked('mod-schedules', false);
+      setChecked('mod-service-requests', false);
+      setChecked('mod-staff-roles', true);
+      setChecked('mod-employee-pricing', true);
     } else if (category === 'RENT_A_CAR') {
       setChecked('mod-kds', false);
       setChecked('mod-qr', false);

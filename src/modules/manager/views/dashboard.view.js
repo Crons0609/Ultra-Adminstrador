@@ -36,6 +36,7 @@ export class ManagerDashboardView extends Component {
       || 'Mi Negocio';
 
     // Subscription notice
+    let subscriptionNotice = '';
     if (this.currentCompany?.subscriptionExpiresAt) {
       const expDate = new Date(this.currentCompany.subscriptionExpiresAt);
       const today = new Date();
