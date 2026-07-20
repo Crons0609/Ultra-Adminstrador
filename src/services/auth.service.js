@@ -213,6 +213,7 @@ export class AuthService {
 
     if (db) {
       try {
+        console.log('[AuthService] 🔍 Verificando si el correo ya existe en /users...', cleanEmail);
         const usersSnap = await get(ref(db, 'users'));
         let existingUser = null;
         if (usersSnap.exists()) {
@@ -226,20 +227,34 @@ export class AuthService {
 
         if (existingUser) {
           const oldCompanyId = existingUser.companyId;
+          const orphanUid = existingUser.id || existingUser.uid;
+          console.log(`[AuthService] 📋 Perfil existente encontrado. UID: ${orphanUid}, companyId: ${oldCompanyId}`);
 
+          // ── Scenario A: company was deleted entirely ──
           let companyExists = false;
+          let employeeStillRegistered = false;
+
           if (oldCompanyId && oldCompanyId !== 'global') {
             const companySnap = await get(ref(db, `companies/${oldCompanyId}`));
             companyExists = companySnap.exists();
+            console.log(`[AuthService] 🏢 ¿companies/${oldCompanyId} existe?`, companyExists);
+
+            if (companyExists) {
+              // ── Scenario B: company exists but check if employee still belongs to it ──
+              const empSnap = await get(ref(db, `${oldCompanyId}/employees/${orphanUid}`));
+              employeeStillRegistered = empSnap.exists();
+              console.log(`[AuthService] 👤 ¿Empleado aún registrado en ${oldCompanyId}/employees/${orphanUid}?`, employeeStillRegistered);
+            }
           } else if (oldCompanyId === 'global') {
             companyExists = true;
+            employeeStillRegistered = true;
           }
 
-          if (!companyExists) {
-            // La empresa del usuario fue eliminada → es un usuario huérfano.
-            // Reutilizamos su cuenta de Auth y la vinculamos a la nueva empresa.
-            const orphanUid = existingUser.id || existingUser.uid;
+          // Re-link if: (A) company deleted, OR (B) employee was individually removed from the company
+          const shouldRelink = !companyExists || !employeeStillRegistered;
+          console.log(`[AuthService] 🔄 ¿Re-vincular usuario?`, shouldRelink, '| companyExists:', companyExists, '| employeeStillRegistered:', employeeStillRegistered);
 
+          if (shouldRelink) {
             const profilePayload = {
               uid: orphanUid,
               email: cleanEmail,
@@ -272,12 +287,16 @@ export class AuthService {
               }
             }
 
-            console.log(`[AuthService] ✅ Usuario huérfano re-vinculado: ${cleanEmail} (UID: ${orphanUid}) → empresa ${newCompanyId}`);
+            console.log(`[AuthService] ✅ Usuario re-vinculado: ${cleanEmail} (UID: ${orphanUid}) → empresa ${newCompanyId}`);
             return orphanUid;
+          } else {
+            console.log(`[AuthService] ⛔ El correo ${cleanEmail} sigue activo en la empresa ${oldCompanyId}. No se puede re-vincular.`);
           }
+        } else {
+          console.log(`[AuthService] ℹ️ No se encontró perfil en /users para: ${cleanEmail}. Proceder con creación normal.`);
         }
       } catch (orphanErr) {
-        console.warn('[AuthService] ⚠️ No se pudo verificar usuarios huérfanos:', orphanErr.message);
+        console.warn('[AuthService] ⚠️ Error en verificación de usuarios huérfanos:', orphanErr.message, orphanErr);
       }
     }
 
