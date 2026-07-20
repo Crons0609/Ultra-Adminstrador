@@ -98,6 +98,19 @@ export class AuthService {
         throw new Error('Tu perfil de usuario no está registrado. Contacta al administrador.');
       }
 
+      // Validar si el negocio existe y no ha sido eliminado (excepto si es SUPER_ADMIN)
+      if (userProfile.companyId && userProfile.companyId !== 'global' && db) {
+        const companySnap = await get(ref(db, `companies/${userProfile.companyId}`));
+        if (!companySnap.exists()) {
+          throw new Error('El negocio asociado a esta cuenta ha sido desactivado,comunicate con soporte al cliente');
+        }
+
+        const companyMeta = companySnap.val() || {};
+        if (companyMeta.status === 'ELIMINADO') {
+          throw new Error('El negocio asociado a esta cuenta se encuentra desactivado');
+        }
+      }
+
       const userSession = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
@@ -122,7 +135,7 @@ export class AuthService {
         action: 'LOGIN',
         companyId: userSession.companyId || 'global',
         description: `Inicio de sesión: ${firebaseUser.email}`
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Load company metadata
       if (userSession.companyId && userSession.companyId !== 'global') {
@@ -213,14 +226,14 @@ export class AuthService {
 
       // ── Step 3: Build profile payload ──────────────────────────────────────
       const profilePayload = {
-        uid:         newUid,
-        email:       email,
+        uid: newUid,
+        email: email,
         displayName: profileData.displayName || email,
-        role:        profileData.role,
-        customRole:  profileData.customRole || '',
-        companyId:   profileData.companyId || 'global',
-        branchId:    profileData.branchId || 'main',
-        createdAt:   Date.now(),
+        role: profileData.role,
+        customRole: profileData.customRole || '',
+        companyId: profileData.companyId || 'global',
+        branchId: profileData.branchId || 'main',
+        createdAt: Date.now(),
         createdAtLocal: TimeService.timestamp()
       };
 
@@ -334,12 +347,12 @@ export class AuthService {
       await FirestoreService.updatePath(`users/${currentUser.uid}`, {
         lastLogoutAt: serverTimestamp(),
         lastLogoutAtLocal: TimeService.timestamp()
-      }).catch(() => {});
+      }).catch(() => { });
       await FirestoreService.logAudit({
         action: 'LOGOUT',
         companyId: currentUser.companyId || 'global',
         description: `Cierre de sesión: ${currentUser.email || currentUser.uid}`
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Clean up all real-time listeners
@@ -432,6 +445,22 @@ export class AuthService {
         }
 
         if (userProfile) {
+          // Validar si el negocio existe y no ha sido eliminado (excepto si es SUPER_ADMIN)
+          if (userProfile.companyId && userProfile.companyId !== 'global' && db) {
+            try {
+              const companySnap = await get(ref(db, `companies/${userProfile.companyId}`));
+              if (!companySnap.exists() || (companySnap.val() && companySnap.val().status === 'ELIMINADO')) {
+                console.warn('[AuthService] Company deleted or trashed. Blocking session.');
+                GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+                clearTimeout(timeout);
+                resolve(null);
+                return;
+              }
+            } catch (err) {
+              console.warn('[AuthService] Failed to verify company during restore:', err.message);
+            }
+          }
+
           const userSession = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
