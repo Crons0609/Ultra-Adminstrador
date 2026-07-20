@@ -52,14 +52,20 @@ export class AuthService {
    * @returns {Promise<Object>} User session object
    */
   static async login(email, password) {
-    console.log('[AuthService] 🔑 Signing in:', email);
+    const cleanEmail = (email || '').toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ñ/g, 'n');
+
+    console.log('[AuthService] 🔑 Signing in:', cleanEmail);
 
     if (!auth) {
       throw new Error('Servicio de autenticación no disponible.');
     }
 
     try {
-      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       const firebaseUser = credential.user;
 
       // ── Profile lookup: Realtime Database ─────────────────────────────────
@@ -81,14 +87,14 @@ export class AuthService {
       }
 
       // ── Fallback: SuperAdmin detection by email ──────────────────────────
-      if (!userProfile && email === SUPER_ADMIN_EMAIL) {
+      if (!userProfile && cleanEmail === SUPER_ADMIN_EMAIL) {
         userProfile = { ...SUPER_ADMIN_PROFILE };
         // Persist SuperAdmin profile to RTDB if it doesn't exist yet
         if (db) {
           set(ref(db, `users/${firebaseUser.uid}`), {
             ...userProfile,
             uid: firebaseUser.uid,
-            email,
+            email: cleanEmail,
             createdAt: serverTimestamp()
           }).catch(e => console.warn('[AuthService] Could not save SuperAdmin profile:', e.message));
         }
@@ -188,7 +194,13 @@ export class AuthService {
    * @returns {Promise<string>} The new user's UID
    */
   static async createUser(email, password, profileData) {
-    console.log('[AuthService] 👤 Creating new user:', email, '| Role:', profileData.role);
+    const cleanEmail = (email || '').toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ñ/g, 'n');
+
+    console.log('[AuthService] 👤 Creating new user:', cleanEmail, '| Role:', profileData.role);
 
     if (!auth) {
       throw new Error('Servicio de autenticación no disponible.');
@@ -216,7 +228,7 @@ export class AuthService {
       const secondaryAuth = getSecondaryAuth(secondaryApp);
 
       // ── Step 1: Create user in Firebase Auth via secondary app ────────────
-      const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+      const credential = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, password);
       const newUser = credential.user;
       const newUid = newUser.uid;
       console.log('[AuthService] ✅ Firebase Auth user created. UID:', newUid);
@@ -227,8 +239,8 @@ export class AuthService {
       // ── Step 3: Build profile payload ──────────────────────────────────────
       const profilePayload = {
         uid: newUid,
-        email: email,
-        displayName: profileData.displayName || email,
+        email: cleanEmail,
+        displayName: profileData.displayName || cleanEmail,
         role: profileData.role,
         customRole: profileData.customRole || '',
         companyId: profileData.companyId || 'global',
@@ -285,8 +297,8 @@ export class AuthService {
       if (companyId && companyId !== 'global') {
         try {
           await FirestoreService.addEmployeeToCompany(companyId, newUid, {
-            displayName: profileData.displayName || email,
-            email: email,
+            displayName: profileData.displayName || cleanEmail,
+            email: cleanEmail,
             role: profileData.role,
             customRole: profileData.customRole || '',
             branchId: profileData.branchId || 'main'
@@ -376,10 +388,15 @@ export class AuthService {
    * @param {string} email
    */
   static async sendPasswordReset(email) {
-    console.log('[AuthService] 📧 Password reset sent to:', email);
+    const cleanEmail = (email || '').toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ñ/g, 'n');
+    console.log('[AuthService] 📧 Password reset sent to:', cleanEmail);
 
     if (auth) {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, cleanEmail);
     }
   }
 
