@@ -211,7 +211,7 @@ export class KDSView extends Component {
 
   async markAsReady(orderId) {
     try {
-      await FirestoreService.update('orders', orderId, { status: 'READY' });
+      await FirestoreService.update('orders', orderId, { status: 'READY', readyAt: Date.now() });
       NotificationService.success(this.isBar ? 'Bebida marcada como LISTA. Mesero notificado.' : 'Comanda marcada como LISTA. Mesero notificado.');
     } catch (e) {
       console.error(e);

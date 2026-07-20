@@ -673,7 +673,23 @@ export class TablesView extends Component {
           date: Date.now()
         };
         await FirestoreService.create('ventas', salePayload);
-        await FirestoreService.update('orders', order.id, { status: 'COMPLETED' });
+        await FirestoreService.update('orders', order.id, { status: 'COMPLETED', completedAt: Date.now() });
+
+        // Decrement stock for each item sold
+        if (Array.isArray(order.items)) {
+          for (const item of order.items) {
+            if (!item.productId) continue;
+            const product = this.state.products.find(p => p.id === item.productId);
+            if (product && typeof product.stock === 'number') {
+              const newStock = Math.max(0, product.stock - (item.qty || 1));
+              try {
+                await FirestoreService.update('productos', item.productId, { stock: newStock });
+              } catch (stockErr) {
+                console.warn('[TablesView] Could not update stock for product', item.productId, stockErr);
+              }
+            }
+          }
+        }
       }
 
       // Check if there are other uncompleted orders for this table

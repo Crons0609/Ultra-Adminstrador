@@ -812,7 +812,7 @@ export class POSView extends Component {
 
       if (loadedOrderId && loadedTableId) {
         // Complete the order
-        await FirestoreService.update('orders', loadedOrderId, { status: 'COMPLETED' });
+        await FirestoreService.update('orders', loadedOrderId, { status: 'COMPLETED', completedAt: Date.now() });
 
         // Retrieve remaining active orders for this table
         const remaining = this.state.orders.filter(o => 

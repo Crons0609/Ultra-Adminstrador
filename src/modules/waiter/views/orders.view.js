@@ -260,7 +260,10 @@ export class OrdersView extends Component {
 
   async updateOrderStatus(orderId, nextStatus, successMessage) {
     try {
-      await FirestoreService.update('orders', orderId, { status: nextStatus, updatedAt: Date.now() });
+      const updates = { status: nextStatus, updatedAt: Date.now() };
+      if (nextStatus === 'READY') updates.readyAt = Date.now();
+      if (nextStatus === 'COMPLETED') updates.completedAt = Date.now();
+      await FirestoreService.update('orders', orderId, updates);
       NotificationService.success(successMessage);
     } catch (e) {
       console.error(e);

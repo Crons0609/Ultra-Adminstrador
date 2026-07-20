@@ -1,30 +1,51 @@
-Integración con Lectores de Código de Barras y QR
 
-El sistema deberá ser compatible con dispositivos físicos de lectura de códigos.
+### 5. Gestión de promociones por la cajera
 
-Debe permitir conectar:
+La cajera debe tener la capacidad de crear y administrar promociones desde su dashboard. Las promociones pueden ser:
 
-* Lectores USB.
-* Lectores Bluetooth.
-* Lectores inalámbricos.
-* Lectores de Código de Barras (EAN, UPC, Code 128, etc.).
-* Lectores de Código QR.
+* **Promoción del día.**
+* **Promoción de la semana.**
+* **Promoción de fin de semana.**
+* **Promoción hasta agotar existencias.**
 
-Cuando el cursor esté sobre el campo correspondiente, el lector deberá completar automáticamente el código sin necesidad de escribirlo manualmente.
+En el caso de promociones por lote, debe poder especificarse el **lote No. XXX** y la cantidad disponible para la promoción.
 
-Funciones adicionales:
+### 6. Persistencia de los códigos QR
 
-* Registrar productos mediante escaneo.
-* Buscar productos por código.
-* Actualizar inventario mediante escaneo.
-* Agregar productos a una venta.
-* Agregar productos a una compra.
-* Registrar activos.
-* Registrar equipos.
-* Registrar vehículos.
-* Registrar herramientas.
-* Registrar insumos.
+Actualmente, los códigos QR generados se eliminan al cerrar sesión o volver a iniciar sesión. Se requiere:
 
-El código leído deberá guardarse permanentemente en Firebase para que pueda utilizarse en búsquedas futuras y acelerar la gestión del inventario.
+* Guardar permanentemente los códigos QR en la base de datos.
+* Asociar cada QR a su mesa, asiento o área correspondiente.
+* Permitir reutilizar los mismos códigos QR sin necesidad de generarlos nuevamente.
+* Mantener los QR activos incluso después de cerrar sesión o reiniciar el sistema.
 
+### 7. Personalización del código QR con el logo del local
 
+Cada código QR debe incluir el **logo del negocio en el centro**, manteniendo la legibilidad del código. Esto permitirá una mejor presentación visual y reforzará la identidad de marca del establecimiento.
+
+### 8. Sistema de arqueo de caja para la cajera
+
+Se debe agregar un apartado completo de **arqueo de caja** dentro del dashboard de la cajera, donde se registren los movimientos financieros del día. El sistema debe permitir ingresar:
+
+* **Monto inicial en caja física** antes de iniciar operaciones.
+* **Total pagado en efectivo** por los clientes.
+* **Total pagado con POS o tarjeta.**
+* **Total de ingresos registrados** en el sistema.
+* **Monto retirado de caja** durante el día, indicando la razón del retiro.
+* **Total esperado en caja física** al finalizar la jornada.
+
+#### Cuadre de caja al final del día
+
+Al finalizar la jornada, el sistema debe calcular automáticamente:
+
+* Cuánto se pagó en efectivo.
+* Cuánto se pagó con POS o tarjeta.
+* Cuánto dinero debe quedar físicamente en caja.
+* Cuánto dinero queda registrado en el sistema.
+* Si existe alguna diferencia entre la caja física y el registro del sistema.
+
+Una vez verificado el arqueo, la cajera debe poder marcarlo como **"Listo para enviar"**, y el reporte debe enviarse automáticamente al **dueño o gerente** para su revisión y aprobación.
+
+### Resultado esperado
+
+Con estas mejoras, la plataforma SaaS quedará preparada para operar con **restaurantes y negocios reales**, ofreciendo un sistema de ventas, control de inventario, promociones, códigos QR, reportes y arqueo de caja completamente funcional y listo para producción.

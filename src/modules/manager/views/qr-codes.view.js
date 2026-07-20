@@ -1,7 +1,8 @@
 /**
  * @file qr-codes.view.js
  * @description QR Code Generator for tables, seats, and delivery zones.
- * Uses the lightweight qrcode-generator library loaded dynamically from CDN.
+ * Uses Kazuhiko Arase's qrcode-generator (v1.4.4) loaded dynamically from CDN.
+ * Generates crisp, scannable SVG QR codes with proper Quiet Zone and error correction H.
  * Supports configuration of table count, custom labels, and bulk printing.
  */
 
@@ -19,6 +20,7 @@ export class QRCodesView extends Component {
     this.branchId = currentUser.branchId || 'main';
 
     // Base URL for customer menu (QR destination)
+    // tableId segment will be appended as "mesa-{N}" matching the DB convention
     this.baseMenuUrl = `${window.location.origin}/#/customer/menu/${this.companyId}/${this.branchId}/`;
 
     this.state = {
@@ -47,38 +49,31 @@ export class QRCodesView extends Component {
             <div class="form-group">
               <label class="form-label" for="qr-table-type">Tipo de ubicación</label>
               <select id="qr-table-type" class="input input-md" style="background-color:var(--color-bg-secondary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:0 var(--space-3); color:var(--color-text-primary);">
-                <option value="Mesa">Mesa</option>
-                <option value="Asiento">Asiento / Silla</option>
-                <option value="Barra">Barra / Bar</option>
-                <option value="Cabina">Cabina</option>
-                <option value="Zona">Zona</option>
-                <option value="Habitación">Habitación</option>
+                <option value="mesa">Mesa</option>
+                <option value="asiento">Asiento / Silla</option>
+                <option value="barra">Barra / Bar</option>
+                <option value="cabina">Cabina</option>
+                <option value="zona">Zona</option>
+                <option value="habitacion">Habitación</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label" for="qr-prefix">Prefijo del número</label>
               <input type="text" id="qr-prefix" class="input input-md" value="" placeholder="Ej. A, B, VIP, Sin prefijo..." />
             </div>
-            <div class="form-group" style="align-self: end;">
-              <button class="btn btn-primary btn-md" id="btn-generate-qr-2" style="width: 100%;">⚡ Generar Códigos</button>
-            </div>
-          </div>
-
-          <!-- Generated URL Preview -->
-          <div style="margin-top: var(--space-4); padding: var(--space-3); background: var(--color-bg-tertiary); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-            <label class="form-label" style="font-size: 0.75rem;">URL base del menú (destino de los QR)</label>
-            <div style="display: flex; align-items: center; gap: var(--space-2); margin-top: 4px;">
-              <code id="qr-base-url-display" style="font-size: 0.75rem; color: var(--color-accent); word-break: break-all; flex: 1;"></code>
-              <button class="btn btn-secondary btn-sm" id="btn-copy-base-url">📋 Copiar</button>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.75rem;">URL base del menú (destino de los QR)</label>
+              <input type="text" id="qr-base-url" class="input input-md" value="${window.location.origin}/#/customer/menu/${this.companyId}/${this.branchId}/" style="font-size:0.72rem;" />
             </div>
           </div>
         </div>
 
         <!-- QR Codes Grid -->
-        <div id="qr-grid-container">
-          <div class="card p-10 text-center" style="min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3);">
-            <div style="font-size: 3rem;">📱</div>
-            <p class="text-secondary">Configura el número de mesas y presiona <strong>Generar Códigos</strong> para obtener tus QR.</p>
+        <div id="qr-grid-container" class="card p-5">
+          <div class="text-center py-8 text-secondary" id="qr-empty-state">
+            <span style="font-size: 3rem; display: block; margin-bottom: 12px;">📱</span>
+            <p>Configura el número de mesas y presiona <strong>Generar Códigos</strong> para obtener tus QR.</p>
+            <p class="text-xs mt-2" style="color: var(--color-text-tertiary);">Los códigos generados son escaneables por la cámara nativa de iOS y Android.</p>
           </div>
         </div>
       `
@@ -88,162 +83,161 @@ export class QRCodesView extends Component {
   async mount() {
     const element = this.layout.mount();
 
-    // Display base URL
-    const urlDisplay = element.querySelector('#qr-base-url-display');
-    if (urlDisplay) {
-      urlDisplay.textContent = this.baseMenuUrl + '[número]';
-    }
-
     // Load QR library from CDN dynamically
     await this.loadQRLibrary();
 
-    this.afterMount();
-    return element;
-  }
-
-  afterMount() {
-    // Copy base URL button
-    const copyBaseBtn = this.layout.$('#btn-copy-base-url');
-    if (copyBaseBtn) {
-      copyBaseBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(this.baseMenuUrl + '1')
-          .then(() => NotificationService.success('URL base copiada al portapapeles.'))
-          .catch(() => NotificationService.error('No se pudo copiar la URL.'));
-      });
+    const btn = this.layout.$('#btn-generate-qr');
+    if (btn) {
+      btn.addEventListener('click', () => this.generateQRCodes());
     }
 
-    // Generate buttons
-    const generateBtns = [
-      this.layout.$('#btn-generate-qr'),
-      this.layout.$('#btn-generate-qr-2')
-    ];
-    generateBtns.forEach(btn => {
-      if (btn) {
-        btn.addEventListener('click', () => this.generateQRCodes());
-      }
-    });
-
-    // Print all button
     const printBtn = this.layout.$('#btn-print-all');
     if (printBtn) {
       printBtn.addEventListener('click', () => this.printAllQR());
     }
+
+    return element;
   }
 
   /**
-   * Dynamically loads the qrcode-generator library from CDN
+   * Dynamically loads Kazuhiko Arase's qrcode-generator library (v1.4.4)
+   * This library supports SVG output with proper Quiet Zone — critical for iOS/Android camera apps.
    */
   async loadQRLibrary() {
     return new Promise((resolve) => {
-      if (window.qrcode) {
+      // If already loaded, skip
+      if (typeof window.qrcode === 'function') {
         this.state.qrLibLoaded = true;
         resolve();
         return;
       }
 
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-      script.onload = () => {
-        this.state.qrLibLoaded = true;
-        resolve();
-      };
-      script.onerror = () => {
-        // Fallback to alternative CDN
-        const script2 = document.createElement('script');
-        script2.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-        script2.onload = () => {
+      const primary = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+      const fallback = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+
+      const tryLoad = (src, onFailure) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
           this.state.qrLibLoaded = true;
           resolve();
         };
-        script2.onerror = () => resolve(); // continue without library
-        document.head.appendChild(script2);
+        script.onerror = onFailure;
+        document.head.appendChild(script);
       };
-      document.head.appendChild(script);
+
+      tryLoad(primary, () => tryLoad(fallback, () => {
+        console.warn('[QRCodesView] Could not load qrcode-generator library. QR codes will show text fallback.');
+        resolve();
+      }));
     });
   }
 
   /**
-   * Generates QR code canvas elements for each table/seat
+   * Generates QR code SVG elements for each table/seat.
+   * TableId format matches the DB convention: "{type}-{prefix}{number}" (e.g. "mesa-3", "mesa-VIP1")
    */
   generateQRCodes() {
     const countInput = this.layout.$('#qr-table-count');
-    const typeInput = this.layout.$('#qr-table-type');
+    const typeInput  = this.layout.$('#qr-table-type');
     const prefixInput = this.layout.$('#qr-prefix');
+    const baseUrlInput = this.layout.$('#qr-base-url');
     const gridContainer = this.layout.$('#qr-grid-container');
 
     if (!countInput || !gridContainer) return;
 
     const count = Math.min(parseInt(countInput.value) || 10, 200);
-    const tableType = typeInput ? typeInput.value : 'Mesa';
-    const prefix = prefixInput ? prefixInput.value.trim() : '';
+    const tableType = typeInput ? typeInput.value.toLowerCase().trim() : 'mesa'; // e.g. "mesa"
+    const prefix    = prefixInput ? prefixInput.value.trim() : '';
+    const baseUrl   = baseUrlInput ? baseUrlInput.value.trim() : this.baseMenuUrl;
+
+    // Human-readable display label mapping
+    const typeLabels = {
+      'mesa': 'Mesa', 'asiento': 'Asiento', 'barra': 'Barra',
+      'cabina': 'Cabina', 'zona': 'Zona', 'habitacion': 'Habitación'
+    };
+    const typeLabel = typeLabels[tableType] || tableType;
 
     // Build grid HTML shell
     let gridHTML = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4);" id="qr-cards-grid">
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4);" id="qr-cards-grid">
     `;
 
     for (let i = 1; i <= count; i++) {
-      const label = `${tableType} ${prefix}${i}`;
-      const url = `${this.baseMenuUrl}${prefix}${i}`;
+      // DB-compatible tableId: "mesa-1", "mesa-VIP2", etc.
+      const tableId = `${tableType}-${prefix}${i}`;
+      const label   = `${typeLabel} ${prefix}${i}`;
+      const url     = `${baseUrl.replace(/\/$/, '')}/${tableId}`;
+
       gridHTML += `
         <div class="card p-4 text-center hover-lift" style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2);">
-          <div id="qr-canvas-${i}" style="width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; background: white; border-radius: var(--radius-sm); overflow: hidden;"></div>
+          <div id="qr-canvas-${i}" style="width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; background: white; border-radius: var(--radius-sm); overflow: hidden; padding: 4px;"></div>
           <h4 style="font-weight: 700; font-size: 1rem; margin: 0;">${label}</h4>
-          <p style="font-size: 0.65rem; color: var(--color-text-tertiary); word-break: break-all; margin: 0;">${url}</p>
-          <button class="btn btn-secondary btn-sm" style="width: 100%;" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('URL copiada: ${label}'))">📋 Copiar URL</button>
+          <p style="font-size: 0.6rem; color: var(--color-text-tertiary); word-break: break-all; margin: 0; max-width: 200px;">${url}</p>
+          <div style="display:flex; gap:6px; width:100%;">
+            <button class="btn btn-secondary btn-sm" style="flex:1; font-size:0.75rem;" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('URL copiada: ${label}'))">📋 Copiar</button>
+          </div>
         </div>
       `;
     }
 
     gridHTML += `</div>`;
-
-    // Inject the grid shell
     gridContainer.innerHTML = gridHTML;
 
-    // Now inject QR codes into each placeholder
+    // Inject QR SVGs after DOM is ready
     setTimeout(() => {
       for (let i = 1; i <= count; i++) {
+        const tableType2 = typeInput ? typeInput.value.toLowerCase().trim() : 'mesa';
+        const tableId = `${tableType2}-${prefix}${i}`;
+        const url = `${baseUrl.replace(/\/$/, '')}/${tableId}`;
         const placeholder = this.layout.$(`#qr-canvas-${i}`);
-        if (!placeholder) continue;
-
-        const url = `${this.baseMenuUrl}${prefix}${i}`;
-        this.renderQRCode(placeholder, url);
+        if (placeholder) {
+          this.renderQRCode(placeholder, url);
+        }
       }
     }, 50);
 
-    NotificationService.success(`${count} códigos QR generados para "${tableType}".`);
+    NotificationService.success(`${count} códigos QR generados para "${typeLabel}".`);
   }
 
   /**
-   * Render a QR code into a given DOM container
-   * @param {HTMLElement} container 
-   * @param {string} url 
+   * Render a scannable QR code SVG into a given DOM container.
+   * Uses qrcode-generator with error level H and a proper Quiet Zone of 10px.
+   * @param {HTMLElement} container
+   * @param {string} url
    */
   renderQRCode(container, url) {
     try {
-      if (window.QRCode) {
-        // QRCodeJS library
-        new window.QRCode(container, {
-          text: url,
-          width: 160,
-          height: 160,
-          colorDark: '#000000',
-          colorLight: '#ffffff',
-          correctLevel: window.QRCode.CorrectLevel.M
-        });
-      } else if (window.QRCodeSVG) {
-        // SVG fallback
-        container.innerHTML = window.QRCodeSVG(url);
+      if (typeof window.qrcode === 'function') {
+        // Kazuhiko Arase's qrcode-generator — produces standards-compliant QR codes
+        // Type 0 = auto-select best type; 'H' = highest error correction (30% restoration)
+        const qr = window.qrcode(0, 'H');
+        qr.addData(url);
+        qr.make();
+
+        // createSvgTag(cellSize, margin) — 4px per module, 10px quiet zone (mandatory for iOS/Android cameras)
+        const svgTag = qr.createSvgTag(4, 10);
+        container.innerHTML = svgTag;
+
+        // Ensure SVG fills container properly
+        const svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.width  = '100%';
+          svg.style.height = '100%';
+          svg.style.display = 'block';
+        }
       } else {
-        // Text fallback showing truncated URL if library didn't load
+        // Plain text fallback if library failed to load
         container.innerHTML = `
-          <div style="padding: 8px; font-size: 0.6rem; word-break: break-all; color: #555; text-align: center; height: 100%; display: flex; align-items: center;">
-            <span>${url.replace(window.location.origin, '...')}</span>
+          <div style="padding: 10px; font-size: 0.6rem; word-break: break-all; color: #555; text-align: center; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px;">
+            <span style="font-size: 1.5rem;">⚠️</span>
+            <span>Librería no disponible. Copia la URL manualmente.</span>
           </div>
         `;
       }
     } catch (e) {
-      container.innerHTML = '<div style="color: red; font-size: 0.65rem;">Error QR</div>';
+      console.error('[QRCodesView] renderQRCode error:', e);
+      container.innerHTML = '<div style="color: red; font-size: 0.65rem; padding:8px;">Error al generar QR</div>';
     }
   }
 
@@ -265,7 +259,7 @@ export class QRCodesView extends Component {
           #print-qr-area { position: fixed; top: 0; left: 0; width: 100%; }
           .qr-print-card {
             display: inline-block;
-            width: 200px;
+            width: 220px;
             text-align: center;
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -285,8 +279,10 @@ export class QRCodesView extends Component {
     window.print();
 
     setTimeout(() => {
-      document.body.removeChild(printArea);
-    }, 1000);
+      if (document.body.contains(printArea)) {
+        document.body.removeChild(printArea);
+      }
+    }, 1500);
   }
 
   unmount() {

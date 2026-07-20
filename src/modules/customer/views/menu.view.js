@@ -240,7 +240,12 @@ export class MenuView extends Component {
 
     // Fetch products
     const prodUnsub = FirestoreService.listenToPath(`${this.companyId}/productos`, (products) => {
-      this.state.products = (products || []).filter(p => p.isActive !== false);
+      this.state.products = (products || []).filter(p => {
+        if (p.isActive === false) return false;
+        // If a numeric stock field exists, hide items that are out of stock
+        if (typeof p.stock === 'number' && p.stock <= 0) return false;
+        return true;
+      });
       this.state.categories = ['Todos', ...new Set(this.state.products.map(p => p.category).filter(Boolean))];
       this.state.loading = false;
       this.checkDataLoaded(root);

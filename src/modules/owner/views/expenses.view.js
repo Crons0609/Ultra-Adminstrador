@@ -100,7 +100,7 @@ export class ExpensesView extends Component {
           const expenseId = deleteBtn.getAttribute('data-id');
           if (confirm('¿Estás seguro de que deseas eliminar este registro de gasto?')) {
             try {
-              await FirestoreService.delete(this.companyId, 'expenses', expenseId);
+              await FirestoreService.delete('expenses', expenseId);
               NotificationService.success('Gasto eliminado.');
             } catch (err) {
               console.error('[ExpensesView] Error deleting:', err);
