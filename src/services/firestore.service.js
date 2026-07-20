@@ -690,7 +690,9 @@ export class FirestoreService {
   static async permanentlyDeleteCompany(companyId, reason = '') {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const companyData = await this.readPath(companyId);
+    // We do NOT fetch the entire company data branch (products, sales, orders, logs) into the client,
+    // as it can be extremely large and freeze the browser thread.
+    // Instead, we only fetch and backup the registry metadata (SaaS settings).
     const registryData = await this.getGlobal('companies', companyId);
     const localNow = TimeService.timestamp();
     const trashId = `${companyId}_${localNow.epochMs}`;
@@ -699,13 +701,12 @@ export class FirestoreService {
     updates[`deleted_companies/${trashId}`] = {
       companyId,
       registry: registryData || null,
-      data: companyData || null,
       reason,
       deletedAt: serverTimestamp(),
       deletedAtLocal: localNow
     };
     updates[`companies/${companyId}`] = null;
-    updates[companyId] = null;
+    updates[companyId] = null; // This deletes the entire tenant branch on the server-side efficiently
 
     await update(ref(db), updates);
     await this.logAudit({
