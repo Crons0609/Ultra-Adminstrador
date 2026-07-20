@@ -206,6 +206,72 @@ export class AuthService {
       throw new Error('Servicio de autenticación no disponible.');
     }
 
+    // ── Check if the email already exists in users and belongs to a deleted company ──
+    if (db) {
+      try {
+        const existingUsers = await FirestoreService.queryGlobal('users', [
+          { field: 'email', op: '==', value: cleanEmail }
+        ]);
+        if (existingUsers && existingUsers.length > 0) {
+          const existingUser = existingUsers[0];
+          const oldCompanyId = existingUser.companyId;
+
+          let companyExists = false;
+          if (oldCompanyId && oldCompanyId !== 'global') {
+            const companySnap = await get(ref(db, `companies/${oldCompanyId}`));
+            if (companySnap.exists()) {
+              companyExists = true;
+            }
+          } else if (oldCompanyId === 'global') {
+            companyExists = true;
+          }
+
+          if (!companyExists) {
+            // The company associated with this user was deleted (orphan user)!
+            // We can safely re-link this existing Auth account to the new company.
+            const newUid = existingUser.id || existingUser.uid;
+
+            const profilePayload = {
+              uid: newUid,
+              email: cleanEmail,
+              displayName: profileData.displayName || cleanEmail,
+              role: profileData.role,
+              customRole: profileData.customRole || '',
+              companyId: profileData.companyId || 'global',
+              branchId: profileData.branchId || 'main',
+              createdAt: existingUser.createdAt || Date.now(),
+              createdAtLocal: existingUser.createdAtLocal || TimeService.timestamp(),
+              updatedAt: Date.now(),
+              updatedAtLocal: TimeService.timestamp()
+            };
+
+            // 1. Update /users/{uid}
+            await set(ref(db, `users/${newUid}`), profilePayload);
+
+            // 2. Dual-write to new company
+            const companyId = profileData.companyId;
+            if (companyId && companyId !== 'global') {
+              await FirestoreService.addEmployeeToCompany(companyId, newUid, {
+                displayName: profileData.displayName || cleanEmail,
+                email: cleanEmail,
+                role: profileData.role,
+                customRole: profileData.customRole || '',
+                branchId: profileData.branchId || 'main'
+              });
+              if (profileData.role === 'OWNER' || profileData.role === 'MANAGER') {
+                await FirestoreService.updateCompanyInfo(companyId, { ownerId: newUid });
+              }
+            }
+
+            console.log(`[AuthService] ✅ Re-linked orphaned user ${cleanEmail} (UID: ${newUid}) to new company ${companyId}`);
+            return newUid;
+          }
+        }
+      } catch (err) {
+        console.warn('[AuthService] Failed to check for existing email in RTDB:', err.message);
+      }
+    }
+
     // ─── Load secondary app modules ──────────────────────────────────────────
     const { initializeApp, deleteApp } = await import(
       'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js'

@@ -666,7 +666,9 @@ export class CompaniesView extends Component {
 
   /**
    * Opens the edit/status administration modal when clicking a row.
-   * Loads company users from Fi  async openEditCompanyModal(row) {
+   * Loads company users from Firestore.
+   */
+  async openEditCompanyModal(row) {
     // Fetch fresh plans from Firebase RTDB to guarantee synchronization
     let plans = [];
     try {
