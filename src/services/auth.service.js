@@ -206,33 +206,42 @@ export class AuthService {
       throw new Error('Servicio de autenticación no disponible.');
     }
 
-    // ── Check if the email already exists in users and belongs to a deleted company ──
+    // ── Check if the email already exists in /users and belongs to a deleted company ──
+    // NOTE: We do NOT use queryGlobal+filters here because _applyFilters uses strict ===
+    // equality (case-sensitive), which misses emails stored with different casing (e.g.
+    // "Angy@ghost.com" vs "angy@ghost.com"). Instead we filter manually with toLowerCase().
+
     if (db) {
       try {
-        const existingUsers = await FirestoreService.queryGlobal('users', [
-          { field: 'email', op: '==', value: cleanEmail }
-        ]);
-        if (existingUsers && existingUsers.length > 0) {
-          const existingUser = existingUsers[0];
+        const usersSnap = await get(ref(db, 'users'));
+        let existingUser = null;
+        if (usersSnap.exists()) {
+          usersSnap.forEach(snap => {
+            const val = snap.val();
+            if ((val?.email || '').toLowerCase().trim() === cleanEmail) {
+              existingUser = { id: snap.key, ...val };
+            }
+          });
+        }
+
+        if (existingUser) {
           const oldCompanyId = existingUser.companyId;
 
           let companyExists = false;
           if (oldCompanyId && oldCompanyId !== 'global') {
             const companySnap = await get(ref(db, `companies/${oldCompanyId}`));
-            if (companySnap.exists()) {
-              companyExists = true;
-            }
+            companyExists = companySnap.exists();
           } else if (oldCompanyId === 'global') {
             companyExists = true;
           }
 
           if (!companyExists) {
-            // The company associated with this user was deleted (orphan user)!
-            // We can safely re-link this existing Auth account to the new company.
-            const newUid = existingUser.id || existingUser.uid;
+            // La empresa del usuario fue eliminada → es un usuario huérfano.
+            // Reutilizamos su cuenta de Auth y la vinculamos a la nueva empresa.
+            const orphanUid = existingUser.id || existingUser.uid;
 
             const profilePayload = {
-              uid: newUid,
+              uid: orphanUid,
               email: cleanEmail,
               displayName: profileData.displayName || cleanEmail,
               role: profileData.role,
@@ -245,13 +254,13 @@ export class AuthService {
               updatedAtLocal: TimeService.timestamp()
             };
 
-            // 1. Update /users/{uid}
-            await set(ref(db, `users/${newUid}`), profilePayload);
+            // 1. Actualizar /users/{uid}
+            await set(ref(db, `users/${orphanUid}`), profilePayload);
 
-            // 2. Dual-write to new company
-            const companyId = profileData.companyId;
-            if (companyId && companyId !== 'global') {
-              await FirestoreService.addEmployeeToCompany(companyId, newUid, {
+            // 2. Dual-write a la nueva empresa
+            const newCompanyId = profileData.companyId;
+            if (newCompanyId && newCompanyId !== 'global') {
+              await FirestoreService.addEmployeeToCompany(newCompanyId, orphanUid, {
                 displayName: profileData.displayName || cleanEmail,
                 email: cleanEmail,
                 role: profileData.role,
@@ -259,16 +268,16 @@ export class AuthService {
                 branchId: profileData.branchId || 'main'
               });
               if (profileData.role === 'OWNER' || profileData.role === 'MANAGER') {
-                await FirestoreService.updateCompanyInfo(companyId, { ownerId: newUid });
+                await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: orphanUid });
               }
             }
 
-            console.log(`[AuthService] ✅ Re-linked orphaned user ${cleanEmail} (UID: ${newUid}) to new company ${companyId}`);
-            return newUid;
+            console.log(`[AuthService] ✅ Usuario huérfano re-vinculado: ${cleanEmail} (UID: ${orphanUid}) → empresa ${newCompanyId}`);
+            return orphanUid;
           }
         }
-      } catch (err) {
-        console.warn('[AuthService] Failed to check for existing email in RTDB:', err.message);
+      } catch (orphanErr) {
+        console.warn('[AuthService] ⚠️ No se pudo verificar usuarios huérfanos:', orphanErr.message);
       }
     }
 
