@@ -36,6 +36,8 @@ const getPOSView = () => import('../modules/cashier/views/pos.view.js').then(m =
 const getPaymentsView = () => import('../modules/cashier/views/payments.view.js').then(m => m.PaymentsView);
 const getCashRegisterView = () => import('../modules/cashier/views/cash-register.view.js').then(m => m.CashRegisterView);
 const getInvoicesView = () => import('../modules/cashier/views/invoices.view.js').then(m => m.InvoicesView);
+const getPromotionsView = () => import('../modules/cashier/views/promotions.view.js').then(m => m.PromotionsView);
+const getArqueoView = () => import('../modules/cashier/views/arqueo.view.js').then(m => m.ArqueoView);
 
 // Inventory Module
 const getInventoryProductsView = () => import('../modules/inventory/views/products.view.js').then(m => m.ProductsView);
@@ -132,6 +134,8 @@ export const ROUTES = [
   { path: '/cashier/payments', view: lazyView(getPaymentsView), middlewares: [roleGuard([USER_ROLES.CASHIER, USER_ROLES.MANAGER])] },
   { path: '/cashier/cash-register', view: lazyView(getCashRegisterView), middlewares: [roleGuard([USER_ROLES.CASHIER, USER_ROLES.MANAGER])] },
   { path: '/cashier/invoices', view: lazyView(getInvoicesView), middlewares: [roleGuard([USER_ROLES.CASHIER, USER_ROLES.MANAGER])] },
+  { path: '/cashier/promotions', view: lazyView(getPromotionsView), middlewares: [roleGuard([USER_ROLES.CASHIER, USER_ROLES.MANAGER])] },
+  { path: '/cashier/arqueo', view: lazyView(getArqueoView), middlewares: [roleGuard([USER_ROLES.CASHIER, USER_ROLES.MANAGER])] },
 
   // Inventory routes
   { path: '/inventory/products', view: lazyView(getInventoryProductsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },

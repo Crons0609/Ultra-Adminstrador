@@ -194,8 +194,104 @@ export class ManagerDashboardView extends Component {
     }
 
     this.subscribeToRealtimeData(element);
+    this.subscribeArqueoNotifications(element);
     return element;
   }
+
+  subscribeArqueoNotifications(element) {
+    try {
+      const listener = FirestoreService.listenToTenant('arqueos_caja', (arqueos) => {
+        const pending = (arqueos || []).filter(a => a.estado === 'PENDIENTE_REVISION');
+        this.renderArqueoBanner(element, pending);
+      });
+      this.listeners.push(listener);
+    } catch(e) {
+      console.warn('[Dashboard] Could not subscribe to arqueos_caja:', e.message);
+    }
+  }
+
+  renderArqueoBanner(element, pendingArqueos) {
+    // Remove existing banner if any
+    const existing = element.querySelector('#arqueo-alert-banner');
+    if (existing) existing.remove();
+    if (!pendingArqueos || pendingArqueos.length === 0) return;
+
+    const latest = pendingArqueos[pendingArqueos.length - 1];
+    const diff   = Number(latest.diferencia || 0);
+    const fmt    = v => `$${Math.abs(v).toFixed(2)}`;
+    const diffLabel = Math.abs(diff) < 0.01
+      ? '✅ Sin diferencia (cuadre perfecto)'
+      : diff < 0
+        ? `🔴 Faltante: ${fmt(diff)}`
+        : `🟡 Sobrante: ${fmt(diff)}`;
+
+    const diffColor = Math.abs(diff) < 0.01 ? '#34d399' : diff < 0 ? '#f87171' : '#fbbf24';
+    const fechaStr  = new Date(latest.fecha || Date.now()).toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    const banner = document.createElement('div');
+    banner.id = 'arqueo-alert-banner';
+    banner.style.cssText = `
+      background: linear-gradient(135deg, rgba(52,211,153,0.08), rgba(124,117,255,0.06));
+      border: 1px solid #34d39944;
+      border-radius: var(--radius-lg);
+      padding: var(--space-4) var(--space-5);
+      margin-bottom: var(--space-5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    `;
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:var(--space-3);">
+        <div style="font-size:2rem;">📊</div>
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;color:var(--color-text-primary);">Arqueo de Caja Pendiente de Revisión</div>
+          <div style="font-size:0.82rem;color:var(--color-text-secondary);margin-top:2px;">
+            Cajero: <strong>${latest.cajero || 'N/A'}</strong> · ${fechaStr} · 
+            <span style="color:${diffColor};font-weight:700;">${diffLabel}</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--color-text-tertiary);margin-top:2px;">
+            Efectivo sistema: $${Number(latest.efectivoSistema||0).toFixed(2)} · 
+            Tarjeta: $${Number(latest.tarjetaSistema||0).toFixed(2)} · 
+            Total: $${Number(latest.totalSistema||0).toFixed(2)} · 
+            Retiros: $${Number(latest.totalRetiros||0).toFixed(2)}
+          </div>
+          ${latest.observaciones ? `<div style="font-size:0.78rem;color:var(--color-text-secondary);margin-top:4px;font-style:italic;">"${latest.observaciones}"</div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--space-2);flex-shrink:0;">
+        <button id="btn-arqueo-reject" class="btn btn-sm" style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.3);font-size:0.78rem;">
+          ✕ Rechazar
+        </button>
+        <button id="btn-arqueo-approve" class="btn btn-sm" style="background:#34d39922;color:#34d399;border:1px solid #34d39944;font-weight:700;font-size:0.78rem;">
+          ✅ Aprobar Arqueo
+        </button>
+      </div>
+    `;
+
+    // Insert at top of page content
+    const content = element.querySelector('.page-layout-content') || element.querySelector('.card') || element.firstElementChild;
+    if (content && content.parentNode) {
+      content.parentNode.insertBefore(banner, content);
+    } else {
+      element.prepend(banner);
+    }
+
+    banner.querySelector('#btn-arqueo-approve')?.addEventListener('click', async () => {
+      await FirestoreService.update('arqueos_caja', latest.id, { estado: 'APROBADO', aprobadoEn: Date.now() });
+      FirestoreService.create('notificaciones', { tipo: 'ARQUEO_APROBADO', mensaje: `El arqueo del ${fechaStr} fue aprobado.`, leida: false });
+      banner.remove();
+    });
+
+    banner.querySelector('#btn-arqueo-reject')?.addEventListener('click', async () => {
+      const nota = prompt('Motivo del rechazo (opcional):') || '';
+      await FirestoreService.update('arqueos_caja', latest.id, { estado: 'RECHAZADO', nota, rechazadoEn: Date.now() });
+      FirestoreService.create('notificaciones', { tipo: 'ARQUEO_RECHAZADO', mensaje: `El arqueo del ${fechaStr} fue rechazado. Nota: ${nota}`, leida: false });
+      banner.remove();
+    });
+  }
+
 
   subscribeToRealtimeData(element) {
     try {

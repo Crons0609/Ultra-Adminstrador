@@ -28,6 +28,7 @@ export class MenuView extends Component {
       products: [],
       categories: [],
       orders: [],
+      promotions: [],
       activeCategory: 'Todos',
       searchQuery: '',
       loading: true,
@@ -258,6 +259,22 @@ export class MenuView extends Component {
       this.renderMenu(root);
     });
     this.listeners.push(ordersUnsub);
+
+    // Fetch active promotions for this company
+    const promoUnsub = FirestoreService.listenToPath(`${this.companyId}/promociones`, (promos) => {
+      const now = Date.now();
+      const today = new Date();
+      const isoDay = today.getDay(); // 0=Dom, 6=Sáb
+      this.state.promotions = (promos || []).filter(p => {
+        if (p.isActive === false) return false;
+        if (p.expiresAt && p.expiresAt < now) return false;
+        if (p.type === 'FIN_SEMANA' && isoDay !== 0 && isoDay !== 6) return false;
+        if (p.type === 'LOTE' && (p.loteCantidad === 0)) return false;
+        return true;
+      });
+      this.renderMenu(root);
+    });
+    this.listeners.push(promoUnsub);
   }
 
   checkDataLoaded(root) {
@@ -481,9 +498,36 @@ export class MenuView extends Component {
               happyHourBadge = `<span style="position: absolute; top: 10px; left: 10px; background: #a855f7; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); z-index:2;">🎉 Happy Hour 20% OFF</span>`;
             }
 
+            // ── Active Promotions overlay (from promociones collection) ───────
+            // Match by productId or global (no productId) promotions
+            const activePromo = this.state.promotions.find(pr =>
+              !pr.productId || pr.productId === p.id
+            );
+            let promoBadge = '';
+            p._promoSoldOut = false;
+            if (activePromo && !happyHourBadge) {
+              const disc = Number(activePromo.discount || 0);
+              if (disc > 0) {
+                const oldP = price;
+                price = oldP * (1 - disc / 100);
+                oldPriceHTML = `<span style="text-decoration:line-through;color:var(--pub-text-sec);font-size:0.8rem;margin-right:6px;">$${oldP.toFixed(2)}</span>`;
+              }
+              const promoColors = { DIA: '#fbbf24', SEMANA: '#34d399', FIN_SEMANA: '#818cf8', LOTE: '#fb923c' };
+              const promoIcons  = { DIA: '📅', SEMANA: '📆', FIN_SEMANA: '🎉', LOTE: '📦' };
+              const pColor = promoColors[activePromo.type] || '#7c75ff';
+              const pIcon  = promoIcons[activePromo.type]  || '🏷️';
+              promoBadge = `<span style="position:absolute;top:10px;left:10px;background:${pColor};color:#000;font-size:0.62rem;font-weight:800;padding:4px 8px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.35);z-index:2;">${pIcon} ${disc}% OFF</span>`;
+              // Mark LOTE as sold out if stock exhausted
+              if (activePromo.type === 'LOTE' && (activePromo.loteCantidad ?? 1) <= 0) {
+                p._promoSoldOut = true;
+                promoBadge = `<span style="position:absolute;top:10px;left:10px;background:#f87171;color:#fff;font-size:0.62rem;font-weight:800;padding:4px 8px;border-radius:4px;z-index:2;">📦 Agotado</span>`;
+              }
+            }
+
             return `
               <div class="pub-menu-card animate-slide-up">
                 ${happyHourBadge}
+                ${promoBadge}
                 <div class="pub-menu-img-wrap">
                   ${hasImage ? `<img src="${p.image}" class="pub-menu-img" alt="${p.name}"/>` : `<div class="pub-menu-img-fallback" style="${isBar ? 'color:#a855f7;' : ''}">🍹</div>`}
                 </div>
@@ -495,7 +539,11 @@ export class MenuView extends Component {
                       ${oldPriceHTML}
                       <strong class="text-md" style="color:var(--pub-primary); font-size:1.05rem;">$${price.toFixed(2)}</strong>
                     </div>
-                    <button class="btn btn-secondary btn-xs btn-add-item" data-id="${p.id}" style="border-radius:6px; padding:6px 12px; font-weight:600; ${isBar ? 'border-color:var(--pub-border);' : ''}">+ Agregar</button>
+                    <button class="btn btn-secondary btn-xs btn-add-item" data-id="${p.id}"
+                      style="border-radius:6px; padding:6px 12px; font-weight:600; ${isBar ? 'border-color:var(--pub-border);' : ''} ${p._promoSoldOut ? 'opacity:0.45;cursor:not-allowed;' : ''}"
+                      ${p._promoSoldOut ? 'disabled' : ''}>
+                      ${p._promoSoldOut ? '❌ Agotado' : '+ Agregar'}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -16,6 +16,9 @@ export class CashRegisterView extends Component {
       title: 'Control de Caja Chica',
       subtitle: 'Monitorea las ventas del día, flujos de efectivo y realiza cierres de caja.',
       actionHTML: `
+        <button class="btn btn-secondary btn-sm" id="btn-go-arqueo" style="display:flex;align-items:center;gap:6px;" onclick="window.location.hash='/cashier/arqueo'">
+          📊 Arqueo de Caja
+        </button>
         <button class="btn btn-primary btn-sm" id="btn-cash-close">Cierre de Caja 🔒</button>
       `,
       contentHTML: `
