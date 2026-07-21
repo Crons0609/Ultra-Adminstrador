@@ -546,55 +546,68 @@
 }
 
 @media (max-width: 640px) {
+  .pub-container {
+    padding: var(--space-3);
+  }
+
   .pub-cover {
-    height: 140px;
+    height: 120px;
   }
 
   .pub-profile-overlay {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-3);
-    margin-top: -40px;
-    padding: var(--space-4);
+    margin-top: 0;
+    padding: var(--space-3);
+    border-radius: 0;
   }
 
   .pub-logo-wrapper {
-    width: 70px;
-    height: 70px;
+    width: 64px;
+    height: 64px;
+    border-width: 2px;
   }
 
   .pub-logo-fallback {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
   }
 
   .pub-info-block {
-    min-width: unset;
-    width: 100%;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .pub-name {
+    font-size: 1.15rem !important;
   }
 
   .pub-consumption-btn {
     margin-left: 0;
     width: 100%;
     justify-content: center;
+    padding: 6px 12px;
+    font-size: 0.8rem;
   }
 
   .pub-grid,
   .pub-menu-grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-3);
   }
 
   .pub-card-name {
-    font-size: 0.92rem;
+    font-size: 0.85rem;
   }
 
   .pub-price-main {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
   }
 
   .pub-view-btn {
-    font-size: 0.8rem;
-    padding: 6px 12px;
+    font-size: 0.75rem;
+    padding: 4px 10px;
   }
 }
 
@@ -608,7 +621,7 @@
 /* ─── Cover Container & Overlay ─── */
 .pub-cover-container {
   position: relative;
-  height: 240px;
+  height: 140px;
   overflow: hidden;
 }
 .pub-cover-gradient {

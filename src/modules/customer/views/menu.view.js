@@ -434,7 +434,7 @@ export class MenuView extends Component {
       <!-- Minimal Hero -->
       <div class="pub-hero" style="border-radius:0;">
         <div class="pub-cover-container">
-          <div class="pub-cover pub-cover-gradient" style="height: 140px; ${isBar ? 'background: linear-gradient(135deg, #a855f7, #121217);' : ''}"></div>
+          <div class="pub-cover pub-cover-gradient" style="${isBar ? 'background: linear-gradient(135deg, #a855f7, #121217);' : ''}"></div>
           <div class="pub-cover-overlay"></div>
         </div>
         <div class="pub-profile-overlay pub-container">

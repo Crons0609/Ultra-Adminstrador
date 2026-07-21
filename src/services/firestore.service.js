@@ -287,7 +287,15 @@ export class FirestoreService {
    * @returns {string}
    */
   static sanitiseKey(key) {
-    return key.replace(/[\.\#\$\/\[\]]/g, '').trim();
+    if (!key) return '';
+    return key
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ñ/gi, 'n')
+      .replace(/[\.\#\$\/\[\]\?\%]/g, '')
+      .replace(/[^a-zA-Z0-9\-_ ]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
   }
 
   /**
