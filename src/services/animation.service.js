@@ -22,10 +22,25 @@ export const AnimationService = {
     if (lenisInstance) return lenisInstance;
 
     lenisInstance = new Lenis({
-      duration: 1.2,
+      duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      wheelMultiplier: 1.0
+      wheelMultiplier: 1.0,
+      touchMultiplier: 2.0,
+      prevent: (node) => {
+        return (
+          node.tagName === 'TEXTAREA' ||
+          node.classList.contains('sidebar-menu') ||
+          node.classList.contains('pub-category-carousel') ||
+          node.classList.contains('modal-body') ||
+          node.classList.contains('pos-ticket-container') ||
+          node.classList.contains('table-responsive') ||
+          node.closest('[data-lenis-prevent]') ||
+          node.closest('.sidebar-menu') ||
+          node.closest('.modal-body') ||
+          node.closest('.pub-category-carousel')
+        );
+      }
     });
 
     function raf(time) {
@@ -53,6 +68,15 @@ export const AnimationService = {
    */
   animatePageEntrance(container) {
     if (!container) return;
+
+    // Reset scroll & recalculate Lenis dimensions for newly mounted route
+    window.scrollTo(0, 0);
+    if (lenisInstance) {
+      lenisInstance.scrollTo(0, { immediate: true });
+      setTimeout(() => {
+        lenisInstance.resize();
+      }, 100);
+    }
 
     // 1. GSAP for Hero / Page Header entry
     const header = container.querySelector('.page-header');
