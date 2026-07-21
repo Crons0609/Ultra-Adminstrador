@@ -13,18 +13,29 @@ import { getBusinessCategory } from '../../../config/business-types.config.js';
 export class MenuView extends Component {
   constructor(params = {}) {
     super(params);
-    this.companyId = params.companyId || sessionStorage.getItem('ua_customer_companyId') || '';
+    try {
+      this.companyId = decodeURIComponent(params.companyId || sessionStorage.getItem('ua_customer_companyId') || '');
+    } catch (_) {
+      this.companyId = params.companyId || sessionStorage.getItem('ua_customer_companyId') || '';
+    }
     this.branchId = params.branchId || sessionStorage.getItem('ua_customer_branchId') || 'main';
     this.tableId = params.tableId || sessionStorage.getItem('ua_customer_tableId') || '';
 
-    // Persist routing parameters to sessionStorage for subsequent views
-    if (!this.tableId) this.tableId = 'general'; // Default fallback for QR scans without tables (e.g. Services)
+    // Default tableId fallback
+    if (!this.tableId) this.tableId = 'general';
     if (this.companyId) sessionStorage.setItem('ua_customer_companyId', this.companyId);
     if (this.branchId) sessionStorage.setItem('ua_customer_branchId', this.branchId);
     if (this.tableId) sessionStorage.setItem('ua_customer_tableId', this.tableId);
 
+    // Auto-default accountType for non-restaurant scans or general locations
+    let savedAccountType = sessionStorage.getItem('ua_customer_accountType');
+    if (!savedAccountType && (this.tableId === 'general' || this.tableId.includes('zona') || this.tableId.includes('habitacion'))) {
+      savedAccountType = 'CONJUNTA';
+      sessionStorage.setItem('ua_customer_accountType', 'CONJUNTA');
+    }
+
     this.state = {
-      accountType: sessionStorage.getItem('ua_customer_accountType') || '', // 'CONJUNTA' | 'SEPARADO'
+      accountType: savedAccountType || '', // 'CONJUNTA' | 'SEPARADO'
       clientName: sessionStorage.getItem('ua_customer_clientName') || '',
       products: [],
       categories: [],
@@ -175,7 +186,7 @@ export class MenuView extends Component {
             <input type="text" id="client-name-input" class="input input-md" placeholder="Ej. Juan - Asiento 1" style="background:var(--pub-surface); color:var(--pub-text); border-color:var(--pub-border);" />
           </div>
 
-          <button class="btn btn-primary w-full py-3 font-semibold" id="btn-start-menu" style="background:var(--pub-primary); border:none; border-radius:10px;" disabled>
+          <button class="btn btn-primary w-full py-3 font-semibold" id="btn-start-menu" style="background:var(--pub-primary); border:none; border-radius:10px;">
             Ingresar al Menú Digital
           </button>
         </div>
@@ -188,7 +199,8 @@ export class MenuView extends Component {
     const inputName = root.querySelector('#client-name-input');
     const btnStart = root.querySelector('#btn-start-menu');
 
-    let selectedType = '';
+    let selectedType = 'CONJUNTA';
+    btnConjunta.classList.add('active');
 
     btnConjunta.addEventListener('click', () => {
       selectedType = 'CONJUNTA';
@@ -463,7 +475,7 @@ export class MenuView extends Component {
         <div class="pub-toolbar">
           <div class="pub-search-wrap">
             <svg class="pub-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="menu-search" class="pub-search-input" placeholder="Buscar bebidas, tragos, snacks..." value="${this.state.searchQuery}" autocomplete="off" />
+            <input type="text" id="menu-search" class="pub-search-input" placeholder="${isBar ? 'Buscar bebidas, tragos, snacks...' : (isServices ? 'Buscar productos o servicios...' : 'Buscar en el catálogo...')}" value="${this.state.searchQuery}" autocomplete="off" />
           </div>
         </div>
 
@@ -480,11 +492,11 @@ export class MenuView extends Component {
         <div class="pub-menu-grid">
           ${filtered.length === 0 ? `
             <div class="text-center py-10 w-full text-secondary" style="grid-column: 1 / -1;">
-              <p>No se encontraron productos en esta categoría.</p>
+              <p>No se encontraron productos o servicios en esta categoría.</p>
             </div>
           ` : filtered.map(p => {
             const hasImage = p.image && p.image.startsWith('http');
-            const desc = p.description || 'Preparado con ingredientes premium en barra.';
+            const desc = p.description || (isServices ? 'Servicio / Producto de alta calidad.' : (isBar ? 'Preparado con ingredientes premium en barra.' : 'Producto disponible para pedido.'));
             
             // Happy Hour promotion calculations
             let price = Number(p.price || 0);

@@ -119,7 +119,7 @@ export class CartView extends Component {
             <div class="text-center py-10 text-secondary">
               <span style="font-size: 3rem; display:block; margin-bottom:10px;">🛒</span>
               <p class="font-semibold">Tu carrito está vacío</p>
-              <p class="text-xs text-secondary mt-1">Regresa al menú para agregar platillos y bebidas.</p>
+              <p class="text-xs text-secondary mt-1">Regresa al menú para agregar productos o servicios.</p>
             </div>
           ` : `
             <div class="d-flex flex-column">
@@ -261,7 +261,7 @@ export class CartView extends Component {
       // 4. Guardar orderId en sesión, limpiar carrito y redirigir al estado del pedido
       sessionStorage.setItem('ua_customer_orderId', orderId);
       sessionStorage.removeItem('ua_customer_cart');
-      NotificationService.success('¡Pedido enviado al mesero con éxito!');
+      NotificationService.success('¡Pedido enviado con éxito!');
       window.location.hash = '/customer/order-status';
     } catch (e) {
       console.error('[CartView] Failed to send order:', e);
