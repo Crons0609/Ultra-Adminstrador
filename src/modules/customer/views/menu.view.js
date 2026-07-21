@@ -253,8 +253,8 @@ export class MenuView extends Component {
     });
     this.listeners.push(prodUnsub);
 
-    // Fetch active orders to calculate cumulative consumption
-    const ordersUnsub = FirestoreService.listenToPathRaw(`companies/${this.companyId}/orders`, (orders) => {
+    // Fetch active orders to calculate cumulative consumption (ruta tenant correcta)
+    const ordersUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/orders`, (orders) => {
       this.state.orders = orders ? Object.entries(orders).map(([id, o]) => ({ id, ...o })) : [];
       this.renderMenu(root);
     });

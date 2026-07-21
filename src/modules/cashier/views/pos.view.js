@@ -66,6 +66,16 @@ export class POSView extends Component {
 
             <div class="pos-panel-header" style="display:flex; flex-direction:column; gap: var(--space-2); margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 12px;">
               
+              <!-- Panel de Solicitudes de Cuenta Pendientes -->
+              <div id="pos-bill-requests-panel" style="display:none; background: rgba(251,146,60,0.07); border: 1px solid rgba(251,146,60,0.25); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 8px;">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <span style="font-size:0.9rem;">🧾</span>
+                  <span class="font-bold" style="font-size:0.78rem; color:#fb923c;">Solicitudes de Cuenta</span>
+                  <span id="pos-bill-requests-count" class="badge animate-pulse" style="background:#fb923c22; color:#fb923c; border:1px solid #fb923c44; font-size:0.65rem; margin-left:auto;">0</span>
+                </div>
+                <div id="pos-bill-requests-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+              </div>
+
               <!-- Table / Comanda Loader -->
               <div>
                 <label class="form-label font-semibold" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">📥 Cargar ${this.isBar ? 'VIP / Área / Barra' : 'Mesa / Pedido Activo'}</label>
@@ -344,12 +354,13 @@ export class POSView extends Component {
       const ordersListener = FirestoreService.listenToTenant('orders', (orders) => {
         this.state.orders = orders || [];
         this.populateTableSelector(element);
+        this.renderBillRequestsPanel(element);
       });
       this.listeners.push(ordersListener);
 
-      // 4. Subscribe to Aforo node (for Bars)
+      // 4. Subscribe to Aforo node (for Bars) — ruta tenant correcta sin prefijo companies/
       if (this.isBar) {
-        const aforoListener = FirestoreService.listenToPathRaw(`companies/${this.companyId}/aforo`, (aforo) => {
+        const aforoListener = FirestoreService.listenToPathRaw(`${this.companyId}/aforo`, (aforo) => {
           this.state.aforo = aforo || { actual: 0, limite: 300 };
           this.updateAforoUI(element);
         });
@@ -387,15 +398,15 @@ export class POSView extends Component {
         date: Date.now(),
         createdAt: Date.now()
       };
-      
+
       // 1. Save entry ticket sale
       await FirestoreService.create('ventas', salePayload);
 
-      // 2. Increment local club capacity
+      // 2. Increment local club capacity (ruta tenant correcta)
       const nextActual = (this.state.aforo.actual || 0) + 1;
-      await FirestoreService.updateRaw(`companies/${this.companyId}/aforo`, { 
-        actual: nextActual, 
-        limite: this.state.aforo.limite || 300 
+      await FirestoreService.updatePath(`${this.companyId}/aforo`, {
+        actual: nextActual,
+        limite: this.state.aforo.limite || 300
       });
 
       NotificationService.success('Entrada de cover registrada. Aforo incrementado.');
@@ -403,6 +414,32 @@ export class POSView extends Component {
       console.error('[POSView] Quick cover sale error:', e);
       NotificationService.error('Error al registrar cover.');
     }
+  }
+
+  renderBillRequestsPanel(element) {
+    const root = element || this.layout.element;
+    const panel = root?.querySelector('#pos-bill-requests-panel');
+    const list = root?.querySelector('#pos-bill-requests-list');
+    const countBadge = root?.querySelector('#pos-bill-requests-count');
+    if (!panel || !list) return;
+
+    const billOrders = this.state.orders.filter(o => o.status === 'ESPERANDO_PAGO');
+
+    if (billOrders.length === 0) {
+      panel.style.display = 'none';
+      return;
+    }
+
+    panel.style.display = 'block';
+    if (countBadge) countBadge.textContent = billOrders.length;
+
+    list.innerHTML = billOrders.map(o => `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(251,146,60,0.05); border:1px solid rgba(251,146,60,0.15); border-radius:6px; padding:6px 10px; font-size:0.75rem;">
+        <span class="font-bold" style="color:#fb923c;">${o.tableName || `Mesa ${o.tableId}`}</span>
+        <span class="text-secondary">$${Number(o.total || 0).toFixed(2)}</span>
+        <button class="btn btn-xs btn-primary" style="background:#fb923c; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.7rem;" onclick="document.querySelector('#pos-table-selector').value='${o.tableId}'; document.querySelector('#pos-table-selector').dispatchEvent(new Event('change'));">Cargar</button>
+      </div>
+    `).join('');
   }
 
   populateTableSelector(element) {

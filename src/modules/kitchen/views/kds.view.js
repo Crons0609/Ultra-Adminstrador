@@ -141,10 +141,15 @@ export class KDSView extends Component {
     const grid = element.querySelector('#kds-container');
     if (grid) {
       grid.addEventListener('click', (e) => {
-        const btn = e.target.closest('.kds-btn');
-        if (btn) {
-          const orderId = btn.getAttribute('data-id');
-          this.markAsReady(orderId);
+        const startBtn = e.target.closest('.kds-btn-start');
+        const readyBtn = e.target.closest('.kds-btn-ready');
+
+        if (startBtn) {
+          const orderId = startBtn.getAttribute('data-id');
+          this.updateOrderStatus(orderId, 'EN_PREPARACION', '¡Preparación iniciada!');
+        } else if (readyBtn) {
+          const orderId = readyBtn.getAttribute('data-id');
+          this.updateOrderStatus(orderId, 'READY', this.isBar ? 'Bebida lista. Mesero notificado.' : 'Comanda LISTA. Mesero notificado.');
         }
       });
     }
@@ -154,8 +159,10 @@ export class KDSView extends Component {
     const grid = element.querySelector('#kds-container');
     if (!grid) return;
 
-    // Kitchen/Bar needs to see orders with status EN_COCINA or PENDIENTE
-    const activeOrders = this.state.orders.filter(o => o.status === 'EN_COCINA' || o.status === 'PENDIENTE');
+    // Cocina/Barra muestra: EN_COCINA (nuevo) y EN_PREPARACION (en proceso)
+    const activeOrders = this.state.orders.filter(o =>
+      o.status === 'EN_COCINA' || o.status === 'EN_PREPARACION' || o.status === 'PENDIENTE'
+    );
 
     if (activeOrders.length === 0) {
       grid.innerHTML = `
@@ -168,53 +175,76 @@ export class KDSView extends Component {
       return;
     }
 
-    grid.innerHTML = activeOrders.map(o => {
+    // Primero las que están EN_COCINA (nuevas), luego EN_PREPARACION
+    const sorted = activeOrders.sort((a, b) => {
+      const priority = { 'EN_COCINA': 0, 'PENDIENTE': 0, 'EN_PREPARACION': 1 };
+      return (priority[a.status] ?? 2) - (priority[b.status] ?? 2);
+    });
+
+    grid.innerHTML = sorted.map(o => {
       const created = o.createdAt || Date.now();
       const elapsedMs = this.state.time - created;
       const elapsedMins = Math.floor(elapsedMs / (1000 * 60));
-      
-      // Bares/BDS have a 8 minutes limit warning, kitchens have a 15 minutes limit warning
+
       const limitMinutes = this.isBar ? 8 : 15;
       const warningClass = elapsedMins >= limitMinutes ? 'warning-time' : '';
-      const timeText = elapsedMins === 0 ? 'Hace un momento' : `Hace ${elapsedMins} mins`;
+      const timeText = elapsedMins === 0 ? 'Hace un momento' : `Hace ${elapsedMins} min`;
+
+      const isPreparing = o.status === 'EN_PREPARACION';
+      const accentColor = this.isBar ? '#a855f7' : (isPreparing ? '#f59e0b' : 'var(--color-accent)');
+
+      const statusBadge = isPreparing
+        ? `<span style="font-size:0.7rem; background:#f59e0b22; color:#f59e0b; border:1px solid #f59e0b44; border-radius:4px; padding:2px 7px; font-weight:700;">🔥 En Preparación</span>`
+        : `<span style="font-size:0.7rem; background:#ef444422; color:#ef4444; border:1px solid #ef444444; border-radius:4px; padding:2px 7px; font-weight:700;">🆕 Nueva</span>`;
 
       const itemsHTML = (o.items || []).map(item => `
         <div class="kds-item">
           <div>
             <span class="kds-item-qty">${item.qty}x</span>
             <span>${item.name}</span>
+            ${item.notes ? `<span style="font-size:0.72rem; color:var(--color-text-secondary); display:block; margin-left:20px;">📝 ${item.notes}</span>` : ''}
           </div>
         </div>
       `).join('');
 
-      const label = o.clientName ? ` (${o.clientName})` : '';
+      const label = o.clientName ? ` · ${o.clientName}` : '';
+      const notesBlock = o.notes ? `<div style="font-size:0.75rem; color:var(--color-text-secondary); background:rgba(255,255,255,0.03); border:1px solid var(--color-border); border-radius:4px; padding:6px 8px;">📝 ${o.notes}</div>` : '';
+
+      const actionBtn = isPreparing
+        ? `<button class="kds-btn kds-btn-ready" data-id="${o.id}" style="background:var(--color-success);">${this.isBar ? '🍹 Bebida Lista ✓' : '✅ Listo para Entregar'}</button>`
+        : `<button class="kds-btn kds-btn-start" data-id="${o.id}" style="background:#f59e0b;">${this.isBar ? '🍹 Preparar Bebida' : '🔥 Iniciar Preparación'}</button>`;
 
       return `
-        <div class="kds-card ${warningClass}" style="${this.isBar ? 'border-left-color:#a855f7;' : ''}">
+        <div class="kds-card ${warningClass}" style="border-left-color:${accentColor};">
           <div class="kds-header">
             <div>
               <span class="kds-table-name">${o.tableName || `Mesa ${o.tableId}`}</span>
-              <span class="text-xs text-secondary d-block" style="margin-top:2px;">${o.accountType}${label}</span>
+              <span class="text-xs text-secondary d-block" style="margin-top:2px;">${o.accountType || ''}${label}</span>
             </div>
-            <span class="kds-time-elapsed">${timeText}</span>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+              ${statusBadge}
+              <span class="kds-time-elapsed">${timeText}</span>
+            </div>
           </div>
           <div class="kds-items-list">
             ${itemsHTML}
           </div>
-          <button class="kds-btn" data-id="${o.id}" style="${this.isBar ? 'background:#a855f7;' : ''}">
-            Listo para Servir ✓
-          </button>
+          ${notesBlock}
+          ${actionBtn}
         </div>
       `;
     }).join('');
   }
 
-  async markAsReady(orderId) {
+  async updateOrderStatus(orderId, newStatus, successMsg) {
     try {
-      await FirestoreService.update('orders', orderId, { status: 'READY', readyAt: Date.now() });
-      NotificationService.success(this.isBar ? 'Bebida marcada como LISTA. Mesero notificado.' : 'Comanda marcada como LISTA. Mesero notificado.');
+      const updates = { status: newStatus, updatedAt: Date.now() };
+      if (newStatus === 'EN_PREPARACION') updates.startedAt = Date.now();
+      if (newStatus === 'READY') updates.readyAt = Date.now();
+      await FirestoreService.update('orders', orderId, updates);
+      NotificationService.success(successMsg);
     } catch (e) {
-      console.error(e);
+      console.error('[KDS] Error al actualizar estado:', e);
       NotificationService.error('Error al actualizar el estado de la comanda.');
     }
   }

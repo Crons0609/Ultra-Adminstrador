@@ -380,17 +380,13 @@ export class OrdersView extends Component {
           updatedAt: Date.now()
         });
 
-        // Update table node
-        const currentTable = await new Promise((resolve) => {
-          FirestoreService.listenToPathRaw(`companies/${this.companyId}/tables/${order.tableId}`, (data) => {
-            resolve(data);
-          });
-        });
-        
+        // Leer la mesa directamente con readPath (retorna el valor, no un listener ID)
+        const currentTable = await FirestoreService.readPath(`${this.companyId}/tables/${order.tableId}`);
+
         let activeOrderIds = currentTable?.activeOrderIds || [];
         if (typeof activeOrderIds === 'string') activeOrderIds = [activeOrderIds];
         if (!activeOrderIds.includes(orderId)) activeOrderIds.push(orderId);
-        
+
         const tableTotal = (currentTable?.orderTotal || 0) + (total - Number(order.total || 0));
 
         await FirestoreService.update('tables', order.tableId, {

@@ -213,8 +213,13 @@ export class CartView extends Component {
     this.renderCart(this.element);
 
     const total = this.state.cart.reduce((sum, item) => sum + item.total, 0);
+    const companyId = this.companyId;
+
+    // Generar un ID único para el pedido
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const orderPayload = {
+      id: orderId,
       tableId: this.tableId,
       tableName: `Mesa ${this.tableId.replace('mesa-', '')}`,
       branchId: this.branchId,
@@ -229,42 +234,33 @@ export class CartView extends Component {
     };
 
     try {
-      // 1. Create order node in tenant's orders
-      // Set the path using companyId as tenant
-      const companyId = this.companyId;
-      const orderId = await new Promise((resolve, reject) => {
-        // We write to companies/{companyId}/orders
-        FirestoreService.createRaw(`companies/${companyId}/orders`, orderPayload)
-          .then(resolve)
-          .catch(reject);
-      });
+      // 1. Escribir el pedido en la ruta correcta del tenant: {companyId}/orders/{orderId}
+      await FirestoreService.writePath(`${companyId}/orders/${orderId}`, orderPayload);
+      console.log(`[CartView] ✅ Pedido creado: ${companyId}/orders/${orderId}`);
 
-      // 2. Mark table as occupied in tenant's tables
-      const currentTable = await new Promise((resolve) => {
-        FirestoreService.listenToPathRaw(`companies/${companyId}/tables/${this.tableId}`, (data) => {
-          resolve(data);
-        });
-      });
+      // 2. Leer el estado actual de la mesa usando readPath (retorna el valor directamente)
+      const currentTable = await FirestoreService.readPath(`${companyId}/tables/${this.tableId}`);
 
-      // We append the active order to the table's list
+      // Agregar el nuevo orderId a la lista de órdenes activas de la mesa
       let activeOrderIds = currentTable?.activeOrderIds || [];
       if (typeof activeOrderIds === 'string') activeOrderIds = [activeOrderIds];
       if (!activeOrderIds.includes(orderId)) activeOrderIds.push(orderId);
 
       const tableTotal = (currentTable?.orderTotal || 0) + total;
 
-      await new Promise((resolve) => {
-        FirestoreService.updateRaw(`companies/${companyId}/tables/${this.tableId}`, {
-          status: 'BUSY',
-          activeOrderId: orderId, // Backwards compatibility fallback
-          activeOrderIds,
-          orderTotal: tableTotal
-        }).then(resolve);
+      // 3. Actualizar el estado de la mesa con updatePath
+      await FirestoreService.updatePath(`${companyId}/tables/${this.tableId}`, {
+        status: 'BUSY',
+        activeOrderId: orderId,
+        activeOrderIds,
+        orderTotal: tableTotal,
+        updatedAt: Date.now()
       });
+      console.log(`[CartView] ✅ Mesa actualizada: ${companyId}/tables/${this.tableId}`);
 
-      // 3. Complete and redirect
+      // 4. Guardar orderId en sesión, limpiar carrito y redirigir al estado del pedido
       sessionStorage.setItem('ua_customer_orderId', orderId);
-      sessionStorage.removeItem('ua_customer_cart'); // Clear cart
+      sessionStorage.removeItem('ua_customer_cart');
       NotificationService.success('¡Pedido enviado al mesero con éxito!');
       window.location.hash = '/customer/order-status';
     } catch (e) {

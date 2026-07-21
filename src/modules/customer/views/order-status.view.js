@@ -57,23 +57,23 @@ export class OrderStatusView extends Component {
 
   subscribeToData(root) {
     try {
-      // 1. Listen to the local profile info to load brand settings
+      // 1. Escuchar el perfil local del negocio para cargar la marca
       const infoUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/informacion_local`, (info) => {
         this.state.info = info || {};
         this.renderStatus(root);
       });
       this.listeners.push(infoUnsub);
 
-      // 2. Listen to this specific order's status
-      const unsub = FirestoreService.listenToPathRaw(`companies/${this.companyId}/orders/${this.orderId}`, (order) => {
+      // 2. Escuchar el estado de este pedido específico (ruta tenant correcta)
+      const unsub = FirestoreService.listenToPathRaw(`${this.companyId}/orders/${this.orderId}`, (order) => {
         this.state.order = order;
         this.state.loading = false;
         this.renderStatus(root);
       });
       this.listeners.push(unsub);
 
-      // 3. Listen to all orders for this table/comensal to support cumulative consumption display
-      const ordersUnsub = FirestoreService.listenToPathRaw(`companies/${this.companyId}/orders`, (orders) => {
+      // 3. Escuchar todos los pedidos de esta mesa para consumo acumulado
+      const ordersUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/orders`, (orders) => {
         this.state.orders = orders ? Object.entries(orders).map(([id, o]) => ({ id, ...o })) : [];
         this.renderStatus(root);
       });
@@ -133,8 +133,9 @@ export class OrderStatusView extends Component {
     
     const steps = [
       { key: 'PENDIENTE_VERIFICACION', label: isBar ? 'Cola de Barra' : 'Verificación', desc: isBar ? 'El mesero está corroborando tus bebidas' : 'El mesero está corroborando tu orden', icon: '📥' },
-      { key: 'EN_COCINA', label: isBar ? 'Preparación en Barra' : 'En Cocina', desc: isBar ? 'El bartender prepara tus cócteles' : 'Tu comida está siendo preparada', icon: isBar ? '🍹' : '🍳' },
-      { key: 'READY', label: 'Listo', desc: '¡Tu pedido está listo para servirse!', icon: '🔔' },
+      { key: 'EN_COCINA', label: isBar ? 'En Barra' : 'En Cocina', desc: isBar ? 'El bartender recibió tu pedido' : 'Cocina recibió la comanda', icon: isBar ? '🍹' : '🍳' },
+      { key: 'EN_PREPARACION', label: isBar ? 'Preparando' : 'En Preparación', desc: isBar ? 'El bartender está preparando tus bebidas' : 'Tu comida está siendo preparada', icon: '🔥' },
+      { key: 'READY', label: '¡Listo!', desc: '¡Tu pedido está listo para servirse!', icon: '🔔' },
       { key: 'ENTREGADO', label: 'Entregado', desc: '¡Que disfrutes tu servicio!', icon: '🍽️' },
       { key: 'ESPERANDO_PAGO', label: 'Cerrando cuenta', desc: 'El personal se acerca a cobrar', icon: '🧾' },
       { key: 'COMPLETED', label: 'Completado', desc: '¡Gracias por visitarnos!', icon: '🎉' }
@@ -384,19 +385,16 @@ export class OrderStatusView extends Component {
       const companyId = this.companyId;
       const orderId = this.orderId;
 
-      // 1. Update order status to ESPERANDO_PAGO
-      await new Promise((resolve) => {
-        FirestoreService.updateRaw(`companies/${companyId}/orders/${orderId}`, {
-          status: 'ESPERANDO_PAGO',
-          updatedAt: Date.now()
-        }).then(resolve);
+      // 1. Actualizar el pedido a ESPERANDO_PAGO usando la ruta tenant correcta
+      await FirestoreService.updatePath(`${companyId}/orders/${orderId}`, {
+        status: 'ESPERANDO_PAGO',
+        updatedAt: Date.now()
       });
 
-      // 2. Update table status to BILL
-      await new Promise((resolve) => {
-        FirestoreService.updateRaw(`companies/${companyId}/tables/${this.tableId}`, {
-          status: 'BILL'
-        }).then(resolve);
+      // 2. Marcar la mesa como BILL para que la cajera la detecte
+      await FirestoreService.updatePath(`${companyId}/tables/${this.tableId}`, {
+        status: 'BILL',
+        updatedAt: Date.now()
       });
 
       NotificationService.success('La cuenta ha sido solicitada. El mesero se acercará pronto.');
