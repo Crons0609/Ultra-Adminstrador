@@ -4,6 +4,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
 
 export class TablesView extends Component {
   constructor(params = {}) {
@@ -12,9 +13,12 @@ export class TablesView extends Component {
     const currentUser = state.currentUser || {};
     this.companyId = currentUser.companyId || '';
     this.waiterName = currentUser.displayName || 'Mesero';
+    this.currentUserId = currentUser.uid || '';
 
     this.state = {
       tables: [],
+      rawTables: [],
+      rawQRs: [],
       products: [],
       orders: [],
       activeOrder: null,
@@ -22,185 +26,151 @@ export class TablesView extends Component {
       cart: [],
       loading: true
     };
+    
+    // Live-timer interval ID for elapsed time display
+    this._timerInterval = null;
 
     this.layout = new PageLayout({
-      title: 'Gestión de Mesas y Comandas',
-      subtitle: 'Toma órdenes, confirma pedidos de clientes y controla el estado del servicio en tiempo real.',
+      title: 'Mis Mesas',
+      subtitle: 'Tus mesas asignadas — confirma pedidos, envía a cocina y solicita cuentas.',
       actionHTML: `
         <span class="badge animate-pulse" style="background:#34d39922; color:#34d399; border:1px solid #34d39944; padding:4px 10px;">
-          ● Servidor Conectado
+          ● En Servicio
         </span>
       `,
       contentHTML: `
         <style>
-          .waiter-dashboard-layout {
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            gap: var(--space-6);
-            align-items: start;
-          }
-          @media (max-width: 1024px) {
-            .waiter-dashboard-layout {
-              grid-template-columns: 1fr;
-            }
-          }
-          /* Tables Grid Styles */
-          .waiter-tables-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          /* ============================================================
+             Waiter My-Tables Dashboard — Unified card-list design
+             ============================================================ */
+          .my-tables-list {
+            display: flex;
+            flex-direction: column;
             gap: var(--space-4);
           }
-          @media (max-width: 480px) {
-            .waiter-tables-grid {
-              grid-template-columns: repeat(2, 1fr);
-              gap: var(--space-2);
-            }
-            .table-card {
-              min-height: 110px !important;
-              padding: var(--space-3) !important;
-            }
-            .table-number {
-              font-size: 1.25rem !important;
-            }
-          }
-          .table-card {
+          .my-table-card {
+            background: var(--color-bg-secondary);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-lg);
-            background: var(--color-bg-secondary);
-            padding: var(--space-4);
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-            position: relative;
             overflow: hidden;
+            transition: box-shadow 0.2s;
+          }
+          .my-table-card:hover {
+            box-shadow: var(--shadow-md);
+          }
+          .my-table-card.has-pending {
+            border-color: #ef4444;
+            box-shadow: 0 0 12px rgba(239,68,68,0.12);
+          }
+          .my-table-card.has-bill {
+            border-color: var(--color-warning);
+          }
+          .my-table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-4) var(--space-5);
+            background: var(--color-bg-tertiary);
+            border-bottom: 1px solid var(--color-border);
+          }
+          .my-table-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+          }
+          .my-table-meta {
+            display: flex;
+            gap: var(--space-3);
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--color-text-secondary);
+          }
+          .my-table-body {
+            padding: var(--space-4) var(--space-5);
+          }
+          .table-order-block {
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-3);
+            overflow: hidden;
+          }
+          .table-order-block:last-child { margin-bottom: 0; }
+          .table-order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-2) var(--space-3);
+            background: var(--color-bg-tertiary);
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.8rem;
+          }
+          .order-status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            font-weight: 600;
+          }
+          .table-order-items {
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.82rem;
+          }
+          .item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px dotted var(--color-border);
+          }
+          .item-row:last-child { border-bottom: none; }
+          .table-order-actions {
+            display: flex;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            flex-wrap: wrap;
+            border-top: 1px solid var(--color-border);
+          }
+          .table-order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+          }
+          .order-total-amount {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--color-accent);
+          }
+          /* empty state */
+          .no-tables-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 130px;
-          }
-          .table-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-          }
-          .table-card.status-free { border-top: 4px solid var(--color-success); }
-          .table-card.status-busy { border-top: 4px solid var(--color-danger); }
-          .table-card.status-bill { border-top: 4px solid var(--color-warning); }
-          
-          .table-number {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: var(--space-1);
-          }
-          .table-status-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            border-radius: 999px;
-            margin-bottom: var(--space-2);
-          }
-          .status-free .table-status-badge { background: var(--color-success-light); color: var(--color-success); }
-          .status-busy .table-status-badge { background: var(--color-danger-light); color: var(--color-danger); }
-          .status-bill .table-status-badge { background: var(--color-warning-light); color: var(--color-warning); }
-
-          .table-info-row {
-            font-size: 0.75rem;
+            padding: var(--space-10) var(--space-4);
             color: var(--color-text-secondary);
-            margin-bottom: 2px;
-          }
-
-          .pending-badge {
-            font-size: 0.65rem;
-            background: #ef444422;
-            color: #ef4444;
-            border: 1px solid #ef444444;
-            padding: 2px 6px;
-            border-radius: 999px;
-            font-weight: 600;
-            margin-top: 4px;
-            animation: pulse-red 1.8s infinite;
-          }
-
-          @keyframes pulse-red {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); box-shadow: 0 0 8px #ef444433; }
-            100% { transform: scale(1); }
-          }
-
-          /* Active Orders Styles */
-          .active-orders-section {
-            background: var(--color-bg-secondary);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-lg);
-            padding: var(--space-5);
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-4);
-          }
-          .waiter-orders-list {
-            display: flex;
-            flex-direction: column;
+            text-align: center;
             gap: var(--space-3);
-            max-height: 70vh;
-            overflow-y: auto;
           }
-          .order-card {
-            background: var(--color-bg-tertiary);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
+          .no-tables-icon { font-size: 3rem; }
+          /* Add-table button */
+          .my-table-add-btn {
+            width: 100%;
             padding: var(--space-3);
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-2);
-            position: relative;
-            text-align: left;
-          }
-          .order-card.status-pending-verification {
-            border-color: #ef4444;
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
-          }
-          .order-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--color-border);
-            padding-bottom: var(--space-1);
-          }
-          .order-table-name {
-            font-size: 0.95rem;
-            font-weight: 700;
-          }
-          .order-items-list {
-            font-size: 0.8rem;
-            color: var(--color-text-primary);
-            max-height: 100px;
-            overflow-y: auto;
-          }
-          .order-item-detail {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 0;
-          }
-          .order-footer-actions {
-            margin-top: 4px;
-          }
-          .order-footer {
-            border-top: 1px solid var(--color-border);
-            padding-top: var(--space-1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.75rem;
+            border: 2px dashed var(--color-border);
+            border-radius: var(--radius-lg);
+            background: transparent;
             color: var(--color-text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, color 0.2s;
           }
-          .order-total {
-            font-weight: 700;
-            font-size: 0.85rem;
-            color: var(--color-text-primary);
+          .my-table-add-btn:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
           }
-          
-          /* Order Builder Modal Styles */
+          /* Modal order builder */
           .order-builder-layout {
             display: grid;
             grid-template-columns: 1.2fr 1fr;
@@ -221,9 +191,7 @@ export class TablesView extends Component {
             border-bottom: 1px solid var(--color-border);
             cursor: pointer;
           }
-          .product-item-row:hover {
-            background: var(--color-bg-tertiary);
-          }
+          .product-item-row:hover { background: var(--color-bg-tertiary); }
           .cart-item-row {
             display: flex;
             justify-content: space-between;
@@ -231,8 +199,6 @@ export class TablesView extends Component {
             padding: var(--space-2) 0;
             border-bottom: 1px dotted var(--color-border);
           }
-
-          /* Orders selection list style */
           .order-selection-item {
             display: flex;
             justify-content: space-between;
@@ -244,30 +210,16 @@ export class TablesView extends Component {
             background: var(--color-bg-secondary);
             transition: border-color 0.2s;
           }
-          .order-selection-item:hover {
-            border-color: var(--color-accent);
+          .order-selection-item:hover { border-color: var(--color-accent); }
+          @keyframes pulse-red {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 8px #ef444433; }
+            100% { transform: scale(1); }
           }
         </style>
-        
-        <div class="waiter-dashboard-layout">
-          <!-- Left Side: Tables -->
-          <div>
-            <h3 class="text-lg font-bold mb-4">📍 Distribución de Mesas</h3>
-            <div id="waiter-tables-container" class="waiter-tables-grid">
-              <p class="text-center w-full py-10 text-secondary">Cargando mesas...</p>
-            </div>
-          </div>
 
-          <!-- Right Side: Active Orders -->
-          <div class="active-orders-section">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h3 class="text-md font-bold" style="margin:0;">📋 Comandas Activas</h3>
-              <button class="btn btn-secondary btn-xs" id="btn-refresh-orders" style="font-size:0.7rem; padding: 2px 6px;">🔄 Actualizar</button>
-            </div>
-            <div id="waiter-orders-list" class="waiter-orders-list">
-              <p class="text-secondary text-center py-5">Esperando comandas...</p>
-            </div>
-          </div>
+        <div id="waiter-tables-container">
+          <p class="text-center w-full py-10 text-secondary">Cargando tus mesas...</p>
         </div>
       `
     });
@@ -291,7 +243,7 @@ export class TablesView extends Component {
       });
       this.listeners.push(tablesListener);
 
-      // 2. Subscribe to qr_codes to pull all custom tables/zones created by owner
+      // 2. Subscribe to qr_codes
       const qrListener = FirestoreService.listenToTenant('qr_codes', (qrs) => {
         this.state.rawQRs = qrs || [];
         this.mergeAndRenderTables(element);
@@ -304,11 +256,30 @@ export class TablesView extends Component {
       });
       this.listeners.push(productsListener);
 
-      // 4. Subscribe to orders to show client order notifications
-      const ordersListener = FirestoreService.listenToTenant('orders', (orders) => {
+      // 4. Subscribe to orders
+      const ordersListener = FirestoreService.listenToTenant('orders', async (orders) => {
+        const prev = this.state.orders || [];
         this.state.orders = orders || [];
-        this.renderTables(element);
-        this.renderActiveOrders(element);
+
+        // Round-Robin trigger: for any new PENDIENTE_VERIFICACION order on a table
+        // that has no waiter assigned yet, run auto-assignment.
+        const newPending = this.state.orders.filter(o =>
+          o.status === 'PENDIENTE_VERIFICACION' &&
+          !prev.find(p => p.id === o.id) // truly new
+        );
+        for (const order of newPending) {
+          if (!order.tableId) continue;
+          const table = (this.state.rawTables || []).find(t => t.id === order.tableId);
+          if (!table?.assignedWaiterId) {
+            try {
+              await WaiterAssignmentService.assignTable(order.tableId, table || {});
+            } catch (e) {
+              console.warn('[TablesView] Round-Robin assignment failed:', e.message);
+            }
+          }
+        }
+
+        this.renderMyTables(element);
       });
       this.listeners.push(ordersListener);
 
@@ -321,11 +292,9 @@ export class TablesView extends Component {
     const rawTables = this.state.rawTables || [];
     const rawQRs = this.state.rawQRs || [];
 
-    // Map existing tables
     const tableMap = new Map();
     rawTables.forEach(t => tableMap.set(t.id, t));
 
-    // Merge any QRs (custom tables/zones created by owner) that aren't in tables yet
     rawQRs.forEach(qr => {
       const id = qr.tableId || qr.id;
       if (id && !tableMap.has(id)) {
@@ -341,9 +310,7 @@ export class TablesView extends Component {
 
     let merged = Array.from(tableMap.values());
 
-    // If still completely empty, initialize default 10 tables
     if (merged.length === 0) {
-      console.log('[TablesView] No tables found, initializing default 10 tables...');
       const defaults = [];
       for (let i = 1; i <= 10; i++) {
         const tableId = `mesa-${i}`;
@@ -354,7 +321,6 @@ export class TablesView extends Component {
       merged = defaults;
     }
 
-    // Sort numerically/alphabetically by table ID or name
     this.state.tables = merged.sort((a, b) => {
       const numA = parseInt((a.name || a.id).replace(/\D/g, '')) || 999;
       const numB = parseInt((b.name || b.id).replace(/\D/g, '')) || 999;
@@ -362,95 +328,269 @@ export class TablesView extends Component {
       return (a.name || a.id).localeCompare(b.name || b.id);
     });
 
-    this.renderTables(element);
-    this.renderActiveOrders(element);
+    this.renderMyTables(element);
   }
 
   bindEvents(element) {
     const container = element.querySelector('#waiter-tables-container');
-    if (container) {
-      container.addEventListener('click', (e) => {
-        const card = e.target.closest('.table-card');
-        if (card) {
-          const tableId = card.getAttribute('data-id');
+    if (!container) return;
+
+    // Delegate all action clicks within table cards
+    container.addEventListener('click', async (e) => {
+      // Add new order button
+      const addBtn = e.target.closest('.btn-table-add-order');
+      if (addBtn) {
+        const tableId = addBtn.getAttribute('data-table');
+        if (!tableId) {
+          // "Tomar Orden Manual" — pick any table
+          this.openTablePickerModal();
+        } else {
           const table = this.state.tables.find(t => t.id === tableId);
           if (table) {
-            this.handleTableClick(table);
+            this.state.selectedTable = table;
+            this.state.cart = [];
+            this.state.activeOrder = null;
+            this.openTakeOrderModal();
           }
         }
-      });
-    }
+        return;
+      }
 
-    const ordersList = element.querySelector('#waiter-orders-list');
-    if (ordersList) {
-      ordersList.addEventListener('click', (e) => {
-        const deliverBtn = e.target.closest('.btn-order-deliver');
-        const verifyBtn = e.target.closest('.btn-order-verify');
-        const billBtn = e.target.closest('.btn-order-bill');
-
-        if (deliverBtn) {
-          const orderId = deliverBtn.getAttribute('data-id');
-          this.updateOrderStatus(orderId, 'ENTREGADO', 'Pedido marcado como entregado en mesa.');
-        } else if (verifyBtn) {
-          const orderId = verifyBtn.getAttribute('data-id');
-          const selectedOrder = this.state.orders.find(o => o.id === orderId);
-          if (selectedOrder) {
-            this.state.activeOrder = selectedOrder;
-            this.state.cart = JSON.parse(JSON.stringify(selectedOrder.items || []));
-            this.state.selectedTable = this.state.tables.find(t => t.id === selectedOrder.tableId) || { id: selectedOrder.tableId, name: selectedOrder.tableName || `Mesa ${selectedOrder.tableId}` };
-            this.openManageOrderModal();
-          }
-        } else if (billBtn) {
-          const orderId = billBtn.getAttribute('data-id');
-          this.requestBillFromList(orderId);
+      // Verify (PENDIENTE_VERIFICACION) button
+      const verifyBtn = e.target.closest('.btn-order-verify');
+      if (verifyBtn) {
+        const orderId = verifyBtn.getAttribute('data-id');
+        const order = this.state.orders.find(o => o.id === orderId);
+        if (order) {
+          this.state.activeOrder = order;
+          this.state.cart = JSON.parse(JSON.stringify(order.items || []));
+          this.state.selectedTable = this.state.tables.find(t => t.id === order.tableId)
+            || { id: order.tableId, name: order.tableName || `Mesa ${order.tableId}` };
+          this.openManageOrderModal();
         }
-      });
-    }
+        return;
+      }
 
-    element.querySelector('#btn-refresh-orders')?.addEventListener('click', () => {
-      this.renderActiveOrders(element);
-      NotificationService.success('Lista de comandas actualizada.');
+      // Mark as delivered
+      const deliverBtn = e.target.closest('.btn-order-deliver');
+      if (deliverBtn) {
+        const orderId = deliverBtn.getAttribute('data-id');
+        await this.updateOrderStatus(orderId, 'ENTREGADO', 'Pedido marcado como entregado.');
+        return;
+      }
+
+      // Request bill
+      const billBtn = e.target.closest('.btn-order-bill');
+      if (billBtn) {
+        const orderId = billBtn.getAttribute('data-id');
+        await this.requestBillFromList(orderId);
+        return;
+      }
+
+      // Manage existing order (edit)
+      const manageBtn = e.target.closest('.btn-order-manage');
+      if (manageBtn) {
+        const orderId = manageBtn.getAttribute('data-id');
+        const order = this.state.orders.find(o => o.id === orderId);
+        if (order) {
+          this.state.activeOrder = order;
+          this.state.cart = JSON.parse(JSON.stringify(order.items || []));
+          this.state.selectedTable = this.state.tables.find(t => t.id === order.tableId)
+            || { id: order.tableId, name: order.tableName || `Mesa ${order.tableId}` };
+          this.openManageOrderModal();
+        }
+        return;
+      }
     });
   }
 
-  renderTables(element) {
+  /**
+   * Render the waiter's personal table list — only tables assigned to this waiter
+   * that are NOT FREE. Each table card shows all active orders with action buttons.
+   */
+  renderMyTables(element) {
     const container = element.querySelector('#waiter-tables-container');
     if (!container) return;
 
-    if (this.state.tables.length === 0) {
-      container.innerHTML = `<p class="text-center w-full py-10 text-secondary">Cargando mesas...</p>`;
+    const myId = this.currentUserId;
+
+    // Only show tables assigned to this waiter AND with active orders (non-FREE)
+    const myTables = this.state.tables.filter(t => {
+      const isAssignedToMe = t.assignedWaiterId === myId;
+      const hasActiveOrders = this.state.orders.some(
+        o => o.tableId === t.id && o.status !== 'COMPLETED' && o.status !== 'CANCELADA'
+      );
+      // Also show if no waiter assigned yet but table is BUSY (fallback)
+      const isOccupiedNoAssignment = !t.assignedWaiterId && t.status !== 'FREE';
+      return (isAssignedToMe || isOccupiedNoAssignment) && (t.status !== 'FREE' || hasActiveOrders);
+    });
+
+    if (myTables.length === 0) {
+      container.innerHTML = `
+        <div class="no-tables-state">
+          <div class="no-tables-icon">🍽️</div>
+          <h3 class="font-bold" style="margin:0;">Sin mesas asignadas</h3>
+          <p style="font-size:0.85rem; max-width:300px;">Cuando lleguen clientes, las mesas te serán asignadas automáticamente.</p>
+          <button class="btn btn-primary btn-sm btn-table-add-order" data-table="">
+            + Tomar Orden Manual
+          </button>
+        </div>
+      `;
       return;
     }
 
-    container.innerHTML = this.state.tables.map(t => {
-      // Find orders belonging to this table
-      const tableOrders = this.state.orders.filter(o => o.tableId === t.id && o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
-      const pendingCount = tableOrders.filter(o => o.status === 'PENDIENTE_VERIFICACION').length;
-      const billCount = tableOrders.filter(o => o.status === 'ESPERANDO_PAGO').length;
+    const now = Date.now();
 
-      // Determine visual status
-      let finalStatus = t.status;
-      if (pendingCount > 0 && t.status === 'FREE') {
-        finalStatus = 'BUSY'; // Show occupied color if there's a pending client order
-      } else if (billCount > 0) {
-        finalStatus = 'BILL';
-      }
+    container.innerHTML = `
+      <div class="my-tables-list">
+        ${myTables.map(t => {
+          const tableOrders = this.state.orders.filter(
+            o => o.tableId === t.id && o.status !== 'COMPLETED' && o.status !== 'CANCELADA'
+          );
+          const hasPending = tableOrders.some(o => o.status === 'PENDIENTE_VERIFICACION');
+          const hasBill = tableOrders.some(o => o.status === 'ESPERANDO_PAGO');
+          const totalCost = tableOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+          const cardCls = hasPending ? 'has-pending' : hasBill ? 'has-bill' : '';
 
-      const statusClass = finalStatus === 'FREE' ? 'status-free' : (finalStatus === 'BUSY' ? 'status-busy' : 'status-bill');
-      const statusLabel = finalStatus === 'FREE' ? 'Disponible' : (finalStatus === 'BUSY' ? 'Ocupada' : 'Pidió Cuenta');
-      
-      const totalCost = tableOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+          // Elapsed time since first occupation
+          const since = t.occupiedSince || (tableOrders[0]?.createdAt) || now;
+          const elapsedMs = now - since;
+          const elapsedMin = Math.floor(elapsedMs / 60000);
+          const elapsedStr = elapsedMin < 60
+            ? `${elapsedMin} min`
+            : `${Math.floor(elapsedMin/60)}h ${elapsedMin%60}m`;
 
-      return `
-        <div class="table-card ${statusClass}" data-id="${t.id}">
-          <div class="table-number">${t.name}</div>
-          <span class="table-status-badge">${statusLabel}</span>
-          ${t.waiterName ? `<div class="table-info-row">👤 Mesero: <strong>${t.waiterName}</strong></div>` : ''}
-          ${totalCost > 0 ? `<div class="table-info-row">💰 Total: <strong>$${totalCost.toFixed(2)}</strong></div>` : ''}
-          ${pendingCount > 0 ? `<div class="pending-badge">📥 ${pendingCount} Pedido Nuevo</div>` : ''}
-        </div>
-      `;
-    }).join('');
+          const ordersHTML = tableOrders.map(o => {
+            const isPending = o.status === 'PENDIENTE_VERIFICACION';
+            const isReady = o.status === 'READY' || o.status === 'LISTO';
+            const isDelivered = o.status === 'ENTREGADO';
+            const isWaitingBill = o.status === 'ESPERANDO_PAGO';
+            const isInKitchen = o.status === 'EN_COCINA';
+
+            let statusStyle = 'background:var(--color-bg-tertiary); color:var(--color-text-secondary);';
+            let statusLabel = o.status;
+            if (isPending)     { statusStyle = 'background:#ef444422; color:#ef4444; border:1px solid #ef444444;'; statusLabel = '⚡ Nuevo Pedido'; }
+            if (isInKitchen)   { statusStyle = 'background:#3b82f622; color:#3b82f6;'; statusLabel = '🍳 En Cocina'; }
+            if (isReady)       { statusStyle = 'background:#10b98122; color:#10b981; border:1px solid #10b98144;'; statusLabel = '🔔 LISTO'; }
+            if (isDelivered)   { statusStyle = 'background:#8b5cf622; color:#8b5cf6;'; statusLabel = '🍽️ Entregado'; }
+            if (isWaitingBill) { statusStyle = 'background:#fb923c22; color:#fb923c;'; statusLabel = '💳 Esperando Pago'; }
+
+            const clientLabel = o.clientName ? `${o.clientName} · ` : '';
+
+            return `
+              <div class="table-order-block">
+                <div class="table-order-header">
+                  <span style="color:var(--color-text-secondary);">${clientLabel}${o.accountType || 'CONJUNTA'}</span>
+                  <span class="order-status-badge" style="${statusStyle}">${statusLabel}</span>
+                </div>
+                <div class="table-order-items">
+                  ${(o.items || []).map(item => `
+                    <div class="item-row">
+                      <span>${item.qty}x ${item.name}</span>
+                      <span class="text-secondary">$${Number(item.total||0).toFixed(2)}</span>
+                    </div>
+                  `).join('')}
+                  ${o.notes ? `<div style="margin-top:4px; font-size:0.75rem; color:var(--color-text-secondary); font-style:italic;">📝 ${o.notes}</div>` : ''}
+                </div>
+                <div class="table-order-actions">
+                  ${isPending   ? `<button class="btn btn-primary btn-xs btn-order-verify" data-id="${o.id}">📥 Verificar</button>` : ''}
+                  ${isReady     ? `<button class="btn btn-success btn-xs btn-order-deliver" data-id="${o.id}">✓ Entregar</button>` : ''}
+                  ${isDelivered ? `<button class="btn btn-warning btn-xs btn-order-bill" data-id="${o.id}">🧾 Pedir Cuenta</button>` : ''}
+                  ${(isInKitchen || isReady || isDelivered) ? `<button class="btn btn-secondary btn-xs btn-order-manage" data-id="${o.id}">✏️ Editar</button>` : ''}
+                </div>
+                <div class="table-order-footer">
+                  <span>${new Date(o.createdAt || Date.now()).toLocaleTimeString()}</span>
+                  <span class="order-total-amount">$${Number(o.total||0).toFixed(2)}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          return `
+            <div class="my-table-card ${cardCls}">
+              <div class="my-table-header">
+                <div>
+                  <span class="my-table-name">📍 ${t.name}</span>
+                  ${hasPending ? `<span style="display:inline-block; margin-left:8px; font-size:0.65rem; background:#ef444422; color:#ef4444; border:1px solid #ef444444; padding:2px 6px; border-radius:999px; font-weight:600; animation:pulse-red 1.8s infinite;">NUEVO PEDIDO</span>` : ''}
+                </div>
+                <div class="my-table-meta">
+                  <span>⏱ ${elapsedStr}</span>
+                  ${tableOrders.length > 0 ? `<span class="order-total-amount">Total: $${totalCost.toFixed(2)}</span>` : ''}
+                  <button class="btn btn-primary btn-xs btn-table-add-order" data-table="${t.id}">+ Orden</button>
+                </div>
+              </div>
+              <div class="my-table-body">
+                ${ordersHTML || '<p class="text-secondary" style="font-size:0.82rem; margin:0;">Sin comandas activas.</p>'}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Keep renderTables as an alias for backward compat (called by some legacy paths)
+  renderTables(element) { this.renderMyTables(element); }
+  renderActiveOrders(element) { this.renderMyTables(element); }
+
+  openTablePickerModal() {
+    const allTables = this.state.tables || [];
+    if (allTables.length === 0) {
+      NotificationService.error('No hay mesas registradas en el establecimiento.');
+      return;
+    }
+
+    const bodyHTML = `
+      <p style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:var(--space-3);">
+        Selecciona la mesa a la cual deseas asignarte y tomar pedido:
+      </p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:var(--space-2); max-height:50vh; overflow-y:auto;">
+        ${allTables.map(t => {
+          const isBusy = t.status !== 'FREE';
+          const badgeClass = isBusy ? 'background:#ef444422; color:#ef4444;' : 'background:#10b98122; color:#10b981;';
+          const statusText = isBusy ? 'Ocupada' : 'Disponible';
+          return `
+            <button class="btn btn-secondary btn-pick-table-item" data-id="${t.id}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:12px 6px;">
+              <span class="font-bold" style="font-size:1.1rem;">${t.name}</span>
+              <span class="badge" style="font-size:0.65rem; ${badgeClass} margin-top:4px;">${statusText}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    const pickerModal = new Modal({
+      title: 'Seleccionar Mesa para Nuevo Pedido',
+      bodyHTML,
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-picker-cancel">Cancelar</button>`,
+      size: 'md'
+    });
+
+    const el = pickerModal.mount();
+    document.body.appendChild(el);
+
+    el.querySelector('#btn-picker-cancel')?.addEventListener('click', () => pickerModal.close());
+    el.querySelectorAll('.btn-pick-table-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tableId = btn.getAttribute('data-id');
+        const table = allTables.find(t => t.id === tableId);
+        if (table) {
+          pickerModal.close();
+          // Assign table to current waiter if not already assigned
+          if (!table.assignedWaiterId) {
+            try {
+              await WaiterAssignmentService.reassignTable(table.id, this.currentUserId, this.waiterName);
+            } catch (e) {
+              console.warn('[TablesView] Could not assign table:', e);
+            }
+          }
+          this.state.selectedTable = table;
+          this.state.cart = [];
+          this.state.activeOrder = null;
+          this.openTakeOrderModal();
+        }
+      });
+    });
   }
 
   async handleTableClick(table) {
@@ -895,7 +1035,7 @@ export class TablesView extends Component {
       );
 
       if (remainingOrders.length === 0) {
-        // If no active orders remain, free the table completely
+        // If no active orders remain, free the table completely and clear waiter assignment
         await FirestoreService.update('tables', table.id, {
           status: 'FREE',
           activeOrderId: null,
@@ -903,7 +1043,10 @@ export class TablesView extends Component {
           waiterName: null,
           orderTotal: null
         });
+        // Clear Round-Robin assignment so the table disappears from the waiter's dashboard
+        try { await WaiterAssignmentService.releaseTable(table.id); } catch (_) {}
         NotificationService.success(`${table.name} liberada exitosamente.`);
+
       } else {
         // Update table node totals without the freed order
         const newTotal = remainingOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);

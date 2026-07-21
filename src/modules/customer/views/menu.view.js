@@ -510,7 +510,9 @@ export class MenuView extends Component {
               <p>No se encontraron productos o servicios en esta categoría.</p>
             </div>
           ` : filtered.map(p => {
-            const hasImage = p.image && p.image.startsWith('http');
+            // Support multiple field names the product might use for its image URL
+            const rawImage = (p.image || p.imageUrl || p.imagen || p.img || '').toString().trim();
+            const hasImage = rawImage.length > 0 && (rawImage.startsWith('http') || rawImage.startsWith('//'));
             const desc = p.description || (isServices ? 'Servicio / Producto de alta calidad.' : (isBar ? 'Preparado con ingredientes premium en barra.' : 'Producto disponible para pedido.'));
             
             // Happy Hour promotion calculations
@@ -553,13 +555,22 @@ export class MenuView extends Component {
               }
             }
 
+            // Build image section: real img tag with onerror fallback to emoji
+            const fallbackEmoji = isBar ? '🍹' : (isServices ? '📦' : '🍽️');
+            const imgSection = hasImage
+              ? `<img src="${rawImage}" class="pub-menu-img" alt="${p.name}"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                 <div class="pub-menu-img-fallback" style="display:none; ${isBar ? 'color:#a855f7;' : ''}">${fallbackEmoji}</div>`
+              : `<div class="pub-menu-img-fallback" style="${isBar ? 'color:#a855f7;' : ''}">${fallbackEmoji}</div>`;
+
             return `
               <div class="pub-menu-card animate-slide-up">
                 ${happyHourBadge}
                 ${promoBadge}
                 <div class="pub-menu-img-wrap">
-                  ${hasImage ? `<img src="${p.image}" class="pub-menu-img" alt="${p.name}"/>` : `<div class="pub-menu-img-fallback" style="${isBar ? 'color:#a855f7;' : ''}">🍹</div>`}
+                  ${imgSection}
                 </div>
+
                 <div class="pub-menu-body">
                   <h4 class="font-bold text-sm" style="color:var(--pub-text);">${p.name}</h4>
                   <p class="text-xs" style="color:var(--pub-text-sec); line-height:1.4;">${desc}</p>

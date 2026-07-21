@@ -16,6 +16,7 @@ import { APP_CONFIG } from './config/app.config.js';
 import { AuthService } from './services/auth.service.js';
 import { FirestoreService } from './services/firestore.service.js';
 import { AnimationService } from './services/animation.service.js';
+import { GeolocationService } from './services/geolocation.service.js';
 
 class App {
   constructor() {
@@ -53,6 +54,8 @@ class App {
               console.warn('[App] Failed to restore company info:', err.message);
             }
           }
+          // Check GPS tracking prompt / auto-resume for employees
+          GeolocationService.checkAndPromptGPS();
         } else {
           console.log('[App] 🔓 No active Firebase session — showing login.');
         }

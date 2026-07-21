@@ -1,0 +1,1 @@
+en el dashboard de el jefe no  aparece la información de el gps o el mapa del empleado. es decir el empleado ya accedio a copmpartir el gps pero en el dashboard de el dueño aun no aparece nada.

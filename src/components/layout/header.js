@@ -9,6 +9,8 @@ import { AuthService } from '../../services/auth.service.js';
 import { TimeService } from '../../services/time.service.js';
 import { BarcodeScannerService } from '../../services/barcode-scanner.service.js';
 import { BarcodeRegistryService } from '../../services/barcode-registry.service.js';
+import { GeolocationService } from '../../services/geolocation.service.js';
+import { NotificationService } from '../../services/notification.service.js';
 
 export class Header extends Component {
   constructor(props = {}) {
@@ -109,6 +111,14 @@ export class Header extends Component {
             <kbd class="scanner-toggle-kbd">Ctrl+B</kbd>
           </button>
 
+          <!-- GPS Location Toggle (For Employees) -->
+          ${currentUser && currentUser.role !== 'SUPER_ADMIN' ? `
+            <button class="gps-header-btn ${GeolocationService.watchId ? 'active' : 'inactive'}" id="header-gps-btn" title="${GeolocationService.watchId ? 'Seguimiento GPS Activo (Clic para detener)' : 'Seguimiento GPS Inactivo (Clic para activar)'}">
+              <span class="gps-dot"></span>
+              <span id="header-gps-text">${GeolocationService.watchId ? 'GPS Activo' : 'Activar GPS'}</span>
+            </button>
+          ` : ''}
+
           <!-- User Profile Chip -->
           <div class="header-user-chip" id="header-user-chip">
             <div class="header-user-avatar">${userInitial}</div>
@@ -123,6 +133,9 @@ export class Header extends Component {
   }
 
   afterMount() {
+    // Check and auto-resume or prompt employee for GPS tracking
+    GeolocationService.checkAndPromptGPS();
+
     // 1. Sidebar toggle — supports both mobile slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');
     const isMobile  = () => window.innerWidth <= 768;
@@ -234,6 +247,55 @@ export class Header extends Component {
         }
       });
     }
+
+    // 5b. GPS Toggle Button Handler
+    const gpsBtn = this.$('#header-gps-btn');
+    const gpsText = this.$('#header-gps-text');
+
+    const updateGpsUI = (isActive) => {
+      if (!gpsBtn) return;
+      if (isActive) {
+        gpsBtn.classList.add('active');
+        gpsBtn.classList.remove('inactive');
+        gpsBtn.title = 'Seguimiento GPS Activo (Clic para detener)';
+        if (gpsText) gpsText.textContent = 'GPS Activo';
+      } else {
+        gpsBtn.classList.remove('active');
+        gpsBtn.classList.add('inactive');
+        gpsBtn.title = 'Seguimiento GPS Inactivo (Clic para activar)';
+        if (gpsText) gpsText.textContent = 'Activar GPS';
+      }
+    };
+
+    if (gpsBtn) {
+      gpsBtn.addEventListener('click', () => {
+        if (GeolocationService.watchId) {
+          if (confirm('¿Deseas detener el seguimiento GPS de tu ubicación laboral?')) {
+            GeolocationService.stopTracking();
+            localStorage.setItem('ua_gps_enabled', 'false');
+            updateGpsUI(false);
+            NotificationService.success('Seguimiento GPS detenido.');
+          }
+        } else {
+          GeolocationService.startTracking({
+            status: 'DISPONIBLE',
+            onUpdate: () => {
+              updateGpsUI(true);
+              NotificationService.success('📍 Ubicación GPS activada correctamente.');
+            },
+            onError: (err) => {
+              NotificationService.error(err.message || 'No se pudo obtener la ubicación GPS.');
+            }
+          });
+          localStorage.setItem('ua_gps_enabled', 'true');
+        }
+      });
+    }
+
+    this._gpsChangeHandler = (e) => {
+      updateGpsUI(e.detail?.active);
+    };
+    window.addEventListener('ua_gps_changed', this._gpsChangeHandler);
 
     // 6. Global Barcode Scanner setup
     const scannerToggleBtn = this.$('#global-scanner-toggle-btn');
@@ -403,6 +465,7 @@ export class Header extends Component {
     if (this._clockInterval) clearInterval(this._clockInterval);
     if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
     if (this._kbdHandler) window.removeEventListener('keydown', this._kbdHandler);
+    if (this._gpsChangeHandler) window.removeEventListener('ua_gps_changed', this._gpsChangeHandler);
     if (this._sidebarNavHandler) document.removeEventListener('click', this._sidebarNavHandler);
     // Remove the programmatic overlay from body
     if (this._overlay && this._overlay.parentNode) this._overlay.remove();

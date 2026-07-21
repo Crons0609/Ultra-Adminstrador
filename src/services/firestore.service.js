@@ -556,6 +556,75 @@ export class FirestoreService {
     console.log(`[DB] ✅ Company config updated: /${companyId}/config`);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WAITER ASSIGNMENT — Round-Robin helpers
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Get all active waiter employees for a company.
+   * "Active" = role is WAITER and they have logged in within the last 12 hours,
+   * OR their isActive flag is explicitly true.
+   * @param {string} companyId
+   * @returns {Promise<Array<{uid, displayName, email, role}>>}
+   */
+  static async getActiveWaiters(companyId) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const empRef = ref(db, `${companyId}/employees`);
+    const snapshot = await get(empRef);
+    if (!snapshot.exists()) return [];
+
+    const results = [];
+    const cutoff = Date.now() - (12 * 60 * 60 * 1000); // 12 hours ago
+    snapshot.forEach(snap => {
+      if (snap.key === '.init') return;
+      const val = snap.val();
+      if (val.role !== 'WAITER') return;
+      // Include if explicitly active, or if last login was within 12h
+      const lastLogin = val.lastLoginAt || 0;
+      const isActive = val.isActive === true || lastLogin > cutoff;
+      if (isActive) {
+        results.push({ uid: snap.key, id: snap.key, ...val });
+      }
+    });
+
+    // Sort by uid to keep consistent ordering across all clients
+    results.sort((a, b) => a.uid.localeCompare(b.uid));
+    return results;
+  }
+
+  /**
+   * Read the current Round-Robin cursor index from company config.
+   * @param {string} companyId
+   * @returns {Promise<number>}
+   */
+  static async getRoundRobinIndex(companyId) {
+    if (!db) return 0;
+    try {
+      const idxRef = ref(db, `${companyId}/config/waiterRoundRobinIndex`);
+      const snap = await get(idxRef);
+      return snap.exists() ? Number(snap.val()) : 0;
+    } catch (e) {
+      console.warn('[DB] getRoundRobinIndex error:', e.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Persist the Round-Robin cursor index into company config.
+   * @param {string} companyId
+   * @param {number} index
+   * @returns {Promise<void>}
+   */
+  static async setRoundRobinIndex(companyId, index) {
+    if (!db) return;
+    try {
+      const idxRef = ref(db, `${companyId}/config/waiterRoundRobinIndex`);
+      await set(idxRef, index);
+    } catch (e) {
+      console.warn('[DB] setRoundRobinIndex error:', e.message);
+    }
+  }
+
   /**
    * List all companies with their info sub-node.
    * @returns {Promise<Array<Object>>}

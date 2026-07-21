@@ -13,6 +13,7 @@ import { AuthService } from '../../../services/auth.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { GeolocationService } from '../../../services/geolocation.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
@@ -26,7 +27,8 @@ export class EmployeesView extends Component {
     // Initialize state
     this.state = {
       employees: [],
-      locations: []
+      locations: [],
+      tables: []
     };
 
     // Initialize DataTable
@@ -109,12 +111,25 @@ export class EmployeesView extends Component {
         <button class="btn btn-secondary btn-sm" id="btn-stop-gps">Detener GPS</button>
       `,
       contentHTML: `
-        <div class="card p-5">
+        <div class="card p-5 mb-5">
           <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <h3 class="text-lg font-semibold">Listado de Personal</h3>
           </div>
           <!-- Table Wrapper -->
           <div id="employees-table-wrapper"></div>
+        </div>
+
+        <!-- Waiter Table Distribution Panel -->
+        <div class="card p-5">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h3 class="text-md font-bold" style="margin:0;">📍 Distribución de Mesas</h3>
+              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Carga de trabajo de meseros activos y mesas asignadas.</p>
+            </div>
+          </div>
+          <div id="waiter-distribution-panel">
+            <p class="text-secondary" style="font-size:0.85rem;">Cargando datos de distribución...</p>
+          </div>
         </div>
       `
     });
@@ -144,6 +159,8 @@ export class EmployeesView extends Component {
 
       this.state.employees = filtered;
       this.refreshTable(filtered);
+      // Re-render distribution panel now that employee names are available
+      this.renderWaiterDistribution();
       console.log('[EmployeesView] ✅ Empleados cargados. Total:', filtered.length);
     } catch (e) {
       console.error('[EmployeesView] Fallo al cargar empleados:', e);
@@ -165,6 +182,7 @@ export class EmployeesView extends Component {
     // Load data from Cloud Firestore
     this.loadEmployees();
     this.subscribeToLocations(element);
+    this.subscribeToTablesDistribution(element);
 
     return element;
   }
@@ -200,6 +218,25 @@ export class EmployeesView extends Component {
         }
       });
     }
+
+    // Delegation for reassign buttons in distribution panel
+    const distPanel = this.layout.$('#waiter-distribution-panel');
+    if (distPanel) {
+      distPanel.addEventListener('click', async (e) => {
+        const resetBtn = e.target.closest('#btn-reset-rr-index');
+        if (resetBtn) {
+          await WaiterAssignmentService.resetRoundRobinIndex();
+          NotificationService.success('Contador de asignación Round-Robin reiniciado.');
+          return;
+        }
+        const reassignBtn = e.target.closest('.btn-reassign-table');
+        if (reassignBtn) {
+          const tableId = reassignBtn.getAttribute('data-table');
+          const tableName = reassignBtn.getAttribute('data-table-name');
+          this.openReassignModal(tableId, tableName);
+        }
+      });
+    }
   }
 
   subscribeToLocations(element) {
@@ -212,6 +249,128 @@ export class EmployeesView extends Component {
     } catch (error) {
       console.warn('[EmployeesView] Error loading GPS locations:', error.message);
     }
+  }
+
+  subscribeToTablesDistribution(element) {
+    try {
+      const listener = FirestoreService.listenToTenant('tables', (tables) => {
+        this.state.tables = tables || [];
+        this.renderWaiterDistribution();
+      });
+      this.listeners.push(listener);
+    } catch (err) {
+      console.warn('[EmployeesView] Error subscribing to tables:', err.message);
+    }
+  }
+
+  renderWaiterDistribution() {
+    const panel = this.layout.$('#waiter-distribution-panel');
+    if (!panel) return;
+
+    const waiters = this.state.employees.filter(e => e.role === 'WAITER');
+    const tables = this.state.tables.filter(t => t.status !== 'FREE');
+
+    if (waiters.length === 0) {
+      panel.innerHTML = '<p class="text-secondary" style="font-size:0.85rem;">No hay meseros registrados.</p>';
+      return;
+    }
+
+    const rows = waiters.map(w => {
+      const assignedTables = tables.filter(t => t.assignedWaiterId === w.uid);
+      const unassignedCount = tables.filter(t => !t.assignedWaiterId).length;
+      return `
+        <tr>
+          <td style="padding: 8px 12px; font-weight:600;">${w.displayName || w.email}</td>
+          <td style="padding: 8px 12px; text-align:center;">
+            <span class="badge" style="background:var(--color-accent-light, #3b82f622); color:var(--color-accent); font-size:0.8rem; padding: 2px 10px;">${assignedTables.length} mesas</span>
+          </td>
+          <td style="padding: 8px 12px;">
+            ${assignedTables.map(t =>
+              `<span style="display:inline-block; background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:2px 8px; font-size:0.75rem; margin:2px;">
+                ${t.name}
+                <button class="btn-reassign-table" data-table="${t.id}" data-table-name="${t.name}" title="Reasignar" style="background:none; border:none; cursor:pointer; color:var(--color-accent); font-size:0.7rem; padding:0 2px;">✏️</button>
+              </span>`
+            ).join('') || '<span class="text-secondary" style="font-size:0.8rem;">—</span>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const unassigned = tables.filter(t => !t.assignedWaiterId);
+    const unassignedRow = unassigned.length > 0 ? `
+      <tr style="background: rgba(239,68,68,0.04);">
+        <td style="padding: 8px 12px; color:#ef4444; font-weight:600;">⚠️ Sin asignar</td>
+        <td style="padding: 8px 12px; text-align:center;"><span class="badge" style="background:#ef444422; color:#ef4444;">${unassigned.length}</span></td>
+        <td style="padding: 8px 12px;">${unassigned.map(t =>
+          `<span style="display:inline-block; background:#ef444411; border:1px solid #ef444433; border-radius:var(--radius-md); padding:2px 8px; font-size:0.75rem; margin:2px;">
+            ${t.name}
+            <button class="btn-reassign-table" data-table="${t.id}" data-table-name="${t.name}" title="Asignar" style="background:none; border:none; cursor:pointer; color:var(--color-accent); font-size:0.7rem; padding:0 2px;">➕</button>
+          </span>`
+        ).join('')}</td>
+      </tr>
+    ` : '';
+
+    panel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3);">
+        <span style="font-size:0.82rem; color:var(--color-text-secondary);">Distribución en tiempo real. ${tables.length} mesa(s) activa(s).</span>
+        <button id="btn-reset-rr-index" class="btn btn-secondary btn-xs">🔄 Reiniciar Rotación</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--color-border);">
+              <th style="padding:8px 12px; text-align:left;">Mesero</th>
+              <th style="padding:8px 12px; text-align:center;">Carga</th>
+              <th style="padding:8px 12px; text-align:left;">Mesas Asignadas</th>
+            </tr>
+          </thead>
+          <tbody>${rows}${unassignedRow}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  async openReassignModal(tableId, tableName) {
+    const waiters = this.state.employees.filter(e => e.role === 'WAITER');
+    if (waiters.length === 0) {
+      NotificationService.error('No hay meseros registrados para reasignar.');
+      return;
+    }
+
+    const modal = new Modal({
+      title: `Reasignar ${tableName}`,
+      bodyHTML: `
+        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:var(--space-3);">Selecciona el mesero al que deseas asignar esta mesa:</p>
+        <div style="display:flex; flex-direction:column; gap:var(--space-2);">
+          ${waiters.map(w => `
+            <button class="btn btn-secondary w-full btn-pick-waiter" style="justify-content:flex-start;" data-uid="${w.uid}" data-name="${w.displayName || w.email}">
+              👤 ${w.displayName || w.email}
+            </button>
+          `).join('')}
+        </div>
+      `,
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-reassign-cancel">Cancelar</button>`,
+      size: 'sm'
+    });
+
+    const el = modal.mount();
+    document.body.appendChild(el);
+
+    el.querySelector('#btn-reassign-cancel')?.addEventListener('click', () => modal.close());
+    el.querySelectorAll('.btn-pick-waiter').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.getAttribute('data-uid');
+        const name = btn.getAttribute('data-name');
+        try {
+          await WaiterAssignmentService.reassignTable(tableId, uid, name);
+          NotificationService.success(`${tableName} reasignada a ${name}.`);
+          modal.close();
+        } catch (e) {
+          console.error(e);
+          NotificationService.error('Error al reasignar la mesa.');
+        }
+      });
+    });
   }
 
   startOwnGpsTracking() {
