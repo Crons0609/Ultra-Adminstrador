@@ -12,7 +12,6 @@ import { getModuleGuards } from '../../config/business-types.config.js';
 export class Sidebar extends Component {
   constructor(props = {}) {
     super(props);
-    this.state = GlobalStore.getState();
   }
 
   getMenuConfig(role) {
@@ -194,7 +193,9 @@ export class Sidebar extends Component {
   }
 
   render() {
-    const { currentUser, activeRole, currentCompany } = this.state;
+    // Always read fresh state from GlobalStore so the sidebar reflects the latest
+    // activeRole and currentCompany (including config/guards) on every render.
+    const { currentUser, activeRole, currentCompany } = GlobalStore.getState();
     const role = activeRole || (currentUser ? currentUser.role : '');
     const menuConfig = this.getMenuConfig(role);
     const currentHash = window.location.hash;
@@ -294,12 +295,19 @@ export class Sidebar extends Component {
       });
     };
     window.addEventListener('hashchange', this._hashHandler);
+
+    // Subscribe to GlobalStore changes so sidebar re-renders when company
+    // info or role changes (e.g. after async session/company restore).
+    this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
+    this._unsubRole   = GlobalStore.subscribe('activeRole',     () => this.update());
   }
 
   unmount() {
     if (this._hashHandler) {
       window.removeEventListener('hashchange', this._hashHandler);
     }
+    if (this._unsubCompany) this._unsubCompany();
+    if (this._unsubRole)    this._unsubRole();
     super.unmount();
   }
 }
