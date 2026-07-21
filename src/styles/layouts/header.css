@@ -167,4 +167,20 @@
   .header-user-name {
     display: none;
   }
+  .header-user-chip {
+    padding: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .scanner-toggle-btn span,
+  .scanner-toggle-kbd {
+    display: none !important;
+  }
+  .scanner-toggle-btn {
+    padding: var(--space-2);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+  }
 }

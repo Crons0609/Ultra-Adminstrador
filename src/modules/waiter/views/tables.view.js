@@ -39,6 +39,19 @@ export class TablesView extends Component {
             gap: var(--space-4);
             margin-bottom: var(--space-6);
           }
+          @media (max-width: 480px) {
+            .waiter-tables-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: var(--space-2);
+            }
+            .table-card {
+              min-height: 120px !important;
+              padding: var(--space-3) !important;
+            }
+            .table-number {
+              font-size: 1.4rem !important;
+            }
+          }
           .table-card {
             border: 1px solid var(--color-border);
             border-radius: var(--radius-lg);
