@@ -119,17 +119,32 @@ export class Header extends Component {
           </div>
         </div>
       </header>
-
-      <!-- Mobile sidebar overlay -->
-      <div class="sidebar-overlay" id="sidebar-overlay"></div>
     `;
   }
 
   afterMount() {
     // 1. Sidebar toggle — supports both mobile slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');
-    const overlay   = this.$('#sidebar-overlay');
     const isMobile  = () => window.innerWidth <= 768;
+
+    // ── Create mobile overlay (appended to body so it covers full screen) ──
+    // The component only mounts firstElementChild, so we cannot rely on the
+    // render() template for this — it must be created programmatically.
+    let overlay = document.getElementById('sidebar-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'sidebar-overlay';
+      overlay.className = 'sidebar-overlay';
+      document.body.appendChild(overlay);
+    }
+    this._overlay = overlay;
+
+    // Helper: close mobile sidebar
+    const closeMobileSidebar = () => {
+      const sidebar = document.getElementById('main-sidebar');
+      if (sidebar) sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    };
 
     // Restore saved desktop collapse preference
     const savedCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
@@ -146,8 +161,8 @@ export class Header extends Component {
 
         if (isMobile()) {
           // Mobile: slide sidebar in/out with overlay
-          sidebar.classList.toggle('open');
-          if (overlay) overlay.classList.toggle('active');
+          const isOpen = sidebar.classList.toggle('open');
+          overlay.classList.toggle('active', isOpen);
         } else {
           // Desktop: collapse to rail / expand back
           const isCollapsed = sidebar.classList.toggle('collapsed');
@@ -157,13 +172,16 @@ export class Header extends Component {
       });
     }
 
-    if (overlay) {
-      overlay.addEventListener('click', () => {
-        const sidebar = document.getElementById('main-sidebar');
-        if (sidebar) sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-      });
-    }
+    // Clicking overlay closes the mobile sidebar
+    overlay.addEventListener('click', closeMobileSidebar);
+
+    // Tapping any sidebar nav link on mobile should also close the sidebar
+    this._sidebarNavHandler = (e) => {
+      if (isMobile() && e.target.closest('.sidebar-item')) {
+        closeMobileSidebar();
+      }
+    };
+    document.addEventListener('click', this._sidebarNavHandler);
 
     // 2. Theme switcher
     const themeBtn = this.$('#theme-toggle-btn');
@@ -385,6 +403,9 @@ export class Header extends Component {
     if (this._clockInterval) clearInterval(this._clockInterval);
     if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
     if (this._kbdHandler) window.removeEventListener('keydown', this._kbdHandler);
+    if (this._sidebarNavHandler) document.removeEventListener('click', this._sidebarNavHandler);
+    // Remove the programmatic overlay from body
+    if (this._overlay && this._overlay.parentNode) this._overlay.remove();
     BarcodeScannerService.detachGlobal();
     super.unmount();
   }
