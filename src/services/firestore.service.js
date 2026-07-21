@@ -138,6 +138,20 @@ export class FirestoreService {
   }
 
   /**
+   * Delete ALL documents in a tenant collection.
+   * @param {string} collectionName
+   * @returns {Promise<void>}
+   */
+  static async deleteAll(collectionName) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const path = this._getTenantPath(collectionName);
+    const colRef = ref(db, path);
+    await remove(colRef);
+    console.log(`[DB] ✅ Deleted all in ${path}`);
+  }
+
+  /**
    * Query documents in a tenant collection with optional client-side filters.
    * @param {string} collectionName
    * @param {Array<{field: string, op: string, value: *}>} [filters]

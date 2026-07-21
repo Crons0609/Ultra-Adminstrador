@@ -74,12 +74,17 @@ export class QRCodesView extends Component {
 
         <!-- Saved QRs section -->
         <div id="qr-saved-section" class="card p-5 mb-6" style="display:none;">
-          <div class="d-flex justify-content-between align-items-center mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
               <h3 class="text-lg font-semibold">📂 QR Guardados en Base de Datos</h3>
               <p class="text-xs text-secondary mt-1">Estos QR están almacenados permanentemente y son reutilizables.</p>
             </div>
-            <span class="badge" id="saved-qr-count" style="font-size:0.78rem;padding:4px 12px;"></span>
+            <div style="display:flex;align-items:center;gap:var(--space-3);">
+              <span class="badge" id="saved-qr-count" style="font-size:0.78rem;padding:4px 12px;"></span>
+              <button class="btn btn-sm" id="btn-delete-all-saved-qrs" style="background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);font-weight:700;font-size:0.78rem;padding:4px 12px;cursor:pointer;">
+                🗑️ Eliminar Todos
+              </button>
+            </div>
           </div>
           <div id="saved-qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:var(--space-4);"></div>
         </div>
@@ -109,6 +114,28 @@ export class QRCodesView extends Component {
     element.querySelector('#btn-generate-qr')?.addEventListener('click', () => this.generateQRCodes(element));
     element.querySelector('#btn-save-qrs')?.addEventListener('click',    () => this.saveQRsToDB(element));
     element.querySelector('#btn-print-all')?.addEventListener('click',   () => this.printAllQR(element));
+    element.querySelector('#btn-delete-all-saved-qrs')?.addEventListener('click', () => this.deleteAllSavedQRs());
+  }
+
+  /** Delete ALL saved QRs from Firebase */
+  async deleteAllSavedQRs() {
+    const total = this.state.savedQRs.length;
+    if (total === 0) {
+      NotificationService.warn('No hay códigos QR guardados para eliminar.');
+      return;
+    }
+
+    if (!confirm(`⚠️ ¿Estás seguro de que deseas eliminar TODOS los ${total} códigos QR guardados de la base de datos?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      await FirestoreService.deleteAll('qr_codes');
+      NotificationService.success(`Se han eliminado todos los códigos QR (${total}) de la base de datos.`);
+    } catch (e) {
+      console.error('[QRCodesView] Error al eliminar todos los QR:', e);
+      NotificationService.error(`Error al eliminar los códigos QR: ${e.message || e}`);
+    }
   }
 
   /** Load business logo from informacion_local for QR overlay */
