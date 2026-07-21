@@ -33,11 +33,22 @@ export class TablesView extends Component {
       `,
       contentHTML: `
         <style>
+          .waiter-dashboard-layout {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: var(--space-6);
+            align-items: start;
+          }
+          @media (max-width: 1024px) {
+            .waiter-dashboard-layout {
+              grid-template-columns: 1fr;
+            }
+          }
+          /* Tables Grid Styles */
           .waiter-tables-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: var(--space-4);
-            margin-bottom: var(--space-6);
           }
           @media (max-width: 480px) {
             .waiter-tables-grid {
@@ -45,18 +56,18 @@ export class TablesView extends Component {
               gap: var(--space-2);
             }
             .table-card {
-              min-height: 120px !important;
+              min-height: 110px !important;
               padding: var(--space-3) !important;
             }
             .table-number {
-              font-size: 1.4rem !important;
+              font-size: 1.25rem !important;
             }
           }
           .table-card {
             border: 1px solid var(--color-border);
             border-radius: var(--radius-lg);
             background: var(--color-bg-secondary);
-            padding: var(--space-5);
+            padding: var(--space-4);
             text-align: center;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
@@ -66,7 +77,7 @@ export class TablesView extends Component {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 150px;
+            min-height: 130px;
           }
           .table-card:hover {
             transform: translateY(-2px);
@@ -77,14 +88,14 @@ export class TablesView extends Component {
           .table-card.status-bill { border-top: 4px solid var(--color-warning); }
           
           .table-number {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: var(--space-1);
           }
           .table-status-badge {
             display: inline-block;
-            padding: 3px 10px;
-            font-size: 0.75rem;
+            padding: 2px 8px;
+            font-size: 0.7rem;
             font-weight: 600;
             border-radius: 999px;
             margin-bottom: var(--space-2);
@@ -94,20 +105,20 @@ export class TablesView extends Component {
           .status-bill .table-status-badge { background: var(--color-warning-light); color: var(--color-warning); }
 
           .table-info-row {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--color-text-secondary);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
 
           .pending-badge {
-            font-size: 0.72rem;
+            font-size: 0.65rem;
             background: #ef444422;
             color: #ef4444;
             border: 1px solid #ef444444;
-            padding: 2px 8px;
+            padding: 2px 6px;
             border-radius: 999px;
             font-weight: 600;
-            margin-top: 6px;
+            margin-top: 4px;
             animation: pulse-red 1.8s infinite;
           }
 
@@ -116,6 +127,78 @@ export class TablesView extends Component {
             50% { transform: scale(1.05); box-shadow: 0 0 8px #ef444433; }
             100% { transform: scale(1); }
           }
+
+          /* Active Orders Styles */
+          .active-orders-section {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-5);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+          }
+          .waiter-orders-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            max-height: 70vh;
+            overflow-y: auto;
+          }
+          .order-card {
+            background: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-3);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            position: relative;
+            text-align: left;
+          }
+          .order-card.status-pending-verification {
+            border-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
+          }
+          .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: var(--space-1);
+          }
+          .order-table-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+          }
+          .order-items-list {
+            font-size: 0.8rem;
+            color: var(--color-text-primary);
+            max-height: 100px;
+            overflow-y: auto;
+          }
+          .order-item-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+          }
+          .order-footer-actions {
+            margin-top: 4px;
+          }
+          .order-footer {
+            border-top: 1px solid var(--color-border);
+            padding-top: var(--space-1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+          }
+          .order-total {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--color-text-primary);
+          }
           
           /* Order Builder Modal Styles */
           .order-builder-layout {
@@ -123,6 +206,12 @@ export class TablesView extends Component {
             grid-template-columns: 1.2fr 1fr;
             gap: var(--space-4);
             max-height: 70vh;
+          }
+          @media (max-width: 640px) {
+            .order-builder-layout {
+              grid-template-columns: 1fr;
+              max-height: none;
+            }
           }
           .product-item-row {
             display: flex;
@@ -160,8 +249,25 @@ export class TablesView extends Component {
           }
         </style>
         
-        <div id="waiter-tables-container" class="waiter-tables-grid animate-fade-in">
-          <p class="text-center w-full py-10 text-secondary">Cargando mesas del establecimiento...</p>
+        <div class="waiter-dashboard-layout">
+          <!-- Left Side: Tables -->
+          <div>
+            <h3 class="text-lg font-bold mb-4">📍 Distribución de Mesas</h3>
+            <div id="waiter-tables-container" class="waiter-tables-grid">
+              <p class="text-center w-full py-10 text-secondary">Cargando mesas...</p>
+            </div>
+          </div>
+
+          <!-- Right Side: Active Orders -->
+          <div class="active-orders-section">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h3 class="text-md font-bold" style="margin:0;">📋 Comandas Activas</h3>
+              <button class="btn btn-secondary btn-xs" id="btn-refresh-orders" style="font-size:0.7rem; padding: 2px 6px;">🔄 Actualizar</button>
+            </div>
+            <div id="waiter-orders-list" class="waiter-orders-list">
+              <p class="text-secondary text-center py-5">Esperando comandas...</p>
+            </div>
+          </div>
         </div>
       `
     });
@@ -202,6 +308,7 @@ export class TablesView extends Component {
       const ordersListener = FirestoreService.listenToTenant('orders', (orders) => {
         this.state.orders = orders || [];
         this.renderTables(element);
+        this.renderActiveOrders(element);
       });
       this.listeners.push(ordersListener);
 
@@ -256,6 +363,7 @@ export class TablesView extends Component {
     });
 
     this.renderTables(element);
+    this.renderActiveOrders(element);
   }
 
   bindEvents(element) {
@@ -272,6 +380,37 @@ export class TablesView extends Component {
         }
       });
     }
+
+    const ordersList = element.querySelector('#waiter-orders-list');
+    if (ordersList) {
+      ordersList.addEventListener('click', (e) => {
+        const deliverBtn = e.target.closest('.btn-order-deliver');
+        const verifyBtn = e.target.closest('.btn-order-verify');
+        const billBtn = e.target.closest('.btn-order-bill');
+
+        if (deliverBtn) {
+          const orderId = deliverBtn.getAttribute('data-id');
+          this.updateOrderStatus(orderId, 'ENTREGADO', 'Pedido marcado como entregado en mesa.');
+        } else if (verifyBtn) {
+          const orderId = verifyBtn.getAttribute('data-id');
+          const selectedOrder = this.state.orders.find(o => o.id === orderId);
+          if (selectedOrder) {
+            this.state.activeOrder = selectedOrder;
+            this.state.cart = JSON.parse(JSON.stringify(selectedOrder.items || []));
+            this.state.selectedTable = this.state.tables.find(t => t.id === selectedOrder.tableId) || { id: selectedOrder.tableId, name: selectedOrder.tableName || `Mesa ${selectedOrder.tableId}` };
+            this.openManageOrderModal();
+          }
+        } else if (billBtn) {
+          const orderId = billBtn.getAttribute('data-id');
+          this.requestBillFromList(orderId);
+        }
+      });
+    }
+
+    element.querySelector('#btn-refresh-orders')?.addEventListener('click', () => {
+      this.renderActiveOrders(element);
+      NotificationService.success('Lista de comandas actualizada.');
+    });
   }
 
   renderTables(element) {
@@ -782,6 +921,122 @@ export class TablesView extends Component {
     } catch (e) {
       console.error(e);
       NotificationService.error('Error al liberar la comanda/mesa.');
+    }
+  }
+
+  renderActiveOrders(element) {
+    const container = element.querySelector('#waiter-orders-list');
+    if (!container) return;
+
+    // Filter to active orders only (excluding completed/cancelled ones)
+    const active = this.state.orders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
+
+    if (active.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: var(--space-4); color: var(--color-text-secondary);">
+          <div style="font-size: 2rem; margin-bottom: 6px;">📋</div>
+          <p class="font-semibold" style="font-size: 0.85rem; margin:0;">No hay comandas activas</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Sort to show pending verifications first, then by date desc
+    const sorted = active.sort((a, b) => {
+      if (a.status === 'PENDIENTE_VERIFICACION' && b.status !== 'PENDIENTE_VERIFICACION') return -1;
+      if (a.status !== 'PENDIENTE_VERIFICACION' && b.status === 'PENDIENTE_VERIFICACION') return 1;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+
+    container.innerHTML = sorted.map(o => {
+      const itemsHTML = (o.items || []).map(item => `
+        <div class="order-item-detail">
+          <span>${item.qty}x ${item.name}</span>
+          <span class="text-secondary">$${Number(item.total).toFixed(2)}</span>
+        </div>
+      `).join('');
+
+      let statusBadge = '';
+      let actionBtn = '';
+      let cardCls = '';
+
+      switch (o.status) {
+        case 'PENDIENTE_VERIFICACION':
+          cardCls = 'status-pending-verification';
+          statusBadge = `<span class="badge animate-pulse" style="background:#ef444422; color:#ef4444; border:1px solid #ef444444; font-size:0.65rem;">Confirmar cliente</span>`;
+          actionBtn = `<button class="btn btn-primary btn-xs w-full btn-order-verify" data-id="${o.id}" style="font-size:0.7rem; padding: 4px 8px; margin-top: 4px;">📥 Verificar</button>`;
+          break;
+        case 'EN_COCINA':
+          statusBadge = `<span class="badge" style="background:#3b82f622; color:#3b82f6; font-size:0.65rem;">En Cocina 🍳</span>`;
+          break;
+        case 'READY':
+        case 'LISTO':
+          statusBadge = `<span class="badge animate-pulse" style="background:#10b98122; color:#10b981; border:1px solid #10b98144; font-size:0.65rem;">¡LISTO! 🔔</span>`;
+          actionBtn = `<button class="btn btn-success btn-xs w-full btn-order-deliver" data-id="${o.id}" style="font-size:0.7rem; padding: 4px 8px; margin-top: 4px;">Entregar a Mesa</button>`;
+          break;
+        case 'ENTREGADO':
+          statusBadge = `<span class="badge" style="background:#8b5cf622; color:#8b5cf6; font-size:0.65rem;">Entregado 🍽️</span>`;
+          actionBtn = `<button class="btn btn-warning btn-xs w-full btn-order-bill" data-id="${o.id}" style="font-size:0.7rem; padding: 4px 8px; margin-top: 4px;">Pedir Cuenta 🧾</button>`;
+          break;
+        case 'ESPERANDO_PAGO':
+          statusBadge = `<span class="badge" style="background:#fb923c22; color:#fb923c; font-size:0.65rem;">Esperando Pago</span>`;
+          break;
+        default:
+          statusBadge = `<span class="badge" style="background:var(--color-bg-tertiary); color:var(--color-text-secondary); font-size:0.65rem;">${o.status}</span>`;
+      }
+
+      const clientLabel = o.clientName ? ` (${o.clientName})` : '';
+
+      return `
+        <div class="order-card ${cardCls}">
+          <div class="order-header">
+            <div>
+              <span class="order-table-name">${o.tableName || `Mesa ${o.tableId}`}</span>
+              <span style="font-size:0.7rem; color:var(--color-text-secondary); display:block;">${o.accountType || 'CONJUNTA'}${clientLabel}</span>
+            </div>
+            ${statusBadge}
+          </div>
+          <div class="order-items-list" style="margin-top: 6px; border-bottom: 1px dotted var(--color-border); padding-bottom: 4px;">
+            ${itemsHTML}
+          </div>
+          <div class="order-footer-actions">
+            ${actionBtn}
+          </div>
+          <div class="order-footer" style="margin-top: 6px;">
+            <span>${new Date(o.createdAt || Date.now()).toLocaleTimeString()}</span>
+            <span class="order-total">Total: $${Number(o.total || 0).toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async updateOrderStatus(orderId, nextStatus, successMessage) {
+    try {
+      const updates = { status: nextStatus, updatedAt: Date.now() };
+      if (nextStatus === 'READY') updates.readyAt = Date.now();
+      if (nextStatus === 'COMPLETED') updates.completedAt = Date.now();
+      await FirestoreService.update('orders', orderId, updates);
+      NotificationService.success(successMessage);
+    } catch (e) {
+      console.error(e);
+      NotificationService.error('Error al actualizar el estado de la comanda.');
+    }
+  }
+
+  async requestBillFromList(orderId) {
+    try {
+      const order = this.state.orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      await FirestoreService.update('orders', orderId, { status: 'ESPERANDO_PAGO', updatedAt: Date.now() });
+      if (order.tableId) {
+        await FirestoreService.update('tables', order.tableId, { status: 'BILL' });
+      }
+      NotificationService.success('Cuenta solicitada. Caja notificada.');
+    } catch (e) {
+      console.error(e);
+      NotificationService.error('Error al solicitar la cuenta.');
     }
   }
 
