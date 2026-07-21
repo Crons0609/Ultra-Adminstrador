@@ -75,7 +75,17 @@ export class GeolocationService {
    */
   static checkAndPromptGPS() {
     const { currentUser } = GlobalStore.getState();
-    if (!currentUser || currentUser.role === 'SUPER_ADMIN') return;
+    
+    // Explicitly restrict GPS prompting/tracking to active employees only
+    const validEmployeeRoles = ['OWNER', 'MANAGER', 'WAITER', 'CASHIER', 'KITCHEN'];
+    if (!currentUser || !validEmployeeRoles.includes(currentUser.role)) {
+      return;
+    }
+
+    // Never prompt on customer-facing routes
+    if (window.location.hash.startsWith('#/customer')) {
+      return;
+    }
 
     // If already actively watching, no action needed
     if (this.watchId) return;
