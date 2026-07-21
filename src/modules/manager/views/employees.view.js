@@ -119,6 +119,20 @@ export class EmployeesView extends Component {
           <div id="employees-table-wrapper"></div>
         </div>
 
+        <!-- GPS Live Location Map Panel -->
+        <div class="card p-5 mb-5">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h3 class="text-md font-bold" style="margin:0;">🗺️ Mapa de Ubicaciones GPS</h3>
+              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Posición en tiempo real de los empleados que compartieron su ubicación.</p>
+            </div>
+            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">🔄 Actualizar</button>
+          </div>
+          <div id="gps-map-panel">
+            <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">📡 Cargando ubicaciones GPS...</div>
+          </div>
+        </div>
+
         <!-- Waiter Table Distribution Panel -->
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
@@ -206,6 +220,15 @@ export class EmployeesView extends Component {
       });
     }
 
+    // Refresh GPS map button
+    const refreshGpsBtn = this.layout.$('#btn-refresh-gps-map');
+    if (refreshGpsBtn) {
+      refreshGpsBtn.addEventListener('click', () => {
+        this.renderGpsMap();
+        NotificationService.success('Mapa GPS actualizado.');
+      });
+    }
+
     // Event delegation for delete buttons
     const tableWrapper = this.layout.$('#employees-table-wrapper');
     if (tableWrapper) {
@@ -244,11 +267,100 @@ export class EmployeesView extends Component {
       const listener = FirestoreService.listenToPath(`${this.companyId}/employee_locations`, (locations) => {
         this.state.locations = locations || [];
         this.refreshTable(this.state.employees);
+        this.renderGpsMap();
       });
       this.listeners.push(listener);
     } catch (error) {
       console.warn('[EmployeesView] Error loading GPS locations:', error.message);
     }
+  }
+
+  renderGpsMap() {
+    const panel = this.layout.$('#gps-map-panel');
+    if (!panel) return;
+
+    const locations = this.state.locations.filter(l => l.latitude && l.longitude);
+
+    if (locations.length === 0) {
+      panel.innerHTML = `
+        <div style="text-align:center; padding: var(--space-6);">
+          <div style="font-size:2.5rem; margin-bottom:var(--space-3);">🛰️</div>
+          <p class="font-semibold" style="margin-bottom:6px;">Sin ubicaciones activas</p>
+          <p class="text-secondary" style="font-size:0.82rem; max-width:340px; margin:0 auto;">
+            Ningún empleado ha activado el seguimiento GPS todavía.
+            Al iniciar sesión, el sistema les solicitará permiso de ubicación automáticamente.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    // If there's a single location, show a full-width map iframe.
+    // If multiple, show cards + individual map links.
+    const now = Date.now();
+
+    const locationCards = locations.map(loc => {
+      const employee = this.state.employees.find(e => e.uid === (loc.employeeId || loc.id));
+      const name = loc.displayName || employee?.displayName || loc.email || 'Empleado';
+      const status = loc.status || 'Disponible';
+      const lastUpdated = loc.updatedAt?.epochMs || (typeof loc.updatedAt === 'number' ? loc.updatedAt : null);
+      const elapsed = lastUpdated ? Math.round((now - lastUpdated) / 60000) : null;
+      const elapsedText = elapsed === null ? '' : elapsed < 1 ? 'Hace un momento' : `Hace ${elapsed} min`;
+      const accuracy = loc.accuracy ? `~${Math.round(loc.accuracy)}m` : '';
+      const mapsUrl = `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`;
+      const embedUrl = `https://maps.google.com/maps?q=${loc.latitude},${loc.longitude}&z=16&output=embed`;
+
+      const statusColor = status === 'DISPONIBLE' || status === 'Disponible'
+        ? '#10b981' : status === 'OCUPADO' ? '#f59e0b' : '#6b7280';
+
+      return `
+        <div style="
+          background: var(--color-bg-secondary);
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-lg);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        ">
+          <!-- Map Embed -->
+          <div style="position:relative; height:220px; background: #1a1a2e; overflow:hidden;">
+            <iframe
+              src="${embedUrl}"
+              style="width:100%; height:100%; border:none; pointer-events:auto;"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              title="Ubicación de ${name}"
+            ></iframe>
+          </div>
+
+          <!-- Employee Info -->
+          <div style="padding: var(--space-4); display:flex; justify-content:space-between; align-items:center; gap:var(--space-3); flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:700; font-size:0.9rem;">${name}</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap;">
+                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; color:${statusColor}; font-weight:600;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:currentColor; display:inline-block;"></span>
+                  ${status}
+                </span>
+                ${elapsedText ? `<span class="text-secondary" style="font-size:0.72rem;">${elapsedText}</span>` : ''}
+                ${accuracy ? `<span class="text-secondary" style="font-size:0.72rem;">📡 ${accuracy}</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex; gap:var(--space-2);">
+              <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-xs">
+                🗺️ Ver en Maps
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    panel.innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:var(--space-4);">
+        ${locationCards}
+      </div>
+    `;
   }
 
   subscribeToTablesDistribution(element) {
