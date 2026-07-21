@@ -461,13 +461,15 @@ export class FirestoreService {
     const data = snap.val();
 
     let status = 'ACTIVO';
+    let config = {};
     try {
       const configSnap = await get(ref(db, `${companyId}/config`));
       if (configSnap.exists()) {
-        status = configSnap.val().status || 'ACTIVO';
+        config = configSnap.val() || {};
+        status = config.status || 'ACTIVO';
       }
     } catch (e) {
-      console.warn('Failed to fetch status from config:', e.message);
+      console.warn('Failed to fetch config:', e.message);
     }
 
     return {
@@ -478,7 +480,8 @@ export class FirestoreService {
       address: data.direccion || '',
       email: data.correo || '',
       status,
-      ...data
+      ...data,
+      config,
     };
   }
 
