@@ -167,31 +167,25 @@ export class TablesView extends Component {
     try {
       // 1. Subscribe to tables
       const tablesListener = FirestoreService.listenToTenant('tables', async (tables) => {
-        // Auto-initialize 10 tables if empty
-        if (!tables || tables.length === 0) {
-          console.log('[TablesView] No tables found, initializing default 10 tables...');
-          const defaults = [];
-          for (let i = 1; i <= 10; i++) {
-            const tableId = `mesa-${i}`;
-            const tableObj = { id: tableId, name: `Mesa ${i}`, status: 'FREE', activeOrderId: null };
-            await FirestoreService.create('tables', tableObj, tableId);
-            defaults.push(tableObj);
-          }
-          this.state.tables = defaults;
-        } else {
-          this.state.tables = tables;
-        }
-        this.renderTables(element);
+        this.state.rawTables = tables || [];
+        this.mergeAndRenderTables(element);
       });
       this.listeners.push(tablesListener);
 
-      // 2. Subscribe to products for taking orders
+      // 2. Subscribe to qr_codes to pull all custom tables/zones created by owner
+      const qrListener = FirestoreService.listenToTenant('qr_codes', (qrs) => {
+        this.state.rawQRs = qrs || [];
+        this.mergeAndRenderTables(element);
+      });
+      this.listeners.push(qrListener);
+
+      // 3. Subscribe to products for taking orders
       const productsListener = FirestoreService.listenToTenant('productos', (products) => {
         this.state.products = products || [];
       });
       this.listeners.push(productsListener);
 
-      // 3. Subscribe to orders to show client order notifications
+      // 4. Subscribe to orders to show client order notifications
       const ordersListener = FirestoreService.listenToTenant('orders', (orders) => {
         this.state.orders = orders || [];
         this.renderTables(element);
@@ -201,6 +195,54 @@ export class TablesView extends Component {
     } catch (e) {
       console.error('[TablesView] DB Subscription error:', e);
     }
+  }
+
+  mergeAndRenderTables(element) {
+    const rawTables = this.state.rawTables || [];
+    const rawQRs = this.state.rawQRs || [];
+
+    // Map existing tables
+    const tableMap = new Map();
+    rawTables.forEach(t => tableMap.set(t.id, t));
+
+    // Merge any QRs (custom tables/zones created by owner) that aren't in tables yet
+    rawQRs.forEach(qr => {
+      const id = qr.tableId || qr.id;
+      if (id && !tableMap.has(id)) {
+        tableMap.set(id, {
+          id,
+          name: qr.label || `Mesa ${id.replace(/\D/g, '')}`,
+          status: 'FREE',
+          activeOrderId: null,
+          type: qr.type || 'mesa'
+        });
+      }
+    });
+
+    let merged = Array.from(tableMap.values());
+
+    // If still completely empty, initialize default 10 tables
+    if (merged.length === 0) {
+      console.log('[TablesView] No tables found, initializing default 10 tables...');
+      const defaults = [];
+      for (let i = 1; i <= 10; i++) {
+        const tableId = `mesa-${i}`;
+        const tableObj = { id: tableId, name: `Mesa ${i}`, status: 'FREE', activeOrderId: null };
+        FirestoreService.create('tables', tableObj, tableId);
+        defaults.push(tableObj);
+      }
+      merged = defaults;
+    }
+
+    // Sort numerically/alphabetically by table ID or name
+    this.state.tables = merged.sort((a, b) => {
+      const numA = parseInt((a.name || a.id).replace(/\D/g, '')) || 999;
+      const numB = parseInt((b.name || b.id).replace(/\D/g, '')) || 999;
+      if (numA !== numB) return numA - numB;
+      return (a.name || a.id).localeCompare(b.name || b.id);
+    });
+
+    this.renderTables(element);
   }
 
   bindEvents(element) {

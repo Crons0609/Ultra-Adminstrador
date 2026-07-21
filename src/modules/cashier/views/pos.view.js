@@ -343,12 +343,18 @@ export class POSView extends Component {
       });
       this.listeners.push(prodListener);
 
-      // 2. Subscribe to Tables for order loading
+      // 2. Subscribe to Tables and QR codes for order loading
       const tablesListener = FirestoreService.listenToTenant('tables', (tables) => {
-        this.state.tables = tables || [];
-        this.populateTableSelector(element);
+        this.state.rawTables = tables || [];
+        this.mergeTablesAndPopulateSelector(element);
       });
       this.listeners.push(tablesListener);
+
+      const qrListener = FirestoreService.listenToTenant('qr_codes', (qrs) => {
+        this.state.rawQRs = qrs || [];
+        this.mergeTablesAndPopulateSelector(element);
+      });
+      this.listeners.push(qrListener);
 
       // 3. Subscribe to Orders
       const ordersListener = FirestoreService.listenToTenant('orders', (orders) => {
@@ -440,6 +446,30 @@ export class POSView extends Component {
         <button class="btn btn-xs btn-primary" style="background:#fb923c; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.7rem;" onclick="document.querySelector('#pos-table-selector').value='${o.tableId}'; document.querySelector('#pos-table-selector').dispatchEvent(new Event('change'));">Cargar</button>
       </div>
     `).join('');
+  }
+
+  mergeTablesAndPopulateSelector(element) {
+    const rawTables = this.state.rawTables || [];
+    const rawQRs = this.state.rawQRs || [];
+
+    const tableMap = new Map();
+    rawTables.forEach(t => tableMap.set(t.id, t));
+
+    rawQRs.forEach(qr => {
+      const id = qr.tableId || qr.id;
+      if (id && !tableMap.has(id)) {
+        tableMap.set(id, {
+          id,
+          name: qr.label || `Mesa ${id.replace(/\D/g, '')}`,
+          status: 'FREE',
+          activeOrderId: null,
+          type: qr.type || 'mesa'
+        });
+      }
+    });
+
+    this.state.tables = Array.from(tableMap.values());
+    this.populateTableSelector(element);
   }
 
   populateTableSelector(element) {

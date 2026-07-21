@@ -18,6 +18,7 @@ export class MenuView extends Component {
     this.tableId = params.tableId || sessionStorage.getItem('ua_customer_tableId') || '';
 
     // Persist routing parameters to sessionStorage for subsequent views
+    if (!this.tableId) this.tableId = 'general'; // Default fallback for QR scans without tables (e.g. Services)
     if (this.companyId) sessionStorage.setItem('ua_customer_companyId', this.companyId);
     if (this.branchId) sessionStorage.setItem('ua_customer_branchId', this.branchId);
     if (this.tableId) sessionStorage.setItem('ua_customer_tableId', this.tableId);
@@ -44,14 +45,14 @@ export class MenuView extends Component {
     root.className = 'public-catalog-root';
     this.element = root;
 
-    if (!this.companyId || !this.tableId) {
+    if (!this.companyId) {
       root.innerHTML = `
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
           <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
             <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
             <h3 class="font-bold text-lg">Código QR Inválido</h3>
             <p class="text-xs text-secondary mt-2">
-              El enlace de acceso es incorrecto o está incompleto. Por favor escanea el código QR de tu mesa nuevamente.
+              El enlace de acceso es incorrecto o está incompleto. Por favor escanea el código QR del establecimiento nuevamente.
             </p>
           </div>
         </div>
@@ -243,8 +244,8 @@ export class MenuView extends Component {
     const prodUnsub = FirestoreService.listenToPath(`${this.companyId}/productos`, (products) => {
       this.state.products = (products || []).filter(p => {
         if (p.isActive === false) return false;
-        // If a numeric stock field exists, hide items that are out of stock
-        if (typeof p.stock === 'number' && p.stock <= 0) return false;
+        // Only hide items if trackStock is explicitly enabled and stock is 0
+        if (p.trackStock === true && typeof p.stock === 'number' && p.stock <= 0) return false;
         return true;
       });
       this.state.categories = ['Todos', ...new Set(this.state.products.map(p => p.category).filter(Boolean))];
@@ -315,6 +316,7 @@ export class MenuView extends Component {
     // Business type category detection
     const category = getBusinessCategory(info.businessType || '');
     const isBar = category === 'BAR_DISCOTECA';
+    const isServices = category === 'SERVICIOS_PERSONALIZADOS';
 
     // Apply specific nocturnal custom styles if it's a bar/club
     if (isBar) {
@@ -435,20 +437,20 @@ export class MenuView extends Component {
           <div class="pub-cover pub-cover-gradient" style="height: 140px; ${isBar ? 'background: linear-gradient(135deg, #a855f7, #121217);' : ''}"></div>
           <div class="pub-cover-overlay"></div>
         </div>
-        <div class="pub-profile-overlay pub-container" style="margin-top: -50px; padding: 12px var(--space-4);">
-          <div class="pub-logo-wrapper" style="width: 70px; height: 70px; border-width: 2px;">${logoHTML}</div>
+        <div class="pub-profile-overlay pub-container">
+          <div class="pub-logo-wrapper">${logoHTML}</div>
           <div class="pub-info-block">
-            <h1 class="pub-name" style="font-size: 1.25rem;">${companyName}</h1>
-            <div class="pub-meta-row" style="font-size: 0.72rem;">
-              <span class="pub-meta-item">📍 Mesa: ${this.tableId.replace('mesa-', '')}</span>
+            <h1 class="pub-name">${companyName}</h1>
+            <div class="pub-meta-row">
+              <span class="pub-meta-item">📍 ${isServices ? 'Ubicación: General' : `Mesa: ${this.tableId.replace('mesa-', '')}`}</span>
               <span class="pub-meta-item">⏱ ${hours}</span>
-              <span class="pub-meta-item" style="color:var(--pub-primary); font-weight:600;">
+              <span class="pub-meta-item pub-account-badge">
                 ● Cuenta: ${this.state.accountType === 'CONJUNTA' ? 'Conjunta' : `Separada (${this.state.clientName})`}
               </span>
             </div>
           </div>
           ${accumulatedTotal > 0 ? `
-            <button class="btn btn-secondary btn-sm" id="btn-view-consumption" style="margin-left:auto; border-radius:8px; font-size:0.75rem; display:flex; align-items:center; gap:4px; font-weight:700; border-color:var(--pub-border);">
+            <button class="btn btn-secondary btn-sm pub-consumption-btn" id="btn-view-consumption">
               🧾 Mi Consumo: $${accumulatedTotal.toFixed(2)}
             </button>
           ` : ''}

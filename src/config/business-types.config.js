@@ -210,6 +210,8 @@ export function getBusinessCategory(businessType) {
 
   // Custom / Personalised Services
   if (
+    typeLower.includes('servicio') ||
+    typeLower.includes('servicios') ||
     typeLower.includes('carpinter') ||
     typeLower.includes('cámara') ||
     typeLower.includes('instalac') ||

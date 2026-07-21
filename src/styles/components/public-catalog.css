@@ -465,23 +465,102 @@
   opacity: 0.7;
 }
 
-/* ─── Mobile Responsive Overrides ─── */
+/* ─── Fluid Responsive & Typography Overrides ─── */
+.pub-name {
+  font-size: clamp(1.2rem, 3vw, 2rem) !important;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  word-break: break-word;
+}
+
+.pub-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+  color: rgba(255,255,255,0.9);
+}
+
+.pub-account-badge {
+  color: var(--pub-primary);
+  font-weight: 600;
+}
+
+.pub-consumption-btn {
+  margin-left: auto;
+  border-radius: 8px;
+  font-size: clamp(0.78rem, 1.5vw, 0.9rem);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-color: var(--pub-border);
+}
+
+.pub-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+  padding-bottom: 120px;
+}
+
+.pub-menu-card .pub-menu-body h4 {
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+}
+
+.pub-menu-card .pub-menu-body p {
+  font-size: clamp(0.8rem, 1.5vw, 0.92rem);
+  line-height: 1.45;
+}
+
+.pub-cat-pill {
+  padding: 10px 20px;
+  background: var(--pub-surface);
+  border: 1px solid var(--pub-border);
+  border-radius: var(--radius-full);
+  font-size: clamp(0.85rem, 1.5vw, 0.98rem);
+  font-weight: 600;
+  color: var(--pub-text-sec);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+/* ─── Mobile & Desktop Responsive Media Queries ─── */
+@media (min-width: 1024px) {
+  .pub-container {
+    max-width: 1280px;
+    padding: var(--space-6);
+  }
+  .pub-menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-6);
+  }
+  .pub-logo-wrapper {
+    width: 100px;
+    height: 100px;
+  }
+}
+
 @media (max-width: 640px) {
   .pub-cover {
-    height: 160px;
+    height: 140px;
   }
 
   .pub-profile-overlay {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-3);
-    margin-top: -50px;
+    margin-top: -40px;
     padding: var(--space-4);
   }
 
   .pub-logo-wrapper {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
   }
 
   .pub-logo-fallback {
@@ -493,32 +572,36 @@
     width: 100%;
   }
 
-  .pub-social-bar {
-    margin-top: var(--space-1);
+  .pub-consumption-btn {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
   }
 
-  .pub-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--space-3);
+  .pub-grid,
+  .pub-menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-4);
   }
 
   .pub-card-name {
-    font-size: 0.85rem;
+    font-size: 0.92rem;
   }
 
   .pub-price-main {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 
   .pub-view-btn {
-    font-size: 0.75rem;
-    padding: 6px 10px;
+    font-size: 0.8rem;
+    padding: 6px 12px;
   }
 }
 
 @media (max-width: 380px) {
-  .pub-grid {
-    grid-template-columns: 1fr 1fr;
+  .pub-grid,
+  .pub-menu-grid {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -256,6 +256,18 @@ export class QRCodesView extends Component {
           prefix: p.prefix    || '',
           branchId: this.branchId,
         }, tableId); // customId = tableId → idempotent upsert
+
+        // Synchronize with tables collection for Waiter/POS views
+        const existingTable = await FirestoreService.readPath(`${this.companyId}/tables/${tableId}`);
+        await FirestoreService.updatePath(`${this.companyId}/tables/${tableId}`, {
+          id: tableId,
+          name: label,
+          type: p.tableType || 'mesa',
+          status: existingTable?.status || 'FREE',
+          activeOrderId: existingTable?.activeOrderId || null,
+          activeOrderIds: existingTable?.activeOrderIds || [],
+          updatedAt: Date.now()
+        });
         saved++;
       } catch(e) {
         console.warn('[QRCodesView] Could not save QR:', tableId, e.message);
