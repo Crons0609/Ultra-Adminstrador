@@ -28,8 +28,66 @@
   top: 0;
   left: 0;
   z-index: 100;
-  transition: transform var(--transition-normal);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+}
+
+/* ─── Desktop Collapsed (Rail) Mode ─── */
+.sidebar.collapsed {
+  width: 64px;
+}
+.sidebar.collapsed .sidebar-brand-info,
+.sidebar.collapsed .sidebar-item-label,
+.sidebar.collapsed .sidebar-group-label,
+.sidebar.collapsed .sidebar-user-info,
+.sidebar.collapsed .sidebar-logout-btn,
+.sidebar.collapsed .sidebar-active-indicator {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  overflow: hidden;
+}
+.sidebar.collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 0 var(--space-2);
+}
+.sidebar.collapsed .sidebar-brand-avatar {
+  margin: 0 auto;
+}
+.sidebar.collapsed .sidebar-item {
+  justify-content: center;
+  padding: 10px;
+}
+.sidebar.collapsed .sidebar-icon {
+  opacity: 1;
+  width: 20px;
+  height: 20px;
+}
+.sidebar.collapsed .sidebar-footer {
+  justify-content: center;
+  padding: var(--space-3) var(--space-2);
+}
+.sidebar.collapsed .sidebar-user-avatar {
+  margin: 0 auto;
+}
+.sidebar.collapsed .sidebar-item:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 68px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-bg-elevated, #1e1e2e);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  border: 1px solid var(--color-border);
+  pointer-events: none;
 }
 
 /* ─── Company Branding Area ─── */
@@ -237,9 +295,25 @@
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
+    width: 264px !important; /* Always full width on mobile, ignore collapsed */
   }
   .sidebar.open {
     transform: translateX(0);
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
   }
+  /* Disable all collapsed-mode overrides on mobile */
+  .sidebar.collapsed .sidebar-brand-info,
+  .sidebar.collapsed .sidebar-item-label,
+  .sidebar.collapsed .sidebar-group-label,
+  .sidebar.collapsed .sidebar-user-info,
+  .sidebar.collapsed .sidebar-logout-btn,
+  .sidebar.collapsed .sidebar-active-indicator {
+    opacity: 1;
+    pointer-events: auto;
+    width: auto;
+    overflow: visible;
+  }
+  .sidebar.collapsed .sidebar-brand { justify-content: flex-start; padding: 0 var(--space-4); }
+  .sidebar.collapsed .sidebar-item  { justify-content: flex-start; padding: 10px var(--space-3); }
+  .sidebar.collapsed .sidebar-footer { justify-content: flex-start; padding: var(--space-3) var(--space-4); }
 }

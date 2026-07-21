@@ -16,6 +16,13 @@
   flex-direction: column;
   min-width: 0; /* Prevent flex items from overflowing */
   min-height: 100vh;
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-top: 64px; /* Reserve space for the fixed header */
+}
+
+/* When sidebar is in collapsed/rail mode, shrink the main content offset */
+body.sidebar-collapsed .main-content {
+  margin-left: 64px;
 }
 
 .page-body {
@@ -64,4 +71,9 @@
   .page-body {
     padding: var(--space-4);
   }
+  /* On mobile, collapsed class does nothing — mobile uses open/close instead */
+  body.sidebar-collapsed .main-content {
+    margin-left: 0;
+  }
 }
+

@@ -26,6 +26,7 @@ export class Header extends Component {
       '#/owner/projections': 'Proyecciones',
       '#/manager/employees': 'Empleados',
       '#/manager/qr-codes': 'Códigos QR',
+      '#/manager/pricing': 'Precios Especiales',
       '#/manager/reports': 'Reportes',
       '#/inventory/products': 'Inventario',
       '#/super-admin/companies': 'Empresas',
@@ -125,16 +126,37 @@ export class Header extends Component {
   }
 
   afterMount() {
-    // 1. Sidebar toggle
+    // 1. Sidebar toggle — supports both mobile slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');
-    const overlay = this.$('#sidebar-overlay');
+    const overlay   = this.$('#sidebar-overlay');
+    const isMobile  = () => window.innerWidth <= 768;
+
+    // Restore saved desktop collapse preference
+    const savedCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    if (!isMobile() && savedCollapsed) {
+      const sidebar = document.getElementById('main-sidebar');
+      if (sidebar) sidebar.classList.add('collapsed');
+      document.body.classList.add('sidebar-collapsed');
+    }
+
     if (toggleBtn) {
       toggleBtn.addEventListener('click', () => {
         const sidebar = document.getElementById('main-sidebar');
-        if (sidebar) sidebar.classList.toggle('open');
-        if (overlay) overlay.classList.toggle('active');
+        if (!sidebar) return;
+
+        if (isMobile()) {
+          // Mobile: slide sidebar in/out with overlay
+          sidebar.classList.toggle('open');
+          if (overlay) overlay.classList.toggle('active');
+        } else {
+          // Desktop: collapse to rail / expand back
+          const isCollapsed = sidebar.classList.toggle('collapsed');
+          document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+          localStorage.setItem('sidebar-collapsed', isCollapsed);
+        }
       });
     }
+
     if (overlay) {
       overlay.addEventListener('click', () => {
         const sidebar = document.getElementById('main-sidebar');

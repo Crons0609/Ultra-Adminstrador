@@ -11,12 +11,32 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-6);
-  position: sticky;
+  position: fixed;
   top: 0;
+  /* Left offset matches sidebar width; collapses to rail width when sidebar is collapsed */
+  left: 264px;
+  right: 0;
   z-index: 90;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Adjust header left position when sidebar collapses to rail */
+body.sidebar-collapsed .header {
+  left: 64px;
+}
+
+/* On mobile the header spans full width */
+@media (max-width: 768px) {
+  .header {
+    left: 0;
+  }
+  body.sidebar-collapsed .header {
+    left: 0;
+  }
+}
+
 
 /* ─── Left side ─── */
 .header-left {
