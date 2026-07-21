@@ -1,1 +1,1 @@
-AUN SIGUE SIN APARECER EL MENU LUEGO DE ESCANEAR EL CODIGO QR
+necesito que el "main-header" este simpre arriba aun cuando hago scroll
