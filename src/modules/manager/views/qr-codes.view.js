@@ -21,7 +21,8 @@ export class QRCodesView extends Component {
     const currentUser = GlobalStore.getState().currentUser || {};
     this.companyId = currentUser.companyId || 'demo';
     this.branchId  = currentUser.branchId  || 'main';
-    this.baseMenuUrl = `${window.location.origin}/#/customer/menu/${this.companyId}/${this.branchId}/`;
+    const rawBaseUrl = `${window.location.origin}/#/customer/menu/${this.companyId}/${this.branchId}/`;
+    this.baseMenuUrl = encodeURI(rawBaseUrl);
 
     this.state = {
       tableCount: 10,
@@ -230,7 +231,8 @@ export class QRCodesView extends Component {
     for (let i = 1; i <= count; i++) {
       const tableId = `${tableType}-${prefix}${i}`;
       const label   = `${typeLabel} ${prefix}${i}`;
-      const url     = `${baseUrl}/${tableId}`;
+      const rawUrl  = `${baseUrl}/${tableId}`;
+      const url     = encodeURI(rawUrl);
       html += `
         <div class="card p-4 text-center hover-lift" data-table-id="${tableId}" data-url="${url}" data-label="${label}"
              style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
@@ -247,7 +249,8 @@ export class QRCodesView extends Component {
     setTimeout(() => {
       for (let i = 1; i <= count; i++) {
         const tableId = `${tableType}-${prefix}${i}`;
-        const url     = `${baseUrl}/${tableId}`;
+        const rawUrl  = `${baseUrl}/${tableId}`;
+        const url     = encodeURI(rawUrl);
         const ph      = element.querySelector(`#qr-canvas-${i}`);
         if (ph) this.renderQRCodeWithLogo(ph, url);
       }
@@ -313,13 +316,19 @@ export class QRCodesView extends Component {
    */
   renderQRCodeWithLogo(container, url) {
     try {
-      if (typeof window.qrcode !== 'function') {
-        container.innerHTML = `<div style="padding:10px;font-size:0.6rem;color:#555;text-align:center;">⚠️ Lib no disponible</div>`;
-        return;
+      // Safely encode URI to prevent UTF-8 replacement character (%EF%BF%BD) corruption with accents / ñ
+      let safeUrl = url;
+      try {
+        if (safeUrl.includes('%EF%BF%BD')) {
+          safeUrl = safeUrl.replace(/%EF%BF%BD/gi, '');
+        }
+        safeUrl = encodeURI(decodeURI(safeUrl));
+      } catch (_) {
+        safeUrl = encodeURI(url);
       }
 
       const qr = window.qrcode(0, 'H'); // Auto type, High error correction
-      qr.addData(url);
+      qr.addData(safeUrl);
       qr.make();
 
       const logoUrl = this.state.logoUrl;

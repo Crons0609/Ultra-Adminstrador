@@ -14,7 +14,11 @@ export class MenuView extends Component {
   constructor(params = {}) {
     super(params);
     try {
-      this.companyId = decodeURIComponent(params.companyId || sessionStorage.getItem('ua_customer_companyId') || '');
+      let rawId = params.companyId || sessionStorage.getItem('ua_customer_companyId') || '';
+      if (rawId.includes('%EF%BF%BD')) {
+        rawId = rawId.replace(/%EF%BF%BD/gi, '');
+      }
+      this.companyId = decodeURIComponent(rawId);
     } catch (_) {
       this.companyId = params.companyId || sessionStorage.getItem('ua_customer_companyId') || '';
     }
@@ -245,49 +249,60 @@ export class MenuView extends Component {
   loadMenuData(root) {
     this.renderSkeleton(root);
 
-    // Fetch local profile
-    const infoUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/informacion_local`, (info) => {
-      this.state.info = info || {};
-      this.checkDataLoaded(root);
-    });
-    this.listeners.push(infoUnsub);
+    const activeId = this.companyId;
+    const sanitizedId = FirestoreService.sanitiseKey(activeId);
 
-    // Fetch products
-    const prodUnsub = FirestoreService.listenToPath(`${this.companyId}/productos`, (products) => {
-      this.state.products = (products || []).filter(p => {
-        if (p.isActive === false) return false;
-        // Only hide items if trackStock is explicitly enabled and stock is 0
-        if (p.trackStock === true && typeof p.stock === 'number' && p.stock <= 0) return false;
-        return true;
+    const startListeners = (targetId) => {
+      // Fetch local profile
+      const infoUnsub = FirestoreService.listenToPathRaw(`${targetId}/informacion_local`, (info) => {
+        if (!info && targetId !== sanitizedId && sanitizedId) {
+          startListeners(sanitizedId);
+          return;
+        }
+        this.state.info = info || {};
+        this.checkDataLoaded(root);
       });
-      this.state.categories = ['Todos', ...new Set(this.state.products.map(p => p.category).filter(Boolean))];
-      this.state.loading = false;
-      this.checkDataLoaded(root);
-    });
-    this.listeners.push(prodUnsub);
+      this.listeners.push(infoUnsub);
 
-    // Fetch active orders to calculate cumulative consumption (ruta tenant correcta)
-    const ordersUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/orders`, (orders) => {
-      this.state.orders = orders ? Object.entries(orders).map(([id, o]) => ({ id, ...o })) : [];
-      this.renderMenu(root);
-    });
-    this.listeners.push(ordersUnsub);
-
-    // Fetch active promotions for this company
-    const promoUnsub = FirestoreService.listenToPath(`${this.companyId}/promociones`, (promos) => {
-      const now = Date.now();
-      const today = new Date();
-      const isoDay = today.getDay(); // 0=Dom, 6=Sáb
-      this.state.promotions = (promos || []).filter(p => {
-        if (p.isActive === false) return false;
-        if (p.expiresAt && p.expiresAt < now) return false;
-        if (p.type === 'FIN_SEMANA' && isoDay !== 0 && isoDay !== 6) return false;
-        if (p.type === 'LOTE' && (p.loteCantidad === 0)) return false;
-        return true;
+      // Fetch products
+      const prodUnsub = FirestoreService.listenToPath(`${targetId}/productos`, (products) => {
+        this.state.products = (products || []).filter(p => {
+          if (p.isActive === false) return false;
+          // Only hide items if trackStock is explicitly enabled and stock is 0
+          if (p.trackStock === true && typeof p.stock === 'number' && p.stock <= 0) return false;
+          return true;
+        });
+        this.state.categories = ['Todos', ...new Set(this.state.products.map(p => p.category).filter(Boolean))];
+        this.state.loading = false;
+        this.checkDataLoaded(root);
       });
-      this.renderMenu(root);
-    });
-    this.listeners.push(promoUnsub);
+      this.listeners.push(prodUnsub);
+
+      // Fetch active orders to calculate cumulative consumption (ruta tenant correcta)
+      const ordersUnsub = FirestoreService.listenToPathRaw(`${targetId}/orders`, (orders) => {
+        this.state.orders = orders ? Object.entries(orders).map(([id, o]) => ({ id, ...o })) : [];
+        this.renderMenu(root);
+      });
+      this.listeners.push(ordersUnsub);
+
+      // Fetch active promotions for this company
+      const promoUnsub = FirestoreService.listenToPath(`${targetId}/promociones`, (promos) => {
+        const now = Date.now();
+        const today = new Date();
+        const isoDay = today.getDay(); // 0=Dom, 6=Sáb
+        this.state.promotions = (promos || []).filter(p => {
+          if (p.isActive === false) return false;
+          if (p.expiresAt && p.expiresAt < now) return false;
+          if (p.type === 'FIN_SEMANA' && isoDay !== 0 && isoDay !== 6) return false;
+          if (p.type === 'LOTE' && (p.loteCantidad === 0)) return false;
+          return true;
+        });
+        this.renderMenu(root);
+      });
+      this.listeners.push(promoUnsub);
+    };
+
+    startListeners(activeId);
   }
 
   checkDataLoaded(root) {
