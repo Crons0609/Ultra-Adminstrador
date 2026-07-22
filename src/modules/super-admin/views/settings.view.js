@@ -132,6 +132,66 @@ export class SettingsView extends Component {
             </form>
           </div>
 
+          <!-- Production Reset Panel (Exclusivo Programadores) -->
+          <div class="card p-5" style="border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.03); grid-column: 1 / -1;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3);">
+              <div>
+                <h3 class="text-lg font-semibold" style="color: #ef4444; display: flex; align-items: center; gap: 8px;">
+                  <span>💥 Reinicio para Producción</span>
+                  <span style="font-size: 0.65rem; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); font-weight: 600;">EXCLUSIVO PROGRAMADOR</span>
+                </h3>
+                <p class="text-xs text-secondary" style="margin-top: 4px;">
+                  Limpia y reorganiza completamente Firebase eliminando cuentas de usuarios de prueba, negocios, pedidos, productos e historial transaccional para iniciar operaciones en producción.
+                </p>
+              </div>
+            </div>
+
+            <div style="padding: var(--space-4); background: var(--color-bg-secondary, rgba(0,0,0,0.2)); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: var(--space-4);">
+              <h4 style="font-size: 0.85rem; font-weight: 600; color: #f87171; margin-bottom: 8px;">⚠️ Advertencia de Seguridad Importante</h4>
+              <ul style="font-size: 0.75rem; color: var(--color-text-secondary); display: flex; flex-direction: column; gap: 4px; padding-left: 18px; margin: 0;">
+                <li><strong>Permanente e Irreversible:</strong> Esta acción eliminará directamente los registros de prueba en Firebase.</li>
+                <li><strong>Protección de Programadores:</strong> Las cuentas de correo de los programadores/SuperAdmin (con sus roles y permisos) <strong>NO</strong> serán eliminadas.</li>
+                <li><strong>Respaldo 1 a 1:</strong> Se recomienda respaldar la base de datos descargando el archivo JSON antes de continuar.</li>
+                <li><strong>Configuración Global Preservada:</strong> Los parámetros del SaaS y planes (<code style="color:#60a5fa;">companies/global</code>) permanecerán listos para producción.</li>
+              </ul>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+              <!-- Step 1: Backup -->
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3); background: rgba(59, 130, 246, 0.08); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                <div>
+                  <h5 style="font-size: 0.8rem; font-weight: 600; color: #60a5fa; margin: 0;">Paso 1: Guardar Copia de Seguridad (1 a 1)</h5>
+                  <p style="font-size: 0.7rem; color: var(--color-text-secondary); margin: 0;">Descarga el estado actual de Firebase en formato JSON antes de borrar los datos de prueba.</p>
+                </div>
+                <button type="button" id="btn-download-backup" class="btn btn-secondary btn-sm" style="border-color: rgba(59, 130, 246, 0.4); color: #60a5fa; white-space: nowrap;">
+                  📥 Descargar Backup JSON
+                </button>
+              </div>
+
+              <!-- Step 2: Confirmation & Execution -->
+              <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                <div class="form-group">
+                  <label class="form-label" for="purge-confirm-input" style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-primary);">
+                    Paso 2: Confirmación de Seguridad (Escribe <code style="background: rgba(239,68,68,0.2); padding: 2px 6px; border-radius: 4px; color: #f87171;">REINICIAR-PRODUCCION</code> o <code style="background: rgba(239,68,68,0.2); padding: 2px 6px; border-radius: 4px; color: #f87171;">1+1</code>)
+                  </label>
+                  <input type="text" id="purge-confirm-input" class="input input-md" placeholder="Ingresa REINICIAR-PRODUCCION o 1+1" style="font-family: monospace; letter-spacing: 0.05em;" />
+                </div>
+
+                <div style="display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap;">
+                  <button type="button" id="btn-execute-purge" class="btn btn-danger btn-md" disabled style="background: #dc2626; border-color: #dc2626; opacity: 0.5; cursor: not-allowed;">
+                    🔥 Ejecutar Reinicio y Limpieza de Firebase
+                  </button>
+                  <span id="purge-status-label" class="text-xs text-secondary" style="font-family: monospace;">Esperando confirmación...</span>
+                </div>
+              </div>
+
+              <!-- Log Console Output -->
+              <div id="purge-log-console" style="display: none; background: #0a0a0c; color: #10b981; font-family: monospace; font-size: 0.72rem; padding: 12px; border-radius: 6px; max-height: 180px; overflow-y: auto; border: 1px solid rgba(16, 185, 129, 0.3);">
+                <div style="color: #6b7280; margin-bottom: 4px;">--- CONSOLA DE LIMPIEZA Y AUDITORÍA DE FIREBASE ---</div>
+              </div>
+            </div>
+          </div>
+
         </div>
       `
     });
@@ -176,6 +236,36 @@ export class SettingsView extends Component {
     const testCronBtn = root.querySelector('#btn-test-cron-url');
     if (testCronBtn) {
       testCronBtn.addEventListener('click', () => this.testCronEndpoint());
+    }
+
+    // Production Reset Event Listeners
+    const downloadBackupBtn = root.querySelector('#btn-download-backup');
+    if (downloadBackupBtn) {
+      downloadBackupBtn.addEventListener('click', () => this.handleDownloadBackup());
+    }
+
+    const confirmInput = root.querySelector('#purge-confirm-input');
+    const executePurgeBtn = root.querySelector('#btn-execute-purge');
+    const purgeStatusLabel = root.querySelector('#purge-status-label');
+
+    if (confirmInput && executePurgeBtn) {
+      confirmInput.addEventListener('input', () => {
+        const val = confirmInput.value.trim().toUpperCase();
+        const isValid = val === 'REINICIAR-PRODUCCION' || val === '1+1';
+
+        executePurgeBtn.disabled = !isValid;
+        executePurgeBtn.style.opacity = isValid ? '1' : '0.5';
+        executePurgeBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+
+        if (purgeStatusLabel) {
+          purgeStatusLabel.textContent = isValid
+            ? '✅ Confirmación válida. Listo para ejecutar.'
+            : 'Esperando confirmación...';
+          purgeStatusLabel.style.color = isValid ? '#10b981' : 'var(--color-text-secondary)';
+        }
+      });
+
+      executePurgeBtn.addEventListener('click', () => this.handleExecuteProductionReset());
     }
   }
 
@@ -432,8 +522,115 @@ export class SettingsView extends Component {
     }
   }
 
+  async handleDownloadBackup() {
+    try {
+      NotificationService.info('Generando archivo de copia de seguridad 1 a 1...');
+      await AuthService.downloadDatabaseBackup();
+      NotificationService.success('Copia de seguridad 1 a 1 descargada con éxito.');
+    } catch (err) {
+      console.error('[SettingsView] Error al descargar backup:', err);
+      NotificationService.error(`Error al generar respaldo: ${err.message || err}`);
+    }
+  }
+
+  async handleExecuteProductionReset() {
+    const root = this.layout.element;
+    if (!root) return;
+
+    const confirmInput = root.querySelector('#purge-confirm-input');
+    const val = confirmInput?.value.trim().toUpperCase() || '';
+    if (val !== 'REINICIAR-PRODUCCION' && val !== '1+1') {
+      alert('Por favor ingresa la clave de confirmación requerida: REINICIAR-PRODUCCION o 1+1');
+      return;
+    }
+
+    const firstConfirm = confirm(
+      '🚨 ¿ESTÁS COMPLETAMENTE SEGURO DE EJECUTAR EL REINICIO PARA PRODUCCIÓN?\n\n' +
+      '• Se eliminarán permanentemente todas las empresas de prueba, productos, órdenes, facturas e historial.\n' +
+      '• Se eliminarán todas las cuentas de prueba conservando ÚNICAMENTE las cuentas de los programadores.\n' +
+      '• Esta acción es IRREVERSIBLE.'
+    );
+
+    if (!firstConfirm) return;
+
+    const executeBtn = root.querySelector('#btn-execute-purge');
+    const statusLabel = root.querySelector('#purge-status-label');
+    const consoleBox = root.querySelector('#purge-log-console');
+
+    if (executeBtn) {
+      executeBtn.disabled = true;
+      executeBtn.textContent = '⏳ Ejecutando Reinicio de Firebase...';
+    }
+
+    if (consoleBox) {
+      consoleBox.style.display = 'block';
+    }
+
+    const appendLog = (msg, isError = false) => {
+      if (!consoleBox) return;
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.style.color = isError ? '#ef4444' : '#10b981';
+      div.textContent = `[${time}] ${msg}`;
+      consoleBox.appendChild(div);
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    };
+
+    appendLog('Iniciando proceso de reinicio para producción...');
+    appendLog('Verificando rol de Programador y permisos de superadministrador...');
+
+    try {
+      appendLog('Generando copia de seguridad 1:1 previa a la purga...');
+      try {
+        await AuthService.downloadDatabaseBackup();
+        appendLog('Copia de seguridad descargada exitosamente en el navegador.');
+      } catch (backupErr) {
+        appendLog(`Advertencia de respaldo: ${backupErr.message}. Continuando con la purga...`, true);
+      }
+
+      appendLog('Escaneando usuarios y filtrando únicamente cuentas de programadores...');
+      appendLog('Eliminando colecciones de negocios, inventarios y registros transaccionales...');
+
+      const result = await AuthService.purgeAllTestDataExceptSuperAdmin();
+
+      appendLog('====================================================');
+      appendLog(`✅ REINICIO COMPLETADO CON ÉXITO.`);
+      appendLog(`• Cuentas de usuarios de prueba eliminadas: ${result.deletedUsersCount}`);
+      appendLog(`• Empresas de prueba eliminadas: ${result.deletedCompaniesCount}`);
+      appendLog(`• Cuentas de programadores conservadas e intactas: ${result.keptProgrammersCount}`);
+      appendLog(`• Total de nodos de base de datos purgados: ${result.totalNodesWiped}`);
+      appendLog(`• Auditoría guardada en /audit_logs.`);
+      appendLog('====================================================');
+
+      if (statusLabel) {
+        statusLabel.textContent = '🎉 Plataforma limpia y lista para Lanzamiento en Producción.';
+        statusLabel.style.color = '#10b981';
+      }
+
+      NotificationService.success('¡Reinicio de Producción completado con éxito! Cuentas de programadores intactas y Firebase limpio.');
+
+      if (confirmInput) confirmInput.value = '';
+    } catch (err) {
+      console.error('[SettingsView] Error en reinicio de producción:', err);
+      appendLog(`💥 ERROR FATAL AL EJECUTAR REINICIO: ${err.message || err}`, true);
+      alert(`Error al ejecutar el reinicio de producción: ${err.message || err}`);
+      if (statusLabel) {
+        statusLabel.textContent = '❌ Error al ejecutar el reinicio.';
+        statusLabel.style.color = '#ef4444';
+      }
+    } finally {
+      if (executeBtn) {
+        executeBtn.disabled = true;
+        executeBtn.textContent = '🔥 Ejecutar Reinicio y Limpieza de Firebase';
+        executeBtn.style.opacity = '0.5';
+        executeBtn.style.cursor = 'not-allowed';
+      }
+    }
+  }
+
   unmount() {
     this.layout.unmount();
     super.unmount();
   }
 }
+

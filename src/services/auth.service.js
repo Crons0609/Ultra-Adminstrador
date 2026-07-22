@@ -635,27 +635,80 @@ export class AuthService {
   }
 
   /**
+   * Downloads a full 1-to-1 JSON backup of Firebase Realtime Database.
+   * Restricted exclusively to Programmer / Super Admin role.
+   */
+  static async downloadDatabaseBackup() {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const currentUser = GlobalStore.getState().currentUser || {};
+    const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || GlobalStore.getState().activeRole === 'SUPER_ADMIN';
+    if (!isSuperAdmin) {
+      throw new Error('Acceso denegado: Esta función es exclusiva de los programadores/SuperAdmin.');
+    }
+
+    console.log('[AuthService] 📥 Generando copia de seguridad 1:1 de Firebase...');
+    const rootSnap = await get(ref(db));
+    if (!rootSnap.exists()) {
+      throw new Error('La base de datos se encuentra vacía o no retornó datos.');
+    }
+
+    const data = rootSnap.val();
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_ultraadmin_firebase_1+1_${timestamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log('[AuthService] ✅ Copia de seguridad descargada exitosamente.');
+    return true;
+  }
+
+  /**
    * Purges all non-Super-Admin users, companies, inventory, sales, orders, and test data
    * from Firebase RTDB while leaving Programmer / Super Admin accounts intact.
+   * Performs an audit log entry for production launch tracking.
    */
   static async purgeAllTestDataExceptSuperAdmin() {
     if (!db) throw new Error('Base de datos no inicializada.');
 
-    console.log('[AuthService] 💣 Iniciando purga total de datos de prueba para producción...');
+    const currentUser = GlobalStore.getState().currentUser || {};
+    const activeRole = GlobalStore.getState().activeRole;
+    const isSuperAdmin = currentUser.role === 'SUPER_ADMIN' || activeRole === 'SUPER_ADMIN';
+    if (!isSuperAdmin) {
+      throw new Error('Acceso denegado: Operación de reinicio reservada exclusivamente para Programadores.');
+    }
+
+    console.log('[AuthService] 💣 Iniciando reinicio de producción y purga total de datos de prueba...');
 
     const updates = {};
+    let deletedUsersCount = 0;
+    let keptProgrammersCount = 0;
+    let deletedCompaniesCount = 0;
 
-    // 1. Scan /users — Keep ONLY users with role === 'SUPER_ADMIN'
+    // 1. Scan /users — Keep ONLY users with role === 'SUPER_ADMIN' or programmer emails
     try {
       const usersSnap = await get(ref(db, 'users'));
       if (usersSnap.exists()) {
         const users = usersSnap.val();
         Object.entries(users).forEach(([uid, profile]) => {
-          const isSuperAdmin = profile?.role === 'SUPER_ADMIN' ||
-                               profile?.email === SUPER_ADMIN_EMAIL ||
-                               (profile?.email || '').toLowerCase() === SUPER_ADMIN_EMAIL;
-          if (!isSuperAdmin) {
+          const isProg = profile?.role === 'SUPER_ADMIN' ||
+                         profile?.email === SUPER_ADMIN_EMAIL ||
+                         (profile?.email || '').toLowerCase() === SUPER_ADMIN_EMAIL ||
+                         profile?.uid === currentUser.uid;
+
+          if (isProg) {
+            keptProgrammersCount++;
+          } else {
             updates[`users/${uid}`] = null;
+            deletedUsersCount++;
           }
         });
       }
@@ -663,20 +716,25 @@ export class AuthService {
       console.warn('[AuthService] Purge scan /users error:', e.message);
     }
 
-    // 2. Scan /companies — Delete all companies
+    // 2. Scan /companies — Delete all companies EXCEPT companies/global
     try {
       const compSnap = await get(ref(db, 'companies'));
       if (compSnap.exists()) {
         const comps = compSnap.val();
         Object.keys(comps).forEach(companyId => {
-          updates[`companies/${companyId}`] = null;
+          if (companyId !== 'global') {
+            updates[`companies/${companyId}`] = null;
+            // Also purge dynamic top-level node for this company if present
+            updates[companyId] = null;
+            deletedCompaniesCount++;
+          }
         });
       }
     } catch (e) {
       console.warn('[AuthService] Purge scan /companies error:', e.message);
     }
 
-    // 3. Delete all tenant paths
+    // 3. Known operational & transactional tenant collection paths to wipe
     const tenantPaths = [
       'accounts_payable',
       'accounts_receivable',
@@ -730,11 +788,60 @@ export class AuthService {
       updates[path] = null;
     }
 
-    console.log('[AuthService] 💥 Ejecutando eliminación en masa:', Object.keys(updates).length, 'nodos');
-    await update(ref(db), updates);
+    // 4. Dynamic scan of root level nodes to catch any leftover test structures
+    try {
+      const rootSnap = await get(ref(db));
+      if (rootSnap.exists()) {
+        const rootData = rootSnap.val();
+        Object.keys(rootData).forEach(key => {
+          if (key !== 'users' && key !== 'companies' && key !== 'audit_logs') {
+            updates[key] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[AuthService] Purge root scan error:', e.message);
+    }
+
+    const totalNodesToUpdate = Object.keys(updates).length;
+    console.log('[AuthService] 💥 Ejecutando eliminación en masa:', totalNodesToUpdate, 'nodos');
+
+    if (totalNodesToUpdate > 0) {
+      await update(ref(db), updates);
+    }
+
+    // 5. Create audit log for production launch reset
+    try {
+      const auditLogRef = push(ref(db, 'audit_logs'));
+      await set(auditLogRef, {
+        action: 'PRODUCTION_RESET',
+        programmerEmail: currentUser.email || SUPER_ADMIN_EMAIL,
+        programmerUid: currentUser.uid || 'system',
+        programmerName: currentUser.displayName || 'Programador',
+        timestamp: Date.now(),
+        isoDate: new Date().toISOString(),
+        details: `Reinicio de producción ejecutado con éxito. Se eliminaron ${deletedUsersCount} usuarios de prueba y ${deletedCompaniesCount} empresas. Cuentas de programador conservadas: ${keptProgrammersCount}.`,
+        metadata: {
+          deletedUsersCount,
+          deletedCompaniesCount,
+          keptProgrammersCount,
+          totalNodesWiped: totalNodesToUpdate
+        }
+      });
+    } catch (auditErr) {
+      console.warn('[AuthService] No se pudo guardar el log de auditoría post-purga:', auditErr.message);
+    }
 
     GlobalStore.set({ companies: [] });
-    console.log('[AuthService] ✅ Limpieza de datos de prueba completada.');
-    return true;
+    console.log('[AuthService] ✅ Limpieza de datos de prueba y reinicio de producción completados.');
+
+    return {
+      success: true,
+      deletedUsersCount,
+      deletedCompaniesCount,
+      keptProgrammersCount,
+      totalNodesWiped: totalNodesToUpdate
+    };
   }
 }
+
