@@ -32,6 +32,7 @@ export class Header extends Component {
       '#/manager/reports': 'Reportes',
       '#/inventory/products': 'Inventario',
       '#/super-admin/companies': 'Empresas',
+      '#/super-admin/users': 'Gestión Global de Usuarios',
       '#/super-admin/monitoring': 'Monitoreo',
       '#/super-admin/plans': 'Planes',
       '#/super-admin/billing': 'Facturación',

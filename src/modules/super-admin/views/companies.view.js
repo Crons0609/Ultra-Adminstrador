@@ -109,14 +109,9 @@ export class CompaniesView extends Component {
       title: 'Gestión de Empresas',
       subtitle: 'Administración, parametrización y asignación de licencias para múltiples modelos de negocio en el SaaS.',
       actionHTML: `
-        <div class="d-flex gap-2">
-          <button class="btn btn-danger btn-sm" id="btn-purge-production" style="background:var(--color-danger); color:white; font-weight:600;">
-            💣 Reset para Producción
-          </button>
-          <button class="btn btn-primary btn-sm" id="btn-add-company">
-            <span style="margin-right: var(--space-1);">+</span> Registrar Negocio
-          </button>
-        </div>
+        <button class="btn btn-primary btn-sm" id="btn-add-company">
+          <span style="margin-right: var(--space-1);">+</span> Registrar Negocio
+        </button>
       `,
       contentHTML: `
         <div class="card p-5">

@@ -178,10 +178,10 @@ export class SettingsView extends Component {
                 </div>
 
                 <div style="display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap;">
-                  <button type="button" id="btn-execute-purge" class="btn btn-danger btn-md" disabled style="background: #dc2626; border-color: #dc2626; opacity: 0.5; cursor: not-allowed;">
+                  <button type="button" id="btn-execute-purge" class="btn btn-danger btn-md" style="background: #dc2626; border-color: #dc2626; opacity: 0.85; cursor: pointer; font-weight: 600;">
                     🔥 Ejecutar Reinicio y Limpieza de Firebase
                   </button>
-                  <span id="purge-status-label" class="text-xs text-secondary" style="font-family: monospace;">Esperando confirmación...</span>
+                  <span id="purge-status-label" class="text-xs text-secondary" style="font-family: monospace;">Escribe 1+1 o REINICIAR-PRODUCCION para habilitar</span>
                 </div>
               </div>
 
@@ -253,14 +253,12 @@ export class SettingsView extends Component {
         const val = confirmInput.value.trim().toUpperCase();
         const isValid = val === 'REINICIAR-PRODUCCION' || val === '1+1';
 
-        executePurgeBtn.disabled = !isValid;
-        executePurgeBtn.style.opacity = isValid ? '1' : '0.5';
-        executePurgeBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+        executePurgeBtn.style.opacity = isValid ? '1' : '0.85';
 
         if (purgeStatusLabel) {
           purgeStatusLabel.textContent = isValid
             ? '✅ Confirmación válida. Listo para ejecutar.'
-            : 'Esperando confirmación...';
+            : 'Escribe 1+1 o REINICIAR-PRODUCCION para habilitar';
           purgeStatusLabel.style.color = isValid ? '#10b981' : 'var(--color-text-secondary)';
         }
       });
@@ -533,99 +531,227 @@ export class SettingsView extends Component {
     }
   }
 
-  async handleExecuteProductionReset() {
-    const root = this.layout.element;
-    if (!root) return;
+  /**
+   * Triggers the Production Reset flow by launching the interactive modal assistant.
+   */
+  handleExecuteProductionReset() {
+    this.openProductionResetModal();
+  }
 
-    const confirmInput = root.querySelector('#purge-confirm-input');
-    const val = confirmInput?.value.trim().toUpperCase() || '';
-    if (val !== 'REINICIAR-PRODUCCION' && val !== '1+1') {
-      alert('Por favor ingresa la clave de confirmación requerida: REINICIAR-PRODUCCION o 1+1');
-      return;
-    }
+  /**
+   * Builds and displays the interactive 2-stage modal for Production Reset.
+   */
+  openProductionResetModal() {
+    // Remove existing modal if present
+    const oldModal = document.getElementById('production-reset-modal');
+    if (oldModal) oldModal.remove();
 
-    const firstConfirm = confirm(
-      '🚨 ¿ESTÁS COMPLETAMENTE SEGURO DE EJECUTAR EL REINICIO PARA PRODUCCIÓN?\n\n' +
-      '• Se eliminarán permanentemente todas las empresas de prueba, productos, órdenes, facturas e historial.\n' +
-      '• Se eliminarán todas las cuentas de prueba conservando ÚNICAMENTE las cuentas de los programadores.\n' +
-      '• Esta acción es IRREVERSIBLE.'
-    );
+    const modalHTML = `
+      <div id="production-reset-modal" class="modal-overlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px;">
+        <div class="card p-6" style="background: #111115; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.8); color: var(--color-text-primary);">
+          
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+            <div>
+              <h3 style="font-size: 1.25rem; font-weight: 700; color: #ef4444; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <span>💥 Reinicio Completo para Producción</span>
+                <span style="font-size: 0.65rem; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">FIREBASE RTDB</span>
+              </h3>
+              <p style="font-size: 0.8rem; color: #9ca3af; margin-top: 4px;">Asistente exclusivo para usuarios con rol de Programador.</p>
+            </div>
+            <button id="modal-close-btn" style="background: transparent; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
+          </div>
 
-    if (!firstConfirm) return;
+          <!-- STAGE 1: Confirm & Backup -->
+          <div id="reset-stage-1">
+            <div style="padding: 14px; background: rgba(239, 68, 68, 0.08); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.25); margin-bottom: 16px;">
+              <h4 style="font-size: 0.85rem; font-weight: 700; color: #f87171; margin: 0 0 6px 0;">⚠️ ADVERTENCIA DE ELIMINACIÓN PERMANENTE</h4>
+              <p style="font-size: 0.78rem; color: #d1d5db; margin: 0 0 8px 0;">
+                Esta acción eliminará <strong>directamente en Firebase</strong> todos los datos de prueba generados durante el desarrollo:
+              </p>
+              <ul style="font-size: 0.75rem; color: #9ca3af; margin: 0; padding-left: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <li>❌ Cuentas de clientes y empleados</li>
+                <li>❌ Empresas, negocios y sucursales</li>
+                <li>❌ Catálogo de productos y categorías</li>
+                <li>❌ Historial de pedidos y facturas</li>
+                <li>❌ Mesas, códigos QR y promociones</li>
+                <li>❌ Configuraciones de locales y cajas</li>
+              </ul>
+              <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(239,68,68,0.3); font-size: 0.75rem; color: #10b981; font-weight: 600;">
+                🛡️ PROTECCIÓN INTACTA: Las cuentas con rol de Programador y la configuración del SaaS no sufrirán ninguna alteración.
+              </div>
+            </div>
 
-    const executeBtn = root.querySelector('#btn-execute-purge');
-    const statusLabel = root.querySelector('#purge-status-label');
-    const consoleBox = root.querySelector('#purge-log-console');
+            <!-- Paso A: Respaldo JSON -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 16px;">
+              <div>
+                <strong style="font-size: 0.82rem; color: #60a5fa; display: block;">1. Generar Copia de Seguridad (1 a 1)</strong>
+                <span style="font-size: 0.72rem; color: #9ca3af;">Descarga el archivo JSON completo de Firebase antes de proceder.</span>
+              </div>
+              <button id="modal-download-backup-btn" class="btn btn-secondary btn-sm" style="border-color: #3b82f6; color: #60a5fa; white-space: nowrap;">
+                📥 Descargar Backup
+              </button>
+            </div>
 
-    if (executeBtn) {
-      executeBtn.disabled = true;
-      executeBtn.textContent = '⏳ Ejecutando Reinicio de Firebase...';
-    }
+            <!-- Paso B: Confirmación obligatoria -->
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #e5e7eb; display: block; margin-bottom: 6px;">
+                  2. Confirmación de Seguridad (Escribe <code style="background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 6px; border-radius: 4px;">1+1</code> o <code style="background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 6px; border-radius: 4px;">REINICIAR-PRODUCCION</code>):
+                </label>
+                <input type="text" id="modal-confirm-input" class="input input-md" placeholder="Escribe 1+1 o REINICIAR-PRODUCCION" style="width: 100%; font-family: monospace; letter-spacing: 0.05em;" />
+              </div>
 
-    if (consoleBox) {
-      consoleBox.style.display = 'block';
-    }
+              <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.78rem; color: #9ca3af; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                <input type="checkbox" id="modal-confirm-checkbox" style="margin-top: 2px;" />
+                <span>Confirmo que he revisado las advertencias, he respaldado la información requerida y deseo proceder con la purga total en Firebase.</span>
+              </label>
+            </div>
 
-    const appendLog = (msg, isError = false) => {
-      if (!consoleBox) return;
-      const time = new Date().toLocaleTimeString();
-      const div = document.createElement('div');
-      div.style.color = isError ? '#ef4444' : '#10b981';
-      div.textContent = `[${time}] ${msg}`;
-      consoleBox.appendChild(div);
-      consoleBox.scrollTop = consoleBox.scrollHeight;
+            <!-- Footer Stage 1 -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button id="modal-cancel-btn" class="btn btn-secondary btn-md">Cancelar</button>
+              <button id="modal-start-purge-btn" class="btn btn-danger btn-md" disabled style="opacity: 0.5; cursor: not-allowed; background: #dc2626; border-color: #dc2626;">
+                🔥 Confirmar y Limpiar Firebase
+              </button>
+            </div>
+          </div>
+
+          <!-- STAGE 2: Progress & Execution -->
+          <div id="reset-stage-2" style="display: none;">
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px;">
+                <span id="progress-stage-title" style="color: #60a5fa;">Iniciando proceso...</span>
+                <span id="progress-percent" style="color: #10b981;">0%</span>
+              </div>
+              <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
+                <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ef4444, #10b981); transition: width 0.3s ease;"></div>
+              </div>
+              <p id="progress-detail-text" style="font-size: 0.75rem; color: #9ca3af; margin-top: 6px; font-family: monospace;">Preparando escaneo de nodos...</p>
+            </div>
+
+            <!-- Console Log -->
+            <div id="modal-log-console" style="background: #090a0f; border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.72rem; max-height: 180px; overflow-y: auto; color: #10b981; margin-bottom: 16px;">
+              <div style="color: #6b7280; margin-bottom: 4px;">=== PROCESO DE LIMPIEZA DE FIREBASE EN CURSO ===</div>
+            </div>
+
+            <!-- Results Summary Table (Populated on completion) -->
+            <div id="modal-result-summary" style="display: none; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: #10b981; margin: 0 0 10px 0;">🎉 ¡Reinicio Completado con Éxito!</h4>
+              <div id="result-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; font-size: 0.75rem; color: #e5e7eb;"></div>
+            </div>
+
+            <!-- Footer Stage 2 -->
+            <div style="display: flex; justify-content: flex-end;">
+              <button id="modal-finish-btn" class="btn btn-primary btn-md" disabled style="opacity: 0.5;">Procesando...</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    const overlay = document.getElementById('production-reset-modal');
+    const closeBtn = document.getElementById('modal-close-btn');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    const downloadBackupBtn = document.getElementById('modal-download-backup-btn');
+    const confirmInput = document.getElementById('modal-confirm-input');
+    const confirmCheckbox = document.getElementById('modal-confirm-checkbox');
+    const startPurgeBtn = document.getElementById('modal-start-purge-btn');
+
+    const stage1 = document.getElementById('reset-stage-1');
+    const stage2 = document.getElementById('reset-stage-2');
+
+    const progressStageTitle = document.getElementById('progress-stage-title');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    const progressDetailText = document.getElementById('progress-detail-text');
+    const modalLogConsole = document.getElementById('modal-log-console');
+    const resultSummary = document.getElementById('modal-result-summary');
+    const resultMetricsGrid = document.getElementById('result-metrics-grid');
+    const finishBtn = document.getElementById('modal-finish-btn');
+
+    const closeModal = () => overlay.remove();
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    downloadBackupBtn.addEventListener('click', () => this.handleDownloadBackup());
+
+    // Validation logic for Stage 1
+    const validateInputs = () => {
+      const val = confirmInput.value.trim().toUpperCase();
+      const textValid = val === 'REINICIAR-PRODUCCION' || val === '1+1';
+      const checkValid = confirmCheckbox.checked;
+
+      const isValid = textValid && checkValid;
+      startPurgeBtn.disabled = !isValid;
+      startPurgeBtn.style.opacity = isValid ? '1' : '0.5';
+      startPurgeBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
     };
 
-    appendLog('Iniciando proceso de reinicio para producción...');
-    appendLog('Verificando rol de Programador y permisos de superadministrador...');
+    confirmInput.addEventListener('input', validateInputs);
+    confirmCheckbox.addEventListener('change', validateInputs);
 
-    try {
-      appendLog('Generando copia de seguridad 1:1 previa a la purga...');
+    // Execution Stage 2
+    startPurgeBtn.addEventListener('click', async () => {
+      stage1.style.display = 'none';
+      stage2.style.display = 'block';
+
+      const appendModalLog = (msg, isError = false) => {
+        const time = new Date().toLocaleTimeString();
+        const div = document.createElement('div');
+        div.style.color = isError ? '#ef4444' : '#10b981';
+        div.textContent = `[${time}] ${msg}`;
+        modalLogConsole.appendChild(div);
+        modalLogConsole.scrollTop = modalLogConsole.scrollHeight;
+      };
+
       try {
-        await AuthService.downloadDatabaseBackup();
-        appendLog('Copia de seguridad descargada exitosamente en el navegador.');
-      } catch (backupErr) {
-        appendLog(`Advertencia de respaldo: ${backupErr.message}. Continuando con la purga...`, true);
+        const result = await AuthService.purgeAllTestDataExceptSuperAdmin((stage, percent, msg) => {
+          progressStageTitle.textContent = stage;
+          progressPercent.textContent = `${percent}%`;
+          progressBarFill.style.width = `${percent}%`;
+          progressDetailText.textContent = msg;
+          appendModalLog(msg);
+        });
+
+        // Display itemized result metrics
+        resultSummary.style.display = 'block';
+        const c = result.collectionCounts || {};
+        resultMetricsGrid.innerHTML = `
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">👥 <strong>${result.deletedUsersCount}</strong> Usuarios elim.</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">🏢 <strong>${result.deletedCompaniesCount}</strong> Empresas elim.</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">📦 <strong>${c.productos || 0}</strong> Productos</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">📂 <strong>${c.categorias || 0}</strong> Categorías</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">🧾 <strong>${c.pedidos || 0}</strong> Pedidos</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">🪑 <strong>${c.mesas || 0}</strong> Mesas</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">📲 <strong>${c.codigos_qr || 0}</strong> Códigos QR</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">🛡️ <strong>${result.keptProgrammersCount}</strong> Programadores</div>
+        `;
+
+        finishBtn.disabled = false;
+        finishBtn.style.opacity = '1';
+        finishBtn.textContent = '🎉 Entendido - Cerrar';
+        finishBtn.addEventListener('click', closeModal);
+
+        NotificationService.success('¡Reinicio para producción completado exitosamente!');
+      } catch (err) {
+        console.error('[SettingsView Modal] Error en purga:', err);
+        appendModalLog(`💥 ERROR EN REINICIO: ${err.message || err}`, true);
+        progressStageTitle.textContent = '❌ Error';
+        progressStageTitle.style.color = '#ef4444';
+        progressDetailText.textContent = `Proceso detenido: ${err.message || err}`;
+
+        finishBtn.disabled = false;
+        finishBtn.style.opacity = '1';
+        finishBtn.textContent = 'Cerrar';
+        finishBtn.classList.replace('btn-primary', 'btn-secondary');
+        finishBtn.addEventListener('click', closeModal);
       }
-
-      appendLog('Escaneando usuarios y filtrando únicamente cuentas de programadores...');
-      appendLog('Eliminando colecciones de negocios, inventarios y registros transaccionales...');
-
-      const result = await AuthService.purgeAllTestDataExceptSuperAdmin();
-
-      appendLog('====================================================');
-      appendLog(`✅ REINICIO COMPLETADO CON ÉXITO.`);
-      appendLog(`• Cuentas de usuarios de prueba eliminadas: ${result.deletedUsersCount}`);
-      appendLog(`• Empresas de prueba eliminadas: ${result.deletedCompaniesCount}`);
-      appendLog(`• Cuentas de programadores conservadas e intactas: ${result.keptProgrammersCount}`);
-      appendLog(`• Total de nodos de base de datos purgados: ${result.totalNodesWiped}`);
-      appendLog(`• Auditoría guardada en /audit_logs.`);
-      appendLog('====================================================');
-
-      if (statusLabel) {
-        statusLabel.textContent = '🎉 Plataforma limpia y lista para Lanzamiento en Producción.';
-        statusLabel.style.color = '#10b981';
-      }
-
-      NotificationService.success('¡Reinicio de Producción completado con éxito! Cuentas de programadores intactas y Firebase limpio.');
-
-      if (confirmInput) confirmInput.value = '';
-    } catch (err) {
-      console.error('[SettingsView] Error en reinicio de producción:', err);
-      appendLog(`💥 ERROR FATAL AL EJECUTAR REINICIO: ${err.message || err}`, true);
-      alert(`Error al ejecutar el reinicio de producción: ${err.message || err}`);
-      if (statusLabel) {
-        statusLabel.textContent = '❌ Error al ejecutar el reinicio.';
-        statusLabel.style.color = '#ef4444';
-      }
-    } finally {
-      if (executeBtn) {
-        executeBtn.disabled = true;
-        executeBtn.textContent = '🔥 Ejecutar Reinicio y Limpieza de Firebase';
-        executeBtn.style.opacity = '0.5';
-        executeBtn.style.cursor = 'not-allowed';
-      }
-    }
+    });
   }
 
   unmount() {
@@ -633,4 +759,5 @@ export class SettingsView extends Component {
     super.unmount();
   }
 }
+
 

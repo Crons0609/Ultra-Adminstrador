@@ -1,1 +1,1 @@
-ya que termine el proceso de pruebas y ensallos de todo el sistema necesito poder agregar un apartado en el dashboard de el progrmador y solo en el del programador para eliminar todas las cuentas de correo electronico, negocios y cualquier otra informacion que haya en firebase y solo dejes los correo de los programadores intacto esos no los toques. para empezar todo el sistema en produccion.
+por que no puedo hacer el reset de produccion ya que cuando toco el boton "Recet para produccion" no sucede nada.

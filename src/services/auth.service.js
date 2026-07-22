@@ -674,9 +674,11 @@ export class AuthService {
   /**
    * Purges all non-Super-Admin users, companies, inventory, sales, orders, and test data
    * from Firebase RTDB while leaving Programmer / Super Admin accounts intact.
-   * Performs an audit log entry for production launch tracking.
+   * Emits live progress events via progressCallback and logs audit trail for production launch tracking.
+   * 
+   * @param {Function} [progressCallback] - Optional callback (stage, percent, message)
    */
-  static async purgeAllTestDataExceptSuperAdmin() {
+  static async purgeAllTestDataExceptSuperAdmin(progressCallback = null) {
     if (!db) throw new Error('Base de datos no inicializada.');
 
     const currentUser = GlobalStore.getState().currentUser || {};
@@ -686,14 +688,38 @@ export class AuthService {
       throw new Error('Acceso denegado: Operación de reinicio reservada exclusivamente para Programadores.');
     }
 
-    console.log('[AuthService] 💣 Iniciando reinicio de producción y purga total de datos de prueba...');
+    const reportProgress = (stage, percent, msg) => {
+      console.log(`[AuthService Purge] [${percent}%] ${stage}: ${msg}`);
+      if (typeof progressCallback === 'function') {
+        try { progressCallback(stage, percent, msg); } catch (_) {}
+      }
+    };
+
+    reportProgress('Iniciando', 5, 'Verificando credenciales de Programador y preparando estructura de purga...');
 
     const updates = {};
     let deletedUsersCount = 0;
     let keptProgrammersCount = 0;
     let deletedCompaniesCount = 0;
 
+    const collectionCounts = {
+      clientes: 0,
+      empleados: 0,
+      negocios: 0,
+      productos: 0,
+      categorias: 0,
+      pedidos: 0,
+      mesas: 0,
+      codigos_qr: 0,
+      promociones: 0,
+      notificaciones: 0,
+      configuraciones: 0,
+      cajas: 0,
+      otros_registros: 0
+    };
+
     // 1. Scan /users — Keep ONLY users with role === 'SUPER_ADMIN' or programmer emails
+    reportProgress('Usuarios', 15, 'Escaneando cuentas de usuario y protegiendo accesos de Programadores...');
     try {
       const usersSnap = await get(ref(db, 'users'));
       if (usersSnap.exists()) {
@@ -709,6 +735,12 @@ export class AuthService {
           } else {
             updates[`users/${uid}`] = null;
             deletedUsersCount++;
+            const role = (profile?.role || '').toUpperCase();
+            if (role === 'CUSTOMER') {
+              collectionCounts.clientes++;
+            } else {
+              collectionCounts.empleados++;
+            }
           }
         });
       }
@@ -717,16 +749,42 @@ export class AuthService {
     }
 
     // 2. Scan /companies — Delete all companies EXCEPT companies/global
+    reportProgress('Empresas', 30, 'Escaneando empresas y locales de prueba...');
     try {
       const compSnap = await get(ref(db, 'companies'));
       if (compSnap.exists()) {
         const comps = compSnap.val();
-        Object.keys(comps).forEach(companyId => {
+        Object.entries(comps).forEach(([companyId, companyData]) => {
           if (companyId !== 'global') {
             updates[`companies/${companyId}`] = null;
-            // Also purge dynamic top-level node for this company if present
             updates[companyId] = null;
             deletedCompaniesCount++;
+            collectionCounts.negocios++;
+
+            // Count inner collections if present
+            if (companyData) {
+              if (companyData.productos || companyData.products) {
+                collectionCounts.productos += Object.keys(companyData.productos || companyData.products || {}).length;
+              }
+              if (companyData.categorias || companyData.categories) {
+                collectionCounts.categorias += Object.keys(companyData.categorias || companyData.categories || {}).length;
+              }
+              if (companyData.pedidos || companyData.ordenes || companyData.orders) {
+                collectionCounts.pedidos += Object.keys(companyData.pedidos || companyData.ordenes || companyData.orders || {}).length;
+              }
+              if (companyData.mesas || companyData.tables) {
+                collectionCounts.mesas += Object.keys(companyData.mesas || companyData.tables || {}).length;
+              }
+              if (companyData.qr_codes || companyData.qrs) {
+                collectionCounts.codigos_qr += Object.keys(companyData.qr_codes || companyData.qrs || {}).length;
+              }
+              if (companyData.promociones || companyData.promotions) {
+                collectionCounts.promociones += Object.keys(companyData.promociones || companyData.promotions || {}).length;
+              }
+              if (companyData.config || companyData.configuracion) {
+                collectionCounts.configuraciones++;
+              }
+            }
           }
         });
       }
@@ -735,66 +793,40 @@ export class AuthService {
     }
 
     // 3. Known operational & transactional tenant collection paths to wipe
-    const tenantPaths = [
-      'accounts_payable',
-      'accounts_receivable',
-      'accounts_receivable_history',
-      'appointments',
-      'assets',
-      'basic_services',
-      'cajas',
-      'catalogo_config',
-      'command_logs',
-      'configuracion_catalogo',
-      'credit_mora_log',
-      'credit_payments',
-      'credits',
-      'expenses',
-      'ingredientes',
-      'invoices',
-      'mesas',
-      'ordenes',
-      'pagos',
-      'payment_reminder_logs',
-      'payment_reminders',
-      'pedidos',
-      'productos',
-      'projections',
-      'promotions',
-      'purchases',
-      'qr_codes',
-      'recurring_clients',
-      'rentals',
-      'scan_history',
-      'service_requests',
-      'supplier_payments',
-      'supplier_reminder_logs',
-      'supplier_reminders',
-      'suppliers',
-      'telegram_campaigns',
-      'telegram_conversations',
-      'telegram_logs',
-      'telegram_subscribers',
-      'tools',
-      'vehicles',
-      'whatsapp_broadcast_logs',
-      'whatsapp_broadcasts',
-      'whatsapp_chats',
-      'whatsapp_logs',
-      'whatsapp_templates'
-    ];
+    reportProgress('Colecciones', 55, 'Contando y preparando eliminación de nodos operacionales...');
+    const tenantPathsMap = {
+      pedidos: ['pedidos', 'ordenes', 'invoices'],
+      productos: ['productos', 'ingredientes', 'catalogo_config', 'configuracion_catalogo'],
+      mesas: ['mesas'],
+      codigos_qr: ['qr_codes', 'scan_history'],
+      promociones: ['promotions'],
+      notificaciones: ['whatsapp_chats', 'whatsapp_logs', 'whatsapp_broadcasts', 'whatsapp_broadcast_logs', 'whatsapp_templates', 'telegram_campaigns', 'telegram_conversations', 'telegram_logs', 'telegram_subscribers'],
+      cajas: ['cajas', 'pagos', 'expenses', 'purchases', 'accounts_payable', 'accounts_receivable', 'accounts_receivable_history', 'credit_payments', 'credits', 'credit_mora_log'],
+      otros_registros: ['appointments', 'assets', 'basic_services', 'command_logs', 'payment_reminder_logs', 'payment_reminders', 'projections', 'recurring_clients', 'rentals', 'service_requests', 'supplier_payments', 'supplier_reminder_logs', 'supplier_reminders', 'suppliers', 'tools', 'vehicles']
+    };
 
-    for (const path of tenantPaths) {
-      updates[path] = null;
+    for (const [cat, paths] of Object.entries(tenantPathsMap)) {
+      for (const path of paths) {
+        updates[path] = null;
+        try {
+          const snap = await get(ref(db, path));
+          if (snap.exists()) {
+            const count = Object.keys(snap.val() || {}).length;
+            collectionCounts[cat] = (collectionCounts[cat] || 0) + count;
+          }
+        } catch (_) {}
+      }
     }
 
-    // 4. Dynamic scan of root level nodes to catch any leftover test structures
+    // 4. Dynamic scan of root level nodes to catch any leftover test structures (and wipe test audit_logs)
+    reportProgress('Escaner Global', 75, 'Realizando barrido dinámico y limpiezas de registros de auditoría de prueba...');
+    updates['audit_logs'] = null;
     try {
       const rootSnap = await get(ref(db));
       if (rootSnap.exists()) {
         const rootData = rootSnap.val();
         Object.keys(rootData).forEach(key => {
-          if (key !== 'users' && key !== 'companies' && key !== 'audit_logs') {
+          if (key !== 'users' && key !== 'companies') {
             updates[key] = null;
           }
         });
@@ -804,44 +836,265 @@ export class AuthService {
     }
 
     const totalNodesToUpdate = Object.keys(updates).length;
-    console.log('[AuthService] 💥 Ejecutando eliminación en masa:', totalNodesToUpdate, 'nodos');
+    reportProgress('Eliminando', 85, `Ejecutando borrado masivo en Firebase (${totalNodesToUpdate} nodos clave)...`);
 
     if (totalNodesToUpdate > 0) {
       await update(ref(db), updates);
     }
 
     // 5. Create audit log for production launch reset
+    reportProgress('Auditoría', 95, 'Registrando log de auditoría del Reinicio de Producción...');
+    const auditData = {
+      action: 'PRODUCTION_RESET',
+      programmerEmail: currentUser.email || SUPER_ADMIN_EMAIL,
+      programmerUid: currentUser.uid || 'system',
+      programmerName: currentUser.displayName || 'Programador',
+      timestamp: Date.now(),
+      isoDate: new Date().toISOString(),
+      details: `Reinicio para producción completado con éxito por ${currentUser.email || SUPER_ADMIN_EMAIL}. Se eliminaron ${deletedUsersCount} cuentas de prueba, ${deletedCompaniesCount} empresas. Cuentas de programador intactas: ${keptProgrammersCount}. Total nodos purgados: ${totalNodesToUpdate}.`,
+      status: 'ÉXITO',
+      metadata: {
+        deletedUsersCount,
+        deletedCompaniesCount,
+        keptProgrammersCount,
+        totalNodesWiped: totalNodesToUpdate,
+        collectionCounts
+      }
+    };
+
     try {
       const auditLogRef = push(ref(db, 'audit_logs'));
-      await set(auditLogRef, {
-        action: 'PRODUCTION_RESET',
-        programmerEmail: currentUser.email || SUPER_ADMIN_EMAIL,
-        programmerUid: currentUser.uid || 'system',
-        programmerName: currentUser.displayName || 'Programador',
-        timestamp: Date.now(),
-        isoDate: new Date().toISOString(),
-        details: `Reinicio de producción ejecutado con éxito. Se eliminaron ${deletedUsersCount} usuarios de prueba y ${deletedCompaniesCount} empresas. Cuentas de programador conservadas: ${keptProgrammersCount}.`,
-        metadata: {
-          deletedUsersCount,
-          deletedCompaniesCount,
-          keptProgrammersCount,
-          totalNodesWiped: totalNodesToUpdate
-        }
-      });
+      await set(auditLogRef, auditData);
     } catch (auditErr) {
       console.warn('[AuthService] No se pudo guardar el log de auditoría post-purga:', auditErr.message);
     }
 
     GlobalStore.set({ companies: [] });
-    console.log('[AuthService] ✅ Limpieza de datos de prueba y reinicio de producción completados.');
+    reportProgress('Completado', 100, '🎉 ¡Reinicio para Producción finalizado con éxito! La plataforma está limpia.');
 
     return {
       success: true,
       deletedUsersCount,
       deletedCompaniesCount,
       keptProgrammersCount,
-      totalNodesWiped: totalNodesToUpdate
+      totalNodesWiped: totalNodesToUpdate,
+      collectionCounts,
+      timestamp: auditData.isoDate,
+      programmerEmail: auditData.programmerEmail
     };
   }
+
+  /**
+   * Fetches all registered users from /users and resolves company names.
+   * Exclusive for Programmer / Super Admin role.
+   */
+  static async getAllUsersWithCompanies() {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const usersSnap = await get(ref(db, 'users'));
+    const companiesSnap = await get(ref(db, 'companies'));
+
+    const companiesMap = {};
+    if (companiesSnap.exists()) {
+      companiesSnap.forEach(snap => {
+        const val = snap.val();
+        companiesMap[snap.key] = val?.informacion_local?.nombre || val?.name || snap.key;
+      });
+    }
+    companiesMap['global'] = 'SaaS Global (Administración)';
+
+    const userList = [];
+    if (usersSnap.exists()) {
+      usersSnap.forEach(snap => {
+        const uid = snap.key;
+        const val = snap.val() || {};
+        const companyId = val.companyId || 'global';
+        userList.push({
+          uid,
+          displayName: val.displayName || 'Usuario sin nombre',
+          email: val.email || 'Sin correo',
+          role: val.role || 'CUSTOMER',
+          customRole: val.customRole || '',
+          companyId,
+          companyName: companiesMap[companyId] || companyId,
+          branchId: val.branchId || 'main',
+          status: val.status || (val.disabled ? 'DISABLED' : 'ACTIVE'),
+          phone: val.phone || val.telefono || '',
+          photoURL: val.photoURL || val.foto || '',
+          createdAt: val.createdAt || val.createdAtLocal || null,
+          lastLoginAt: val.lastLoginAt || val.lastLogin || null,
+          storedPassword: val.storedPassword || ''
+        });
+      });
+    }
+
+    return userList;
+  }
+
+  /**
+   * Updates any user profile from Programmer Dashboard with audit logging.
+   */
+  static async adminUpdateUserProfile(targetUid, payload) {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const currentUser = GlobalStore.getState().currentUser || {};
+    const updates = {};
+    const timestamp = Date.now();
+
+    const userUpdates = {
+      displayName: payload.displayName,
+      email: payload.email,
+      role: payload.role,
+      companyId: payload.companyId || 'global',
+      branchId: payload.branchId || 'main',
+      status: payload.status || 'ACTIVE',
+      phone: payload.phone || '',
+      photoURL: payload.photoURL || '',
+      updatedAt: timestamp
+    };
+
+    if (payload.customRole !== undefined) userUpdates.customRole = payload.customRole;
+
+    updates[`users/${targetUid}`] = userUpdates;
+
+    // Synchronize company employee reference if belongs to a specific company
+    if (payload.companyId && payload.companyId !== 'global') {
+      updates[`${payload.companyId}/employees/${targetUid}`] = {
+        uid: targetUid,
+        displayName: payload.displayName,
+        email: payload.email,
+        role: payload.role,
+        status: payload.status || 'ACTIVE',
+        updatedAt: timestamp
+      };
+    }
+
+    await update(ref(db), updates);
+
+    // Write audit log
+    try {
+      const auditRef = push(ref(db, 'audit_logs'));
+      await set(auditRef, {
+        action: 'ADMIN_UPDATE_USER',
+        programmerEmail: currentUser.email || 'superadmin@ultraadmin.com',
+        programmerUid: currentUser.uid || 'system',
+        targetUid,
+        targetEmail: payload.email,
+        timestamp,
+        isoDate: new Date().toISOString(),
+        details: `Perfil de usuario ${payload.email} actualizado por el programador. Nuevo rol: ${payload.role}, Empresa: ${payload.companyId}.`,
+        metadata: userUpdates
+      });
+    } catch (e) {
+      console.warn('[AuthService] Audit log write failed:', e);
+    }
+
+    return true;
+  }
+
+  /**
+   * Admin method to reset or change a user's password with audit logging.
+   */
+  static async adminUpdateUserPassword(targetUid, targetEmail, newPassword) {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const currentUser = GlobalStore.getState().currentUser || {};
+    const timestamp = Date.now();
+
+    await update(ref(db, `users/${targetUid}`), {
+      storedPassword: newPassword,
+      updatedAt: timestamp
+    });
+
+    try {
+      const auditRef = push(ref(db, 'audit_logs'));
+      await set(auditRef, {
+        action: 'ADMIN_RESET_PASSWORD',
+        programmerEmail: currentUser.email || 'superadmin@ultraadmin.com',
+        programmerUid: currentUser.uid || 'system',
+        targetUid,
+        targetEmail,
+        timestamp,
+        isoDate: new Date().toISOString(),
+        details: `Contraseña restablecida por el programador para el usuario ${targetEmail}.`
+      });
+    } catch (e) {
+      console.warn('[AuthService] Audit log write failed:', e);
+    }
+
+    return true;
+  }
+
+  /**
+   * Admin method to change user status (ACTIVE, SUSPENDED, DISABLED).
+   */
+  static async adminSetUserStatus(targetUid, targetEmail, newStatus) {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const currentUser = GlobalStore.getState().currentUser || {};
+    const timestamp = Date.now();
+
+    await update(ref(db, `users/${targetUid}`), {
+      status: newStatus,
+      disabled: newStatus === 'DISABLED' || newStatus === 'SUSPENDED',
+      updatedAt: timestamp
+    });
+
+    try {
+      const auditRef = push(ref(db, 'audit_logs'));
+      await set(auditRef, {
+        action: 'ADMIN_CHANGE_USER_STATUS',
+        programmerEmail: currentUser.email || 'superadmin@ultraadmin.com',
+        programmerUid: currentUser.uid || 'system',
+        targetUid,
+        targetEmail,
+        newStatus,
+        timestamp,
+        isoDate: new Date().toISOString(),
+        details: `Estado de cuenta de ${targetEmail} cambiado a ${newStatus} por el programador.`
+      });
+    } catch (e) {
+      console.warn('[AuthService] Audit log write failed:', e);
+    }
+
+    return true;
+  }
+
+  /**
+   * Admin method to permanently delete a user account.
+   */
+  static async adminDeleteUserAccount(targetUid, targetEmail, companyId) {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const currentUser = GlobalStore.getState().currentUser || {};
+    const timestamp = Date.now();
+    const updates = {};
+
+    updates[`users/${targetUid}`] = null;
+    if (companyId && companyId !== 'global') {
+      updates[`${companyId}/employees/${targetUid}`] = null;
+    }
+
+    await update(ref(db), updates);
+
+    try {
+      const auditRef = push(ref(db, 'audit_logs'));
+      await set(auditRef, {
+        action: 'ADMIN_DELETE_USER',
+        programmerEmail: currentUser.email || 'superadmin@ultraadmin.com',
+        programmerUid: currentUser.uid || 'system',
+        targetUid,
+        targetEmail,
+        timestamp,
+        isoDate: new Date().toISOString(),
+        details: `Cuenta de usuario ${targetEmail} (${targetUid}) eliminada por el programador.`
+      });
+    } catch (e) {
+      console.warn('[AuthService] Audit log write failed:', e);
+    }
+
+    return true;
+  }
 }
+
 

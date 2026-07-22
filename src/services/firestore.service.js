@@ -629,6 +629,20 @@ export class FirestoreService {
   }
 
   /**
+   * Alias for listAllCompanies
+   */
+  static async getCompanies() {
+    return this.listAllCompanies();
+  }
+
+  /**
+   * Alias for listAllCompanies
+   */
+  static async getAllCompanies() {
+    return this.listAllCompanies();
+  }
+
+  /**
    * List all companies with their info sub-node.
    * @returns {Promise<Array<Object>>}
    */

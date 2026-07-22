@@ -88,6 +88,7 @@ const getSuperAdminMonitoringView = () => import('../modules/super-admin/views/m
 const getSuperAdminBillingView = () => import('../modules/super-admin/views/billing.view.js').then(m => m.BillingView);
 const getSuperAdminLogsView = () => import('../modules/super-admin/views/logs.view.js').then(m => m.LogsView);
 const getSuperAdminSettingsView = () => import('../modules/super-admin/views/settings.view.js').then(m => m.SettingsView);
+const getSuperAdminUsersView = () => import('../modules/super-admin/views/users.view.js').then(m => m.UsersView);
 
 // ─── Lazy Route Adapter ───────────────────────────────────────────────────────
 /**
@@ -188,11 +189,13 @@ export const ROUTES = [
 
   // Super Admin routes
   { path: '/super-admin/companies', view: lazyView(getSuperAdminCompaniesView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
+  { path: '/super-admin/users', view: lazyView(getSuperAdminUsersView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/plans', view: lazyView(getSuperAdminPlansView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/monitoring', view: lazyView(getSuperAdminMonitoringView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/billing', view: lazyView(getSuperAdminBillingView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/logs', view: lazyView(getSuperAdminLogsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/settings', view: lazyView(getSuperAdminSettingsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
+
 
   // Public Catalog dynamic wildcard route (Keep at the very bottom)
   { path: '/:companyId', view: lazyView(getPublicCatalogView), middlewares: [] },
