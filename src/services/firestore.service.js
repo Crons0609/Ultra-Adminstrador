@@ -335,7 +335,8 @@ export class FirestoreService {
 
     const defaultConfig = {
       enableKDS: false,
-      enableWhatsApp: false,
+      enableWhatsApp: true,
+      enableTelegram: true,
       enableBilling: false,
       enableQR: false,
       enableVehiclesCatalog: false,
@@ -365,6 +366,8 @@ export class FirestoreService {
       status: companyData.status || 'ACTIVO',
       subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
       ownerId: companyData.ownerId || '',
+      ownerEmail: companyData.ownerEmail || '',
+      ownerPassword: companyData.ownerPassword || '',
       createdAt: now,
       updatedAt: now,
       createdAtLocal: localNow,
@@ -667,6 +670,19 @@ export class FirestoreService {
           }
         } catch (e) {}
 
+        let ownerEmail = info.ownerEmail || '';
+        let ownerPassword = info.ownerPassword || '';
+        if (info.ownerId) {
+          try {
+            const userSnap = await get(ref(db, `users/${info.ownerId}`));
+            if (userSnap.exists()) {
+              const u = userSnap.val();
+              if (u.email) ownerEmail = u.email;
+              if (u.storedPassword) ownerPassword = u.storedPassword;
+            }
+          } catch (e) {}
+        }
+
         return {
           id: companyId,
           name: info.name || companyId,
@@ -676,6 +692,8 @@ export class FirestoreService {
           deletedAt: info.deletedAt || null,
           statusReason: info.statusReason || '',
           ownerId: info.ownerId || '',
+          ownerEmail,
+          ownerPassword,
           branches: branchCount || 1,
           users: employeeCount || 1,
           config: config,

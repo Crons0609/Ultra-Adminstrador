@@ -25,8 +25,8 @@ export class Company {
     
     // Default tenant feature configuration flags
     this.config = {
-      enableWhatsApp: false,
-      enableTelegram: false,
+      enableWhatsApp: true,
+      enableTelegram: true,
       enableKDS: true,
       enablePWA: true,
       customDomain: null,

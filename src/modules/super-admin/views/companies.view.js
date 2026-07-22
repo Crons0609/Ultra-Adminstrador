@@ -67,6 +67,18 @@ export class CompaniesView extends Component {
               : `<span style="color:var(--color-text-primary);">${formatted}</span>`;
           }
         },
+        {
+          key: 'ownerEmail',
+          label: 'Credenciales del Cliente (Dueño)',
+          render: (val, row) => `
+            <div>
+              <div style="font-weight: 600; color: var(--color-accent); font-size: 0.82rem;">📧 ${val || row.ownerEmail || '—'}</div>
+              <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top:2px;">
+                🔑 <code style="background:var(--color-bg-tertiary); border:1px solid var(--color-border); padding:1px 6px; border-radius:4px; font-family:monospace; font-weight:bold; color:var(--color-text-primary);">${row.ownerPassword || '••••••••'}</code>
+              </div>
+            </div>
+          `
+        },
         { key: 'branches', label: 'Sucursales' },
         { key: 'users', label: 'Usuarios' },
         {
@@ -78,6 +90,7 @@ export class CompaniesView extends Component {
                 ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}">Restaurar</button>
                    <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}">Eliminar definitivo</button>`
                 : `<button class="btn btn-primary btn-sm btn-company-action" data-action="edit" data-id="${row.id}" style="background-color: var(--color-accent); color: white; border: none;">Editar</button>
+                   <button class="btn btn-warning btn-sm btn-company-action" data-action="credentials" data-id="${row.id}" style="font-size:0.75rem; padding: 3px 8px;" title="Ver / Cambiar Contraseña">🔑 Credenciales</button>
                    <button class="btn btn-secondary btn-sm btn-company-action" data-action="deactivate" data-id="${row.id}">Desactivar</button>
                    <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}">Suspender</button>
                    <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}">Papelera</button>`}
@@ -96,9 +109,14 @@ export class CompaniesView extends Component {
       title: 'Gestión de Empresas',
       subtitle: 'Administración, parametrización y asignación de licencias para múltiples modelos de negocio en el SaaS.',
       actionHTML: `
-        <button class="btn btn-primary btn-sm" id="btn-add-company">
-          <span style="margin-right: var(--space-1);">+</span> Registrar Negocio
-        </button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-danger btn-sm" id="btn-purge-production" style="background:var(--color-danger); color:white; font-weight:600;">
+            💣 Reset para Producción
+          </button>
+          <button class="btn btn-primary btn-sm" id="btn-add-company">
+            <span style="margin-right: var(--space-1);">+</span> Registrar Negocio
+          </button>
+        </div>
       `,
       contentHTML: `
         <div class="card p-5">
@@ -166,6 +184,11 @@ export class CompaniesView extends Component {
       addBtn.addEventListener('click', () => this.openAddCompanyModal());
     }
 
+    const purgeBtn = this.layout.$('#btn-purge-production');
+    if (purgeBtn) {
+      purgeBtn.addEventListener('click', () => this.openPurgeModal());
+    }
+
     const wrapper = this.layout.$('#companies-table-wrapper');
     if (wrapper && !this._companyActionsBound) {
       this._companyActionsBound = true;
@@ -176,9 +199,12 @@ export class CompaniesView extends Component {
         e.stopPropagation();
         const action = btn.dataset.action;
         const id = btn.dataset.id;
+        const company = (GlobalStore.getState().companies || []).find(c => c.id === id);
+
         if (action === 'edit') {
-          const company = (GlobalStore.getState().companies || []).find(c => c.id === id);
           if (company) this.openEditCompanyModal(company);
+        } else if (action === 'credentials') {
+          if (company) this.openCredentialsModal(company);
         } else {
           this.handleCompanyAction(id, action);
         }
@@ -394,8 +420,13 @@ export class CompaniesView extends Component {
             </label>
             
             <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-whatsapp" style="accent-color: var(--color-accent);" />
-              <span>Alertas e Informes automáticos vía WhatsApp</span>
+              <input type="checkbox" id="mod-whatsapp" checked style="accent-color: var(--color-accent);" />
+              <span>WhatsApp Automation Hub (API WhatsApp de negocio)</span>
+            </label>
+            
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+              <input type="checkbox" id="mod-telegram" checked style="accent-color: var(--color-accent);" />
+              <span>Telegram Automation Hub (Bot Telegram de negocio)</span>
             </label>
             
             <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
@@ -508,6 +539,7 @@ export class CompaniesView extends Component {
     const enableKDS = this.modalInstance.$('#mod-kds').checked;
     const enableQR = this.modalInstance.$('#mod-qr').checked;
     const enableWhatsApp = this.modalInstance.$('#mod-whatsapp').checked;
+    const enableTelegram = this.modalInstance.$('#mod-telegram').checked;
     const enableBilling = this.modalInstance.$('#mod-billing').checked;
     const enableVehiclesCatalog = this.modalInstance.$('#mod-vehicles-catalog').checked;
     const enableRentals = this.modalInstance.$('#mod-rentals').checked;
@@ -543,6 +575,7 @@ export class CompaniesView extends Component {
         enableKDS,
         enableQR,
         enableWhatsApp,
+        enableTelegram,
         enableBilling,
         enableVehiclesCatalog,
         enableRentals,
@@ -765,8 +798,12 @@ export class CompaniesView extends Component {
                 <span>Menú Digital QR para mesas</span>
               </label>
               <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp ? 'checked' : ''} style="accent-color: var(--color-accent);" />
-                <span>Alertas e Informes automáticos vía WhatsApp</span>
+                <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp !== false ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>WhatsApp Automation Hub (API WhatsApp de negocio)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
+                <input type="checkbox" id="edit-mod-telegram" ${row.config?.enableTelegram !== false ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+                <span>Telegram Automation Hub (Bot Telegram de negocio)</span>
               </label>
               <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
                 <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} style="accent-color: var(--color-accent);" />
@@ -984,6 +1021,7 @@ export class CompaniesView extends Component {
     const enableKDS      = this.modalInstance.$('#edit-mod-kds').checked;
     const enableQR       = this.modalInstance.$('#edit-mod-qr').checked;
     const enableWhatsApp = this.modalInstance.$('#edit-mod-whatsapp').checked;
+    const enableTelegram = this.modalInstance.$('#edit-mod-telegram').checked;
     const enableBilling  = this.modalInstance.$('#edit-mod-billing').checked;
     const enableVehiclesCatalog   = this.modalInstance.$('#edit-mod-vehicles-catalog').checked;
     const enableRentals           = this.modalInstance.$('#edit-mod-rentals').checked;
@@ -1009,6 +1047,7 @@ export class CompaniesView extends Component {
         enableKDS,
         enableQR,
         enableWhatsApp,
+        enableTelegram,
         enableBilling,
         enableVehiclesCatalog,
         enableRentals,

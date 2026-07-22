@@ -15,7 +15,7 @@ export class WhatsAppService {
   static async sendMessage(companyId, to, templateName, variables = {}) {
     // 1. Check license
     const { currentCompany } = GlobalStore.getState();
-    const isWhatsAppEnabled = currentCompany?.config?.enableWhatsApp === true;
+    const isWhatsAppEnabled = currentCompany?.config?.enableWhatsApp !== false;
 
     if (!isWhatsAppEnabled) {
       throw new Error('Licencia insuficiente: El plan actual del establecimiento no incluye la integración de WhatsApp API.');

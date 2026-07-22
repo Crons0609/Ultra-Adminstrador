@@ -27,7 +27,7 @@ export class TelegramService {
   static async sendMessage(companyId, chatId, templateName, variables = {}) {
     // 1. Check license
     const { currentCompany } = GlobalStore.getState();
-    const isTelegramEnabled = currentCompany?.config?.enableTelegram === true;
+    const isTelegramEnabled = currentCompany?.config?.enableTelegram !== false;
 
     if (!isTelegramEnabled) {
       throw new Error(
@@ -294,7 +294,7 @@ export class TelegramService {
    */
   static async sendBroadcast(companyId, segment, messageText) {
     const { currentCompany } = GlobalStore.getState();
-    const isTelegramEnabled = currentCompany?.config?.enableTelegram === true;
+    const isTelegramEnabled = currentCompany?.config?.enableTelegram !== false;
     if (!isTelegramEnabled) throw new Error('Telegram no está activado para este negocio.');
 
     // Load subscribers

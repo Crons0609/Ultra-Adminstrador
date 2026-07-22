@@ -23,7 +23,7 @@ export class TelegramHubView extends Component {
     const { currentCompany } = GlobalStore.getState();
     this.companyId = currentUser.companyId || '';
     this.currentUser = currentUser;
-    this.isTelegramEnabled = currentCompany?.config?.enableTelegram === true;
+    this.isTelegramEnabled = currentCompany?.config?.enableTelegram !== false;
 
     this.state = {
       activeTab: 'inbox',

@@ -21,7 +21,7 @@ export class WhatsAppHubView extends Component {
     const { currentCompany } = GlobalStore.getState();
     this.companyId = currentUser.companyId || '';
     this.currentUser = currentUser;
-    this.isWhatsAppEnabled = currentCompany?.config?.enableWhatsApp === true;
+    this.isWhatsAppEnabled = currentCompany?.config?.enableWhatsApp !== false;
 
     this.state = {
       activeTab: 'inbox',         // inbox | autobot | campaigns | stats | settings

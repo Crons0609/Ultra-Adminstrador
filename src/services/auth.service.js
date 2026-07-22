@@ -604,4 +604,137 @@ export class AuthService {
       }
     });
   }
+
+  /**
+   * Updates a user's password in Firebase RTDB /users/{uid} and /companies/{companyId}/ownerPassword.
+   */
+  static async updateUserStoredPassword(uid, newPassword, companyId = null) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    }
+    if (db) {
+      const userUpdates = {
+        storedPassword: newPassword,
+        updatedAt: serverTimestamp(),
+        updatedAtLocal: TimeService.timestamp()
+      };
+      await update(ref(db, `users/${uid}`), userUpdates);
+
+      if (companyId && companyId !== 'global') {
+        await update(ref(db, `companies/${companyId}`), {
+          ownerPassword: newPassword,
+          updatedAt: serverTimestamp()
+        }).catch(e => console.warn('[AuthService] Could not update company ownerPassword:', e.message));
+
+        await update(ref(db, `${companyId}/employees/${uid}`), {
+          storedPassword: newPassword
+        }).catch(() => {});
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Purges all non-Super-Admin users, companies, inventory, sales, orders, and test data
+   * from Firebase RTDB while leaving Programmer / Super Admin accounts intact.
+   */
+  static async purgeAllTestDataExceptSuperAdmin() {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    console.log('[AuthService] 💣 Iniciando purga total de datos de prueba para producción...');
+
+    const updates = {};
+
+    // 1. Scan /users — Keep ONLY users with role === 'SUPER_ADMIN'
+    try {
+      const usersSnap = await get(ref(db, 'users'));
+      if (usersSnap.exists()) {
+        const users = usersSnap.val();
+        Object.entries(users).forEach(([uid, profile]) => {
+          const isSuperAdmin = profile?.role === 'SUPER_ADMIN' ||
+                               profile?.email === SUPER_ADMIN_EMAIL ||
+                               (profile?.email || '').toLowerCase() === SUPER_ADMIN_EMAIL;
+          if (!isSuperAdmin) {
+            updates[`users/${uid}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[AuthService] Purge scan /users error:', e.message);
+    }
+
+    // 2. Scan /companies — Delete all companies
+    try {
+      const compSnap = await get(ref(db, 'companies'));
+      if (compSnap.exists()) {
+        const comps = compSnap.val();
+        Object.keys(comps).forEach(companyId => {
+          updates[`companies/${companyId}`] = null;
+        });
+      }
+    } catch (e) {
+      console.warn('[AuthService] Purge scan /companies error:', e.message);
+    }
+
+    // 3. Delete all tenant paths
+    const tenantPaths = [
+      'accounts_payable',
+      'accounts_receivable',
+      'accounts_receivable_history',
+      'appointments',
+      'assets',
+      'basic_services',
+      'cajas',
+      'catalogo_config',
+      'command_logs',
+      'configuracion_catalogo',
+      'credit_mora_log',
+      'credit_payments',
+      'credits',
+      'expenses',
+      'ingredientes',
+      'invoices',
+      'mesas',
+      'ordenes',
+      'pagos',
+      'payment_reminder_logs',
+      'payment_reminders',
+      'pedidos',
+      'productos',
+      'projections',
+      'promotions',
+      'purchases',
+      'qr_codes',
+      'recurring_clients',
+      'rentals',
+      'scan_history',
+      'service_requests',
+      'supplier_payments',
+      'supplier_reminder_logs',
+      'supplier_reminders',
+      'suppliers',
+      'telegram_campaigns',
+      'telegram_conversations',
+      'telegram_logs',
+      'telegram_subscribers',
+      'tools',
+      'vehicles',
+      'whatsapp_broadcast_logs',
+      'whatsapp_broadcasts',
+      'whatsapp_chats',
+      'whatsapp_logs',
+      'whatsapp_templates'
+    ];
+
+    for (const path of tenantPaths) {
+      updates[path] = null;
+    }
+
+    console.log('[AuthService] 💥 Ejecutando eliminación en masa:', Object.keys(updates).length, 'nodos');
+    await update(ref(db), updates);
+
+    GlobalStore.set({ companies: [] });
+    console.log('[AuthService] ✅ Limpieza de datos de prueba completada.');
+    return true;
+  }
 }
