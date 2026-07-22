@@ -14,6 +14,8 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { GlobalStore } from '../../../core/state.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { WhatsAppService } from '../../../services/whatsapp.service.js';
+import { TelegramService } from '../../../services/telegram.service.js';
 
 export class POSView extends Component {
   constructor(params = {}) {
@@ -864,13 +866,40 @@ export class POSView extends Component {
 
       await FirestoreService.create('ventas', salePayload);
 
-      // 2. Decrement product stock levels
+      // 2. Decrement product stock levels + check low stock alerts
       for (const item of this.state.cart) {
         const prod = this.state.products.find(p => p.id === item.productId);
         if (prod) {
           const newStock = Math.max(0, Number(prod.stock || 0) - Number(item.qty));
           await FirestoreService.update('productos', item.productId, { stock: newStock });
+
+          // 🔔 WhatsApp: alert if stock drops below threshold after sale
+          const threshold = Number(prod.lowStockThreshold || prod.minStock || 5);
+          if (newStock <= threshold && this.companyId) {
+            WhatsAppService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => {});
+            TelegramService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => {});
+          }
         }
+      }
+
+      // 🔔 WhatsApp: send order confirmation to client if phone is on record
+      const clientPhone = this.state.selectedClientPhone || null;
+      if (clientPhone && this.companyId) {
+        WhatsAppService.sendOrderConfirmation(this.companyId, clientPhone, {
+          clientName: this.state.selectedClientName || 'Cliente',
+          total,
+          paymentMethod: this.state.paymentMethod
+        }).catch(() => {});
+      }
+
+      // 🔔 Telegram: send order confirmation if client has telegramChatId on record
+      const clientChatId = this.state.selectedClientTelegramChatId || null;
+      if (clientChatId && this.companyId) {
+        TelegramService.sendOrderConfirmation(this.companyId, clientChatId, {
+          clientName: this.state.selectedClientName || 'Cliente',
+          total,
+          paymentMethod: this.state.paymentMethod
+        }).catch(() => {});
       }
 
       // 3. If a table order was loaded, update the order status and table node

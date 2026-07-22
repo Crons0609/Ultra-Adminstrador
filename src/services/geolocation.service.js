@@ -33,6 +33,14 @@ export class GeolocationService {
       return null;
     }
 
+    // Exclude owner, manager, and super admin roles from tracking
+    const allowedRoles = ['WAITER', 'CASHIER', 'KITCHEN'];
+    if (!allowedRoles.includes(currentUser.role)) {
+      const err = new Error('El seguimiento de ubicación no está habilitado para tu rol.');
+      if (onError) onError(err);
+      return null;
+    }
+
     this.stopTracking();
     this.watchId = navigator.geolocation.watchPosition(async (position) => {
       const payload = {
@@ -53,10 +61,16 @@ export class GeolocationService {
       await FirestoreService.create('employee_location_history', payload);
       if (onUpdate) onUpdate(payload);
     }, (err) => {
+      // Immediately stop tracking and update settings on error (e.g. if GPS is disabled)
+      // to prevent loop spam of error notifications.
+      this.stopTracking();
+      localStorage.setItem('ua_gps_enabled', 'false');
+      window.dispatchEvent(new CustomEvent('ua_gps_changed', { detail: { active: false } }));
+
       if (onError) onError(err);
     }, {
       enableHighAccuracy: true,
-      maximumAge: 30000,
+      maximumAge: 0, // Request direct precise location (disable cached location)
       timeout: 15000
     });
 
@@ -76,8 +90,8 @@ export class GeolocationService {
   static checkAndPromptGPS() {
     const { currentUser } = GlobalStore.getState();
     
-    // Explicitly restrict GPS prompting/tracking to active employees only
-    const validEmployeeRoles = ['OWNER', 'MANAGER', 'WAITER', 'CASHIER', 'KITCHEN'];
+    // Explicitly restrict GPS prompting/tracking to active operational employees only
+    const validEmployeeRoles = ['WAITER', 'CASHIER', 'KITCHEN'];
     if (!currentUser || !validEmployeeRoles.includes(currentUser.role)) {
       return;
     }
@@ -141,9 +155,15 @@ export class GeolocationService {
     });
 
     el.querySelector('#btn-gps-enable')?.addEventListener('click', () => {
+      let notified = false;
       this.startTracking({
         status: 'DISPONIBLE',
-        onUpdate: () => NotificationService.success('📍 Ubicación GPS activada correctamente.'),
+        onUpdate: () => {
+          if (!notified) {
+            NotificationService.success('📍 Ubicación GPS activada correctamente.');
+            notified = true;
+          }
+        },
         onError: (err) => NotificationService.error(err.message || 'No se pudo obtener la ubicación GPS.')
       });
       localStorage.setItem('ua_gps_enabled', 'true');

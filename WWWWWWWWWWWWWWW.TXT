@@ -1,1 +1,24 @@
-en el dashboard de el jefe no  aparece la información de el gps o el mapa del empleado. es decir el empleado ya accedio a copmpartir el gps pero en el dashboard de el dueño aun no aparece nada.
+arreglar el error de gps ya que cuando desactivo el gps hay un bug que vuelve una y otra ves la notificación de desactivado
+
+al dueño hay que agregarle un apartado de 
+
+agregar cuentas por cobrar para la gestion de crédito  
+
+cuentas por pagar a proveedores (va conectado a sistema de inventario)., es decir que si el proveedor me dio a crédito 15 cpcinas al subir la captura de la factura se integren al invetario automáticamente y agregar los precios,  pero si el producto no esta en stok hay que agregarlo como nuevo producto y los datos necesarios
+
+pagos de cable, agua, energía, entre otros servicios basicos
+
+listado de clientes recurrentes 
+
+agregar a cada uno de los negocios un api de whatsapp
+
+y agregar un apartado de generación de cobro se le va a llamar "sistema de crédito"
+me aparecerán los clientes recurrentes o hacer un nuevo cliente "opcional" y agregar todos los dtos necesarios
+abajo de eso habrá un recuadro para seleccionar uno o varios producto de stok y se rellenaran los datos de precio y demás automáticamente o agregar un pedido especial "opcional" y agregar manualmente los datos, precios y de mas
+luego habrá otro recuadro donde se seleccione con amortización o sin amortización
+con amortización es que va disminuyendo el interés con la deuda por cada abono., por ejemplo si diste al crédito una labadora de 10,000 córdobas al 15%,  el primer mes el cliente dio 3000 córdobas la siguiente cuota va a ser menos por que el 15% se va a implementar a los 7000 restantes y no a los 10000 iniciales significa que por cada abono va a disminuir la deuda.
+sin amortización signifia de que e porcentaje establecido iniciarmente se cobrara hasta finalizar la deuda ejemplo si un produto cuesta 100 cordibas ty el interés es al 10% significa que mensualmente va a pagar 10 crdubas de interés fijo hasta pagar el articulo de 100 cordibas mas el 10% en total, si el articulo inicialmente fue dado al credio¿to por un plazo de 3 meses significa que el va a pagar 10 cordonas cprrespondiente al 10% por cada mes establecido e el plazo inicial.
+luego habrá un recuadro donde se seleccione la forma de pago, por ejemplo si el cliente tiene una cuenta bancaria o puede pagar con tarjeta de crédito, efectivo, entre otros métodos de pago.
+y finalmente se generará un documento de cobro que se enviará al cliente via correo electrónico y también se guardará en la base de datos del sistema para futuras referencias.
+creo que se me olvida algo por ejemplo 
+los cobros no se pueden hacer como sea si no en fechas determinadas o estipuladas por el dueño o administrador del negocio por ejemplo si se le dio credito a un cliente el dia 1 de enero y se estipulo que iva a pagar cada mes el dia 15 del mismo mes entonces no se le puede hacer el cobro el dia 2 o 3 del mismo mes se tiene que hacer el cobro el dia 15 del mismo mes y si no lo hace se le aplica una mora del 5% por cada dia de atraso pero la mora no se va a implementar como yo habia dicho antes si no se va a implementar a la deuda restante por ejemplo si el cliente tiene 10,000 cordibas en deuda el dia 15 del mes y no paga se le aplicara una mora del 5% de 10,000, o sea 500 cordobas en ese mes y el cliente sigue en deuda el siguiente mes por ejemplo el dia 15 de febrero y tampoco paga se le aplicara otra mora pero ya no del 10,000 inicial si no que del restante por ejemplo 10,000 + 500 de mora seria 10,500 y se le aplicara el 5% de 10,500 que serian 525 cordobas y asi sucesivamente.

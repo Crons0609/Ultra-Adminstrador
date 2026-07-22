@@ -107,8 +107,6 @@ export class EmployeesView extends Component {
         <button class="btn btn-primary btn-sm" id="btn-add-employee">
           <span style="margin-right: var(--space-1);">+</span> Agregar Trabajador
         </button>
-        <button class="btn btn-secondary btn-sm" id="btn-start-gps">Activar mi GPS</button>
-        <button class="btn btn-secondary btn-sm" id="btn-stop-gps">Detener GPS</button>
       `,
       contentHTML: `
         <div class="card p-5 mb-5">
@@ -207,18 +205,7 @@ export class EmployeesView extends Component {
       addBtn.addEventListener('click', () => this.openAddEmployeeModal());
     }
 
-    const startGpsBtn = this.layout.$('#btn-start-gps');
-    if (startGpsBtn) {
-      startGpsBtn.addEventListener('click', () => this.startOwnGpsTracking());
-    }
 
-    const stopGpsBtn = this.layout.$('#btn-stop-gps');
-    if (stopGpsBtn) {
-      stopGpsBtn.addEventListener('click', () => {
-        GeolocationService.stopTracking();
-        NotificationService.success('Seguimiento GPS detenido en este dispositivo.');
-      });
-    }
 
     // Refresh GPS map button
     const refreshGpsBtn = this.layout.$('#btn-refresh-gps-map');
@@ -485,16 +472,7 @@ export class EmployeesView extends Component {
     });
   }
 
-  startOwnGpsTracking() {
-    const consent = confirm('¿Autorizas registrar tu ubicación GPS para seguimiento laboral en tiempo real? Puedes detenerlo desde este panel.');
-    if (!consent) return;
 
-    GeolocationService.startTracking({
-      status: 'DISPONIBLE',
-      onUpdate: () => NotificationService.success('Ubicación GPS actualizada.'),
-      onError: (error) => NotificationService.error(error.message || 'No se pudo obtener la ubicación.')
-    });
-  }
 
   /**
    * Refreshes the Table inside DOM using updated data

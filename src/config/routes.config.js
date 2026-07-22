@@ -71,6 +71,15 @@ const getOwnerFinanceView = () => import('../modules/owner/views/finance.view.js
 const getOwnerExpensesView = () => import('../modules/owner/views/expenses.view.js').then(m => m.ExpensesView);
 const getOwnerProjectionsView = () => import('../modules/owner/views/projections.view.js').then(m => m.ProjectionsView);
 const getOwnerBalanceView = () => import('../modules/owner/views/balance.view.js').then(m => m.BalanceView);
+const getOwnerRecurringClientsView = () => import('../modules/owner/views/recurring-clients.view.js').then(m => m.RecurringClientsView);
+const getOwnerAccountsReceivableView = () => import('../modules/owner/views/accounts-receivable.view.js').then(m => m.AccountsReceivableView);
+const getOwnerAccountsPayableView = () => import('../modules/owner/views/accounts-payable.view.js').then(m => m.AccountsPayableView);
+const getOwnerBasicServicesView = () => import('../modules/owner/views/basic-services.view.js').then(m => m.BasicServicesView);
+const getOwnerWhatsAppHubView = () => import('../modules/owner/views/whatsapp-hub.view.js').then(m => m.WhatsAppHubView);
+const getOwnerTelegramHubView = () => import('../modules/owner/views/telegram-hub.view.js').then(m => m.TelegramHubView);
+const getOwnerPaymentRemindersView = () => import('../modules/owner/views/payment-reminders.view.js').then(m => m.PaymentRemindersView);
+const getOwnerSupplierRemindersView = () => import('../modules/owner/views/supplier-reminders.view.js').then(m => m.SupplierRemindersView);
+const getOwnerCreditSystemView = () => import('../modules/owner/views/credit-system.view.js').then(m => m.CreditSystemView);
 
 // Super Admin Module
 const getSuperAdminCompaniesView = () => import('../modules/super-admin/views/companies.view.js').then(m => m.CompaniesView);
@@ -167,6 +176,15 @@ export const ROUTES = [
   { path: '/owner/expenses', view: lazyView(getOwnerExpensesView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
   { path: '/owner/projections', view: lazyView(getOwnerProjectionsView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
   { path: '/owner/balance', view: lazyView(getOwnerBalanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/recurring-clients', view: lazyView(getOwnerRecurringClientsView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/accounts-receivable', view: lazyView(getOwnerAccountsReceivableView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/accounts-payable', view: lazyView(getOwnerAccountsPayableView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/basic-services', view: lazyView(getOwnerBasicServicesView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/whatsapp', view: lazyView(getOwnerWhatsAppHubView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
+  { path: '/owner/telegram', view: lazyView(getOwnerTelegramHubView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
+  { path: '/owner/payment-reminders', view: lazyView(getOwnerPaymentRemindersView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER, USER_ROLES.CASHIER])] },
+  { path: '/owner/supplier-reminders', view: lazyView(getOwnerSupplierRemindersView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
+  { path: '/owner/credit-system', view: lazyView(getOwnerCreditSystemView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
 
   // Super Admin routes
   { path: '/super-admin/companies', view: lazyView(getSuperAdminCompaniesView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },

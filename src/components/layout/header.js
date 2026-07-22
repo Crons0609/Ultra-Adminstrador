@@ -112,7 +112,7 @@ export class Header extends Component {
           </button>
 
           <!-- GPS Location Toggle (For Employees) -->
-          ${currentUser && currentUser.role !== 'SUPER_ADMIN' ? `
+          ${currentUser && ['WAITER', 'CASHIER', 'KITCHEN'].includes(currentUser.role) ? `
             <button class="gps-header-btn ${GeolocationService.watchId ? 'active' : 'inactive'}" id="header-gps-btn" title="${GeolocationService.watchId ? 'Seguimiento GPS Activo (Clic para detener)' : 'Seguimiento GPS Inactivo (Clic para activar)'}">
               <span class="gps-dot"></span>
               <span id="header-gps-text">${GeolocationService.watchId ? 'GPS Activo' : 'Activar GPS'}</span>
@@ -277,11 +277,15 @@ export class Header extends Component {
             NotificationService.success('Seguimiento GPS detenido.');
           }
         } else {
+          let notified = false;
           GeolocationService.startTracking({
             status: 'DISPONIBLE',
             onUpdate: () => {
               updateGpsUI(true);
-              NotificationService.success('📍 Ubicación GPS activada correctamente.');
+              if (!notified) {
+                NotificationService.success('📍 Ubicación GPS activada correctamente.');
+                notified = true;
+              }
             },
             onError: (err) => {
               NotificationService.error(err.message || 'No se pudo obtener la ubicación GPS.');
