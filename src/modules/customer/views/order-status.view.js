@@ -72,6 +72,15 @@ export class OrderStatusView extends Component {
       });
       this.listeners.push(unsub);
 
+      // 2b. Escuchar la mesa para obtener el cargo y nombre del mesero/personal asignado en tiempo real
+      if (this.tableId) {
+        const tableUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/tables/${this.tableId}`, (table) => {
+          this.state.table = table;
+          this.renderStatus(root);
+        });
+        this.listeners.push(tableUnsub);
+      }
+
       // 3. Escuchar todos los pedidos de esta mesa para consumo acumulado
       const ordersUnsub = FirestoreService.listenToPathRaw(`${this.companyId}/orders`, (orders) => {
         this.state.orders = orders ? Object.entries(orders).map(([id, o]) => ({ id, ...o })) : [];
@@ -130,9 +139,11 @@ export class OrderStatusView extends Component {
     }
 
     const status = order.status || 'PENDIENTE_VERIFICACION';
+    const table = this.state.table || {};
+    const waiterRoleName = table.assignedWaiterRole || order.assignedWaiterRole || (isBar ? 'Bartender' : 'Mesero');
     
     const steps = [
-      { key: 'PENDIENTE_VERIFICACION', label: isBar ? 'Cola de Barra' : 'Verificación', desc: isBar ? 'El mesero está corroborando tus bebidas' : 'El mesero está corroborando tu orden', icon: '📥' },
+      { key: 'PENDIENTE_VERIFICACION', label: isBar ? 'Cola de Barra' : 'Verificación', desc: `El ${waiterRoleName.toLowerCase()} está corroborando tu orden`, icon: '📥' },
       { key: 'EN_COCINA', label: isBar ? 'En Barra' : 'En Cocina', desc: isBar ? 'El bartender recibió tu pedido' : 'Cocina recibió la comanda', icon: isBar ? '🍹' : '🍳' },
       { key: 'EN_PREPARACION', label: isBar ? 'Preparando' : 'En Preparación', desc: isBar ? 'El bartender está preparando tus bebidas' : 'Tu comida está siendo preparada', icon: '🔥' },
       { key: 'READY', label: '¡Listo!', desc: '¡Tu pedido está listo para servirse!', icon: '🔔' },
@@ -397,7 +408,9 @@ export class OrderStatusView extends Component {
         updatedAt: Date.now()
       });
 
-      NotificationService.success('La cuenta ha sido solicitada. El mesero se acercará pronto.');
+      const table = this.state.table || {};
+      const waiterRoleName = table.assignedWaiterRole || 'Mesero';
+      NotificationService.success(`La cuenta ha sido solicitada. El ${waiterRoleName.toLowerCase()} se acercará pronto.`);
     } catch (e) {
       console.error('[OrderStatusView] Bill request failed:', e);
       NotificationService.error('Error al solicitar la cuenta.');

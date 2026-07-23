@@ -33,28 +33,64 @@ export function roleGuard(allowedRoles) {
     if (!authenticated) return false;
 
     const state = GlobalStore.getState();
-    const userRole = state.activeRole || (state.currentUser && state.currentUser.role);
+    const currentUser = state.currentUser || {};
+    const userRole = state.activeRole || currentUser.role;
 
-    if (userRole !== 'SUPER_ADMIN') {
-      const company = state.currentCompany;
-      if (company) {
-        const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
-        const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
-        
-        if (isFaltaPago || isExpired) {
-          console.warn(`Access Denied: Company '${company.name}' is expired or inactive.`);
-          alert(`Acceso Suspendido: La suscripción de "${company.name}" ha vencido o se encuentra inactiva. Por favor, contacte al administrador.`);
+    if (userRole === 'SUPER_ADMIN' || userRole === 'OWNER') {
+      if (userRole !== 'SUPER_ADMIN') {
+        const company = state.currentCompany;
+        if (company) {
+          const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
+          const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
           
-          const { AuthService } = await import('../services/auth.service.js');
-          await AuthService.logout();
-          router.navigate('/login');
-          return false;
+          if (isFaltaPago || isExpired) {
+            console.warn(`Access Denied: Company '${company.name}' is expired or inactive.`);
+            alert(`Acceso Suspendido: La suscripción de "${company.name}" ha vencido o se encuentra inactiva. Por favor, contacte al administrador.`);
+            
+            const { AuthService } = await import('../services/auth.service.js');
+            await AuthService.logout();
+            router.navigate('/login');
+            return false;
+          }
         }
+      }
+      return true;
+    }
+
+    const company = state.currentCompany;
+    if (company) {
+      const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
+      const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
+      
+      if (isFaltaPago || isExpired) {
+        console.warn(`Access Denied: Company '${company.name}' is expired or inactive.`);
+        alert(`Acceso Suspendido: La suscripción de "${company.name}" ha vencido o se encuentra inactiva. Por favor, contacte al administrador.`);
+        
+        const { AuthService } = await import('../services/auth.service.js');
+        await AuthService.logout();
+        router.navigate('/login');
+        return false;
       }
     }
 
+    const path = route.path || '';
+    const permissions = currentUser.permissions || {};
+
+    if (path.startsWith('/waiter/')) {
+      if (permissions.tomar_pedidos === true) return true;
+    }
+    if (path.startsWith('/cashier/')) {
+      if (permissions.administrar_caja === true || permissions.cobrar_pedidos === true) return true;
+    }
+    if (path.startsWith('/inventory/')) {
+      if (permissions.gestionar_inventario === true || permissions.gestionar_productos === true) return true;
+    }
+    if (path.startsWith('/manager/')) {
+      if (permissions.ver_reportes === true || permissions.administrar_empleados === true) return true;
+    }
+
     if (!allowedRoles.includes(userRole)) {
-      console.error(`Access Denied: Role '${userRole}' not allowed on '${route.path}'.`);
+      console.error(`Access Denied: Role '${userRole}' or required permissions not allowed on '${route.path}'.`);
       
       // Redirect to correct dashboard according to the user's role
       redirectUserDashboard(userRole, router);

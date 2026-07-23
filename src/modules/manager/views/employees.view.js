@@ -92,7 +92,12 @@ export class EmployeesView extends Component {
           label: 'Acciones',
           render: (_, row) => {
             if (this.currentUser.role !== 'OWNER') return '<span class="text-xs text-secondary">Solo Dueño</span>';
-            return `<button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}">Dar de Baja</button>`;
+            return `
+              <div style="display:flex; gap:4px;">
+                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="Editar">✏️ Editar</button>
+                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="Baja">🗑️ Baja</button>
+              </div>
+            `;
           }
         }
       ],
@@ -166,7 +171,8 @@ export class EmployeesView extends Component {
           customRole: e.customRole || '',
           companyId: this.companyId,
           branchId: e.branchId || 'main',
-          active: e.active !== false
+          active: e.active !== false,
+          permissions: e.permissions || {}
         }));
 
       this.state.employees = filtered;
@@ -216,10 +222,17 @@ export class EmployeesView extends Component {
       });
     }
 
-    // Event delegation for delete buttons
+    // Event delegation for actions buttons
     const tableWrapper = this.layout.$('#employees-table-wrapper');
     if (tableWrapper) {
       tableWrapper.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.btn-edit-employee');
+        if (editBtn) {
+          const uid = editBtn.getAttribute('data-uid');
+          this.openEditEmployeeModal(uid);
+          return;
+        }
+
         const deleteBtn = e.target.closest('.btn-delete-employee');
         if (deleteBtn) {
           const uid = deleteBtn.getAttribute('data-uid');
@@ -366,7 +379,7 @@ export class EmployeesView extends Component {
     const panel = this.layout.$('#waiter-distribution-panel');
     if (!panel) return;
 
-    const waiters = this.state.employees.filter(e => e.role === 'WAITER');
+    const waiters = this.state.employees.filter(e => e.role === 'WAITER' || e.permissions?.tomar_pedidos === true);
     const tables = this.state.tables.filter(t => t.status !== 'FREE');
 
     if (waiters.length === 0) {
@@ -430,22 +443,25 @@ export class EmployeesView extends Component {
   }
 
   async openReassignModal(tableId, tableName) {
-    const waiters = this.state.employees.filter(e => e.role === 'WAITER');
+    const waiters = this.state.employees.filter(e => e.role === 'WAITER' || e.permissions?.tomar_pedidos === true);
     if (waiters.length === 0) {
-      NotificationService.error('No hay meseros registrados para reasignar.');
+      NotificationService.error('No hay personal habilitado para tomar pedidos.');
       return;
     }
 
     const modal = new Modal({
       title: `Reasignar ${tableName}`,
       bodyHTML: `
-        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:var(--space-3);">Selecciona el mesero al que deseas asignar esta mesa:</p>
+        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:var(--space-3);">Selecciona el trabajador al que deseas asignar esta mesa:</p>
         <div style="display:flex; flex-direction:column; gap:var(--space-2);">
-          ${waiters.map(w => `
-            <button class="btn btn-secondary w-full btn-pick-waiter" style="justify-content:flex-start;" data-uid="${w.uid}" data-name="${w.displayName || w.email}">
-              👤 ${w.displayName || w.email}
-            </button>
-          `).join('')}
+          ${waiters.map(w => {
+            const displayCargo = w.customRole || (w.role === 'WAITER' ? 'Mesero' : w.role);
+            return `
+              <button class="btn btn-secondary w-full btn-pick-waiter" style="justify-content:flex-start;" data-uid="${w.uid}" data-name="${w.displayName || w.email}" data-role="${displayCargo}">
+                👤 ${w.displayName || w.email} (${displayCargo})
+              </button>
+            `;
+          }).join('')}
         </div>
       `,
       footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-reassign-cancel">Cancelar</button>`,
@@ -460,8 +476,9 @@ export class EmployeesView extends Component {
       btn.addEventListener('click', async () => {
         const uid = btn.getAttribute('data-uid');
         const name = btn.getAttribute('data-name');
+        const role = btn.getAttribute('data-role');
         try {
-          await WaiterAssignmentService.reassignTable(tableId, uid, name);
+          await WaiterAssignmentService.reassignTable(tableId, uid, name, role);
           NotificationService.success(`${tableName} reasignada a ${name}.`);
           modal.close();
         } catch (e) {
@@ -486,41 +503,165 @@ export class EmployeesView extends Component {
     }
   }
 
-  /**
-   * Opens the dynamic Modal form to register an employee
-   */
+  getSYSTEM_PERMISSIONS() {
+    return [
+      // Restaurante / Alimentos
+      { key: 'tomar_pedidos', label: '🍽️ Tomar pedidos' },
+      { key: 'editar_pedidos', label: '📝 Editar pedidos' },
+      { key: 'cancelar_pedidos', label: '❌ Cancelar pedidos' },
+      { key: 'cobrar_pedidos', label: '💵 Cobrar pedidos' },
+      { key: 'administrar_caja', label: '🏦 Administrar caja' },
+      { key: 'administrar_mesas', label: '📍 Administrar mesas' },
+      { key: 'gestionar_reservas', label: '📅 Gestionar reservas' },
+
+      // Servicios Múltiples / Citas / Rentas
+      { key: 'gestionar_servicios', label: '🛠️ Gestionar servicios / tareas' },
+      { key: 'gestionar_citas', label: '🗓️ Gestionar citas y agenda' },
+      { key: 'gestionar_alquileres', label: '🔑 Gestionar alquileres y rentas' },
+      { key: 'gestionar_vehiculos', label: '🚗 Gestionar vehículos / delivery' },
+      { key: 'gestionar_herramientas', label: '🔧 Gestionar herramientas y equipos' },
+      { key: 'gestionar_clientes', label: '👥 Gestionar clientes' },
+
+      // Operaciones Generales
+      { key: 'ver_reportes', label: '📊 Ver reportes' },
+      { key: 'gestionar_productos', label: '📦 Gestionar productos y catálogo' },
+      { key: 'gestionar_categorias', label: '📁 Gestionar categorías' },
+      { key: 'gestionar_inventario', label: '🗄️ Gestionar inventario / stock' },
+      { key: 'administrar_empleados', label: '👥 Administrar empleados' },
+      { key: 'ver_estadisticas', label: '📈 Ver estadísticas' },
+      { key: 'configurar_impresoras', label: '🖨️ Configurar impresoras' },
+      { key: 'recibir_notificaciones', label: '🔔 Recibir notificaciones' },
+      { key: 'administrar_promociones', label: '🏷️ Administrar promociones' }
+    ];
+  }
+
+  renderPermissionsCheckboxes(existingPermissions = {}) {
+    return this.getSYSTEM_PERMISSIONS().map(p => {
+      const isChecked = existingPermissions[p.key] === true ? 'checked' : '';
+      return `
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.75rem; background:rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px; cursor:pointer; user-select:none;">
+          <input type="checkbox" class="permission-chk-input" data-permission="${p.key}" ${isChecked} style="cursor:pointer;" />
+          <span style="color:var(--color-text-secondary);">${p.label}</span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  setupModalCargoListeners(modalOverlay, selectId, customContainerId, customInputId) {
+    const select = modalOverlay.querySelector(`#${selectId}`);
+    const customContainer = modalOverlay.querySelector(`#${customContainerId}`);
+    const customInput = modalOverlay.querySelector(`#${customInputId}`);
+
+    const updateUI = (isUserChange = false) => {
+      const val = select.value;
+      if (val === 'CUSTOM') {
+        customContainer.style.display = 'block';
+        customInput.required = true;
+      } else {
+        customContainer.style.display = 'none';
+        customInput.required = false;
+        if (isUserChange) customInput.value = '';
+      }
+      if (isUserChange) {
+        this.applyPermissionPresets(val, modalOverlay);
+      }
+    };
+
+    select.addEventListener('change', () => updateUI(true));
+    updateUI(false);
+  }
+
+  applyPermissionPresets(roleValue, modalEl) {
+    const checkboxes = modalEl.querySelectorAll('.permission-chk-input');
+    const presets = {
+      MANAGER: {
+        tomar_pedidos: true, editar_pedidos: true, cancelar_pedidos: true, cobrar_pedidos: true,
+        administrar_caja: true, ver_reportes: true, gestionar_productos: true, gestionar_categorias: true,
+        gestionar_inventario: true, administrar_empleados: true, administrar_mesas: true, gestionar_reservas: true,
+        ver_estadisticas: true, configurar_impresoras: true, recibir_notificaciones: true, administrar_promociones: true,
+        gestionar_clientes: true
+      },
+      WAITER: {
+        tomar_pedidos: true, editar_pedidos: true, recibir_notificaciones: true
+      },
+      CASHIER: {
+        cobrar_pedidos: true, administrar_caja: true, recibir_notificaciones: true
+      },
+      KITCHEN: {
+        recibir_notificaciones: true
+      },
+      CUSTOM: {}
+    };
+
+    const selectedPreset = presets[roleValue] || {};
+    checkboxes.forEach(chk => {
+      const key = chk.getAttribute('data-permission');
+      chk.checked = selectedPreset[key] === true;
+    });
+  }
+
+  extractModalPermissions(modalEl) {
+    const permissions = {};
+    modalEl.querySelectorAll('.permission-chk-input').forEach(chk => {
+      const key = chk.getAttribute('data-permission');
+      permissions[key] = chk.checked;
+    });
+    return permissions;
+  }
+
   openAddEmployeeModal() {
+    let modalOverlay = document.getElementById('settings-worker-modal-manager');
+    if (modalOverlay) modalOverlay.remove();
+
+    const rolesSelectOptions = `
+      <option value="WAITER">Mesero / Salonero</option>
+      <option value="KITCHEN">Cocinero / Chef</option>
+      <option value="CASHIER">Cajero</option>
+      <option value="MANAGER">Gerente / Administrador</option>
+      <option value="CUSTOM">Cargo Personalizado...</option>
+    `;
+
     const formHTML = `
-      <form id="add-employee-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
+      <form id="add-employee-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
         <div class="form-group">
-          <label class="form-label" for="emp-name">Nombre Completo</label>
-          <input type="text" id="emp-name" class="input input-md" placeholder="Ej. Juan Gómez" required />
+          <label class="form-label" for="emp-name">Nombre Completo <span class="form-label-required"></span></label>
+          <input type="text" id="emp-name" class="input input-md" placeholder="Ej. Carlos Torres" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="emp-role">Rol / Permiso</label>
+            <label class="form-label" for="emp-role">Cargo / Rol <span class="form-label-required"></span></label>
             <select id="emp-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="WAITER">Mesero (Toma de pedidos)</option>
-              <option value="KITCHEN">Cocinero (Visualización KDS)</option>
-              <option value="CASHIER">Cajero (Punto de Venta / POS)</option>
-              <option value="MANAGER">Gerente (Métricas y Personal)</option>
+              ${rolesSelectOptions}
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="emp-custom-role">Puesto Personalizado (opcional)</label>
-            <input type="text" id="emp-custom-role" class="input input-md" placeholder="Ej. Barman, Hostess, Cajero Nocturno" />
+          <div class="form-group" id="emp-custom-container" style="display:none;">
+            <label class="form-label" for="emp-custom-role">Especificar Cargo <span class="form-label-required"></span></label>
+            <input type="text" id="emp-custom-role" class="input input-md" placeholder="Ej. Bartender, Recepcionista" />
           </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="emp-phone">Teléfono</label>
+          <input type="text" id="emp-phone" class="input input-md" placeholder="Ej. +505 8888-8888" />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="emp-email">Correo Electrónico</label>
-            <input type="email" id="emp-email" class="input input-md" placeholder="empleado@empresa.com" required />
+            <label class="form-label" for="emp-email">Correo Electrónico <span class="form-label-required"></span></label>
+            <input type="email" id="emp-email" class="input input-md" placeholder="empleado@correo.com" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="emp-password">Contraseña inicial</label>
-            <input type="password" id="emp-password" class="input input-md" placeholder="Mín. 6 caracteres" minlength="6" required />
+            <label class="form-label" for="emp-password">Contraseña Inicial <span class="form-label-required"></span></label>
+            <input type="password" id="emp-password" class="input input-md" placeholder="Min. 6 caracteres" minlength="6" required />
+          </div>
+        </div>
+
+        <!-- Permisos checklist -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 4px;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--color-accent);">🔑 Permisos del Sistema</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
+            ${this.renderPermissionsCheckboxes()}
           </div>
         </div>
       </form>
@@ -532,70 +673,226 @@ export class EmployeesView extends Component {
     `;
 
     this.modalInstance = new Modal({
-      title: 'Agregar Trabajador a la Sucursal',
+      title: '👥 Registrar Nuevo Trabajador',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
     });
 
-    document.body.appendChild(this.modalInstance.mount());
+    const el = this.modalInstance.mount();
+    el.setAttribute('id', 'settings-worker-modal-manager');
+    document.body.appendChild(el);
 
-    const cancelBtn = this.modalInstance.$('#modal-cancel-btn');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => this.modalInstance.close());
-    }
+    this.setupModalCargoListeners(el, 'emp-role', 'emp-custom-container', 'emp-custom-role');
 
-    const submitBtn = this.modalInstance.$('#modal-submit-btn');
-    if (submitBtn) {
-      submitBtn.addEventListener('click', () => this.submitNewEmployee());
-    }
+    el.querySelector('#modal-cancel-btn')?.addEventListener('click', () => this.modalInstance.close());
+    el.querySelector('#modal-submit-btn')?.addEventListener('click', () => this.submitNewEmployee(el));
   }
 
-  /**
-   * Processes input values and saves them in Firebase Auth + Firestore
-   */
-  async submitNewEmployee() {
-    const form = this.modalInstance.$('#add-employee-form');
+  async submitNewEmployee(modalEl) {
+    const form = modalEl.querySelector('#add-employee-form');
     if (!form || !form.reportValidity()) return;
 
-    const submitBtn = this.modalInstance.$('#modal-submit-btn');
+    const submitBtn = modalEl.querySelector('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Creando cuenta...';
     }
 
-    const name = this.modalInstance.$('#emp-name').value.trim();
-    const role = this.modalInstance.$('#emp-role').value;
-    const customRole = this.modalInstance.$('#emp-custom-role').value.trim();
-    const email = this.modalInstance.$('#emp-email').value.trim();
-    const password = this.modalInstance.$('#emp-password').value;
+    const displayName = modalEl.querySelector('#emp-name').value.trim();
+    const roleSelectVal = modalEl.querySelector('#emp-role').value;
+    const customRoleInputVal = modalEl.querySelector('#emp-custom-role').value.trim();
+    const phone = modalEl.querySelector('#emp-phone').value.trim();
+    const email = modalEl.querySelector('#emp-email').value.trim();
+    const password = modalEl.querySelector('#emp-password').value;
+
+    const permissions = this.extractModalPermissions(modalEl);
+
+    const role = roleSelectVal === 'CUSTOM' ? 'WAITER' : roleSelectVal;
+    const customRole = roleSelectVal === 'CUSTOM' ? customRoleInputVal : '';
 
     try {
       console.log('[EmployeesView] Creando cuenta del empleado en la nube...');
-      await AuthService.createUser(email, password, {
-        displayName: name,
-        role: role,
-        customRole: customRole,
+      const uid = await AuthService.createUser(email, password, {
+        displayName,
+        role,
+        customRole,
         companyId: this.companyId,
-        branchId: this.branchId
+        branchId: this.branchId,
+        permissions
       });
 
-      NotificationService.success(`Trabajador "${name}" agregado exitosamente.`);
-      
-      // Close modal
-      this.modalInstance.close();
+      // Save phone details to user profile in RTDB if defined
+      const { db } = await import('../../../config/firebase.config.js');
+      const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+      if (phone && db) {
+        await update(ref(db, `users/${uid}`), { phone });
+        await update(ref(db, `${this.companyId}/employees/${uid}`), { phone });
+      }
 
-      // Reload data
+      NotificationService.success(`Trabajador "${displayName}" agregado exitosamente.`);
+      this.modalInstance.close();
       this.loadEmployees();
     } catch (e) {
       console.error('[EmployeesView] Error al crear empleado:', e);
-      alert(`Error al registrar el empleado en la nube: ${e.message || e}`);
-      
+      alert(`Error al registrar el empleado: ${e.message || e}`);
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Guardar Empleado';
       }
     }
+  }
+
+  openEditEmployeeModal(uid) {
+    const emp = this.state.employees.find(e => e.uid === uid);
+    if (!emp) return;
+
+    let modalOverlay = document.getElementById('settings-worker-edit-modal-manager');
+    if (modalOverlay) modalOverlay.remove();
+
+    const isCustom = emp.customRole ? true : false;
+    const rolesSelectOptions = `
+      <option value="WAITER" ${(!isCustom && emp.role === 'WAITER') ? 'selected' : ''}>Mesero / Salonero</option>
+      <option value="KITCHEN" ${(!isCustom && emp.role === 'KITCHEN') ? 'selected' : ''}>Cocinero / Chef</option>
+      <option value="CASHIER" ${(!isCustom && emp.role === 'CASHIER') ? 'selected' : ''}>Cajero</option>
+      <option value="MANAGER" ${(!isCustom && emp.role === 'MANAGER') ? 'selected' : ''}>Gerente / Administrador</option>
+      <option value="CUSTOM" ${isCustom ? 'selected' : ''}>Cargo Personalizado...</option>
+    `;
+
+    const formHTML = `
+      <form id="edit-employee-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
+        <div class="form-group">
+          <label class="form-label" for="edit-emp-name">Nombre Completo <span class="form-label-required"></span></label>
+          <input type="text" id="edit-emp-name" class="input input-md" value="${this.escapeHTML(emp.displayName)}" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+          <div class="form-group">
+            <label class="form-label" for="edit-emp-role">Cargo / Rol</label>
+            <select id="edit-emp-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+              ${rolesSelectOptions}
+            </select>
+          </div>
+          <div class="form-group" id="edit-emp-custom-container" style="display:${isCustom ? 'block' : 'none'};">
+            <label class="form-label" for="edit-emp-custom-role">Especificar Cargo <span class="form-label-required"></span></label>
+            <input type="text" id="edit-emp-custom-role" class="input input-md" value="${isCustom ? this.escapeHTML(emp.customRole) : ''}" placeholder="Ej. Bartender, Recepcionista" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-emp-phone">Teléfono</label>
+          <input type="text" id="edit-emp-phone" class="input input-md" value="${this.escapeHTML(emp.phone && emp.phone !== '—' ? emp.phone : '')}" placeholder="Ej. +505 8888-8888" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-emp-email">Correo Electrónico</label>
+          <input type="email" id="edit-emp-email" class="input input-md" value="${this.escapeHTML(emp.email)}" required />
+        </div>
+
+        <div class="form-group">
+          <label class="switch-container">
+            <input type="checkbox" id="edit-emp-active" class="switch-input" ${emp.active ? 'checked' : ''} />
+            <div>
+              <strong style="font-size:0.85rem; display:block;">Estado de la cuenta</strong>
+              <span class="text-xs text-secondary">Activar o suspender el acceso de este trabajador.</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Permisos checklist -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 4px;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--color-accent);">🔑 Permisos del Sistema</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
+            ${this.renderPermissionsCheckboxes(emp.permissions)}
+          </div>
+        </div>
+      </form>
+    `;
+
+    const footerHTML = `
+      <button class="btn btn-secondary btn-sm" id="edit-modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="edit-modal-submit-btn">Guardar Cambios</button>
+    `;
+
+    const editModal = new Modal({
+      title: '✏️ Editar Información de Empleado',
+      bodyHTML: formHTML,
+      footerHTML: footerHTML,
+      size: 'md'
+    });
+
+    const el = editModal.mount();
+    el.setAttribute('id', 'settings-worker-edit-modal-manager');
+    document.body.appendChild(el);
+
+    this.setupModalCargoListeners(el, 'edit-emp-role', 'edit-emp-custom-container', 'edit-emp-custom-role');
+
+    el.querySelector('#edit-modal-cancel-btn')?.addEventListener('click', () => editModal.close());
+    el.querySelector('#edit-modal-submit-btn')?.addEventListener('click', async () => {
+      const form = el.querySelector('#edit-employee-form');
+      if (!form || !form.reportValidity()) return;
+
+      const submitBtn = el.querySelector('#edit-modal-submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando cambios...';
+
+      const displayName = el.querySelector('#edit-emp-name').value.trim();
+      const roleSelectVal = el.querySelector('#edit-emp-role').value;
+      const customRoleInputVal = el.querySelector('#edit-emp-custom-role').value.trim();
+      const phone = el.querySelector('#edit-emp-phone').value.trim();
+      const email = el.querySelector('#edit-emp-email').value.trim();
+      const active = el.querySelector('#edit-emp-active').checked;
+
+      const permissions = this.extractModalPermissions(el);
+
+      const role = roleSelectVal === 'CUSTOM' ? 'WAITER' : roleSelectVal;
+      const customRole = roleSelectVal === 'CUSTOM' ? customRoleInputVal : '';
+
+      try {
+        const timestamp = Date.now();
+        const updates = {};
+
+        updates[`users/${uid}/displayName`] = displayName;
+        updates[`users/${uid}/email`] = email;
+        updates[`users/${uid}/role`] = role;
+        updates[`users/${uid}/customRole`] = customRole;
+        updates[`users/${uid}/phone`] = phone;
+        updates[`users/${uid}/status`] = active ? 'ACTIVE' : 'DISABLED';
+        updates[`users/${uid}/disabled`] = !active;
+        updates[`users/${uid}/permissions`] = permissions;
+        updates[`users/${uid}/updatedAt`] = timestamp;
+
+        updates[`${this.companyId}/employees/${uid}/displayName`] = displayName;
+        updates[`${this.companyId}/employees/${uid}/email`] = email;
+        updates[`${this.companyId}/employees/${uid}/role`] = role;
+        updates[`${this.companyId}/employees/${uid}/customRole`] = customRole;
+        updates[`${this.companyId}/employees/${uid}/phone`] = phone;
+        updates[`${this.companyId}/employees/${uid}/active`] = active;
+        updates[`${this.companyId}/employees/${uid}/permissions`] = permissions;
+        updates[`${this.companyId}/employees/${uid}/updatedAt`] = timestamp;
+
+        const { db } = await import('../../../config/firebase.config.js');
+        const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+        if (db) {
+          await update(ref(db), updates);
+        }
+
+        await FirestoreService.logAudit({
+          action: 'OWNER_EDIT_EMPLOYEE',
+          companyId: this.companyId,
+          description: `El gerente/dueño editó el perfil del empleado ${displayName} (${email}). Rol: ${role}, Cargo: ${customRole || 'Predefinido'}, Activo: ${active}.`
+        });
+
+        NotificationService.success(`Datos de "${displayName}" actualizados.`);
+        editModal.close();
+        this.loadEmployees();
+      } catch (err) {
+        console.error(err);
+        alert(`Error al guardar cambios: ${err.message || err}`);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar Cambios';
+      }
+    });
   }
 
   confirmDeleteEmployee(uid, name) {
@@ -613,6 +910,14 @@ export class EmployeesView extends Component {
       console.error('[EmployeesView] Error deleting employee:', e);
       alert(`Error al dar de baja al empleado: ${e.message || e}`);
     }
+  }
+
+  escapeHTML(str = '') {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   unmount() {

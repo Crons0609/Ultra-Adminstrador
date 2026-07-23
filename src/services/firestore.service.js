@@ -581,7 +581,8 @@ export class FirestoreService {
     snapshot.forEach(snap => {
       if (snap.key === '.init') return;
       const val = snap.val();
-      if (val.role !== 'WAITER') return;
+      const canTakeOrders = val.permissions?.tomar_pedidos === true || (val.role === 'WAITER' && (!val.permissions || val.permissions.tomar_pedidos !== false));
+      if (!canTakeOrders) return;
       // Include if explicitly active, or if last login was within 12h
       const lastLogin = val.lastLoginAt || 0;
       const isActive = val.isActive === true || lastLogin > cutoff;

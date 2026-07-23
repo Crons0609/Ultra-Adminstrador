@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file waiter-assignment.service.js
  * @description Automatic Round-Robin waiter assignment logic.
  *
@@ -83,9 +83,12 @@ export class WaiterAssignmentService {
     const waiter = await this.getNextWaiter();
     if (!waiter) return null;
 
+    const waiterRole = waiter.customRole || (waiter.role === 'WAITER' ? 'Mesero' : (waiter.role === 'MANAGER' ? 'Gerente' : (waiter.role === 'CASHIER' ? 'Cajero' : waiter.role))) || 'Mesero';
+
     const updates = {
       assignedWaiterId: waiter.uid,
       assignedWaiterName: waiter.displayName || waiter.email || 'Mesero',
+      assignedWaiterRole: waiterRole
     };
 
     if (!tableData.occupiedSince) {
@@ -93,7 +96,7 @@ export class WaiterAssignmentService {
     }
 
     await FirestoreService.update('tables', tableId, updates);
-    console.log(`[WaiterAssignment] Table ${tableId} assigned to: ${waiter.displayName}`);
+    console.log(`[WaiterAssignment] Table ${tableId} assigned to: ${waiter.displayName} (${waiterRole})`);
     return waiter;
   }
 
@@ -103,14 +106,16 @@ export class WaiterAssignmentService {
    * @param {string} tableId
    * @param {string} waiterId
    * @param {string} waiterName
+   * @param {string} waiterRole
    * @returns {Promise<void>}
    */
-  static async reassignTable(tableId, waiterId, waiterName) {
+  static async reassignTable(tableId, waiterId, waiterName, waiterRole) {
     await FirestoreService.update('tables', tableId, {
       assignedWaiterId: waiterId,
       assignedWaiterName: waiterName,
+      assignedWaiterRole: waiterRole || 'Mesero'
     });
-    console.log(`[WaiterAssignment] Table ${tableId} manually reassigned to ${waiterName}`);
+    console.log(`[WaiterAssignment] Table ${tableId} manually reassigned to ${waiterName} (${waiterRole || 'Mesero'})`);
   }
 
   /**

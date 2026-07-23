@@ -124,7 +124,8 @@ export class AuthService {
         role: userProfile.role,
         customRole: userProfile.customRole || '',
         companyId: userProfile.companyId,
-        branchId: userProfile.branchId || 'main'
+        branchId: userProfile.branchId || 'main',
+        permissions: userProfile.permissions || {}
       };
 
       GlobalStore.set({
@@ -339,6 +340,7 @@ export class AuthService {
         customRole: profileData.customRole || '',
         companyId: profileData.companyId || 'global',
         branchId: profileData.branchId || 'main',
+        permissions: profileData.permissions || {},
         createdAt: Date.now(),
         createdAtLocal: TimeService.timestamp()
       };
@@ -395,7 +397,8 @@ export class AuthService {
             email: cleanEmail,
             role: profileData.role,
             customRole: profileData.customRole || '',
-            branchId: profileData.branchId || 'main'
+            branchId: profileData.branchId || 'main',
+            permissions: profileData.permissions || {}
           });
           console.log('[AuthService] ✅ Employee dual-write complete for company:', companyId);
 
@@ -579,7 +582,8 @@ export class AuthService {
             role: userProfile.role,
             customRole: userProfile.customRole || '',
             companyId: userProfile.companyId,
-            branchId: userProfile.branchId || 'main'
+            branchId: userProfile.branchId || 'main',
+            permissions: userProfile.permissions || {}
           };
 
           GlobalStore.set({
@@ -923,7 +927,8 @@ export class AuthService {
           photoURL: val.photoURL || val.foto || '',
           createdAt: val.createdAt || val.createdAtLocal || null,
           lastLoginAt: val.lastLoginAt || val.lastLogin || null,
-          storedPassword: val.storedPassword || ''
+          storedPassword: val.storedPassword || '',
+          permissions: val.permissions || {}
         });
       });
     }

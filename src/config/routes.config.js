@@ -80,6 +80,7 @@ const getOwnerTelegramHubView = () => import('../modules/owner/views/telegram-hu
 const getOwnerPaymentRemindersView = () => import('../modules/owner/views/payment-reminders.view.js').then(m => m.PaymentRemindersView);
 const getOwnerSupplierRemindersView = () => import('../modules/owner/views/supplier-reminders.view.js').then(m => m.SupplierRemindersView);
 const getOwnerCreditSystemView = () => import('../modules/owner/views/credit-system.view.js').then(m => m.CreditSystemView);
+const getOwnerSettingsView = () => import('../modules/owner/views/settings.view.js').then(m => m.SettingsView);
 
 // Super Admin Module
 const getSuperAdminCompaniesView = () => import('../modules/super-admin/views/companies.view.js').then(m => m.CompaniesView);
@@ -186,6 +187,7 @@ export const ROUTES = [
   { path: '/owner/payment-reminders', view: lazyView(getOwnerPaymentRemindersView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER, USER_ROLES.CASHIER])] },
   { path: '/owner/supplier-reminders', view: lazyView(getOwnerSupplierRemindersView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
   { path: '/owner/credit-system', view: lazyView(getOwnerCreditSystemView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
+  { path: '/owner/settings', view: lazyView(getOwnerSettingsView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
 
   // Super Admin routes
   { path: '/super-admin/companies', view: lazyView(getSuperAdminCompaniesView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
