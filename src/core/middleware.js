@@ -4,6 +4,7 @@
  */
 
 import { GlobalStore } from './state.js';
+import { getBusinessCategory, getModuleGuards } from '../config/business-types.config.js';
 
 /**
  * Authentication Middleware: Verify user is logged in.
@@ -40,43 +41,37 @@ export function roleGuard(allowedRoles) {
 
     // Business type category guards validation
     if (company && userRole !== 'SUPER_ADMIN') {
-      try {
-        const { getBusinessCategory, getModuleGuards } = await import('../config/business-types.config.js');
-        const category = getBusinessCategory(company.businessType || '');
-        const guards = getModuleGuards(company.businessType || '');
-        const isRestaurant = (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA');
+      const category = getBusinessCategory(company.businessType || '');
+      const guards = getModuleGuards(company.businessType || '');
+      const isRestaurant = (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA');
 
-        if (!isRestaurant && ['/kitchen/kds', '/kitchen/stats', '/waiter/tables', '/waiter/orders'].includes(path)) {
-          console.warn(`Access Denied: Route '${path}' is restricted to Gastronomy businesses.`);
-          redirectUserDashboard(userRole, router);
-          return false;
-        }
+      if (!isRestaurant && ['/kitchen/kds', '/kitchen/stats', '/waiter/tables', '/waiter/orders'].includes(path)) {
+        console.warn(`Access Denied: Route '${path}' is restricted to Gastronomy businesses.`);
+        redirectUserDashboard(userRole, router);
+        return false;
+      }
 
-        if ((path === '/waiter/client-assignments' || path === '/owner/client-assignments') && !guards.enableServiceRequests) {
-          console.warn(`Access Denied: Client assignments are disabled for this business type.`);
-          redirectUserDashboard(userRole, router);
-          return false;
-        }
+      if ((path === '/waiter/client-assignments' || path === '/owner/client-assignments') && !guards.enableServiceRequests) {
+        console.warn(`Access Denied: Client assignments are disabled for this business type.`);
+        redirectUserDashboard(userRole, router);
+        return false;
+      }
 
-        if ((path === '/manager/vehicles' || path === '/manager/rentals') && !guards.enableRentals && !guards.enableVehiclesCatalog) {
-          console.warn(`Access Denied: Rentals are disabled for this business type.`);
-          redirectUserDashboard(userRole, router);
-          return false;
-        }
+      if ((path === '/manager/vehicles' || path === '/manager/rentals') && !guards.enableRentals && !guards.enableVehiclesCatalog) {
+        console.warn(`Access Denied: Rentals are disabled for this business type.`);
+        redirectUserDashboard(userRole, router);
+        return false;
+      }
 
-        if (path === '/manager/appointments' && !guards.enableAppointments) {
-          console.warn(`Access Denied: Appointments are disabled for this business type.`);
-          redirectUserDashboard(userRole, router);
-          return false;
-        }
-      } catch (err) {
-        console.warn('[roleGuard] Guards validation failed:', err);
+      if (path === '/manager/appointments' && !guards.enableAppointments) {
+        console.warn(`Access Denied: Appointments are disabled for this business type.`);
+        redirectUserDashboard(userRole, router);
+        return false;
       }
     }
 
     if (userRole === 'SUPER_ADMIN' || userRole === 'OWNER') {
       if (userRole !== 'SUPER_ADMIN') {
-        const company = state.currentCompany;
         if (company) {
           const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
           const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
@@ -95,7 +90,6 @@ export function roleGuard(allowedRoles) {
       return true;
     }
 
-    const company = state.currentCompany;
     if (company) {
       const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
       const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
@@ -111,7 +105,6 @@ export function roleGuard(allowedRoles) {
       }
     }
 
-    const path = route.path || '';
     const permissions = currentUser.permissions || {};
 
     if (path.startsWith('/waiter/')) {
@@ -159,7 +152,6 @@ export function redirectUserDashboard(role, router) {
       break;
     case 'WAITER':
       try {
-        const { getBusinessCategory } = await import('../config/business-types.config.js');
         const companyObj = GlobalStore.getState().currentCompany;
         const categoryObj = getBusinessCategory(companyObj?.businessType || '');
         if (categoryObj === 'GASTRONOMIA' || categoryObj === 'BAR_DISCOTECA') {

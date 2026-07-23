@@ -1107,4 +1107,40 @@ export class FirestoreService {
       return 0;
     });
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INVOICE OCR OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Save a newly imported OCR purchase invoice.
+   * @param {Object} invoiceData 
+   * @returns {Promise<string>} Invoice ID
+   */
+  static async saveInvoiceImport(invoiceData) {
+    const customId = invoiceData.id || `INV-${Date.now()}`;
+    return await this.create('invoices', invoiceData, customId);
+  }
+
+  /**
+   * Retrieve invoice import history for current tenant.
+   * @returns {Promise<Array>}
+   */
+  static async getInvoicesHistory() {
+    return await this.query('invoices');
+  }
+
+  /**
+   * Update invoice import status.
+   * @param {string} invoiceId 
+   * @param {string} status 
+   * @param {Object} [details] 
+   */
+  static async updateInvoiceStatus(invoiceId, status, details = {}) {
+    return await this.update('invoices', invoiceId, {
+      status,
+      ...details,
+      updatedAtLocal: TimeService.timestamp()
+    });
+  }
 }

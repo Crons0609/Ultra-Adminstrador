@@ -45,6 +45,7 @@ const getInventoryIngredientsView = () => import('../modules/inventory/views/ing
 const getSuppliersView = () => import('../modules/inventory/views/suppliers.view.js').then(m => m.SuppliersView);
 const getPurchasesView = () => import('../modules/inventory/views/purchases.view.js').then(m => m.PurchasesView);
 const getInventoryAlertsView = () => import('../modules/inventory/views/alerts.view.js').then(m => m.AlertsView);
+const getInvoiceOCRView = () => import('../modules/inventory/views/invoice-ocr.view.js').then(m => m.InvoiceOCRView);
 
 // Manager Module
 const getManagerDashboardView = () => import('../modules/manager/views/dashboard.view.js').then(m => m.ManagerDashboardView);
@@ -161,6 +162,8 @@ export const ROUTES = [
   { path: '/inventory/suppliers', view: lazyView(getSuppliersView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/inventory/purchases', view: lazyView(getPurchasesView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
   { path: '/inventory/alerts', view: lazyView(getInventoryAlertsView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/inventory/invoice-ocr', view: lazyView(getInvoiceOCRView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
+  { path: '/owner/invoice-ocr', view: lazyView(getInvoiceOCRView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Manager routes
   { path: '/manager/dashboard', view: lazyView(getManagerDashboardView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
