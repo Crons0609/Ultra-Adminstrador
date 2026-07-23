@@ -19,11 +19,13 @@ export class ClientAssignmentsView extends Component {
     this.branchId = this.currentUser.branchId || 'main';
 
     this.state = {
-      activeTab: 'assign', // 'assign' | 'register' | 'history' | 'authorizations'
+      activeTab: 'assign', // 'assign' | 'register' | 'history' | 'authorizations' | 'pending-clients'
       employees: [],
       clients: [],
       assignments: [],
       authRequests: [],
+      pendingClients: [], // Requests sent by employees waiting for approval
+      activePendingClientId: null, // Selected request to review
       filters: {
         searchQuery: '',
         status: 'ALL',
@@ -91,6 +93,31 @@ export class ClientAssignmentsView extends Component {
             transition: max-height 0.3s ease-out;
             overflow: hidden;
           }
+          .split-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-5);
+          }
+          @media (min-width: 992px) {
+            .split-container { grid-template-columns: 1fr 2fr; }
+          }
+          .pending-list-item {
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-border);
+            background: var(--color-bg-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            margin-bottom: 8px;
+          }
+          .pending-list-item:hover {
+            border-color: var(--color-accent);
+            background: rgba(255,255,255,0.02);
+          }
+          .pending-list-item.active {
+            border-color: var(--color-accent);
+            background: rgba(139,92,246,0.05);
+          }
         </style>
         <div id="assign-dashboard-container"></div>
       `
@@ -98,7 +125,9 @@ export class ClientAssignmentsView extends Component {
 
     this.dbUnsubscribe = null;
     this.authRequestsUnsubscribe = null;
+    this.pendingClientsUnsubscribe = null;
     this.sweeperInterval = null;
+    this.maps = {};
   }
 
   async mount() {
@@ -114,11 +143,9 @@ export class ClientAssignmentsView extends Component {
     this.renderActiveTabContent();
     this.setupTabListeners(element);
 
-    // Initial load from Realtime Database
     await this.loadData();
     this.subscribeToRealtimeData();
 
-    // Start Expiration Sweeper
     this.startExpirationSweeper();
 
     return element;
@@ -130,10 +157,7 @@ export class ClientAssignmentsView extends Component {
         <div style="font-size: 3.5rem; margin-bottom: var(--space-4);">⚠️</div>
         <h3 class="text-xl font-bold mb-2" style="color: var(--color-error);">Funcionalidad Exclusiva de Servicios</h3>
         <p class="text-secondary mb-4">
-          La sección de <strong>Asignación de Clientes y Autorizaciones</strong> está diseñada únicamente para negocios del rubro <strong>Servicios Varios</strong>, Mantenimiento, Talleres, Alquileres o Belleza.
-        </p>
-        <p class="text-xs text-secondary">
-          Tu negocio está registrado actualmente bajo el rubro de: <span class="badge" style="background: var(--color-bg-tertiary); color: var(--color-text-primary);">${this.currentCompany.businessType || 'General'}</span>.
+          La sección de <strong>Asignación de Clientes y Autorizaciones</strong> está diseñada únicamente para negocios del rubro <strong>Servicios Varios</strong>.
         </p>
       </div>
     `;
@@ -146,6 +170,7 @@ export class ClientAssignmentsView extends Component {
         <button class="assign-tab-btn ${this.state.activeTab === 'register' ? 'active' : ''}" data-tab="register">👥 Registrar Cliente</button>
         <button class="assign-tab-btn ${this.state.activeTab === 'history' ? 'active' : ''}" data-tab="history">⏳ Historial de Asignaciones</button>
         <button class="assign-tab-btn ${this.state.activeTab === 'authorizations' ? 'active' : ''}" data-tab="authorizations">🔑 Autorizaciones</button>
+        <button class="assign-tab-btn ${this.state.activeTab === 'pending-clients' ? 'active' : ''}" data-tab="pending-clients">📂 Clientes Pendientes</button>
       </div>
       <div id="assign-tab-content"></div>
     `;
@@ -180,11 +205,388 @@ export class ClientAssignmentsView extends Component {
     } else if (this.state.activeTab === 'authorizations') {
       tabContent.innerHTML = this.getAuthorizationsHTML();
       this.bindAuthorizationsEvents(tabContent);
+    } else if (this.state.activeTab === 'pending-clients') {
+      tabContent.innerHTML = this.getPendingClientsHTML();
+      this.bindPendingClientsEvents(tabContent);
     }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // HTML BUILDERS & EVENT BINDINGS
+  // CLIENT REGISTRATIONS SUBMITTED BY EMPLOYEES (OWNER APPROVAL PANEL)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  getPendingClientsHTML() {
+    const pendingRequests = this.state.pendingClients.filter(c => c.status === 'Pendiente');
+    
+    // Left column list
+    const listItemsHTML = pendingRequests.map(req => {
+      const activeClass = this.state.activePendingClientId === req.id ? 'active' : '';
+      return `
+        <div class="pending-list-item ${activeClass}" data-req-id="${req.id}">
+          <div style="font-weight:700; color:var(--color-text-primary); font-size:0.85rem;">${req.displayName}</div>
+          <div style="font-size:0.7rem; color:var(--color-accent); margin-top:2px;">Registró: ${req.employeeName}</div>
+          <div style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px;">Fecha: ${TimeService.formatDate(req.createdAt, true)}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Right column details workspace
+    let detailsHTML = '';
+    const activeReq = pendingRequests.find(r => r.id === this.state.activePendingClientId);
+
+    if (activeReq) {
+      detailsHTML = `
+        <div class="card p-6 animate-fade-in" style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px; margin-bottom:8px;">
+            <div>
+              <h4 class="font-bold text-md" style="color:var(--color-text-primary);">Revisar Cliente: ${activeReq.displayName}</h4>
+              <span style="font-size:0.75rem; color:var(--color-text-secondary);">Enviado por <strong>${activeReq.employeeName}</strong> el ${TimeService.formatDate(activeReq.createdAt, true)}</span>
+            </div>
+            <span class="badge" style="background:rgba(234,179,8,0.1); color:var(--color-warning); font-size:0.7rem;">Pendiente</span>
+          </div>
+
+          <form id="review-client-form" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="form-section-title">👤 Datos de Contacto y Personales</div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="rev-name">Nombre Completo</label>
+                <input type="text" id="rev-name" class="input input-md" value="${activeReq.displayName}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="rev-company">Empresa / Negocio</label>
+                <input type="text" id="rev-company" class="input input-md" value="${activeReq.companyName || ''}" />
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="rev-phone">Teléfono Principal</label>
+                <input type="text" id="rev-phone" class="input input-md" value="${activeReq.phone}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="rev-phone-sec">Teléfono Secundario</label>
+                <input type="text" id="rev-phone-sec" class="input input-md" value="${activeReq.phoneSecondary || ''}" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="rev-email">Correo Electrónico</label>
+              <input type="email" id="rev-email" class="input input-md" value="${activeReq.email || ''}" required />
+            </div>
+
+            <div class="form-section-title">📍 Ubicación Física</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="rev-city">Ciudad / Municipio</label>
+                <input type="text" id="rev-city" class="input input-md" value="${activeReq.city}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="rev-dept">Departamento / Provincia</label>
+                <input type="text" id="rev-dept" class="input input-md" value="${activeReq.department || ''}" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="rev-address">Dirección de Domicilio</label>
+              <input type="text" id="rev-address" class="input input-md" value="${activeReq.address}" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="rev-ref">Referencia de Ubicación</label>
+              <input type="text" id="rev-ref" class="input input-md" value="${activeReq.reference}" required />
+            </div>
+
+            <!-- GPS Coordinates Map Panel -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-top:4px;">
+              <strong style="font-size:0.78rem; display:block; margin-bottom:4px; color:var(--color-text-primary);">🗺️ Coordenadas GPS del Registro</strong>
+              ${activeReq.gps 
+                ? `<span style="font-size:0.72rem; color:var(--color-text-secondary);">Latitud: <strong>${activeReq.gps.lat}</strong>, Longitud: <strong>${activeReq.gps.lng}</strong> (Capturado: ${TimeService.formatDate(activeReq.gps.capturedAt, true)})</span>
+                   <div id="owner-review-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:8px; z-index:5;"></div>`
+                : '<span class="text-error" style="font-size:0.75rem;">⚠️ No se capturaron coordenadas GPS para este cliente.</span>'}
+            </div>
+
+            <div class="form-section-title">🛠️ Especificaciones de Servicio</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="rev-service">Tipo de Servicio</label>
+                <input type="text" id="rev-service" class="input input-md" value="${activeReq.serviceType}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="rev-priority">Prioridad Inicial</label>
+                <select id="rev-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
+                  <option value="Baja" ${activeReq.priority === 'Baja' ? 'selected' : ''}>Baja</option>
+                  <option value="Media" ${activeReq.priority === 'Media' ? 'selected' : ''}>Media</option>
+                  <option value="Alta" ${activeReq.priority === 'Alta' ? 'selected' : ''}>Alta</option>
+                  <option value="Urgente" ${activeReq.priority === 'Urgente' ? 'selected' : ''}>Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="rev-desc">Descripción del Trabajo</label>
+              <textarea id="rev-desc" class="input" style="height:55px; padding:10px;" required>${activeReq.problemDescription}</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="rev-equip">Equipos Instalados (Ficha Técnica Inicial)</label>
+              <input type="text" id="rev-equip" class="input input-md" value="${activeReq.installedEquipment || ''}" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="rev-obs">Observaciones Generales</label>
+              <textarea id="rev-obs" class="input" style="height:50px; padding:10px;">${activeReq.observations || ''}</textarea>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; margin-top:8px;">
+              <button type="button" class="btn btn-danger btn-sm" id="btn-reject-client">❌ Rechazar Registro</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-approve-client">✅ Aprobar y Crear Cliente</button>
+            </div>
+          </form>
+        </div>
+      `;
+    } else {
+      detailsHTML = `
+        <div class="card p-10 text-center text-secondary animate-fade-in">
+          <div style="font-size:3rem; margin-bottom:10px;">📂</div>
+          <h4 class="font-bold">Ningún Cliente Seleccionado</h4>
+          <p class="text-xs mt-1">Selecciona una solicitud de la lista de la izquierda para revisar su ficha técnica e inicio de servicio.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="split-container">
+        <!-- Left Side: List -->
+        <div class="card p-5" style="max-height: 600px; overflow-y:auto;">
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Solicitudes de Ingreso</h3>
+          <div id="pending-clients-list-wrapper">
+            ${listItemsHTML || '<div class="text-center py-10 text-secondary" style="font-size:0.85rem;">🔕 No hay nuevos clientes pendientes de aprobación.</div>'}
+          </div>
+        </div>
+
+        <!-- Right Side: Editor / Review Workspace -->
+        <div id="pending-client-review-workspace">
+          ${detailsHTML}
+        </div>
+      </div>
+    `;
+  }
+
+  bindPendingClientsEvents(contentEl) {
+    // List item selection trigger
+    contentEl.querySelectorAll('.pending-list-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const id = item.getAttribute('data-req-id');
+        this.state.activePendingClientId = id;
+        this.renderActiveTabContent();
+      });
+    });
+
+    const activeReq = this.state.pendingClients.find(r => r.id === this.state.activePendingClientId);
+    if (!activeReq) return;
+
+    // Approvals button
+    contentEl.querySelector('#btn-approve-client')?.addEventListener('click', async () => {
+      const form = contentEl.querySelector('#review-client-form');
+      if (!form || !form.reportValidity()) return;
+
+      const approveBtn = contentEl.querySelector('#btn-approve-client');
+      approveBtn.disabled = true;
+      approveBtn.textContent = 'Procesando aprobación...';
+
+      try {
+        const { db } = await import('../../../config/firebase.config.js');
+        const { ref, push, set, update, remove } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+        if (db) {
+          // Read form values (incorporating any owner edits!)
+          const displayName = form.querySelector('#rev-name').value.trim();
+          const companyName = form.querySelector('#rev-company').value.trim();
+          const phone = form.querySelector('#rev-phone').value.trim();
+          const phoneSecondary = form.querySelector('#rev-phone-sec').value.trim();
+          const email = form.querySelector('#rev-email').value.trim();
+          const city = form.querySelector('#rev-city').value.trim();
+          const department = form.querySelector('#rev-dept').value.trim();
+          const address = form.querySelector('#rev-address').value.trim();
+          const reference = form.querySelector('#rev-ref').value.trim();
+          const serviceType = form.querySelector('#rev-service').value.trim();
+          const priority = form.querySelector('#rev-priority').value;
+          const problemDescription = form.querySelector('#rev-desc').value.trim();
+          const installedEquipment = form.querySelector('#rev-equip').value.trim();
+          const observations = form.querySelector('#rev-obs').value.trim();
+
+          const clientRef = push(ref(db, `${this.companyId}/clients`));
+          const clientId = clientRef.key;
+
+          // Generate dynamic Google Maps links in base of lat/lng captured in field
+          let mapsUrl = '';
+          if (activeReq.gps) {
+            mapsUrl = `https://www.google.com/maps?q=${activeReq.gps.lat},${activeReq.gps.lng}`;
+          }
+
+          const newClientData = {
+            id: clientId,
+            displayName,
+            companyName,
+            phone,
+            phoneSecondary,
+            email,
+            address,
+            city,
+            department,
+            reference,
+            mapsUrl,
+            serviceType,
+            problemDescription,
+            notes: observations,
+            createdAt: Date.now(),
+            technical_info: {
+              productDescription: installedEquipment || '—',
+              observations: `Registrado en campo por técnico ${activeReq.employeeName}.`
+            }
+          };
+
+          // A. Save client profiles to master database clients
+          await set(clientRef, newClientData);
+
+          // B. Update status in request node
+          await update(ref(db, `${this.companyId}/pending_clients/${activeReq.id}`), {
+            status: 'Aprobada'
+          });
+
+          // C. Notify Technician
+          const notifRef = push(ref(db, `${this.companyId}/notifications`));
+          await set(notifRef, {
+            id: notifRef.key,
+            toUid: activeReq.employeeId,
+            title: '🎉 Cliente Aprobado',
+            message: `El dueño aprobó el ingreso del cliente "${displayName}" solicitado en campo.`,
+            timestamp: Date.now(),
+            read: false
+          });
+
+          // D. Log audit trace
+          await FirestoreService.logAudit({
+            action: 'OWNER_APPROVE_CLIENT',
+            companyId: this.companyId,
+            description: `El propietario ${this.currentUser.displayName} aprobó y registró al cliente "${displayName}" (ID: ${clientId}) pre-registrado en campo por el técnico ${activeReq.employeeName}.`
+          });
+        }
+
+        NotificationService.success(`Cliente "${activeReq.displayName}" aprobado correctamente.`);
+        this.state.activePendingClientId = null;
+        this.loadData();
+      } catch (err) {
+        console.error(err);
+        alert(`Error al aprobar cliente: ${err.message || err}`);
+        approveBtn.disabled = false;
+        approveBtn.textContent = 'Aprobar y Crear Cliente';
+      }
+    });
+
+    // Rejections button
+    contentEl.querySelector('#btn-reject-client')?.addEventListener('click', async () => {
+      const comment = prompt('Escribe el motivo del rechazo o corrección solicitada:') || '';
+      
+      const rejectBtn = contentEl.querySelector('#btn-reject-client');
+      rejectBtn.disabled = true;
+      rejectBtn.textContent = 'Procesando...';
+
+      try {
+        const { db } = await import('../../../config/firebase.config.js');
+        const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+        if (db) {
+          await update(ref(db, `${this.companyId}/pending_clients/${activeReq.id}`), {
+            status: 'Rechazada',
+            comment: comment
+          });
+
+          // Notify Technician
+          const notifRef = push(ref(db, `${this.companyId}/notifications`));
+          await set(notifRef, {
+            id: notifRef.key,
+            toUid: activeReq.employeeId,
+            title: '❌ Cliente Rechazado / Corrección',
+            message: `Se ha rechazado la pre-solicitud del cliente "${activeReq.displayName}". Motivo: ${comment || 'Sin especificar'}`,
+            timestamp: Date.now(),
+            read: false
+          });
+
+          // Log Audit Trace
+          await FirestoreService.logAudit({
+            action: 'OWNER_REJECT_CLIENT',
+            companyId: this.companyId,
+            description: `El propietario ${this.currentUser.displayName} rechazó la solicitud de registro del cliente "${activeReq.displayName}" enviada por ${activeReq.employeeName}. Comentario: ${comment}`
+          });
+        }
+
+        NotificationService.success('Solicitud rechazada con éxito.');
+        this.state.activePendingClientId = null;
+        this.loadData();
+      } catch (err) {
+        console.error(err);
+        alert(`Error al rechazar: ${err.message || err}`);
+        rejectBtn.disabled = false;
+        rejectBtn.textContent = 'Rechazar Registro';
+      }
+    });
+
+    // Re-init map
+    if (activeReq.gps) {
+      this.loadLeaflet().then(() => {
+        this.initMap('owner-review-map', activeReq.gps.lat, activeReq.gps.lng);
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MAP LEAFLET DYNAMIC MODULE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async loadLeaflet() {
+    if (window.L) return window.L;
+
+    return new Promise((resolve, reject) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => resolve(window.L);
+      script.onerror = (err) => reject(err);
+      document.body.appendChild(script);
+    });
+  }
+
+  initMap(containerId, lat, lng) {
+    if (!window.L) return;
+    try {
+      if (this.maps && this.maps[containerId]) {
+        this.maps[containerId].remove();
+      } else {
+        this.maps = this.maps || {};
+      }
+
+      const map = window.L.map(containerId).setView([lat, lng], 15);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      window.L.marker([lat, lng]).addTo(map);
+      this.maps[containerId] = map;
+      
+      setTimeout(() => map.invalidateSize(), 200);
+    } catch (e) {
+      console.warn('[Leaflet] Map init failed:', e.message);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GENERAL TEMPLATE STUFFS
   // ═══════════════════════════════════════════════════════════════════════════
 
   getAssignFormHTML() {
@@ -315,7 +717,6 @@ export class ClientAssignmentsView extends Component {
 
           await set(assignmentRef, assignmentData);
 
-          // Push notify to DB for employee
           const notifRef = push(ref(db, `${this.companyId}/notifications`));
           await set(notifRef, {
             id: notifRef.key,
@@ -394,18 +795,17 @@ export class ClientAssignmentsView extends Component {
           <div class="form-section-title">🛠️ Detalle del Servicio Inicial</div>
           <div class="form-group">
             <label class="form-label" for="cli-service">Tipo de Servicio Solicitado <span class="form-label-required"></span></label>
-            <input type="text" id="cli-service" class="input input-md" placeholder="Ej. Reparación de A/C, Mantenimiento Preventivo" required />
+            <input type="text" id="cli-service" class="input input-md" placeholder="Ej. Reparación de A/C" required />
           </div>
           <div class="form-group">
             <label class="form-label" for="cli-description">Descripción del Problema o Tarea <span class="form-label-required"></span></label>
-            <textarea id="cli-description" class="input" style="height: 60px; padding: 10px;" placeholder="Detalla el problema planteado por el cliente..." required></textarea>
+            <textarea id="cli-description" class="input" style="height: 60px; padding: 10px;" placeholder="Detalla el problema..." required></textarea>
           </div>
           <div class="form-group">
             <label class="form-label" for="cli-notes">Observaciones Generales</label>
-            <textarea id="cli-notes" class="input" style="height: 60px; padding: 10px;" placeholder="Detalles de facturación, condiciones, etc."></textarea>
+            <textarea id="cli-notes" class="input" style="height: 60px; padding: 10px;" placeholder="Detalles..."></textarea>
           </div>
 
-          <!-- LEVEL 1: TECHNICAL DATA SECTION (Accordion) -->
           <div class="form-section-title" data-target="technical-acc">📋 Nivel 1: Ficha Técnica (Compartido Automáticamente) <span>▼</span></div>
           <div id="technical-acc" class="accordion-content" style="max-height: 0px; display: flex; flex-direction: column; gap: var(--space-3);">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
@@ -415,12 +815,12 @@ export class ClientAssignmentsView extends Component {
               </div>
               <div class="form-group">
                 <label class="form-label" for="cli-model">Marca y Modelo</label>
-                <input type="text" id="cli-model" class="input input-md" placeholder="Ej. Hikvision DS-2CD2087G2-L" />
+                <input type="text" id="cli-model" class="input input-md" placeholder="Ej. Hikvision" />
               </div>
             </div>
             <div class="form-group">
               <label class="form-label" for="cli-prod-desc">Descripción del Producto Instalado</label>
-              <input type="text" id="cli-prod-desc" class="input input-md" placeholder="Ej. Kit DVR 8 Canales con Cámaras ColorVu 4K" />
+              <input type="text" id="cli-prod-desc" class="input input-md" placeholder="Ej. Kit DVR" />
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3);">
               <div class="form-group">
@@ -440,67 +840,28 @@ export class ClientAssignmentsView extends Component {
                 </select>
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="cli-tech-obs">Observaciones Técnicas</label>
-              <textarea id="cli-tech-obs" class="input" style="height: 60px; padding: 10px;" placeholder="Detalles de instalación física, alturas, cableado..."></textarea>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="cli-maint-history">Historial de Mantenimientos</label>
-              <textarea id="cli-maint-history" class="input" style="height: 60px; padding: 10px;" placeholder="Historial previo de asistencias o limpiezas..."></textarea>
-            </div>
           </div>
 
-          <!-- LEVEL 2: CONFIDENTIAL CREDENTIALS SECTION (Accordion) -->
           <div class="form-section-title" data-target="credentials-acc">🔑 Nivel 2: Datos y Credenciales de Acceso (Requiere Aprobación) <span>▼</span></div>
           <div id="credentials-acc" class="accordion-content" style="max-height: 0px; display: flex; flex-direction: column; gap: var(--space-3);">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
               <div class="form-group">
                 <label class="form-label" for="cli-dvr-user">Usuario DVR</label>
-                <input type="text" id="cli-dvr-user" class="input input-md" placeholder="admin" />
+                <input type="text" id="cli-dvr-user" class="input input-md" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="cli-dvr-pass">Contraseña DVR</label>
-                <input type="password" id="cli-dvr-pass" class="input input-md" placeholder="••••••••" />
+                <input type="password" id="cli-dvr-pass" class="input input-md" />
               </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
               <div class="form-group">
                 <label class="form-label" for="cli-nvr-user">Usuario NVR/XVR</label>
-                <input type="text" id="cli-nvr-user" class="input input-md" placeholder="admin" />
+                <input type="text" id="cli-nvr-user" class="input input-md" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="cli-nvr-pass">Contraseña NVR/XVR</label>
-                <input type="password" id="cli-nvr-pass" class="input input-md" placeholder="••••••••" />
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-              <div class="form-group">
-                <label class="form-label" for="cli-cam-user">Usuario Cámaras IP</label>
-                <input type="text" id="cli-cam-user" class="input input-md" placeholder="admin" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-cam-pass">Contraseña Cámaras IP</label>
-                <input type="password" id="cli-cam-pass" class="input input-md" placeholder="••••••••" />
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-              <div class="form-group">
-                <label class="form-label" for="cli-app-user">Usuario App Móvil</label>
-                <input type="text" id="cli-app-user" class="input input-md" placeholder="cliente@correo.com" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-app-pass">Contraseña App Móvil</label>
-                <input type="password" id="cli-app-pass" class="input input-md" placeholder="••••••••" />
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-              <div class="form-group">
-                <label class="form-label" for="cli-encrypt">Código / Clave de Cifrado (Encryption Code)</label>
-                <input type="text" id="cli-encrypt" class="input input-md" placeholder="ABCDEF" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-other-creds">Otras Credenciales / Llaves</label>
-                <input type="text" id="cli-other-creds" class="input input-md" placeholder="Usuario y clave de hosting, router, etc." />
+                <input type="password" id="cli-nvr-pass" class="input input-md" />
               </div>
             </div>
           </div>
@@ -514,7 +875,6 @@ export class ClientAssignmentsView extends Component {
   }
 
   bindRegisterClientFormEvents(contentEl) {
-    // Accordion Toggle Behavior
     contentEl.querySelectorAll('.form-section-title[data-target]').forEach(title => {
       title.addEventListener('click', () => {
         const targetId = title.getAttribute('data-target');
@@ -551,30 +911,20 @@ export class ClientAssignmentsView extends Component {
       const problemDescription = form.querySelector('#cli-description').value.trim();
       const notes = form.querySelector('#cli-notes').value.trim();
 
-      // Level 1: technical details
       const technical_info = {
         serialNumber: form.querySelector('#cli-serial').value.trim(),
         brandModel: form.querySelector('#cli-model').value.trim(),
         productDescription: form.querySelector('#cli-prod-desc').value.trim(),
         installationDate: form.querySelector('#cli-install-date').value,
         warrantyExpiration: form.querySelector('#cli-warranty-exp').value,
-        warrantyStatus: form.querySelector('#cli-warranty-status').value,
-        observations: form.querySelector('#cli-tech-obs').value.trim(),
-        maintenanceHistory: form.querySelector('#cli-maint-history').value.trim()
+        warrantyStatus: form.querySelector('#cli-warranty-status').value
       };
 
-      // Level 2: credentials (Encrypted before writing)
       const credentials = {
         dvrUser: EncryptionService.encrypt(form.querySelector('#cli-dvr-user').value.trim()),
         dvrPassword: EncryptionService.encrypt(form.querySelector('#cli-dvr-pass').value.trim()),
         nvrUser: EncryptionService.encrypt(form.querySelector('#cli-nvr-user').value.trim()),
-        nvrPassword: EncryptionService.encrypt(form.querySelector('#cli-nvr-pass').value.trim()),
-        ipCameraUser: EncryptionService.encrypt(form.querySelector('#cli-cam-user').value.trim()),
-        ipCameraPassword: EncryptionService.encrypt(form.querySelector('#cli-cam-pass').value.trim()),
-        appUser: EncryptionService.encrypt(form.querySelector('#cli-app-user').value.trim()),
-        appPassword: EncryptionService.encrypt(form.querySelector('#cli-app-pass').value.trim()),
-        encryptionCode: EncryptionService.encrypt(form.querySelector('#cli-encrypt').value.trim()),
-        otherCredentials: EncryptionService.encrypt(form.querySelector('#cli-other-creds').value.trim())
+        nvrPassword: EncryptionService.encrypt(form.querySelector('#cli-nvr-pass').value.trim())
       };
 
       const submitBtn = form.querySelector('#btn-submit-client');
@@ -686,30 +1036,28 @@ export class ClientAssignmentsView extends Component {
       <div class="card p-5 animate-fade-in">
         <h3 class="text-md font-bold mb-4">⏳ Historial de Asignaciones de Servicios</h3>
         
-        <!-- Filtros reactivos -->
         <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom: 20px;">
-          <input type="text" id="hist-search" class="input input-md" placeholder="Buscar cliente o empleado..." value="${this.state.filters.searchQuery}" />
+          <input type="text" id="hist-search" class="input input-md" placeholder="Buscar..." value="${this.state.filters.searchQuery}" />
           <select id="hist-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-            <option value="ALL" ${this.state.filters.status === 'ALL' ? 'selected' : ''}>Todos los Estados</option>
-            <option value="Pendiente" ${this.state.filters.status === 'Pendiente' ? 'selected' : ''}>Pendientes</option>
-            <option value="En proceso" ${this.state.filters.status === 'En proceso' ? 'selected' : ''}>En Proceso</option>
-            <option value="Finalizado" ${this.state.filters.status === 'Finalizado' ? 'selected' : ''}>Finalizados</option>
-            <option value="Cancelado" ${this.state.filters.status === 'Cancelado' ? 'selected' : ''}>Cancelados</option>
+            <option value="ALL">Todos los Estados</option>
+            <option value="Pendiente">Pendientes</option>
+            <option value="En proceso">En Proceso</option>
+            <option value="Finalizado">Finalizados</option>
+            <option value="Cancelado">Cancelados</option>
           </select>
           <select id="hist-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-            <option value="ALL" ${this.state.filters.priority === 'ALL' ? 'selected' : ''}>Todas las Prioridades</option>
-            <option value="Baja" ${this.state.filters.priority === 'Baja' ? 'selected' : ''}>Baja</option>
-            <option value="Media" ${this.state.filters.priority === 'Media' ? 'selected' : ''}>Media</option>
-            <option value="Alta" ${this.state.filters.priority === 'Alta' ? 'selected' : ''}>Alta</option>
-            <option value="Urgente" ${this.state.filters.priority === 'Urgente' ? 'selected' : ''}>Urgente</option>
+            <option value="ALL">Todas las Prioridades</option>
+            <option value="Baja">Baja</option>
+            <option value="Media">Media</option>
+            <option value="Alta">Alta</option>
+            <option value="Urgente">Urgente</option>
           </select>
           <div style="display:flex; gap:4px;">
-            <input type="date" id="hist-from" class="input input-md" style="font-size:0.75rem;" value="${this.state.filters.dateFrom}" title="Fecha Desde" />
-            <input type="date" id="hist-to" class="input input-md" style="font-size:0.75rem;" value="${this.state.filters.dateTo}" title="Fecha Hasta" />
+            <input type="date" id="hist-from" class="input input-md" style="font-size:0.75rem;" value="${this.state.filters.dateFrom}" />
+            <input type="date" id="hist-to" class="input input-md" style="font-size:0.75rem;" value="${this.state.filters.dateTo}" />
           </div>
         </div>
 
-        <!-- Tabla -->
         <div style="overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse; text-align:left;">
             <thead>
@@ -726,32 +1074,12 @@ export class ClientAssignmentsView extends Component {
               </tr>
             </thead>
             <tbody>
-              ${listItems || '<tr><td colspan="9" style="text-align:center; padding: 30px; color:var(--color-text-secondary);">No se encontraron asignaciones que coincidan con los filtros.</td></tr>'}
+              ${listItems || '<tr><td colspan="9" style="text-align:center; padding: 30px; color:var(--color-text-secondary);">No se encontraron asignaciones.</td></tr>'}
             </tbody>
           </table>
         </div>
       </div>
     `;
-  }
-
-  getFilteredAssignments() {
-    const f = this.state.filters;
-    return this.state.assignments.filter(asg => {
-      const searchLower = f.searchQuery.toLowerCase();
-      const matchSearch = !f.searchQuery || 
-        asg.clientName.toLowerCase().includes(searchLower) ||
-        asg.employeeName.toLowerCase().includes(searchLower) ||
-        (asg.description && asg.description.toLowerCase().includes(searchLower));
-
-      const matchStatus = f.status === 'ALL' || asg.status === f.status;
-      const matchPriority = f.priority === 'ALL' || asg.priority === f.priority;
-
-      const assignedDateStr = new Date(asg.assignedAt).toISOString().split('T')[0];
-      const matchFrom = !f.dateFrom || assignedDateStr >= f.dateFrom;
-      const matchTo = !f.dateTo || assignedDateStr <= f.dateTo;
-
-      return matchSearch && matchStatus && matchPriority && matchFrom && matchTo;
-    });
   }
 
   bindHistoryEvents(contentEl) {
@@ -796,10 +1124,6 @@ export class ClientAssignmentsView extends Component {
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LEVEL 2: AUTHORIZATIONS INTERFACE (OWNER CONTROLS)
-  // ═══════════════════════════════════════════════════════════════════════════
-
   getAuthorizationsHTML() {
     const pendingList = this.state.authRequests.filter(r => r.status === 'Pendiente');
     const historyList = this.state.authRequests.filter(r => r.status !== 'Pendiente');
@@ -808,13 +1132,7 @@ export class ClientAssignmentsView extends Component {
       dvrUser: '👤 Usuario DVR',
       dvrPassword: '🔑 Contraseña DVR',
       nvrUser: '👤 Usuario NVR/XVR',
-      nvrPassword: '🔑 Contraseña NVR/XVR',
-      ipCameraUser: '👤 Usuario Cámara IP',
-      ipCameraPassword: '🔑 Contraseña Cámara IP',
-      appUser: '👤 Usuario Aplicación Móvil',
-      appPassword: '🔑 Contraseña Aplicación',
-      encryptionCode: '🛡️ Código de Cifrado',
-      otherCredentials: '📝 Otras Credenciales'
+      nvrPassword: '🔑 Contraseña NVR/XVR'
     };
 
     const pendingCards = pendingList.map(req => {
@@ -831,7 +1149,7 @@ export class ClientAssignmentsView extends Component {
             <div>
               <strong style="font-size:0.95rem; color:var(--color-text-primary);">${req.employeeName}</strong>
               <div style="font-size:0.72rem; color:var(--color-text-secondary); margin-top:2px;">
-                Solicita acceso para el cliente: <strong>${req.clientName}</strong>
+                Solicita acceso para: <strong>${req.clientName}</strong>
               </div>
             </div>
             <span class="badge" style="font-size:0.7rem; background:rgba(234,179,8,0.1); color:var(--color-warning);">Pendiente</span>
@@ -843,7 +1161,7 @@ export class ClientAssignmentsView extends Component {
           </div>
 
           <div style="margin-bottom:12px;">
-            <strong style="font-size:0.78rem; display:block; margin-bottom:6px;">Selección de Campos a Autorizar (Granular):</strong>
+            <strong style="font-size:0.78rem; display:block; margin-bottom:6px;">Selección de Campos a Autorizar:</strong>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               ${fieldsCheckboxHTML}
             </div>
@@ -851,7 +1169,7 @@ export class ClientAssignmentsView extends Component {
 
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:0.78rem; color:var(--color-text-secondary);">Duración del acceso:</span>
+              <span style="font-size:0.78rem; color:var(--color-text-secondary);">Duración:</span>
               <select class="auth-duration-select input input-xs" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary); padding: 2px 6px;">
                 <option value="10">10 minutos</option>
                 <option value="15" selected>15 minutos</option>
@@ -876,21 +1194,16 @@ export class ClientAssignmentsView extends Component {
 
       const resolvedStr = req.approvedAt ? TimeService.formatDate(req.approvedAt, true) : '—';
       const expireStr = req.expiresAt ? TimeService.formatDate(req.expiresAt, true) : '—';
-
       const approvedLabels = (req.approvedFields || []).map(f => labelMap[f] || f).join(', ');
 
       return `
         <tr style="border-bottom:1px solid var(--color-border); font-size:0.78rem;">
-          <td style="padding:10px 8px;">
-            <strong>${req.employeeName}</strong>
-          </td>
+          <td style="padding:10px 8px;"><strong>${req.employeeName}</strong></td>
           <td style="padding:10px 8px;">${req.clientName}</td>
           <td style="padding:10px 8px; color:var(--color-text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${req.motive}">
             ${req.motive || '—'}
           </td>
-          <td style="padding:10px 8px;">
-            <strong style="color:${statusColor};">${req.status}</strong>
-          </td>
+          <td style="padding:10px 8px;"><strong style="color:${statusColor};">${req.status}</strong></td>
           <td style="padding:10px 8px; color:var(--color-text-secondary); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${approvedLabels}">
             ${approvedLabels || 'Ninguno'}
           </td>
@@ -903,7 +1216,6 @@ export class ClientAssignmentsView extends Component {
 
     return `
       <div style="display:grid; grid-template-columns:1fr; gap:20px;">
-        <!-- Solicitudes pendientes -->
         <div class="card p-5">
           <h3 class="text-md font-bold mb-4">🔑 Solicitudes de Credenciales Pendientes</h3>
           <div id="pending-requests-wrapper">
@@ -911,7 +1223,6 @@ export class ClientAssignmentsView extends Component {
           </div>
         </div>
 
-        <!-- Historial de autorizaciones -->
         <div class="card p-5">
           <h3 class="text-md font-bold mb-4">📚 Historial de Solicitudes y Autorizaciones</h3>
           <div style="overflow-x:auto;">
@@ -970,7 +1281,6 @@ export class ClientAssignmentsView extends Component {
       if (!db) return;
 
       if (!isApprove) {
-        // Reject Flow
         const comment = prompt('Motivo de rechazo (opcional):') || '';
         await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
           status: 'Rechazado',
@@ -979,7 +1289,6 @@ export class ClientAssignmentsView extends Component {
           authorizedBy: this.currentUser.displayName
         });
 
-        // Notify employee
         const notifRef = push(ref(db, `${this.companyId}/notifications`));
         await set(notifRef, {
           id: notifRef.key,
@@ -990,33 +1299,30 @@ export class ClientAssignmentsView extends Component {
           read: false
         });
 
-        // Log audit trace
         await FirestoreService.logAudit({
           action: 'OWNER_REJECT_CREDENTIALS',
           companyId: this.companyId,
           description: `El propietario ${this.currentUser.displayName} rechazó la solicitud de credenciales de ${req.employeeName} para el cliente ${req.clientName}.`
         });
 
-        NotificationService.success('Solicitud rechazada con éxito.');
+        NotificationService.success('Solicitud rechazada.');
         this.loadData();
         return;
       }
 
-      // Approve Flow (granular approval)
       const approvedCheckboxes = requestCard.querySelectorAll('.auth-field-chk:checked');
       const approvedFields = Array.from(approvedCheckboxes).map(chk => chk.value);
 
       if (approvedFields.length === 0) {
-        alert('Debes seleccionar al menos un campo para autorizar la solicitud.');
+        alert('Debes seleccionar al menos un campo.');
         return;
       }
 
       const durationMin = parseInt(requestCard.querySelector('.auth-duration-select').value) || 15;
 
-      // 1. Fetch client encrypted credentials
       const clientSnap = await get(ref(db, `${this.companyId}/clients/${req.clientId}`));
       if (!clientSnap.exists()) {
-        alert('El cliente relacionado no existe.');
+        alert('El cliente no existe.');
         return;
       }
 
@@ -1024,7 +1330,6 @@ export class ClientAssignmentsView extends Component {
       const rawCreds = client.credentials || {};
       const approvedData = {};
 
-      // 2. Decrypt only the approved fields, base64 data to plain text and save to approvedData node
       approvedFields.forEach(field => {
         if (rawCreds[field]) {
           approvedData[field] = EncryptionService.decrypt(rawCreds[field]);
@@ -1033,7 +1338,6 @@ export class ClientAssignmentsView extends Component {
         }
       });
 
-      // 3. Write approvals, decrypt data and expiration
       const timestamp = Date.now();
       const expiresAt = timestamp + durationMin * 60 * 1000;
 
@@ -1047,7 +1351,6 @@ export class ClientAssignmentsView extends Component {
         authorizedBy: this.currentUser.displayName
       });
 
-      // 4. Send notify
       const notifRef = push(ref(db, `${this.companyId}/notifications`));
       await set(notifRef, {
         id: notifRef.key,
@@ -1058,7 +1361,6 @@ export class ClientAssignmentsView extends Component {
         read: false
       });
 
-      // 5. Log audit trace
       await FirestoreService.logAudit({
         action: 'OWNER_APPROVE_CREDENTIALS',
         companyId: this.companyId,
@@ -1076,7 +1378,6 @@ export class ClientAssignmentsView extends Component {
   startExpirationSweeper() {
     if (this.sweeperInterval) clearInterval(this.sweeperInterval);
 
-    // Runs a sweeper routine every 10 seconds to auto-delete expired approvals from database
     this.sweeperInterval = setInterval(async () => {
       const expiredList = this.state.authRequests.filter(r => r.status === 'Aprobado' && r.expiresAt && r.expiresAt < Date.now());
       if (expiredList.length === 0) return;
@@ -1086,19 +1387,16 @@ export class ClientAssignmentsView extends Component {
         const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
 
         if (db) {
-          console.log(`[Sweeper] Limpiando ${expiredList.length} solicitudes de credenciales expiradas...`);
-          
           for (const req of expiredList) {
             await update(ref(db, `${this.companyId}/auth_requests/${req.id}`), {
               status: 'Expirado',
-              approvedData: null // Clear decrypted sensitive credentials completely!
+              approvedData: null
             });
 
-            // Log Audit
             await FirestoreService.logAudit({
               action: 'CREDENTIALS_EXPIRED',
               companyId: this.companyId,
-              description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos eliminados de forma segura.`
+              description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos eliminados.`
             });
           }
         }
@@ -1109,7 +1407,7 @@ export class ClientAssignmentsView extends Component {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // DATABASE RETRIEVALS
+  // LOAD DATA & SUBSCRIBERS
   // ═══════════════════════════════════════════════════════════════════════════
 
   async loadData() {
@@ -1119,7 +1417,6 @@ export class ClientAssignmentsView extends Component {
 
       if (!db || !this.companyId) return;
 
-      // Load employees
       const empSnapshot = await get(ref(db, `${this.companyId}/employees`));
       if (empSnapshot.exists()) {
         const data = empSnapshot.val();
@@ -1128,14 +1425,12 @@ export class ClientAssignmentsView extends Component {
           .filter(e => e.role !== 'SUPER_ADMIN' && e.role !== 'OWNER' && e.active !== false);
       }
 
-      // Load clients
       const cliSnapshot = await get(ref(db, `${this.companyId}/clients`));
       if (cliSnapshot.exists()) {
         const data = cliSnapshot.val();
         this.state.clients = Object.keys(data).map(k => ({ id: k, ...data[k] }));
       }
 
-      // Load assignments
       const asgSnapshot = await get(ref(db, `${this.companyId}/assignments`));
       if (asgSnapshot.exists()) {
         const data = asgSnapshot.val();
@@ -1144,13 +1439,21 @@ export class ClientAssignmentsView extends Component {
           .sort((a, b) => b.assignedAt - a.assignedAt);
       }
 
-      // Load auth requests
       const reqSnapshot = await get(ref(db, `${this.companyId}/auth_requests`));
       if (reqSnapshot.exists()) {
         const data = reqSnapshot.val();
         this.state.authRequests = Object.keys(data)
           .map(k => ({ id: k, ...data[k] }))
           .sort((a, b) => b.requestedAt - a.requestedAt);
+      }
+
+      // Load pending clients
+      const pcSnapshot = await get(ref(db, `${this.companyId}/pending_clients`));
+      if (pcSnapshot.exists()) {
+        const data = pcSnapshot.val();
+        this.state.pendingClients = Object.keys(data)
+          .map(k => ({ id: k, ...data[k] }))
+          .sort((a, b) => b.createdAt - a.createdAt);
       }
 
       this.renderActiveTabContent();
@@ -1164,7 +1467,6 @@ export class ClientAssignmentsView extends Component {
       import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
         if (!db || !this.companyId) return;
 
-        // Assignments listener
         this.dbUnsubscribe = onValue(ref(db, `${this.companyId}/assignments`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -1179,7 +1481,6 @@ export class ClientAssignmentsView extends Component {
           }
         });
 
-        // Auth requests listener
         this.authRequestsUnsubscribe = onValue(ref(db, `${this.companyId}/auth_requests`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -1190,6 +1491,21 @@ export class ClientAssignmentsView extends Component {
             this.state.authRequests = [];
           }
           if (this.state.activeTab === 'authorizations') {
+            this.renderActiveTabContent();
+          }
+        });
+
+        // Realtime listener for pending clients
+        this.pendingClientsUnsubscribe = onValue(ref(db, `${this.companyId}/pending_clients`), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            this.state.pendingClients = Object.keys(data)
+              .map(k => ({ id: k, ...data[k] }))
+              .sort((a, b) => b.createdAt - a.createdAt);
+          } else {
+            this.state.pendingClients = [];
+          }
+          if (this.state.activeTab === 'pending-clients') {
             this.renderActiveTabContent();
           }
         });
@@ -1406,6 +1722,9 @@ export class ClientAssignmentsView extends Component {
     }
     if (this.authRequestsUnsubscribe) {
       this.authRequestsUnsubscribe();
+    }
+    if (this.pendingClientsUnsubscribe) {
+      this.pendingClientsUnsubscribe();
     }
     this.layout.unmount();
     super.unmount();

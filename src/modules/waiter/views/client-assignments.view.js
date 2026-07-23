@@ -17,16 +17,36 @@ export class ClientAssignmentsView extends Component {
     this.uid = this.currentUser.uid || '';
 
     this.state = {
-      activeTab: 'active', // 'active' | 'history'
+      activeTab: 'active', // 'active' | 'history' | 'register-client'
       assignments: [],
       authRequests: [],
+      pendingClients: [], // Requests sent by this employee
       filters: {
         searchQuery: '',
         status: 'ALL',
         priority: 'ALL',
         dateAssigned: '',
         dateScheduled: ''
-      }
+      },
+      // Temp object for new client form before confirmation
+      newClientForm: {
+        displayName: '',
+        companyName: '',
+        phone: '',
+        phoneSecondary: '',
+        email: '',
+        address: '',
+        city: '',
+        department: '',
+        reference: '',
+        observations: '',
+        serviceType: '',
+        problemDescription: '',
+        installedEquipment: '',
+        priority: 'Media',
+        gps: null
+      },
+      confirmingNewClient: false
     };
 
     this.layout = new PageLayout({
@@ -146,11 +166,20 @@ export class ClientAssignmentsView extends Component {
           .contact-btn:hover {
             opacity: 0.85;
           }
+          .form-section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--color-accent);
+            margin: var(--space-4) 0 var(--space-2);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 2px;
+          }
         </style>
 
         <div class="assign-tabs">
           <button class="assign-tab-btn ${this.state.activeTab === 'active' ? 'active' : ''}" data-tab="active">⚡ Trabajos Activos</button>
           <button class="assign-tab-btn ${this.state.activeTab === 'history' ? 'active' : ''}" data-tab="history">📚 Historial de Trabajos</button>
+          <button class="assign-tab-btn ${this.state.activeTab === 'register-client' ? 'active' : ''}" data-tab="register-client">➕ Registrar Cliente</button>
         </div>
 
         <div id="waiter-filter-bar" style="margin-bottom: 20px;"></div>
@@ -160,7 +189,9 @@ export class ClientAssignmentsView extends Component {
 
     this.dbUnsubscribe = null;
     this.authRequestsUnsubscribe = null;
+    this.pendingClientsUnsubscribe = null;
     this.timerInterval = null;
+    this.maps = {};
   }
 
   async mount() {
@@ -197,6 +228,7 @@ export class ClientAssignmentsView extends Component {
           dateAssigned: '',
           dateScheduled: ''
         };
+        this.state.confirmingNewClient = false;
         
         this.renderFilters();
         this.renderAssignments();
@@ -211,7 +243,6 @@ export class ClientAssignmentsView extends Component {
 
       if (!db || !this.companyId) return;
 
-      // Load assignments
       const snapshot = await get(ref(db, `${this.companyId}/assignments`));
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -221,13 +252,22 @@ export class ClientAssignmentsView extends Component {
           .sort((a, b) => b.assignedAt - a.assignedAt);
       }
 
-      // Load auth requests
       const reqSnapshot = await get(ref(db, `${this.companyId}/auth_requests`));
       if (reqSnapshot.exists()) {
         const data = reqSnapshot.val();
         this.state.authRequests = Object.keys(data)
           .map(k => ({ id: k, ...data[k] }))
           .filter(r => r.employeeId === this.uid);
+      }
+
+      // Load pending client requests
+      const pcSnapshot = await get(ref(db, `${this.companyId}/pending_clients`));
+      if (pcSnapshot.exists()) {
+        const data = pcSnapshot.val();
+        this.state.pendingClients = Object.keys(data)
+          .map(k => ({ id: k, ...data[k] }))
+          .filter(r => r.employeeId === this.uid)
+          .sort((a, b) => b.createdAt - a.createdAt);
       }
 
       this.renderFilters();
@@ -242,7 +282,7 @@ export class ClientAssignmentsView extends Component {
       import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
         if (!db || !this.companyId) return;
 
-        // Listener for assignments
+        // Assignments listener
         this.dbUnsubscribe = onValue(ref(db, `${this.companyId}/assignments`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -253,10 +293,12 @@ export class ClientAssignmentsView extends Component {
           } else {
             this.state.assignments = [];
           }
-          this.renderAssignments();
+          if (this.state.activeTab === 'active' || this.state.activeTab === 'history') {
+            this.renderAssignments();
+          }
         });
 
-        // Listener for authorizations requests
+        // Authorizations listener
         this.authRequestsUnsubscribe = onValue(ref(db, `${this.companyId}/auth_requests`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -266,7 +308,25 @@ export class ClientAssignmentsView extends Component {
           } else {
             this.state.authRequests = [];
           }
-          this.renderAssignments();
+          if (this.state.activeTab === 'active' || this.state.activeTab === 'history') {
+            this.renderAssignments();
+          }
+        });
+
+        // Pending Clients listener
+        this.pendingClientsUnsubscribe = onValue(ref(db, `${this.companyId}/pending_clients`), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            this.state.pendingClients = Object.keys(data)
+              .map(k => ({ id: k, ...data[k] }))
+              .filter(r => r.employeeId === this.uid)
+              .sort((a, b) => b.createdAt - a.createdAt);
+          } else {
+            this.state.pendingClients = [];
+          }
+          if (this.state.activeTab === 'register-client') {
+            this.renderAssignments();
+          }
         });
       });
     });
@@ -275,6 +335,12 @@ export class ClientAssignmentsView extends Component {
   renderFilters() {
     const f = this.state.filters;
     const isHistory = this.state.activeTab === 'history';
+    const isRegister = this.state.activeTab === 'register-client';
+
+    if (isRegister) {
+      this.filterBar.innerHTML = '';
+      return;
+    }
 
     const statusSelectHTML = isHistory ? `
       <select id="filt-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
@@ -306,7 +372,7 @@ export class ClientAssignmentsView extends Component {
       </div>
     `;
 
-    // Bind listeners
+    // Bind filters
     const bindFilter = (id, stateKey) => {
       this.filterBar.querySelector(`#${id}`)?.addEventListener('input', (e) => {
         this.state.filters[stateKey] = e.target.value;
@@ -353,6 +419,11 @@ export class ClientAssignmentsView extends Component {
   renderAssignments() {
     if (!this.container) return;
 
+    if (this.state.activeTab === 'register-client') {
+      this.renderRegisterClientTab();
+      return;
+    }
+
     const list = this.getFilteredAssignments();
 
     if (list.length === 0) {
@@ -394,7 +465,6 @@ export class ClientAssignmentsView extends Component {
         `
         : '';
 
-      // 🔑 Level 2 Credentials status for this specific client assignment
       const activeRequest = this.state.authRequests.find(r => r.clientId === asg.clientId && r.assignmentId === asg.id);
       let authModuleHTML = '';
 
@@ -421,7 +491,6 @@ export class ClientAssignmentsView extends Component {
             const sec = remainSecs % 60;
             const clockStr = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 
-            // Show granular approved credentials decrypted
             const credsData = activeRequest.approvedData || {};
             const labelMap = {
               dvrUser: 'Usuario DVR',
@@ -477,7 +546,6 @@ export class ClientAssignmentsView extends Component {
             </div>
           `;
         } else {
-          // Expirado
           authModuleHTML = `
             <div style="background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; font-size:0.78rem; display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
               <span class="text-secondary">🔑 Acceso Expirado (Temporal)</span>
@@ -487,7 +555,6 @@ export class ClientAssignmentsView extends Component {
         }
       }
 
-      // Actions buttons layout
       let actionHTML = '';
       if (asg.status === 'Pendiente') {
         actionHTML = `<button class="btn btn-info btn-sm w-100 btn-start-job" data-id="${asg.id}">🚀 Iniciar Trabajo</button>`;
@@ -507,7 +574,6 @@ export class ClientAssignmentsView extends Component {
         `;
       }
 
-      // Contact options
       const phoneClean = asg.clientPhone ? asg.clientPhone.replace(/[^\d+]/g, '') : '';
       const whatsappMsg = encodeURIComponent(`Hola ${asg.clientName}, te saluda soporte técnico de ${this.currentUser.displayName}. Estoy asignado a tu servicio: ${asg.description.substring(0, 50)}...`);
       
@@ -601,423 +667,502 @@ export class ClientAssignmentsView extends Component {
     }).join('');
   }
 
-  bindActionEvents(element) {
-    element.addEventListener('click', async (e) => {
-      // Copy to clipboard helper
-      const copyBtn = e.target.closest('.btn-copy-cred');
-      if (copyBtn) {
-        const val = copyBtn.getAttribute('data-val');
-        navigator.clipboard.writeText(val);
-        NotificationService.success('Copiado al portapapeles.');
-        return;
-      }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NEW CLIENT REGISTRATION FLOW (EMPLOYEE)
+  // ═══════════════════════════════════════════════════════════════════════════
 
-      // Close temporary access manual button
-      const closeAccessBtn = e.target.closest('.btn-close-access');
-      if (closeAccessBtn) {
-        const reqId = closeAccessBtn.getAttribute('data-id');
-        if (confirm('¿Deseas revocar el acceso temporal a estas credenciales de forma inmediata?')) {
-          await this.expireRequest(reqId);
-        }
-        return;
-      }
-
-      // Open Level 1 technical data popup
-      const techBtn = e.target.closest('.btn-view-technical');
-      if (techBtn) {
-        const clientId = techBtn.getAttribute('data-client-id');
-        this.openTechnicalDataModal(clientId);
-        return;
-      }
-
-      // Open Level 2 credentials requests modal
-      const reqCredsBtn = e.target.closest('.btn-request-creds');
-      if (reqCredsBtn) {
-        const clientId = reqCredsBtn.getAttribute('data-client-id');
-        const asgId = reqCredsBtn.getAttribute('data-asg-id');
-        this.openRequestCredsModal(clientId, asgId);
-        return;
-      }
-
-      // Standard assignment lifecycle
-      const startBtn = e.target.closest('.btn-start-job');
-      if (startBtn) {
-        const id = startBtn.getAttribute('data-id');
-        const assignment = this.state.assignments.find(a => a.id === id);
-        if (!assignment) return;
-
-        if (confirm(`¿Deseas marcar el trabajo para "${assignment.clientName}" como En Proceso?`)) {
-          await this.updateStatus(id, 'En proceso');
-          
-          try {
-            await FirestoreService.logAudit({
-              action: 'EMPLOYEE_START_JOB',
-              companyId: this.companyId,
-              description: `El empleado ${this.currentUser.displayName} (${this.currentUser.email}) inició el trabajo para el cliente ${assignment.clientName} (ID: ${assignment.clientId}).`
-            });
-          } catch (auditErr) {
-            console.warn('[AuditLogs] Falló el registro de auditoría:', auditErr.message);
-          }
-        }
-        return;
-      }
-
-      const finishBtn = e.target.closest('.btn-finish-job');
-      if (finishBtn) {
-        const id = finishBtn.getAttribute('data-id');
-        this.openFinishJobModal(id);
-        return;
-      }
-    });
-  }
-
-  async loadMyAssignments() {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, get } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (!db || !this.companyId) return;
-
-      const snapshot = await get(ref(db, `${this.companyId}/assignments`));
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        this.state.assignments = Object.keys(data)
-          .map(k => ({ id: k, ...data[k] }))
-          .filter(a => a.employeeId === this.uid)
-          .sort((a, b) => b.assignedAt - a.assignedAt);
-      }
-
-      const reqSnapshot = await get(ref(db, `${this.companyId}/auth_requests`));
-      if (reqSnapshot.exists()) {
-        const data = reqSnapshot.val();
-        this.state.authRequests = Object.keys(data)
-          .map(k => ({ id: k, ...data[k] }))
-          .filter(r => r.employeeId === this.uid);
-      }
-
-      this.renderFilters();
-      this.renderAssignments();
-    } catch (e) {
-      console.error(e);
+  renderRegisterClientTab() {
+    if (this.state.confirmingNewClient) {
+      this.renderConfirmationScreen();
+      return;
     }
-  }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LEVEL 1: VIEW TECHNICAL DATA MODAL
-  // ═══════════════════════════════════════════════════════════════════════════
+    const formVal = this.state.newClientForm;
 
-  async openTechnicalDataModal(clientId) {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, get } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+    // Tracking/history of previous requests submitted
+    const trackingRows = this.state.pendingClients.map(c => {
+      const badge = {
+        Pendiente: '<span class="badge" style="background:rgba(234,179,8,0.1); color:var(--color-warning);">Pendiente</span>',
+        Aprobada: '<span class="badge" style="background:rgba(34,197,94,0.1); color:var(--color-success);">Aprobada</span>',
+        Rechazada: '<span class="badge" style="background:rgba(239,68,68,0.1); color:var(--color-error);">Rechazada</span>'
+      }[c.status] || `<span class="badge">${c.status}</span>`;
 
-      if (!db) return;
-
-      const snap = await get(ref(db, `${this.companyId}/clients/${clientId}`));
-      if (!snap.exists()) {
-        alert('No se pudo encontrar la información técnica del cliente.');
-        return;
-      }
-
-      const client = snap.val();
-      const tech = client.technical_info || {};
-
-      let modalOverlay = document.getElementById('view-technical-modal-container');
-      if (modalOverlay) modalOverlay.remove();
-
-      const detailsHTML = `
-        <div style="color:var(--color-text-primary); display:flex; flex-direction:column; gap:12px; font-size:0.85rem;">
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div>
-              <span class="text-secondary" style="display:block; font-size:0.75rem;">Marca / Modelo:</span>
-              <strong>${tech.brandModel || '—'}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="display:block; font-size:0.75rem;">Número de Serie:</span>
-              <strong>${tech.serialNumber || '—'}</strong>
-            </div>
-          </div>
-
-          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
-            <span class="text-secondary" style="display:block; font-size:0.75rem;">Descripción del Producto Instalado:</span>
-            <strong>${tech.productDescription || '—'}</strong>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
-            <div>
-              <span class="text-secondary" style="display:block; font-size:0.75rem;">Instalado:</span>
-              <strong>${tech.installationDate ? TimeService.formatDate(tech.installationDate) : '—'}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="display:block; font-size:0.75rem;">Vence Garantía:</span>
-              <strong>${tech.warrantyExpiration ? TimeService.formatDate(tech.warrantyExpiration) : '—'}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="display:block; font-size:0.75rem;">Estado:</span>
-              <strong style="color:${tech.warrantyStatus === 'Vigente' ? 'var(--color-success)' : 'var(--color-error)'}">${tech.warrantyStatus || '—'}</strong>
-            </div>
-          </div>
-
-          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
-            <span class="text-secondary" style="display:block; font-size:0.75rem;">Observaciones Técnicas de la Ficha:</span>
-            <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); white-space:pre-line;">
-              ${tech.observations || 'Sin observaciones registradas.'}
-            </div>
-          </div>
-
-          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
-            <span class="text-secondary" style="display:block; font-size:0.75rem;">Historial de Mantenimientos:</span>
-            <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); white-space:pre-line;">
-              ${tech.maintenanceHistory || 'Sin historial registrado.'}
-            </div>
-          </div>
-        </div>
+      return `
+        <tr style="border-bottom:1px solid var(--color-border); font-size:0.75rem;">
+          <td style="padding:8px;"><strong>${c.displayName}</strong></td>
+          <td style="padding:8px; color:var(--color-text-secondary);">${TimeService.formatDate(c.createdAt)}</td>
+          <td style="padding:8px;">${c.serviceType}</td>
+          <td style="padding:8px;">${badge}</td>
+          <td style="padding:8px; color:var(--color-text-secondary); font-size:0.7rem; max-width:200px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${c.comment || ''}">
+            ${c.comment || '—'}
+          </td>
+        </tr>
       `;
+    }).join('');
 
-      const technicalModal = new Modal({
-        title: `📋 Ficha Técnica: ${client.displayName}`,
-        bodyHTML: detailsHTML,
-        footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-close-tech-modal">Cerrar Ficha</button>`,
-        size: 'md'
+    this.container.innerHTML = `
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; grid-column:1 / -1; align-items:flex-start;">
+        <!-- Registration Form Card -->
+        <div class="card p-6 animate-fade-in">
+          <h3 class="text-md font-bold mb-4">➕ Registrar Nuevo Cliente (Petición de Aprobación)</h3>
+          
+          <form id="emp-new-client-form" style="display:flex; flex-direction:column; gap:12px;">
+            <div class="form-section-title">👤 Datos del Cliente</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="reg-name">Nombre Completo <span class="form-label-required"></span></label>
+                <input type="text" id="reg-name" class="input input-md" placeholder="Ej. Pedro Gómez" value="${formVal.displayName}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-company">Empresa (Opcional)</label>
+                <input type="text" id="reg-company" class="input input-md" placeholder="Ej. Comercial Gómez" value="${formVal.companyName}" />
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="reg-phone">Teléfono Principal <span class="form-label-required"></span></label>
+                <input type="text" id="reg-phone" class="input input-md" placeholder="Ej. 8888-8888" value="${formVal.phone}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-phone-sec">Teléfono Secundario (Opcional)</label>
+                <input type="text" id="reg-phone-sec" class="input input-md" placeholder="Ej. 2222-2222" value="${formVal.phoneSecondary}" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-email">Correo Electrónico <span class="form-label-required"></span></label>
+              <input type="email" id="reg-email" class="input input-md" placeholder="cliente@correo.com" value="${formVal.email}" required />
+            </div>
+
+            <div class="form-section-title">📍 Ubicación del Cliente</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="reg-city">Ciudad / Municipio <span class="form-label-required"></span></label>
+                <input type="text" id="reg-city" class="input input-md" placeholder="Ej. Managua" value="${formVal.city}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-dept">Departamento / Provincia <span class="form-label-required"></span></label>
+                <input type="text" id="reg-dept" class="input input-md" placeholder="Ej. Managua" value="${formVal.department}" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-address">Dirección Completa <span class="form-label-required"></span></label>
+              <input type="text" id="reg-address" class="input input-md" placeholder="Ej. Calle Principal 102" value="${formVal.address}" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-ref">Referencia de Ubicación <span class="form-label-required"></span></label>
+              <input type="text" id="reg-ref" class="input input-md" placeholder="Ej. Frente a iglesia católica" value="${formVal.reference}" required />
+            </div>
+
+            <!-- GPS Capture Box -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong style="font-size:0.8rem; color:var(--color-text-primary);">📍 Ubicación GPS del Dispositivo</strong>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-get-gps">🌍 Obtener ubicación actual</button>
+              </div>
+              
+              <div id="gps-coords-display" style="font-size:0.75rem; color:var(--color-text-secondary);">
+                ${formVal.gps 
+                  ? `Latitud: <strong>${formVal.gps.lat}</strong>, Longitud: <strong>${formVal.gps.lng}</strong> (Capturado: ${TimeService.formatDate(formVal.gps.capturedAt, true)})`
+                  : '⚠️ No se ha capturado la ubicación GPS del cliente en campo.'}
+              </div>
+
+              <div id="waiter-preview-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:10px; display:${formVal.gps ? 'block' : 'none'}; z-index:5;"></div>
+            </div>
+
+            <div class="form-section-title">🛠️ Información de Servicio</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="reg-service">Tipo de Servicio Solicitado <span class="form-label-required"></span></label>
+                <input type="text" id="reg-service" class="input input-md" placeholder="Ej. Instalación de CCTV" value="${formVal.serviceType}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-priority">Prioridad Inicial <span class="form-label-required"></span></label>
+                <select id="reg-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
+                  <option value="Baja" ${formVal.priority === 'Baja' ? 'selected' : ''}>Baja</option>
+                  <option value="Media" ${formVal.priority === 'Media' ? 'selected' : ''}>Media</option>
+                  <option value="Alta" ${formVal.priority === 'Alta' ? 'selected' : ''}>Alta</option>
+                  <option value="Urgente" ${formVal.priority === 'Urgente' ? 'selected' : ''}>Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-desc">Descripción del Trabajo <span class="form-label-required"></span></label>
+              <textarea id="reg-desc" class="input" style="height:60px; padding:10px;" placeholder="Describe detalladamente el problema o servicio..." required>${formVal.problemDescription}</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-equip">Equipos Instalados / Modelos (Opcional)</label>
+              <input type="text" id="reg-equip" class="input input-md" placeholder="Ej. DVR Hikvision 4 Canales" value="${formVal.installedEquipment}" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-obs">Observaciones Generales</label>
+              <textarea id="reg-obs" class="input" style="height:50px; padding:10px;" placeholder="Notas adicionales del cliente...">${formVal.observations}</textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button type="submit" class="btn btn-primary">Siguiente: Previsualizar Resumen</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tracking/Logs Side Card -->
+        <div class="card p-5 animate-fade-in">
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Historial de Solicitudes</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; text-align:left;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); font-size:0.7rem; font-weight:700;">
+                  <th style="padding:6px 4px;">Cliente</th>
+                  <th style="padding:6px 4px;">Fecha</th>
+                  <th style="padding:6px 4px;">Servicio</th>
+                  <th style="padding:6px 4px;">Estado</th>
+                  <th style="padding:6px 4px;">Comentario</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${trackingRows || '<tr><td colspan="5" style="text-align:center; padding:15px; color:var(--color-text-secondary); font-size:0.7rem;">No has enviado solicitudes aún.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Bind Geolocation button
+    this.container.querySelector('#btn-get-gps')?.addEventListener('click', () => {
+      this.triggerGPSCapture();
+    });
+
+    // Handle Form Submit (Goes to Confirmation Review screen)
+    const form = this.container.querySelector('#emp-new-client-form');
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Read values and store in state
+      this.state.newClientForm = {
+        displayName: form.querySelector('#reg-name').value.trim(),
+        companyName: form.querySelector('#reg-company').value.trim(),
+        phone: form.querySelector('#reg-phone').value.trim(),
+        phoneSecondary: form.querySelector('#reg-phone-sec').value.trim(),
+        email: form.querySelector('#reg-email').value.trim(),
+        address: form.querySelector('#reg-address').value.trim(),
+        city: form.querySelector('#reg-city').value.trim(),
+        department: form.querySelector('#reg-dept').value.trim(),
+        reference: form.querySelector('#reg-ref').value.trim(),
+        observations: form.querySelector('#reg-obs').value.trim(),
+        serviceType: form.querySelector('#reg-service').value.trim(),
+        problemDescription: form.querySelector('#reg-desc').value.trim(),
+        installedEquipment: form.querySelector('#reg-equip').value.trim(),
+        priority: form.querySelector('#reg-priority').value,
+        gps: this.state.newClientForm.gps
+      };
+
+      this.state.confirmingNewClient = true;
+      this.renderAssignments();
+    });
+
+    // Re-init map if GPS is already captured and stored in state
+    if (formVal.gps) {
+      this.loadLeaflet().then(() => {
+        this.initMap('waiter-preview-map', formVal.gps.lat, formVal.gps.lng);
       });
-
-      const el = technicalModal.mount();
-      el.setAttribute('id', 'view-technical-modal-container');
-      document.body.appendChild(el);
-
-      el.querySelector('#btn-close-tech-modal')?.addEventListener('click', () => technicalModal.close());
-    } catch (e) {
-      console.error(e);
-      alert('Error al consultar ficha técnica.');
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LEVEL 2: REQUEST CONFIDENTIAL CREDENTIALS MODAL
-  // ═══════════════════════════════════════════════════════════════════════════
+  triggerGPSCapture() {
+    const coordsDisplay = this.container.querySelector('#gps-coords-display');
+    if (!navigator.geolocation) {
+      alert('La geolocalización no está soportada por tu navegador.');
+      return;
+    }
 
-  openRequestCredsModal(clientId, assignmentId) {
-    const assignment = this.state.assignments.find(a => a.id === assignmentId);
-    if (!assignment) return;
+    coordsDisplay.innerHTML = '⚡ Obteniendo coordenadas de satélite...';
 
-    let modalOverlay = document.getElementById('request-creds-modal-container');
-    if (modalOverlay) modalOverlay.remove();
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const timestamp = Date.now();
 
-    const formHTML = `
-      <form id="request-creds-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
-        <div class="form-group">
-          <label class="form-label" style="font-weight:700; margin-bottom:8px; display:block;">Selecciona los Datos Requeridos <span class="form-label-required"></span></label>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="dvrUser" />
-              <span>👤 Usuario DVR</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="dvrPassword" />
-              <span>🔑 Clave DVR</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="nvrUser" />
-              <span>👤 Usuario NVR/XVR</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="nvrPassword" />
-              <span>🔑 Clave NVR/XVR</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="ipCameraUser" />
-              <span>👤 Usuario Cam IP</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="ipCameraPassword" />
-              <span>🔑 Clave Cam IP</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="appUser" />
-              <span>👤 Usuario App</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="appPassword" />
-              <span>🔑 Clave App</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="encryptionCode" />
-              <span>🛡️ Cifrado (Encryption Code)</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
-              <input type="checkbox" name="req-field" value="otherCredentials" />
-              <span>📝 Otras Credenciales</span>
-            </label>
+        this.state.newClientForm.gps = {
+          lat,
+          lng,
+          capturedAt: timestamp
+        };
+
+        coordsDisplay.innerHTML = `Latitud: <strong>${lat}</strong>, Longitud: <strong>${lng}</strong> (Capturado: ${TimeService.formatDate(timestamp, true)})`;
+        
+        const mapContainer = this.container.querySelector('#waiter-preview-map');
+        mapContainer.style.display = 'block';
+
+        this.loadLeaflet().then(() => {
+          this.initMap('waiter-preview-map', lat, lng);
+        });
+      },
+      (error) => {
+        console.error(error);
+        alert(`No se pudo obtener la ubicación: ${error.message}`);
+        coordsDisplay.innerHTML = '⚠️ Error al obtener coordenadas.';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  renderConfirmationScreen() {
+    const val = this.state.newClientForm;
+
+    this.container.innerHTML = `
+      <div class="card p-6 animate-fade-in" style="max-width:700px; margin:0 auto; grid-column:1 / -1;">
+        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">📋 Confirmar Datos del Cliente Antes de Enviar</h3>
+        
+        <div style="display:flex; flex-direction:column; gap:12px; font-size:0.85rem; color:var(--color-text-primary); margin-bottom:20px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Nombre del Cliente:</span>
+              <strong>${val.displayName}</strong>
+            </div>
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Empresa / Negocio:</span>
+              <strong>${val.companyName || '—'}</strong>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Teléfono Principal:</span>
+              <strong>${val.phone}</strong>
+            </div>
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Teléfono Secundario:</span>
+              <strong>${val.phoneSecondary || '—'}</strong>
+            </div>
+          </div>
+
+          <div>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Correo Electrónico:</span>
+            <strong>${val.email}</strong>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Ciudad:</span>
+              <strong>${val.city}</strong>
+            </div>
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Departamento:</span>
+              <strong>${val.department}</strong>
+            </div>
+          </div>
+
+          <div>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Dirección de Domicilio:</span>
+            <strong>${val.address}</strong>
+          </div>
+
+          <div>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Punto de Referencia:</span>
+            <strong>${val.reference}</strong>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Tipo de Servicio:</span>
+              <strong>${val.serviceType}</strong>
+            </div>
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Prioridad Inicial:</span>
+              <strong>${val.priority}</strong>
+            </div>
+          </div>
+
+          <div>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Descripción del Problema:</span>
+            <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">${val.problemDescription}</div>
+          </div>
+
+          ${val.installedEquipment ? `
+            <div>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Equipos Instalados:</span>
+              <strong>${val.installedEquipment}</strong>
+            </div>
+          ` : ''}
+
+          <!-- GPS map preview inside confirmation -->
+          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+            <span class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:4px;">Ubicación GPS a Enviar:</span>
+            ${val.gps 
+              ? `Latitud: <strong>${val.gps.lat}</strong>, Longitud: <strong>${val.gps.lng}</strong>`
+              : '<span class="text-error">⚠️ Sin datos GPS capturados.</span>'}
+            <div id="employee-confirm-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:8px; z-index:5; display:${val.gps ? 'block' : 'none'};"></div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="req-motive">Motivo o Justificación del Acceso <span class="form-label-required"></span></label>
-          <textarea id="req-motive" class="input" style="height:70px; padding:10px;" placeholder="Ej. Necesito configurar el redireccionamiento de puertos en el router del cliente." required></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+          <button class="btn btn-secondary btn-sm" id="btn-confirm-back">✏️ Modificar Datos</button>
+          <button class="btn btn-primary btn-sm" id="btn-confirm-send">🚀 Confirmar y Enviar al Dueño</button>
         </div>
-      </form>
+      </div>
     `;
 
-    const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="req-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="req-submit-btn">Enviar Solicitud</button>
-    `;
-
-    const requestModal = new Modal({
-      title: '🔑 Solicitar Acceso a Credenciales Confidenciales',
-      bodyHTML: formHTML,
-      footerHTML: footerHTML,
-      size: 'md'
+    // Bind back button
+    this.container.querySelector('#btn-confirm-back')?.addEventListener('click', () => {
+      this.state.confirmingNewClient = false;
+      this.renderAssignments();
     });
 
-    const el = requestModal.mount();
-    el.setAttribute('id', 'request-creds-modal-container');
-    document.body.appendChild(el);
-
-    el.querySelector('#req-cancel-btn')?.addEventListener('click', () => requestModal.close());
-    el.querySelector('#req-submit-btn')?.addEventListener('click', async () => {
-      const form = el.querySelector('#request-creds-form');
-      if (!form || !form.reportValidity()) return;
-
-      const checkedBoxes = form.querySelectorAll('input[name="req-field"]:checked');
-      if (checkedBoxes.length === 0) {
-        alert('Debes seleccionar al menos una credencial para solicitar acceso.');
-        return;
-      }
-
-      const requestedFields = Array.from(checkedBoxes).map(chk => chk.value);
-      const motive = el.querySelector('#req-motive').value.trim();
-
-      const submitBtn = el.querySelector('#req-submit-btn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Enviando...';
+    // Bind send button
+    this.container.querySelector('#btn-confirm-send')?.addEventListener('click', async () => {
+      const sendBtn = this.container.querySelector('#btn-confirm-send');
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Enviando petición...';
 
       try {
         const { db } = await import('../../../config/firebase.config.js');
         const { ref, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
 
         if (db) {
-          const reqRef = push(ref(db, `${this.companyId}/auth_requests`));
-          const reqId = reqRef.key;
+          const newRef = push(ref(db, `${this.companyId}/pending_clients`));
+          const requestId = newRef.key;
 
           const requestData = {
-            id: reqId,
+            id: requestId,
             employeeId: this.uid,
             employeeName: this.currentUser.displayName || 'Técnico',
-            clientId: clientId,
-            clientName: assignment.clientName,
-            assignmentId: assignmentId,
-            requestedFields: requestedFields,
-            motive: motive,
+            createdAt: Date.now(),
             status: 'Pendiente',
-            requestedAt: Date.now(),
-            approvedAt: 0,
-            expiresAt: 0,
             comment: '',
-            authorizedBy: ''
+            // Personal
+            displayName: val.displayName,
+            companyName: val.companyName,
+            phone: val.phone,
+            phoneSecondary: val.phoneSecondary,
+            email: val.email,
+            address: val.address,
+            city: val.city,
+            department: val.department,
+            reference: val.reference,
+            observations: val.observations,
+            // Service
+            serviceType: val.serviceType,
+            problemDescription: val.problemDescription,
+            installedEquipment: val.installedEquipment,
+            priority: val.priority,
+            gps: val.gps || null
           };
 
-          await set(reqRef, requestData);
+          await set(newRef, requestData);
 
-          // Notify Owner
+          // Push toast notify to DB for OWNER
           const notifRef = push(ref(db, `${this.companyId}/notifications`));
           await set(notifRef, {
             id: notifRef.key,
             toUid: 'OWNER',
-            title: '🔑 Solicitud de Acceso Especial',
-            message: `El empleado ${this.currentUser.displayName} solicita credenciales para el cliente ${assignment.clientName}`,
+            title: '👥 Nuevo Cliente Pendiente',
+            message: `El empleado ${this.currentUser.displayName} pre-registró al cliente "${val.displayName}" en campo.`,
             timestamp: Date.now(),
             read: false
           });
 
           // Log Audit Trace
           await FirestoreService.logAudit({
-            action: 'EMPLOYEE_REQUEST_CREDENTIALS',
+            action: 'EMPLOYEE_REQUEST_CLIENT',
             companyId: this.companyId,
-            description: `El empleado ${this.currentUser.displayName} (${this.currentUser.email}) solicitó acceso granular a las credenciales del cliente ${assignment.clientName}. Motivo: ${motive}. Campos: ${requestedFields.join(', ')}`
+            description: `El empleado ${this.currentUser.displayName} (${this.currentUser.email}) solicitó pre-registrar el cliente "${val.displayName}" con GPS [${val.gps ? `${val.gps.lat}, ${val.gps.lng}` : 'Sin GPS'}].`
           });
         }
 
-        NotificationService.success('Solicitud enviada al dueño con éxito.');
-        requestModal.close();
-        this.loadMyAssignments();
+        NotificationService.success('Petición de registro enviada correctamente.');
+        
+        // Reset state newClientForm
+        this.state.newClientForm = {
+          displayName: '',
+          companyName: '',
+          phone: '',
+          phoneSecondary: '',
+          email: '',
+          address: '',
+          city: '',
+          department: '',
+          reference: '',
+          observations: '',
+          serviceType: '',
+          problemDescription: '',
+          installedEquipment: '',
+          priority: 'Media',
+          gps: null
+        };
+        this.state.confirmingNewClient = false;
+        this.renderAssignments();
       } catch (err) {
         console.error(err);
-        alert(`Error al enviar solicitud: ${err.message || err}`);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Enviar Solicitud';
+        alert(`Error al enviar datos: ${err.message || err}`);
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Confirmar y Enviar al Dueño';
       }
     });
-  }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // EXPIRE CREDENTIALS AUTOMATICALLY OR MANUALLY
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  async expireRequest(requestId) {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (db) {
-        await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
-          status: 'Expirado',
-          approvedData: null // Clear decrypted fields completely!
-        });
-
-        // Find request to log audit trace
-        const req = this.state.authRequests.find(r => r.id === requestId);
-        if (req) {
-          await FirestoreService.logAudit({
-            action: 'CREDENTIALS_EXPIRED',
-            companyId: this.companyId,
-            description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos eliminados de forma segura.`
-          });
-        }
-      }
-
-      NotificationService.success('Acceso revocado y datos eliminados de forma segura.');
-      this.loadMyAssignments();
-    } catch (e) {
-      console.error(e);
+    // Re-init map
+    if (val.gps) {
+      this.loadLeaflet().then(() => {
+        this.initMap('employee-confirm-map', val.gps.lat, val.gps.lng);
+      });
     }
   }
 
-  startCountdownTicker() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MAP LEAFLET RESOURCE LOADER
+  // ═══════════════════════════════════════════════════════════════════════════
 
-    this.timerInterval = setInterval(async () => {
-      let needsRefresh = false;
-      const now = Date.now();
+  async loadLeaflet() {
+    if (window.L) return window.L;
 
-      for (const req of this.state.authRequests) {
-        if (req.status === 'Aprobado' && req.expiresAt) {
-          const remainSecs = Math.max(0, Math.floor((req.expiresAt - now) / 1000));
-          const el = document.getElementById(`countdown-${req.id}`);
-          
-          if (el) {
-            if (remainSecs > 0) {
-              const min = Math.floor(remainSecs / 60);
-              const sec = remainSecs % 60;
-              el.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-            } else {
-              // Expired in real-time, trigger expiration db call!
-              needsRefresh = true;
-              await this.expireRequest(req.id);
-            }
-          }
-        }
+    return new Promise((resolve, reject) => {
+      // Load CSS
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      // Load JS
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => resolve(window.L);
+      script.onerror = (err) => reject(err);
+      document.body.appendChild(script);
+    });
+  }
+
+  initMap(containerId, lat, lng) {
+    if (!window.L) return;
+    try {
+      if (this.maps && this.maps[containerId]) {
+        this.maps[containerId].remove();
+      } else {
+        this.maps = this.maps || {};
       }
 
-      // Trigger UI updates if anything was expired during ticker run
-      if (needsRefresh) {
-        this.renderAssignments();
-      }
-    }, 1000);
+      const map = window.L.map(containerId).setView([lat, lng], 15);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      window.L.marker([lat, lng]).addTo(map);
+      this.maps[containerId] = map;
+      
+      setTimeout(() => map.invalidateSize(), 200);
+    } catch (e) {
+      console.warn('[Leaflet] Map init failed:', e.message);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // LIFECYCLE LIFELINE LIFTS
+  // LIFE SOURCING STAGERS
   // ═══════════════════════════════════════════════════════════════════════════
 
   async updateStatus(id, newStatus, comments = '', photoUrl = '') {
@@ -1116,7 +1261,6 @@ export class ClientAssignmentsView extends Component {
 
         await this.updateStatus(id, 'Finalizado', comments, photoUrl);
 
-        // Revoke any active credentials requests automatically when completing the assignment!
         const assignment = this.state.assignments.find(a => a.id === id);
         if (assignment) {
           const req = this.state.authRequests.find(r => r.clientId === assignment.clientId && r.assignmentId === assignment.id && r.status === 'Aprobado');
@@ -1143,6 +1287,65 @@ export class ClientAssignmentsView extends Component {
         submitBtn.textContent = 'Completar Servicio';
       }
     });
+  }
+
+  async expireRequest(requestId) {
+    try {
+      const { db } = await import('../../../config/firebase.config.js');
+      const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+      if (db) {
+        await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
+          status: 'Expirado',
+          approvedData: null
+        });
+
+        const req = this.state.authRequests.find(r => r.id === requestId);
+        if (req) {
+          await FirestoreService.logAudit({
+            action: 'CREDENTIALS_EXPIRED',
+            companyId: this.companyId,
+            description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos de forma segura.`
+          });
+        }
+      }
+
+      NotificationService.success('Acceso revocado y datos eliminados.');
+      this.loadMyAssignments();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  startCountdownTicker() {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+
+    this.timerInterval = setInterval(async () => {
+      let needsRefresh = false;
+      const now = Date.now();
+
+      for (const req of this.state.authRequests) {
+        if (req.status === 'Aprobado' && req.expiresAt) {
+          const remainSecs = Math.max(0, Math.floor((req.expiresAt - now) / 1000));
+          const el = document.getElementById(`countdown-${req.id}`);
+          
+          if (el) {
+            if (remainSecs > 0) {
+              const min = Math.floor(remainSecs / 60);
+              const sec = remainSecs % 60;
+              el.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+            } else {
+              needsRefresh = true;
+              await this.expireRequest(req.id);
+            }
+          }
+        }
+      }
+
+      if (needsRefresh) {
+        this.renderAssignments();
+      }
+    }, 1000);
   }
 
   formatExecutionTime(assignedAt, completedAt) {
@@ -1180,6 +1383,9 @@ export class ClientAssignmentsView extends Component {
     }
     if (this.authRequestsUnsubscribe) {
       this.authRequestsUnsubscribe();
+    }
+    if (this.pendingClientsUnsubscribe) {
+      this.pendingClientsUnsubscribe();
     }
     this.layout.unmount();
     super.unmount();
