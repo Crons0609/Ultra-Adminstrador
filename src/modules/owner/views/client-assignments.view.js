@@ -3,8 +3,10 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { FirestoreService } from '../../../services/firestore.service.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { EncryptionService } from '../../../utils/encryption.js';
 
 export class ClientAssignmentsView extends Component {
   constructor(params = {}) {
@@ -17,10 +19,11 @@ export class ClientAssignmentsView extends Component {
     this.branchId = this.currentUser.branchId || 'main';
 
     this.state = {
-      activeTab: 'assign', // 'assign' | 'register' | 'history'
+      activeTab: 'assign', // 'assign' | 'register' | 'history' | 'authorizations'
       employees: [],
       clients: [],
       assignments: [],
+      authRequests: [],
       filters: {
         searchQuery: '',
         status: 'ALL',
@@ -34,8 +37,8 @@ export class ClientAssignmentsView extends Component {
     this.isServiceRubro = (category === 'SERVICIOS_PERSONALIZADOS' || category === 'OTROS' || category === 'PERSONALIZADA');
 
     this.layout = new PageLayout({
-      title: 'Asignación de Clientes a Empleados',
-      subtitle: 'Distribuye tareas de servicio y mantén un seguimiento del estado de cada orden.',
+      title: 'Asignación de Clientes y Autorizaciones',
+      subtitle: 'Distribuye tareas de servicio, registra fichas técnicas y autoriza credenciales de forma segura.',
       actionHTML: `
         <span class="badge" style="font-size: 0.75rem; padding: 4px 10px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 4px; background: rgba(139, 92, 246, 0.1); color: var(--color-accent);">
           🏢 Rubro: ${this.currentCompany.businessType || 'Servicios Varios'}
@@ -63,6 +66,7 @@ export class ClientAssignmentsView extends Component {
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
           }
           .assign-tab-btn:hover {
             color: var(--color-text-primary);
@@ -78,6 +82,14 @@ export class ClientAssignmentsView extends Component {
             margin: var(--space-4) 0 var(--space-3);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             padding-bottom: var(--space-1);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .accordion-content {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
           }
         </style>
         <div id="assign-dashboard-container"></div>
@@ -85,6 +97,8 @@ export class ClientAssignmentsView extends Component {
     });
 
     this.dbUnsubscribe = null;
+    this.authRequestsUnsubscribe = null;
+    this.sweeperInterval = null;
   }
 
   async mount() {
@@ -104,6 +118,9 @@ export class ClientAssignmentsView extends Component {
     await this.loadData();
     this.subscribeToRealtimeData();
 
+    // Start Expiration Sweeper
+    this.startExpirationSweeper();
+
     return element;
   }
 
@@ -113,7 +130,7 @@ export class ClientAssignmentsView extends Component {
         <div style="font-size: 3.5rem; margin-bottom: var(--space-4);">⚠️</div>
         <h3 class="text-xl font-bold mb-2" style="color: var(--color-error);">Funcionalidad Exclusiva de Servicios</h3>
         <p class="text-secondary mb-4">
-          La sección de <strong>Asignación de Clientes</strong> está diseñada únicamente para negocios del rubro <strong>Servicios Varios</strong>, Mantenimiento, Talleres, Alquileres o Belleza.
+          La sección de <strong>Asignación de Clientes y Autorizaciones</strong> está diseñada únicamente para negocios del rubro <strong>Servicios Varios</strong>, Mantenimiento, Talleres, Alquileres o Belleza.
         </p>
         <p class="text-xs text-secondary">
           Tu negocio está registrado actualmente bajo el rubro de: <span class="badge" style="background: var(--color-bg-tertiary); color: var(--color-text-primary);">${this.currentCompany.businessType || 'General'}</span>.
@@ -128,6 +145,7 @@ export class ClientAssignmentsView extends Component {
         <button class="assign-tab-btn ${this.state.activeTab === 'assign' ? 'active' : ''}" data-tab="assign">📝 Nueva Asignación</button>
         <button class="assign-tab-btn ${this.state.activeTab === 'register' ? 'active' : ''}" data-tab="register">👥 Registrar Cliente</button>
         <button class="assign-tab-btn ${this.state.activeTab === 'history' ? 'active' : ''}" data-tab="history">⏳ Historial de Asignaciones</button>
+        <button class="assign-tab-btn ${this.state.activeTab === 'authorizations' ? 'active' : ''}" data-tab="authorizations">🔑 Autorizaciones</button>
       </div>
       <div id="assign-tab-content"></div>
     `;
@@ -159,6 +177,9 @@ export class ClientAssignmentsView extends Component {
     } else if (this.state.activeTab === 'history') {
       tabContent.innerHTML = this.getHistoryHTML();
       this.bindHistoryEvents(tabContent);
+    } else if (this.state.activeTab === 'authorizations') {
+      tabContent.innerHTML = this.getAuthorizationsHTML();
+      this.bindAuthorizationsEvents(tabContent);
     }
   }
 
@@ -294,7 +315,7 @@ export class ClientAssignmentsView extends Component {
 
           await set(assignmentRef, assignmentData);
 
-          // Push push notification to DB for employee
+          // Push notify to DB for employee
           const notifRef = push(ref(db, `${this.companyId}/notifications`));
           await set(notifRef, {
             id: notifRef.key,
@@ -377,11 +398,111 @@ export class ClientAssignmentsView extends Component {
           </div>
           <div class="form-group">
             <label class="form-label" for="cli-description">Descripción del Problema o Tarea <span class="form-label-required"></span></label>
-            <textarea id="cli-description" class="input" style="height: 80px; padding: 10px;" placeholder="Detalla el problema planteado por el cliente..." required></textarea>
+            <textarea id="cli-description" class="input" style="height: 60px; padding: 10px;" placeholder="Detalla el problema planteado por el cliente..." required></textarea>
           </div>
           <div class="form-group">
             <label class="form-label" for="cli-notes">Observaciones Generales</label>
             <textarea id="cli-notes" class="input" style="height: 60px; padding: 10px;" placeholder="Detalles de facturación, condiciones, etc."></textarea>
+          </div>
+
+          <!-- LEVEL 1: TECHNICAL DATA SECTION (Accordion) -->
+          <div class="form-section-title" data-target="technical-acc">📋 Nivel 1: Ficha Técnica (Compartido Automáticamente) <span>▼</span></div>
+          <div id="technical-acc" class="accordion-content" style="max-height: 0px; display: flex; flex-direction: column; gap: var(--space-3);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-serial">Número de Serie de Equipos</label>
+                <input type="text" id="cli-serial" class="input input-md" placeholder="Ej. SN-789456123" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-model">Marca y Modelo</label>
+                <input type="text" id="cli-model" class="input input-md" placeholder="Ej. Hikvision DS-2CD2087G2-L" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cli-prod-desc">Descripción del Producto Instalado</label>
+              <input type="text" id="cli-prod-desc" class="input input-md" placeholder="Ej. Kit DVR 8 Canales con Cámaras ColorVu 4K" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-install-date">Fecha de Instalación</label>
+                <input type="date" id="cli-install-date" class="input input-md" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-warranty-exp">Expiración de Garantía</label>
+                <input type="date" id="cli-warranty-exp" class="input input-md" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-warranty-status">Estado de Garantía</label>
+                <select id="cli-warranty-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
+                  <option value="Vigente">🟢 Vigente</option>
+                  <option value="Vencida">🔴 Vencida</option>
+                  <option value="Sin garantía" selected>⚪ Sin garantía</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cli-tech-obs">Observaciones Técnicas</label>
+              <textarea id="cli-tech-obs" class="input" style="height: 60px; padding: 10px;" placeholder="Detalles de instalación física, alturas, cableado..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cli-maint-history">Historial de Mantenimientos</label>
+              <textarea id="cli-maint-history" class="input" style="height: 60px; padding: 10px;" placeholder="Historial previo de asistencias o limpiezas..."></textarea>
+            </div>
+          </div>
+
+          <!-- LEVEL 2: CONFIDENTIAL CREDENTIALS SECTION (Accordion) -->
+          <div class="form-section-title" data-target="credentials-acc">🔑 Nivel 2: Datos y Credenciales de Acceso (Requiere Aprobación) <span>▼</span></div>
+          <div id="credentials-acc" class="accordion-content" style="max-height: 0px; display: flex; flex-direction: column; gap: var(--space-3);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-dvr-user">Usuario DVR</label>
+                <input type="text" id="cli-dvr-user" class="input input-md" placeholder="admin" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-dvr-pass">Contraseña DVR</label>
+                <input type="password" id="cli-dvr-pass" class="input input-md" placeholder="••••••••" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-nvr-user">Usuario NVR/XVR</label>
+                <input type="text" id="cli-nvr-user" class="input input-md" placeholder="admin" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-nvr-pass">Contraseña NVR/XVR</label>
+                <input type="password" id="cli-nvr-pass" class="input input-md" placeholder="••••••••" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-cam-user">Usuario Cámaras IP</label>
+                <input type="text" id="cli-cam-user" class="input input-md" placeholder="admin" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-cam-pass">Contraseña Cámaras IP</label>
+                <input type="password" id="cli-cam-pass" class="input input-md" placeholder="••••••••" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-app-user">Usuario App Móvil</label>
+                <input type="text" id="cli-app-user" class="input input-md" placeholder="cliente@correo.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-app-pass">Contraseña App Móvil</label>
+                <input type="password" id="cli-app-pass" class="input input-md" placeholder="••••••••" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+              <div class="form-group">
+                <label class="form-label" for="cli-encrypt">Código / Clave de Cifrado (Encryption Code)</label>
+                <input type="text" id="cli-encrypt" class="input input-md" placeholder="ABCDEF" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cli-other-creds">Otras Credenciales / Llaves</label>
+                <input type="text" id="cli-other-creds" class="input input-md" placeholder="Usuario y clave de hosting, router, etc." />
+              </div>
+            </div>
           </div>
 
           <div class="d-flex justify-content-end gap-2 mt-2">
@@ -393,6 +514,25 @@ export class ClientAssignmentsView extends Component {
   }
 
   bindRegisterClientFormEvents(contentEl) {
+    // Accordion Toggle Behavior
+    contentEl.querySelectorAll('.form-section-title[data-target]').forEach(title => {
+      title.addEventListener('click', () => {
+        const targetId = title.getAttribute('data-target');
+        const content = contentEl.querySelector(`#${targetId}`);
+        const span = title.querySelector('span');
+
+        if (content.style.maxHeight === '0px' || !content.style.maxHeight) {
+          content.style.maxHeight = '1000px';
+          content.style.padding = '10px 0';
+          span.textContent = '▲';
+        } else {
+          content.style.maxHeight = '0px';
+          content.style.padding = '0';
+          span.textContent = '▼';
+        }
+      });
+    });
+
     const form = contentEl.querySelector('#new-client-form');
     if (!form) return;
 
@@ -410,6 +550,32 @@ export class ClientAssignmentsView extends Component {
       const serviceType = form.querySelector('#cli-service').value.trim();
       const problemDescription = form.querySelector('#cli-description').value.trim();
       const notes = form.querySelector('#cli-notes').value.trim();
+
+      // Level 1: technical details
+      const technical_info = {
+        serialNumber: form.querySelector('#cli-serial').value.trim(),
+        brandModel: form.querySelector('#cli-model').value.trim(),
+        productDescription: form.querySelector('#cli-prod-desc').value.trim(),
+        installationDate: form.querySelector('#cli-install-date').value,
+        warrantyExpiration: form.querySelector('#cli-warranty-exp').value,
+        warrantyStatus: form.querySelector('#cli-warranty-status').value,
+        observations: form.querySelector('#cli-tech-obs').value.trim(),
+        maintenanceHistory: form.querySelector('#cli-maint-history').value.trim()
+      };
+
+      // Level 2: credentials (Encrypted before writing)
+      const credentials = {
+        dvrUser: EncryptionService.encrypt(form.querySelector('#cli-dvr-user').value.trim()),
+        dvrPassword: EncryptionService.encrypt(form.querySelector('#cli-dvr-pass').value.trim()),
+        nvrUser: EncryptionService.encrypt(form.querySelector('#cli-nvr-user').value.trim()),
+        nvrPassword: EncryptionService.encrypt(form.querySelector('#cli-nvr-pass').value.trim()),
+        ipCameraUser: EncryptionService.encrypt(form.querySelector('#cli-cam-user').value.trim()),
+        ipCameraPassword: EncryptionService.encrypt(form.querySelector('#cli-cam-pass').value.trim()),
+        appUser: EncryptionService.encrypt(form.querySelector('#cli-app-user').value.trim()),
+        appPassword: EncryptionService.encrypt(form.querySelector('#cli-app-pass').value.trim()),
+        encryptionCode: EncryptionService.encrypt(form.querySelector('#cli-encrypt').value.trim()),
+        otherCredentials: EncryptionService.encrypt(form.querySelector('#cli-other-creds').value.trim())
+      };
 
       const submitBtn = form.querySelector('#btn-submit-client');
       submitBtn.disabled = true;
@@ -436,6 +602,8 @@ export class ClientAssignmentsView extends Component {
             serviceType: serviceType,
             problemDescription: problemDescription,
             notes: notes,
+            technical_info: technical_info,
+            credentials: credentials,
             createdAt: Date.now()
           };
 
@@ -629,7 +797,319 @@ export class ClientAssignmentsView extends Component {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // FIREBASE REALTIME DATABASE METHODS
+  // LEVEL 2: AUTHORIZATIONS INTERFACE (OWNER CONTROLS)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  getAuthorizationsHTML() {
+    const pendingList = this.state.authRequests.filter(r => r.status === 'Pendiente');
+    const historyList = this.state.authRequests.filter(r => r.status !== 'Pendiente');
+
+    const labelMap = {
+      dvrUser: '👤 Usuario DVR',
+      dvrPassword: '🔑 Contraseña DVR',
+      nvrUser: '👤 Usuario NVR/XVR',
+      nvrPassword: '🔑 Contraseña NVR/XVR',
+      ipCameraUser: '👤 Usuario Cámara IP',
+      ipCameraPassword: '🔑 Contraseña Cámara IP',
+      appUser: '👤 Usuario Aplicación Móvil',
+      appPassword: '🔑 Contraseña Aplicación',
+      encryptionCode: '🛡️ Código de Cifrado',
+      otherCredentials: '📝 Otras Credenciales'
+    };
+
+    const pendingCards = pendingList.map(req => {
+      const fieldsCheckboxHTML = req.requestedFields.map(f => `
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; cursor:pointer;">
+          <input type="checkbox" class="auth-field-chk" value="${f}" checked />
+          <span>${labelMap[f] || f}</span>
+        </label>
+      `).join('');
+
+      return `
+        <div class="card p-5 animate-fade-in" style="border:1px solid rgba(139,92,246,0.15); margin-bottom:12px;" data-req-id="${req.id}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div>
+              <strong style="font-size:0.95rem; color:var(--color-text-primary);">${req.employeeName}</strong>
+              <div style="font-size:0.72rem; color:var(--color-text-secondary); margin-top:2px;">
+                Solicita acceso para el cliente: <strong>${req.clientName}</strong>
+              </div>
+            </div>
+            <span class="badge" style="font-size:0.7rem; background:rgba(234,179,8,0.1); color:var(--color-warning);">Pendiente</span>
+          </div>
+
+          <div style="font-size:0.8rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:6px; padding:8px 12px; margin-bottom:10px;">
+            <strong>Justificación o Motivo:</strong><br/>
+            <span style="color:var(--color-text-secondary);">${req.motive || 'Sin justificación'}</span>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <strong style="font-size:0.78rem; display:block; margin-bottom:6px;">Selección de Campos a Autorizar (Granular):</strong>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              ${fieldsCheckboxHTML}
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:0.78rem; color:var(--color-text-secondary);">Duración del acceso:</span>
+              <select class="auth-duration-select input input-xs" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary); padding: 2px 6px;">
+                <option value="10">10 minutos</option>
+                <option value="15" selected>15 minutos</option>
+                <option value="30">30 minutos</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-danger btn-xs btn-reject-request" data-id="${req.id}">Rechazar</button>
+              <button class="btn btn-primary btn-xs btn-approve-request" data-id="${req.id}">Autorizar</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const historyItems = historyList.map(req => {
+      const statusColor = {
+        Aprobado: 'var(--color-success)',
+        Rechazado: 'var(--color-error)',
+        Expirado: 'var(--color-text-secondary)'
+      }[req.status] || 'var(--color-text-primary)';
+
+      const resolvedStr = req.approvedAt ? TimeService.formatDate(req.approvedAt, true) : '—';
+      const expireStr = req.expiresAt ? TimeService.formatDate(req.expiresAt, true) : '—';
+
+      const approvedLabels = (req.approvedFields || []).map(f => labelMap[f] || f).join(', ');
+
+      return `
+        <tr style="border-bottom:1px solid var(--color-border); font-size:0.78rem;">
+          <td style="padding:10px 8px;">
+            <strong>${req.employeeName}</strong>
+          </td>
+          <td style="padding:10px 8px;">${req.clientName}</td>
+          <td style="padding:10px 8px; color:var(--color-text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${req.motive}">
+            ${req.motive || '—'}
+          </td>
+          <td style="padding:10px 8px;">
+            <strong style="color:${statusColor};">${req.status}</strong>
+          </td>
+          <td style="padding:10px 8px; color:var(--color-text-secondary); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${approvedLabels}">
+            ${approvedLabels || 'Ninguno'}
+          </td>
+          <td style="padding:10px 8px; color:var(--color-text-secondary);">${TimeService.formatDate(req.requestedAt, true)}</td>
+          <td style="padding:10px 8px; color:var(--color-text-secondary);">${resolvedStr}</td>
+          <td style="padding:10px 8px; color:var(--color-text-secondary);">${expireStr}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div style="display:grid; grid-template-columns:1fr; gap:20px;">
+        <!-- Solicitudes pendientes -->
+        <div class="card p-5">
+          <h3 class="text-md font-bold mb-4">🔑 Solicitudes de Credenciales Pendientes</h3>
+          <div id="pending-requests-wrapper">
+            ${pendingCards || '<div class="text-center py-6 text-secondary" style="font-size:0.85rem;">🔕 No hay solicitudes de credenciales pendientes.</div>'}
+          </div>
+        </div>
+
+        <!-- Historial de autorizaciones -->
+        <div class="card p-5">
+          <h3 class="text-md font-bold mb-4">📚 Historial de Solicitudes y Autorizaciones</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; text-align:left;">
+              <thead>
+                <tr style="border-bottom:2px solid var(--color-border); color:var(--color-text-secondary); font-size:0.75rem; font-weight:700;">
+                  <th style="padding:8px;">Empleado</th>
+                  <th style="padding:8px;">Cliente</th>
+                  <th style="padding:8px;">Motivo</th>
+                  <th style="padding:8px;">Estado</th>
+                  <th style="padding:8px;">Datos Aprobados</th>
+                  <th style="padding:8px;">Solicitado</th>
+                  <th style="padding:8px;">Resuelto</th>
+                  <th style="padding:8px;">Expiración</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${historyItems || '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--color-text-secondary);">No hay registros de autorizaciones previas.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  bindAuthorizationsEvents(contentEl) {
+    contentEl.addEventListener('click', async (e) => {
+      const approveBtn = e.target.closest('.btn-approve-request');
+      if (approveBtn) {
+        const id = approveBtn.getAttribute('data-id');
+        this.processApproval(id, true, contentEl);
+        return;
+      }
+
+      const rejectBtn = e.target.closest('.btn-reject-request');
+      if (rejectBtn) {
+        const id = rejectBtn.getAttribute('data-id');
+        this.processApproval(id, false, contentEl);
+        return;
+      }
+    });
+  }
+
+  async processApproval(requestId, isApprove, contentEl) {
+    const req = this.state.authRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    const requestCard = contentEl.querySelector(`[data-req-id="${requestId}"]`);
+    if (!requestCard) return;
+
+    try {
+      const { db } = await import('../../../config/firebase.config.js');
+      const { ref, update, get, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+      if (!db) return;
+
+      if (!isApprove) {
+        // Reject Flow
+        const comment = prompt('Motivo de rechazo (opcional):') || '';
+        await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
+          status: 'Rechazado',
+          approvedAt: Date.now(),
+          comment: comment,
+          authorizedBy: this.currentUser.displayName
+        });
+
+        // Notify employee
+        const notifRef = push(ref(db, `${this.companyId}/notifications`));
+        await set(notifRef, {
+          id: notifRef.key,
+          toUid: req.employeeId,
+          title: '❌ Solicitud de Credenciales Rechazada',
+          message: `El propietario rechazó tu solicitud de credenciales para ${req.clientName}. Motivo: ${comment || 'Sin justificación'}`,
+          timestamp: Date.now(),
+          read: false
+        });
+
+        // Log audit trace
+        await FirestoreService.logAudit({
+          action: 'OWNER_REJECT_CREDENTIALS',
+          companyId: this.companyId,
+          description: `El propietario ${this.currentUser.displayName} rechazó la solicitud de credenciales de ${req.employeeName} para el cliente ${req.clientName}.`
+        });
+
+        NotificationService.success('Solicitud rechazada con éxito.');
+        this.loadData();
+        return;
+      }
+
+      // Approve Flow (granular approval)
+      const approvedCheckboxes = requestCard.querySelectorAll('.auth-field-chk:checked');
+      const approvedFields = Array.from(approvedCheckboxes).map(chk => chk.value);
+
+      if (approvedFields.length === 0) {
+        alert('Debes seleccionar al menos un campo para autorizar la solicitud.');
+        return;
+      }
+
+      const durationMin = parseInt(requestCard.querySelector('.auth-duration-select').value) || 15;
+
+      // 1. Fetch client encrypted credentials
+      const clientSnap = await get(ref(db, `${this.companyId}/clients/${req.clientId}`));
+      if (!clientSnap.exists()) {
+        alert('El cliente relacionado no existe.');
+        return;
+      }
+
+      const client = clientSnap.val();
+      const rawCreds = client.credentials || {};
+      const approvedData = {};
+
+      // 2. Decrypt only the approved fields, base64 data to plain text and save to approvedData node
+      approvedFields.forEach(field => {
+        if (rawCreds[field]) {
+          approvedData[field] = EncryptionService.decrypt(rawCreds[field]);
+        } else {
+          approvedData[field] = '—';
+        }
+      });
+
+      // 3. Write approvals, decrypt data and expiration
+      const timestamp = Date.now();
+      const expiresAt = timestamp + durationMin * 60 * 1000;
+
+      await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
+        status: 'Aprobado',
+        approvedAt: timestamp,
+        expiresAt: expiresAt,
+        expirationDurationMin: durationMin,
+        approvedFields: approvedFields,
+        approvedData: approvedData,
+        authorizedBy: this.currentUser.displayName
+      });
+
+      // 4. Send notify
+      const notifRef = push(ref(db, `${this.companyId}/notifications`));
+      await set(notifRef, {
+        id: notifRef.key,
+        toUid: req.employeeId,
+        title: '🔑 Solicitud de Credenciales Aprobada',
+        message: `Se te ha concedido acceso temporal (${durationMin} min) a las credenciales de ${req.clientName}`,
+        timestamp: Date.now(),
+        read: false
+      });
+
+      // 5. Log audit trace
+      await FirestoreService.logAudit({
+        action: 'OWNER_APPROVE_CREDENTIALS',
+        companyId: this.companyId,
+        description: `El propietario ${this.currentUser.displayName} aprobó la solicitud de credenciales de ${req.employeeName} para el cliente ${req.clientName}. Campos: ${approvedFields.join(', ')}. Expiración: ${durationMin} min.`
+      });
+
+      NotificationService.success(`Solicitud autorizada por ${durationMin} minutos.`);
+      this.loadData();
+    } catch (e) {
+      console.error(e);
+      alert(`Error al procesar la aprobación: ${e.message || e}`);
+    }
+  }
+
+  startExpirationSweeper() {
+    if (this.sweeperInterval) clearInterval(this.sweeperInterval);
+
+    // Runs a sweeper routine every 10 seconds to auto-delete expired approvals from database
+    this.sweeperInterval = setInterval(async () => {
+      const expiredList = this.state.authRequests.filter(r => r.status === 'Aprobado' && r.expiresAt && r.expiresAt < Date.now());
+      if (expiredList.length === 0) return;
+
+      try {
+        const { db } = await import('../../../config/firebase.config.js');
+        const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+        if (db) {
+          console.log(`[Sweeper] Limpiando ${expiredList.length} solicitudes de credenciales expiradas...`);
+          
+          for (const req of expiredList) {
+            await update(ref(db, `${this.companyId}/auth_requests/${req.id}`), {
+              status: 'Expirado',
+              approvedData: null // Clear decrypted sensitive credentials completely!
+            });
+
+            // Log Audit
+            await FirestoreService.logAudit({
+              action: 'CREDENTIALS_EXPIRED',
+              companyId: this.companyId,
+              description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos eliminados de forma segura.`
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[Sweeper] Error sweeps:', err.message);
+      }
+    }, 10000);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DATABASE RETRIEVALS
   // ═══════════════════════════════════════════════════════════════════════════
 
   async loadData() {
@@ -639,6 +1119,7 @@ export class ClientAssignmentsView extends Component {
 
       if (!db || !this.companyId) return;
 
+      // Load employees
       const empSnapshot = await get(ref(db, `${this.companyId}/employees`));
       if (empSnapshot.exists()) {
         const data = empSnapshot.val();
@@ -647,18 +1128,29 @@ export class ClientAssignmentsView extends Component {
           .filter(e => e.role !== 'SUPER_ADMIN' && e.role !== 'OWNER' && e.active !== false);
       }
 
+      // Load clients
       const cliSnapshot = await get(ref(db, `${this.companyId}/clients`));
       if (cliSnapshot.exists()) {
         const data = cliSnapshot.val();
         this.state.clients = Object.keys(data).map(k => ({ id: k, ...data[k] }));
       }
 
+      // Load assignments
       const asgSnapshot = await get(ref(db, `${this.companyId}/assignments`));
       if (asgSnapshot.exists()) {
         const data = asgSnapshot.val();
         this.state.assignments = Object.keys(data)
           .map(k => ({ id: k, ...data[k] }))
           .sort((a, b) => b.assignedAt - a.assignedAt);
+      }
+
+      // Load auth requests
+      const reqSnapshot = await get(ref(db, `${this.companyId}/auth_requests`));
+      if (reqSnapshot.exists()) {
+        const data = reqSnapshot.val();
+        this.state.authRequests = Object.keys(data)
+          .map(k => ({ id: k, ...data[k] }))
+          .sort((a, b) => b.requestedAt - a.requestedAt);
       }
 
       this.renderActiveTabContent();
@@ -672,6 +1164,7 @@ export class ClientAssignmentsView extends Component {
       import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
         if (!db || !this.companyId) return;
 
+        // Assignments listener
         this.dbUnsubscribe = onValue(ref(db, `${this.companyId}/assignments`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -682,6 +1175,21 @@ export class ClientAssignmentsView extends Component {
             this.state.assignments = [];
           }
           if (this.state.activeTab === 'history') {
+            this.renderActiveTabContent();
+          }
+        });
+
+        // Auth requests listener
+        this.authRequestsUnsubscribe = onValue(ref(db, `${this.companyId}/auth_requests`), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            this.state.authRequests = Object.keys(data)
+              .map(k => ({ id: k, ...data[k] }))
+              .sort((a, b) => b.requestedAt - a.requestedAt);
+          } else {
+            this.state.authRequests = [];
+          }
+          if (this.state.activeTab === 'authorizations') {
             this.renderActiveTabContent();
           }
         });
@@ -890,8 +1398,14 @@ export class ClientAssignmentsView extends Component {
   }
 
   unmount() {
+    if (this.sweeperInterval) {
+      clearInterval(this.sweeperInterval);
+    }
     if (this.dbUnsubscribe) {
       this.dbUnsubscribe();
+    }
+    if (this.authRequestsUnsubscribe) {
+      this.authRequestsUnsubscribe();
     }
     this.layout.unmount();
     super.unmount();
