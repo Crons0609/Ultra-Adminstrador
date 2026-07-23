@@ -7,7 +7,7 @@
 import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
-import { getModuleGuards } from '../../config/business-types.config.js';
+import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
 
 export class Sidebar extends Component {
   constructor(props = {}) {
@@ -20,6 +20,7 @@ export class Sidebar extends Component {
 
     // Compute automatic guards from business type, then merge with super-admin cfg overrides.
     // cfg values take precedence (super-admin can force-enable a module even if the rubro doesn't have it).
+    const category = getBusinessCategory(currentCompany?.businessType || '');
     const autoGuards = getModuleGuards(currentCompany?.businessType || '');
     const guards = { ...autoGuards, ...cfg };
 
@@ -100,6 +101,10 @@ export class Sidebar extends Component {
               ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, guards.enableEmployeePricing),
               { label: 'Página Pública', path: '#/manager/catalog-settings', icon: icons.globe },
               { label: 'Ajustes', path: '#/owner/settings', icon: icons.settings },
+              ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
+                ? [{ label: 'Asignación de Clientes', path: '#/owner/client-assignments', icon: icons.calendar }]
+                : []
+              ),
             ]
           },
           {
@@ -151,6 +156,10 @@ export class Sidebar extends Component {
               { label: 'Avisos a Proveedores', path: '#/owner/supplier-reminders', icon: icons.payable },
               { label: 'WhatsApp Automation', path: '#/owner/whatsapp', icon: icons.whatsapp },
               { label: 'Telegram Automation', path: '#/owner/telegram', icon: icons.telegram },
+              ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
+                ? [{ label: 'Asignación de Clientes', path: '#/owner/client-assignments', icon: icons.calendar }]
+                : []
+              ),
             ]
           }
         ]
@@ -176,7 +185,10 @@ export class Sidebar extends Component {
           {
             label: 'Servicio',
             items: [
-              { label: 'Mis Mesas', path: '#/waiter/tables', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>` },
+              ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
+                ? [{ label: 'Mis Clientes Asignados', path: '#/waiter/client-assignments', icon: icons.calendar }]
+                : [{ label: 'Mis Mesas', path: '#/waiter/tables', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>` }]
+              )
             ]
           }
         ]

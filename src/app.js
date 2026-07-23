@@ -56,8 +56,15 @@ class App {
           }
           // Check GPS tracking prompt / auto-resume for employees
           GeolocationService.checkAndPromptGPS();
+          
+          // Start notifications listener
+          this.startNotificationsListener(userSession);
         } else {
           console.log('[App] 🔓 No active Firebase session — showing login.');
+          if (this.notificationsUnsubscribe) {
+            this.notificationsUnsubscribe();
+            this.notificationsUnsubscribe = null;
+          }
         }
         resolve();
       });
@@ -72,6 +79,52 @@ class App {
     this.router = new Router(ROUTES, 'app');
 
     console.log(`[App] ✅ ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);
+  }
+
+  /**
+   * Listens for incoming real-time notifications in Firebase and displays them as Toast alerts.
+   */
+  startNotificationsListener(userSession) {
+    if (this.notificationsUnsubscribe) {
+      this.notificationsUnsubscribe();
+      this.notificationsUnsubscribe = null;
+    }
+
+    import('./config/firebase.config.js').then(({ db }) => {
+      import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
+        if (!db || !userSession.companyId) return;
+
+        const path = `${userSession.companyId}/notifications`;
+        const notificationsRef = ref(db, path);
+        
+        let initialLoad = true;
+        this.notificationsUnsubscribe = onValue(notificationsRef, (snapshot) => {
+          if (!snapshot.exists()) return;
+          const data = snapshot.val();
+          
+          if (initialLoad) {
+            initialLoad = false;
+            return;
+          }
+
+          const notifs = Object.keys(data).map(k => ({ id: k, ...data[k] }));
+          if (notifs.length === 0) return;
+          
+          notifs.sort((a, b) => b.timestamp - a.timestamp);
+          const newest = notifs[0];
+
+          const isOwner = userSession.role === 'OWNER' || userSession.role === 'MANAGER';
+          const matchUser = newest.toUid === userSession.uid || (newest.toUid === 'OWNER' && isOwner);
+          const isRecent = (Date.now() - newest.timestamp) < 5000;
+
+          if (matchUser && isRecent && !newest.read) {
+            import('./services/notification.service.js').then(({ NotificationService }) => {
+              NotificationService.show(newest.message, 'info', 5000);
+            });
+          }
+        });
+      });
+    });
   }
 
   /**
