@@ -521,6 +521,7 @@ export class EmployeesView extends Component {
       { key: 'gestionar_vehiculos', label: '🚗 Gestionar vehículos / delivery' },
       { key: 'gestionar_herramientas', label: '🔧 Gestionar herramientas y equipos' },
       { key: 'gestionar_clientes', label: '👥 Gestionar clientes' },
+      { key: 'registrar_ubicacion_clientes', label: '📍 Registrar ubicación de clientes' },
 
       // Operaciones Generales
       { key: 'ver_reportes', label: '📊 Ver reportes' },

@@ -20,12 +20,15 @@ export class ClientAssignmentsView extends Component {
 
     this.state = {
       activeTab: 'assign', // 'assign' | 'register' | 'history' | 'authorizations' | 'pending-clients'
+      pendingSubTab: 'new-clients', // 'new-clients' | 'gps-updates'
       employees: [],
       clients: [],
       assignments: [],
       authRequests: [],
       pendingClients: [], // Requests sent by employees waiting for approval
-      activePendingClientId: null, // Selected request to review
+      pendingLocations: [], // GPS location requests sent by employees
+      activePendingClientId: null, // Selected request to review (New Client)
+      activePendingLocationId: null, // Selected request to review (GPS Update)
       filters: {
         searchQuery: '',
         status: 'ALL',
@@ -118,6 +121,28 @@ export class ClientAssignmentsView extends Component {
             border-color: var(--color-accent);
             background: rgba(139,92,246,0.05);
           }
+          
+          .pending-subtabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 15px;
+          }
+          .pending-subtab-btn {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+          }
+          .pending-subtab-btn.active {
+            background: var(--color-accent);
+            color: #fff;
+            border-color: var(--color-accent);
+          }
         </style>
         <div id="assign-dashboard-container"></div>
       `
@@ -126,6 +151,7 @@ export class ClientAssignmentsView extends Component {
     this.dbUnsubscribe = null;
     this.authRequestsUnsubscribe = null;
     this.pendingClientsUnsubscribe = null;
+    this.pendingLocationsUnsubscribe = null;
     this.sweeperInterval = null;
     this.maps = {};
   }
@@ -206,19 +232,37 @@ export class ClientAssignmentsView extends Component {
       tabContent.innerHTML = this.getAuthorizationsHTML();
       this.bindAuthorizationsEvents(tabContent);
     } else if (this.state.activeTab === 'pending-clients') {
-      tabContent.innerHTML = this.getPendingClientsHTML();
+      tabContent.innerHTML = this.getPendingClientsContainerHTML();
       this.bindPendingClientsEvents(tabContent);
     }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CLIENT REGISTRATIONS SUBMITTED BY EMPLOYEES (OWNER APPROVAL PANEL)
+  // REVIEWS CONTAINER & GPS UPDATES APPROVAL WORKSPACE
   // ═══════════════════════════════════════════════════════════════════════════
 
-  getPendingClientsHTML() {
+  getPendingClientsContainerHTML() {
+    const isNewClients = this.state.pendingSubTab === 'new-clients';
+    const nuevosCount = this.state.pendingClients.filter(c => c.status === 'Pendiente').length;
+    const gpsCount = this.state.pendingLocations.filter(l => l.status === 'Pendiente').length;
+
+    const subTabsHTML = `
+      <div class="pending-subtabs">
+        <button class="pending-subtab-btn ${isNewClients ? 'active' : ''}" data-subtab="new-clients">👤 Nuevos Clientes (${nuevosCount})</button>
+        <button class="pending-subtab-btn ${!isNewClients ? 'active' : ''}" data-subtab="gps-updates">📍 Ubicaciones GPS (${gpsCount})</button>
+      </div>
+    `;
+
+    if (isNewClients) {
+      return subTabsHTML + this.getNewClientsWorkspaceHTML();
+    } else {
+      return subTabsHTML + this.getGpsUpdatesWorkspaceHTML();
+    }
+  }
+
+  getNewClientsWorkspaceHTML() {
     const pendingRequests = this.state.pendingClients.filter(c => c.status === 'Pendiente');
     
-    // Left column list
     const listItemsHTML = pendingRequests.map(req => {
       const activeClass = this.state.activePendingClientId === req.id ? 'active' : '';
       return `
@@ -230,7 +274,6 @@ export class ClientAssignmentsView extends Component {
       `;
     }).join('');
 
-    // Right column details workspace
     let detailsHTML = '';
     const activeReq = pendingRequests.find(r => r.id === this.state.activePendingClientId);
 
@@ -297,13 +340,12 @@ export class ClientAssignmentsView extends Component {
               <input type="text" id="rev-ref" class="input input-md" value="${activeReq.reference}" required />
             </div>
 
-            <!-- GPS Coordinates Map Panel -->
             <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-top:4px;">
               <strong style="font-size:0.78rem; display:block; margin-bottom:4px; color:var(--color-text-primary);">🗺️ Coordenadas GPS del Registro</strong>
               ${activeReq.gps 
-                ? `<span style="font-size:0.72rem; color:var(--color-text-secondary);">Latitud: <strong>${activeReq.gps.lat}</strong>, Longitud: <strong>${activeReq.gps.lng}</strong> (Capturado: ${TimeService.formatDate(activeReq.gps.capturedAt, true)})</span>
+                ? `<span style="font-size:0.72rem; color:var(--color-text-secondary);">Latitud: <strong>${activeReq.gps.lat}</strong>, Longitud: <strong>${activeReq.gps.lng}</strong></span>
                    <div id="owner-review-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:8px; z-index:5;"></div>`
-                : '<span class="text-error" style="font-size:0.75rem;">⚠️ No se capturaron coordenadas GPS para este cliente.</span>'}
+                : '<span class="text-error" style="font-size:0.75rem;">⚠️ No se capturaron coordenadas GPS.</span>'}
             </div>
 
             <div class="form-section-title">🛠️ Especificaciones de Servicio</div>
@@ -347,25 +389,25 @@ export class ClientAssignmentsView extends Component {
       `;
     } else {
       detailsHTML = `
-        <div class="card p-10 text-center text-secondary animate-fade-in">
-          <div style="font-size:3rem; margin-bottom:10px;">📂</div>
-          <h4 class="font-bold">Ningún Cliente Seleccionado</h4>
-          <p class="text-xs mt-1">Selecciona una solicitud de la lista de la izquierda para revisar su ficha técnica e inicio de servicio.</p>
+        <div class="card p-10 text-center text-secondary">
+          <div style="font-size:3rem; margin-bottom:10px;">👤</div>
+          <h4 class="font-bold">Ningún Nuevo Cliente Seleccionado</h4>
+          <p class="text-xs mt-1">Selecciona una pre-inscripción de la lista izquierda.</p>
         </div>
       `;
     }
 
     return `
       <div class="split-container">
-        <!-- Left Side: List -->
+        <!-- List -->
         <div class="card p-5" style="max-height: 600px; overflow-y:auto;">
-          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Solicitudes de Ingreso</h3>
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Nuevos Ingresos</h3>
           <div id="pending-clients-list-wrapper">
             ${listItemsHTML || '<div class="text-center py-10 text-secondary" style="font-size:0.85rem;">🔕 No hay nuevos clientes pendientes de aprobación.</div>'}
           </div>
         </div>
 
-        <!-- Right Side: Editor / Review Workspace -->
+        <!-- Detail workspace -->
         <div id="pending-client-review-workspace">
           ${detailsHTML}
         </div>
@@ -373,176 +415,432 @@ export class ClientAssignmentsView extends Component {
     `;
   }
 
+  getGpsUpdatesWorkspaceHTML() {
+    const pendingLocs = this.state.pendingLocations.filter(l => l.status === 'Pendiente');
+
+    const listItemsHTML = pendingLocs.map(req => {
+      const activeClass = this.state.activePendingLocationId === req.id ? 'active' : '';
+      return `
+        <div class="pending-list-item ${activeClass}" data-loc-id="${req.id}">
+          <div style="font-weight:700; color:var(--color-text-primary); font-size:0.85rem;">${req.clientName}</div>
+          <div style="font-size:0.7rem; color:var(--color-accent); margin-top:2px;">Técnico: ${req.employeeName}</div>
+          <div style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px;">Capturado: ${TimeService.formatDate(req.capturedAt, true)}</div>
+        </div>
+      `;
+    }).join('');
+
+    let detailsHTML = '';
+    const activeLoc = pendingLocs.find(l => l.id === this.state.activePendingLocationId);
+
+    if (activeLoc) {
+      // Find client in catalog to show location history and current oficiales coords
+      const client = this.state.clients.find(c => c.id === activeLoc.clientId) || {};
+      const officialGpsStr = client.gps 
+        ? `${client.gps.lat.toFixed(6)}, ${client.gps.lng.toFixed(6)} (Actual)`
+        : 'Sin ubicación registrada actualmente';
+
+      // Load client's location history if available
+      const historyKeys = client.location_history ? Object.keys(client.location_history) : [];
+      const historyRowsHTML = historyKeys.map(key => {
+        const item = client.location_history[key];
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.03); font-size:0.72rem;">
+            <td style="padding:6px 4px; color:var(--color-text-secondary);">${TimeService.formatDate(item.capturedAt, true)}</td>
+            <td style="padding:6px 4px; color:var(--color-text-primary); font-weight:600;">${item.employeeName}</td>
+            <td style="padding:6px 4px; font-family:monospace;">${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</td>
+            <td style="padding:6px 4px; color:var(--color-text-secondary); font-size:0.65rem;">${item.observations || '—'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      detailsHTML = `
+        <div class="card p-6 animate-fade-in" style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
+            <div>
+              <h4 class="font-bold text-md" style="color:var(--color-text-primary);">📍 Actualizar Ubicación: ${activeLoc.clientName}</h4>
+              <span style="font-size:0.75rem; color:var(--color-text-secondary);">Enviado por el técnico <strong>${activeLoc.employeeName}</strong></span>
+            </div>
+            <span class="badge" style="background:rgba(234,179,8,0.1); color:var(--color-warning); font-size:0.7rem;">Pendiente</span>
+          </div>
+
+          <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:6px; color:var(--color-text-primary);">
+            <div>🗺️ Dirección Física Registrada: <strong>${client.address || '—'}</strong></div>
+            <div>📍 Ubicación Oficial Actual: <strong style="color:var(--color-accent);">${officialGpsStr}</strong></div>
+            <div>🛰️ Ubicación Propuesta por Técnico: <strong style="color:var(--color-success); font-family:monospace;">${activeLoc.lat.toFixed(6)}, ${activeLoc.lng.toFixed(6)}</strong> (Precisión: ${activeLoc.accuracy}m)</div>
+            ${activeLoc.observations ? `
+              <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); margin-top:4px;">
+                <strong>Observaciones de Campo:</strong> ${activeLoc.observations}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Leaflet review map -->
+          <div style="border:1px solid var(--color-border); border-radius:6px; margin: 6px 0;">
+            <div id="owner-review-gps-map" style="height:200px; z-index:5;"></div>
+          </div>
+
+          <!-- Location History Table -->
+          <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+            <strong style="font-size:0.75rem; color:var(--color-accent); display:block; margin-bottom:6px;">📚 Historial de Coordenadas de este Cliente:</strong>
+            <div style="overflow-x:auto; max-height:150px;">
+              <table style="width:100%; border-collapse:collapse; text-align:left;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.05); color:var(--color-text-secondary); font-size:0.65rem; font-weight:700;">
+                    <th style="padding:4px;">Fecha</th>
+                    <th style="padding:4px;">Registró</th>
+                    <th style="padding:4px;">Coordenadas</th>
+                    <th style="padding:4px;">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${historyRowsHTML || '<tr><td colspan="4" style="text-align:center; padding:10px; color:var(--color-text-secondary); font-size:0.65rem;">No hay historial de ubicaciones anteriores para este cliente.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; margin-top:4px;">
+            <button class="btn btn-danger btn-sm" id="btn-reject-gps-update">❌ Rechazar Cambios</button>
+            <button class="btn btn-primary btn-sm" id="btn-approve-gps-update">✅ Aprobar y Actualizar Ubicación</button>
+          </div>
+        </div>
+      `;
+    } else {
+      detailsHTML = `
+        <div class="card p-10 text-center text-secondary">
+          <div style="font-size:3rem; margin-bottom:10px;">📍</div>
+          <h4 class="font-bold">Ninguna Petición de Ubicación Seleccionada</h4>
+          <p class="text-xs mt-1">Selecciona una actualización de GPS en la lista izquierda para previsualizar el punto exacto en el mapa.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="split-container">
+        <!-- List -->
+        <div class="card p-5" style="max-height: 600px; overflow-y:auto;">
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Solicitudes de GPS</h3>
+          <div id="pending-locations-list-wrapper">
+            ${listItemsHTML || '<div class="text-center py-10 text-secondary" style="font-size:0.85rem;">🔕 No hay solicitudes de GPS pendientes.</div>'}
+          </div>
+        </div>
+
+        <!-- Workspace Detail -->
+        <div id="pending-location-review-workspace">
+          ${detailsHTML}
+        </div>
+      </div>
+    `;
+  }
+
   bindPendingClientsEvents(contentEl) {
-    // List item selection trigger
-    contentEl.querySelectorAll('.pending-list-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const id = item.getAttribute('data-req-id');
-        this.state.activePendingClientId = id;
+    // Sub-tab toggling
+    contentEl.querySelectorAll('.pending-subtab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.state.pendingSubTab = btn.getAttribute('data-subtab');
+        this.state.activePendingClientId = null;
+        this.state.activePendingLocationId = null;
         this.renderActiveTabContent();
       });
     });
 
-    const activeReq = this.state.pendingClients.find(r => r.id === this.state.activePendingClientId);
-    if (!activeReq) return;
+    const isNewClients = this.state.pendingSubTab === 'new-clients';
 
-    // Approvals button
-    contentEl.querySelector('#btn-approve-client')?.addEventListener('click', async () => {
-      const form = contentEl.querySelector('#review-client-form');
-      if (!form || !form.reportValidity()) return;
+    if (isNewClients) {
+      // 👤 NEW CLIENTS EVENT BINDINGS
+      contentEl.querySelectorAll('.pending-list-item').forEach(item => {
+        item.addEventListener('click', () => {
+          this.state.activePendingClientId = item.getAttribute('data-req-id');
+          this.renderActiveTabContent();
+        });
+      });
 
-      const approveBtn = contentEl.querySelector('#btn-approve-client');
-      approveBtn.disabled = true;
-      approveBtn.textContent = 'Procesando aprobación...';
+      const activeReq = this.state.pendingClients.find(r => r.id === this.state.activePendingClientId);
+      if (!activeReq) return;
 
-      try {
-        const { db } = await import('../../../config/firebase.config.js');
-        const { ref, push, set, update, remove } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+      // Approval Button
+      contentEl.querySelector('#btn-approve-client')?.addEventListener('click', async () => {
+        const form = contentEl.querySelector('#review-client-form');
+        if (!form || !form.reportValidity()) return;
 
-        if (db) {
-          // Read form values (incorporating any owner edits!)
-          const displayName = form.querySelector('#rev-name').value.trim();
-          const companyName = form.querySelector('#rev-company').value.trim();
-          const phone = form.querySelector('#rev-phone').value.trim();
-          const phoneSecondary = form.querySelector('#rev-phone-sec').value.trim();
-          const email = form.querySelector('#rev-email').value.trim();
-          const city = form.querySelector('#rev-city').value.trim();
-          const department = form.querySelector('#rev-dept').value.trim();
-          const address = form.querySelector('#rev-address').value.trim();
-          const reference = form.querySelector('#rev-ref').value.trim();
-          const serviceType = form.querySelector('#rev-service').value.trim();
-          const priority = form.querySelector('#rev-priority').value;
-          const problemDescription = form.querySelector('#rev-desc').value.trim();
-          const installedEquipment = form.querySelector('#rev-equip').value.trim();
-          const observations = form.querySelector('#rev-obs').value.trim();
+        const approveBtn = contentEl.querySelector('#btn-approve-client');
+        approveBtn.disabled = true;
 
-          const clientRef = push(ref(db, `${this.companyId}/clients`));
-          const clientId = clientRef.key;
+        try {
+          const { db } = await import('../../../config/firebase.config.js');
+          const { ref, push, set, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
 
-          // Generate dynamic Google Maps links in base of lat/lng captured in field
-          let mapsUrl = '';
-          if (activeReq.gps) {
-            mapsUrl = `https://www.google.com/maps?q=${activeReq.gps.lat},${activeReq.gps.lng}`;
+          if (db) {
+            const displayName = form.querySelector('#rev-name').value.trim();
+            const companyName = form.querySelector('#rev-company').value.trim();
+            const phone = form.querySelector('#rev-phone').value.trim();
+            const phoneSecondary = form.querySelector('#rev-phone-sec').value.trim();
+            const email = form.querySelector('#rev-email').value.trim();
+            const city = form.querySelector('#rev-city').value.trim();
+            const department = form.querySelector('#rev-dept').value.trim();
+            const address = form.querySelector('#rev-address').value.trim();
+            const reference = form.querySelector('#rev-ref').value.trim();
+            const serviceType = form.querySelector('#rev-service').value.trim();
+            const priority = form.querySelector('#rev-priority').value;
+            const problemDescription = form.querySelector('#rev-desc').value.trim();
+            const installedEquipment = form.querySelector('#rev-equip').value.trim();
+            const observations = form.querySelector('#rev-obs').value.trim();
+
+            const clientRef = push(ref(db, `${this.companyId}/clients`));
+            const clientId = clientRef.key;
+
+            let mapsUrl = '';
+            if (activeReq.gps) {
+              mapsUrl = `https://www.google.com/maps?q=${activeReq.gps.lat},${activeReq.gps.lng}`;
+            }
+
+            const newClientData = {
+              id: clientId,
+              displayName,
+              companyName,
+              phone,
+              phoneSecondary,
+              email,
+              address,
+              city,
+              department,
+              reference,
+              mapsUrl,
+              serviceType,
+              problemDescription,
+              notes: observations,
+              createdAt: Date.now(),
+              technical_info: {
+                productDescription: installedEquipment || '—',
+                observations: `Registrado en campo por técnico ${activeReq.employeeName}.`
+              }
+            };
+
+            // Set main GPS details too if available
+            if (activeReq.gps) {
+              newClientData.gps = {
+                lat: activeReq.gps.lat,
+                lng: activeReq.gps.lng,
+                accuracy: activeReq.gps.accuracy || 0,
+                updatedAt: Date.now(),
+                updatedBy: activeReq.employeeName
+              };
+            }
+
+            await set(clientRef, newClientData);
+
+            await update(ref(db, `${this.companyId}/pending_clients/${activeReq.id}`), {
+              status: 'Aprobada'
+            });
+
+            // Notify Technician
+            const notifRef = push(ref(db, `${this.companyId}/notifications`));
+            await set(notifRef, {
+              id: notifRef.key,
+              toUid: activeReq.employeeId,
+              title: '🎉 Cliente Aprobado',
+              message: `El dueño aprobó el ingreso del cliente "${displayName}" solicitado en campo.`,
+              timestamp: Date.now(),
+              read: false
+            });
+
+            await FirestoreService.logAudit({
+              action: 'OWNER_APPROVE_CLIENT',
+              companyId: this.companyId,
+              description: `El propietario ${this.currentUser.displayName} aprobó y registró al cliente "${displayName}" (ID: ${clientId}) solicitado por ${activeReq.employeeName}.`
+            });
           }
 
-          const newClientData = {
-            id: clientId,
-            displayName,
-            companyName,
-            phone,
-            phoneSecondary,
-            email,
-            address,
-            city,
-            department,
-            reference,
-            mapsUrl,
-            serviceType,
-            problemDescription,
-            notes: observations,
-            createdAt: Date.now(),
-            technical_info: {
-              productDescription: installedEquipment || '—',
-              observations: `Registrado en campo por técnico ${activeReq.employeeName}.`
-            }
-          };
-
-          // A. Save client profiles to master database clients
-          await set(clientRef, newClientData);
-
-          // B. Update status in request node
-          await update(ref(db, `${this.companyId}/pending_clients/${activeReq.id}`), {
-            status: 'Aprobada'
-          });
-
-          // C. Notify Technician
-          const notifRef = push(ref(db, `${this.companyId}/notifications`));
-          await set(notifRef, {
-            id: notifRef.key,
-            toUid: activeReq.employeeId,
-            title: '🎉 Cliente Aprobado',
-            message: `El dueño aprobó el ingreso del cliente "${displayName}" solicitado en campo.`,
-            timestamp: Date.now(),
-            read: false
-          });
-
-          // D. Log audit trace
-          await FirestoreService.logAudit({
-            action: 'OWNER_APPROVE_CLIENT',
-            companyId: this.companyId,
-            description: `El propietario ${this.currentUser.displayName} aprobó y registró al cliente "${displayName}" (ID: ${clientId}) pre-registrado en campo por el técnico ${activeReq.employeeName}.`
-          });
+          NotificationService.success(`Cliente "${activeReq.displayName}" aprobado.`);
+          this.state.activePendingClientId = null;
+          this.loadData();
+        } catch (err) {
+          console.error(err);
+          approveBtn.disabled = false;
         }
-
-        NotificationService.success(`Cliente "${activeReq.displayName}" aprobado correctamente.`);
-        this.state.activePendingClientId = null;
-        this.loadData();
-      } catch (err) {
-        console.error(err);
-        alert(`Error al aprobar cliente: ${err.message || err}`);
-        approveBtn.disabled = false;
-        approveBtn.textContent = 'Aprobar y Crear Cliente';
-      }
-    });
-
-    // Rejections button
-    contentEl.querySelector('#btn-reject-client')?.addEventListener('click', async () => {
-      const comment = prompt('Escribe el motivo del rechazo o corrección solicitada:') || '';
-      
-      const rejectBtn = contentEl.querySelector('#btn-reject-client');
-      rejectBtn.disabled = true;
-      rejectBtn.textContent = 'Procesando...';
-
-      try {
-        const { db } = await import('../../../config/firebase.config.js');
-        const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-        if (db) {
-          await update(ref(db, `${this.companyId}/pending_clients/${activeReq.id}`), {
-            status: 'Rechazada',
-            comment: comment
-          });
-
-          // Notify Technician
-          const notifRef = push(ref(db, `${this.companyId}/notifications`));
-          await set(notifRef, {
-            id: notifRef.key,
-            toUid: activeReq.employeeId,
-            title: '❌ Cliente Rechazado / Corrección',
-            message: `Se ha rechazado la pre-solicitud del cliente "${activeReq.displayName}". Motivo: ${comment || 'Sin especificar'}`,
-            timestamp: Date.now(),
-            read: false
-          });
-
-          // Log Audit Trace
-          await FirestoreService.logAudit({
-            action: 'OWNER_REJECT_CLIENT',
-            companyId: this.companyId,
-            description: `El propietario ${this.currentUser.displayName} rechazó la solicitud de registro del cliente "${activeReq.displayName}" enviada por ${activeReq.employeeName}. Comentario: ${comment}`
-          });
-        }
-
-        NotificationService.success('Solicitud rechazada con éxito.');
-        this.state.activePendingClientId = null;
-        this.loadData();
-      } catch (err) {
-        console.error(err);
-        alert(`Error al rechazar: ${err.message || err}`);
-        rejectBtn.disabled = false;
-        rejectBtn.textContent = 'Rechazar Registro';
-      }
-    });
-
-    // Re-init map
-    if (activeReq.gps) {
-      this.loadLeaflet().then(() => {
-        this.initMap('owner-review-map', activeReq.gps.lat, activeReq.gps.lng);
       });
+
+      // Rejection Button
+      contentEl.querySelector('#btn-reject-client')?.addEventListener('click', async () => {
+        const comment = prompt('Escribe el motivo del rechazo:') || '';
+        const rejectBtn = contentEl.querySelector('#btn-reject-client');
+        rejectBtn.disabled = true;
+
+        try {
+          const { db } = await import('../../../config/firebase.config.js');
+          const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+          if (db) {
+            await update(ref(db, `${this.companyId}/pending_clients/${activeReq.id}`), {
+              status: 'Rechazada',
+              comment: comment
+            });
+
+            const notifRef = push(ref(db, `${this.companyId}/notifications`));
+            await set(notifRef, {
+              id: notifRef.key,
+              toUid: activeReq.employeeId,
+              title: '❌ Cliente Rechazado / Corrección',
+              message: `Se ha rechazado la pre-solicitud del cliente "${activeReq.displayName}". Motivo: ${comment || 'Sin especificar'}`,
+              timestamp: Date.now(),
+              read: false
+            });
+
+            await FirestoreService.logAudit({
+              action: 'OWNER_REJECT_CLIENT',
+              companyId: this.companyId,
+              description: `El propietario ${this.currentUser.displayName} rechazó la solicitud de registro del cliente "${activeReq.displayName}" enviada por ${activeReq.employeeName}.`
+            });
+          }
+
+          NotificationService.success('Solicitud rechazada.');
+          this.state.activePendingClientId = null;
+          this.loadData();
+        } catch (err) {
+          console.error(err);
+          rejectBtn.disabled = false;
+        }
+      });
+
+      if (activeReq.gps) {
+        this.loadLeaflet().then(() => this.initMap('owner-review-map', activeReq.gps.lat, activeReq.gps.lng));
+      }
+
+    } else {
+      // 📍 GPS UPDATES EVENT BINDINGS
+      contentEl.querySelectorAll('.pending-list-item').forEach(item => {
+        item.addEventListener('click', () => {
+          this.state.activePendingLocationId = item.getAttribute('data-loc-id');
+          this.renderActiveTabContent();
+        });
+      });
+
+      const activeLoc = this.state.pendingLocations.find(l => l.id === this.state.activePendingLocationId);
+      if (!activeLoc) return;
+
+      // Approval GPS Update
+      contentEl.querySelector('#btn-approve-gps-update')?.addEventListener('click', async () => {
+        const approveBtn = contentEl.querySelector('#btn-approve-gps-update');
+        approveBtn.disabled = true;
+
+        try {
+          const { db } = await import('../../../config/firebase.config.js');
+          const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+          if (db) {
+            const gpsData = {
+              lat: activeLoc.lat,
+              lng: activeLoc.lng,
+              accuracy: activeLoc.accuracy || 0,
+              updatedAt: Date.now(),
+              updatedBy: activeLoc.employeeName
+            };
+
+            const mapsUrl = `https://www.google.com/maps?q=${activeLoc.lat},${activeLoc.lng}`;
+
+            // A. Update client profile official coords and maps URL
+            await update(ref(db, `${this.companyId}/clients/${activeLoc.clientId}`), {
+              gps: gpsData,
+              mapsUrl: mapsUrl
+            });
+
+            // B. Push to location history node
+            const historyRef = push(ref(db, `${this.companyId}/clients/${activeLoc.clientId}/location_history`));
+            await set(historyRef, {
+              id: historyRef.key,
+              lat: activeLoc.lat,
+              lng: activeLoc.lng,
+              accuracy: activeLoc.accuracy || 0,
+              capturedAt: activeLoc.capturedAt,
+              employeeId: activeLoc.employeeId,
+              employeeName: activeLoc.employeeName,
+              observations: activeLoc.observations || ''
+            });
+
+            // C. Update request state
+            await update(ref(db, `${this.companyId}/pending_locations/${activeLoc.id}`), {
+              status: 'Aprobado'
+            });
+
+            // D. Notify Technician
+            const notifRef = push(ref(db, `${this.companyId}/notifications`));
+            await set(notifRef, {
+              id: notifRef.key,
+              toUid: activeLoc.employeeId,
+              title: '🎉 Ubicación GPS Aprobada',
+              message: `El dueño aprobó la ubicación física registrada para el cliente "${activeLoc.clientName}"`,
+              timestamp: Date.now(),
+              read: false
+            });
+
+            // E. Audit Log
+            await FirestoreService.logAudit({
+              action: 'OWNER_APPROVE_LOCATION_UPDATE',
+              companyId: this.companyId,
+              description: `El propietario ${this.currentUser.displayName} aprobó la actualización de coordenadas para el cliente "${activeLoc.clientName}" [${activeLoc.lat}, ${activeLoc.lng}] propuesta por el técnico ${activeLoc.employeeName}.`
+            });
+          }
+
+          NotificationService.success('Ubicación del cliente actualizada con éxito.');
+          this.state.activePendingLocationId = null;
+          this.loadData();
+        } catch (err) {
+          console.error(err);
+          approveBtn.disabled = false;
+        }
+      });
+
+      // Reject GPS Update
+      contentEl.querySelector('#btn-reject-gps-update')?.addEventListener('click', async () => {
+        const comment = prompt('Escribe el motivo del rechazo:') || '';
+        const rejectBtn = contentEl.querySelector('#btn-reject-gps-update');
+        rejectBtn.disabled = true;
+
+        try {
+          const { db } = await import('../../../config/firebase.config.js');
+          const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+          if (db) {
+            await update(ref(db, `${this.companyId}/pending_locations/${activeLoc.id}`), {
+              status: 'Rechazado',
+              comment: comment
+            });
+
+            // Notify Technician
+            const notifRef = push(ref(db, `${this.companyId}/notifications`));
+            await set(notifRef, {
+              id: notifRef.key,
+              toUid: activeLoc.employeeId,
+              title: '❌ Ubicación GPS Rechazada',
+              message: `Se ha rechazado la actualización GPS para el cliente "${activeLoc.clientName}". Motivo: ${comment || 'Sin especificar'}`,
+              timestamp: Date.now(),
+              read: false
+            });
+
+            // Audit Log
+            await FirestoreService.logAudit({
+              action: 'OWNER_REJECT_LOCATION_UPDATE',
+              companyId: this.companyId,
+              description: `El propietario ${this.currentUser.displayName} rechazó la ubicación GPS para "${activeLoc.clientName}" enviada por ${activeLoc.employeeName}.`
+            });
+          }
+
+          NotificationService.success('Actualización GPS rechazada.');
+          this.state.activePendingLocationId = null;
+          this.loadData();
+        } catch (err) {
+          console.error(err);
+          rejectBtn.disabled = false;
+        }
+      });
+
+      // Init map preview
+      this.loadLeaflet().then(() => this.initMap('owner-review-gps-map', activeLoc.lat, activeLoc.lng));
     }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MAP LEAFLET DYNAMIC MODULE
+  // MAP LEAFLET MODULE
   // ═══════════════════════════════════════════════════════════════════════════
 
   async loadLeaflet() {
@@ -586,7 +884,7 @@ export class ClientAssignmentsView extends Component {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GENERAL TEMPLATE STUFFS
+  // OTHER CORE VIEWS
   // ═══════════════════════════════════════════════════════════════════════════
 
   getAssignFormHTML() {
@@ -735,7 +1033,6 @@ export class ClientAssignmentsView extends Component {
         this.renderActiveTabContent();
       } catch (err) {
         console.error(err);
-        NotificationService.error('Error al guardar la asignación.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Crear Asignación';
       }
@@ -801,67 +1098,17 @@ export class ClientAssignmentsView extends Component {
             <label class="form-label" for="cli-description">Descripción del Problema o Tarea <span class="form-label-required"></span></label>
             <textarea id="cli-description" class="input" style="height: 60px; padding: 10px;" placeholder="Detalla el problema..." required></textarea>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="cli-notes">Observaciones Generales</label>
-            <textarea id="cli-notes" class="input" style="height: 60px; padding: 10px;" placeholder="Detalles..."></textarea>
-          </div>
 
-          <div class="form-section-title" data-target="technical-acc">📋 Nivel 1: Ficha Técnica (Compartido Automáticamente) <span>▼</span></div>
+          <div class="form-section-title" data-target="technical-acc">📋 Nivel 1: Ficha Técnica <span>▼</span></div>
           <div id="technical-acc" class="accordion-content" style="max-height: 0px; display: flex; flex-direction: column; gap: var(--space-3);">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
               <div class="form-group">
                 <label class="form-label" for="cli-serial">Número de Serie de Equipos</label>
-                <input type="text" id="cli-serial" class="input input-md" placeholder="Ej. SN-789456123" />
+                <input type="text" id="cli-serial" class="input input-md" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="cli-model">Marca y Modelo</label>
-                <input type="text" id="cli-model" class="input input-md" placeholder="Ej. Hikvision" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="cli-prod-desc">Descripción del Producto Instalado</label>
-              <input type="text" id="cli-prod-desc" class="input input-md" placeholder="Ej. Kit DVR" />
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-3);">
-              <div class="form-group">
-                <label class="form-label" for="cli-install-date">Fecha de Instalación</label>
-                <input type="date" id="cli-install-date" class="input input-md" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-warranty-exp">Expiración de Garantía</label>
-                <input type="date" id="cli-warranty-exp" class="input input-md" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-warranty-status">Estado de Garantía</label>
-                <select id="cli-warranty-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-                  <option value="Vigente">🟢 Vigente</option>
-                  <option value="Vencida">🔴 Vencida</option>
-                  <option value="Sin garantía" selected>⚪ Sin garantía</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section-title" data-target="credentials-acc">🔑 Nivel 2: Datos y Credenciales de Acceso (Requiere Aprobación) <span>▼</span></div>
-          <div id="credentials-acc" class="accordion-content" style="max-height: 0px; display: flex; flex-direction: column; gap: var(--space-3);">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-              <div class="form-group">
-                <label class="form-label" for="cli-dvr-user">Usuario DVR</label>
-                <input type="text" id="cli-dvr-user" class="input input-md" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-dvr-pass">Contraseña DVR</label>
-                <input type="password" id="cli-dvr-pass" class="input input-md" />
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-              <div class="form-group">
-                <label class="form-label" for="cli-nvr-user">Usuario NVR/XVR</label>
-                <input type="text" id="cli-nvr-user" class="input input-md" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cli-nvr-pass">Contraseña NVR/XVR</label>
-                <input type="password" id="cli-nvr-pass" class="input input-md" />
+                <input type="text" id="cli-model" class="input input-md" />
               </div>
             </div>
           </div>
@@ -909,27 +1156,15 @@ export class ClientAssignmentsView extends Component {
       const mapsUrl = form.querySelector('#cli-maps').value.trim();
       const serviceType = form.querySelector('#cli-service').value.trim();
       const problemDescription = form.querySelector('#cli-description').value.trim();
-      const notes = form.querySelector('#cli-notes').value.trim();
 
       const technical_info = {
         serialNumber: form.querySelector('#cli-serial').value.trim(),
         brandModel: form.querySelector('#cli-model').value.trim(),
-        productDescription: form.querySelector('#cli-prod-desc').value.trim(),
-        installationDate: form.querySelector('#cli-install-date').value,
-        warrantyExpiration: form.querySelector('#cli-warranty-exp').value,
-        warrantyStatus: form.querySelector('#cli-warranty-status').value
-      };
-
-      const credentials = {
-        dvrUser: EncryptionService.encrypt(form.querySelector('#cli-dvr-user').value.trim()),
-        dvrPassword: EncryptionService.encrypt(form.querySelector('#cli-dvr-pass').value.trim()),
-        nvrUser: EncryptionService.encrypt(form.querySelector('#cli-nvr-user').value.trim()),
-        nvrPassword: EncryptionService.encrypt(form.querySelector('#cli-nvr-pass').value.trim())
+        warrantyStatus: 'Sin garantía'
       };
 
       const submitBtn = form.querySelector('#btn-submit-client');
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Registrando...';
 
       try {
         const { db } = await import('../../../config/firebase.config.js');
@@ -951,25 +1186,21 @@ export class ClientAssignmentsView extends Component {
             companyName: companyName,
             serviceType: serviceType,
             problemDescription: problemDescription,
-            notes: notes,
             technical_info: technical_info,
-            credentials: credentials,
             createdAt: Date.now()
           };
 
           await set(clientRef, clientData);
         }
 
-        NotificationService.success(`Cliente "${name}" registrado correctamente.`);
+        NotificationService.success(`Cliente "${name}" registrado.`);
         form.reset();
         this.state.activeTab = 'assign';
         this.renderTabs();
         this.renderActiveTabContent();
       } catch (err) {
         console.error(err);
-        NotificationService.error('Error al guardar el perfil del cliente.');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Registrar Cliente';
       }
     });
   }
@@ -983,50 +1214,22 @@ export class ClientAssignmentsView extends Component {
         Urgente: 'var(--color-error)'
       }[asg.priority] || 'var(--color-text-secondary)';
 
-      const statusColor = {
-        Pendiente: 'rgba(234, 179, 8, 0.1)',
-        'En proceso': 'rgba(59, 130, 246, 0.1)',
-        Finalizado: 'rgba(34, 197, 94, 0.1)',
-        Cancelado: 'rgba(239, 68, 68, 0.1)'
-      }[asg.status] || 'rgba(255, 255, 255, 0.05)';
-
-      const statusTextColor = {
-        Pendiente: 'var(--color-warning)',
-        'En proceso': 'var(--color-info)',
-        Finalizado: 'var(--color-success)',
-        Cancelado: 'var(--color-error)'
-      }[asg.status] || 'var(--color-text-primary)';
-
       const scheduledStr = asg.scheduledDate ? `${TimeService.formatDate(asg.scheduledDate)} ${asg.scheduledTime}` : 'Sin programar';
       const finishStr = asg.completedAt ? TimeService.formatDate(asg.completedAt, true) : '—';
 
       return `
         <tr style="border-bottom: 1px solid var(--color-border); font-size: 0.8rem;">
+          <td style="padding: 12px 8px;"><strong>${asg.clientName}</strong></td>
+          <td style="padding: 12px 8px;">${asg.employeeName}</td>
+          <td style="padding: 12px 8px;">${asg.description}</td>
+          <td style="padding: 12px 8px;"><span class="badge">${asg.status}</span></td>
+          <td style="padding: 12px 8px;"><span style="color:${prioColor}; font-weight:bold;">● ${asg.priority}</span></td>
+          <td style="padding: 12px 8px;">${TimeService.formatDate(asg.assignedAt)}</td>
+          <td style="padding: 12px 8px;">${scheduledStr}</td>
+          <td style="padding: 12px 8px;">${finishStr}</td>
           <td style="padding: 12px 8px;">
-            <strong style="color:var(--color-text-primary);">${asg.clientName}</strong>
-            <div style="font-size:0.7rem; color:var(--color-text-secondary);">${asg.clientPhone}</div>
-          </td>
-          <td style="padding: 12px 8px; color:var(--color-text-primary);">${asg.employeeName}</td>
-          <td style="padding: 12px 8px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${asg.description}">
-            ${asg.description}
-          </td>
-          <td style="padding: 12px 8px;">
-            <span class="badge" style="background:${statusColor}; color:${statusTextColor}; font-size:0.7rem; padding: 2px 6px;">
-              ${asg.status}
-            </span>
-          </td>
-          <td style="padding: 12px 8px;">
-            <span style="color:${prioColor}; font-weight:bold;">● ${asg.priority}</span>
-          </td>
-          <td style="padding: 12px 8px; color:var(--color-text-secondary);">${TimeService.formatDate(asg.assignedAt)}</td>
-          <td style="padding: 12px 8px; color:var(--color-text-secondary);">${scheduledStr}</td>
-          <td style="padding: 12px 8px; color:var(--color-text-secondary);">${finishStr}</td>
-          <td style="padding: 12px 8px;">
-            <div style="display:flex; gap:4px;">
-              <button class="btn btn-secondary btn-xs btn-edit-asg" data-id="${asg.id}">✏️</button>
-              <button class="btn btn-danger btn-xs btn-cancel-asg" data-id="${asg.id}">✕</button>
-              <button class="btn btn-danger btn-xs btn-delete-asg" data-id="${asg.id}">🗑️</button>
-            </div>
+            <button class="btn btn-secondary btn-xs btn-edit-asg" data-id="${asg.id}">✏️</button>
+            <button class="btn btn-danger btn-xs btn-cancel-asg" data-id="${asg.id}">✕</button>
           </td>
         </tr>
       `;
@@ -1035,33 +1238,10 @@ export class ClientAssignmentsView extends Component {
     return `
       <div class="card p-5 animate-fade-in">
         <h3 class="text-md font-bold mb-4">⏳ Historial de Asignaciones de Servicios</h3>
-        
-        <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom: 20px;">
-          <input type="text" id="hist-search" class="input input-md" placeholder="Buscar..." value="${this.state.filters.searchQuery}" />
-          <select id="hist-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-            <option value="ALL">Todos los Estados</option>
-            <option value="Pendiente">Pendientes</option>
-            <option value="En proceso">En Proceso</option>
-            <option value="Finalizado">Finalizados</option>
-            <option value="Cancelado">Cancelados</option>
-          </select>
-          <select id="hist-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-            <option value="ALL">Todas las Prioridades</option>
-            <option value="Baja">Baja</option>
-            <option value="Media">Media</option>
-            <option value="Alta">Alta</option>
-            <option value="Urgente">Urgente</option>
-          </select>
-          <div style="display:flex; gap:4px;">
-            <input type="date" id="hist-from" class="input input-md" style="font-size:0.75rem;" value="${this.state.filters.dateFrom}" />
-            <input type="date" id="hist-to" class="input input-md" style="font-size:0.75rem;" value="${this.state.filters.dateTo}" />
-          </div>
-        </div>
-
         <div style="overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse; text-align:left;">
             <thead>
-              <tr style="border-bottom:2px solid var(--color-border); color:var(--color-text-secondary); font-size:0.75rem; font-weight:700;">
+              <tr style="border-bottom:2px solid var(--color-border); color:var(--color-text-secondary); font-size:0.75rem;">
                 <th style="padding:8px;">Cliente</th>
                 <th style="padding:8px;">Empleado</th>
                 <th style="padding:8px;">Descripción</th>
@@ -1074,7 +1254,7 @@ export class ClientAssignmentsView extends Component {
               </tr>
             </thead>
             <tbody>
-              ${listItems || '<tr><td colspan="9" style="text-align:center; padding: 30px; color:var(--color-text-secondary);">No se encontraron asignaciones.</td></tr>'}
+              ${listItems || '<tr><td colspan="9" style="text-align:center; padding: 20px;">No se encontraron asignaciones.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -1083,24 +1263,10 @@ export class ClientAssignmentsView extends Component {
   }
 
   bindHistoryEvents(contentEl) {
-    const bindFilter = (id, stateKey) => {
-      contentEl.querySelector(`#${id}`)?.addEventListener('input', (e) => {
-        this.state.filters[stateKey] = e.target.value;
-        this.renderActiveTabContent();
-      });
-    };
-
-    bindFilter('hist-search', 'searchQuery');
-    bindFilter('hist-status', 'status');
-    bindFilter('hist-priority', 'priority');
-    bindFilter('hist-from', 'dateFrom');
-    bindFilter('hist-to', 'dateTo');
-
     contentEl.addEventListener('click', async (e) => {
       const editBtn = e.target.closest('.btn-edit-asg');
       if (editBtn) {
-        const id = editBtn.getAttribute('data-id');
-        this.openEditAssignmentModal(id);
+        this.openEditAssignmentModal(editBtn.getAttribute('data-id'));
         return;
       }
 
@@ -1110,622 +1276,16 @@ export class ClientAssignmentsView extends Component {
         if (confirm('¿Deseas marcar esta asignación como Cancelada?')) {
           this.updateAssignmentStatus(id, 'Cancelado');
         }
-        return;
-      }
-
-      const deleteBtn = e.target.closest('.btn-delete-asg');
-      if (deleteBtn) {
-        const id = deleteBtn.getAttribute('data-id');
-        if (confirm('¿Estás seguro de que deseas eliminar permanentemente esta asignación?')) {
-          this.deleteAssignment(id);
-        }
-        return;
-      }
-    });
-  }
-
-  getAuthorizationsHTML() {
-    const pendingList = this.state.authRequests.filter(r => r.status === 'Pendiente');
-    const historyList = this.state.authRequests.filter(r => r.status !== 'Pendiente');
-
-    const labelMap = {
-      dvrUser: '👤 Usuario DVR',
-      dvrPassword: '🔑 Contraseña DVR',
-      nvrUser: '👤 Usuario NVR/XVR',
-      nvrPassword: '🔑 Contraseña NVR/XVR'
-    };
-
-    const pendingCards = pendingList.map(req => {
-      const fieldsCheckboxHTML = req.requestedFields.map(f => `
-        <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; cursor:pointer;">
-          <input type="checkbox" class="auth-field-chk" value="${f}" checked />
-          <span>${labelMap[f] || f}</span>
-        </label>
-      `).join('');
-
-      return `
-        <div class="card p-5 animate-fade-in" style="border:1px solid rgba(139,92,246,0.15); margin-bottom:12px;" data-req-id="${req.id}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div>
-              <strong style="font-size:0.95rem; color:var(--color-text-primary);">${req.employeeName}</strong>
-              <div style="font-size:0.72rem; color:var(--color-text-secondary); margin-top:2px;">
-                Solicita acceso para: <strong>${req.clientName}</strong>
-              </div>
-            </div>
-            <span class="badge" style="font-size:0.7rem; background:rgba(234,179,8,0.1); color:var(--color-warning);">Pendiente</span>
-          </div>
-
-          <div style="font-size:0.8rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:6px; padding:8px 12px; margin-bottom:10px;">
-            <strong>Justificación o Motivo:</strong><br/>
-            <span style="color:var(--color-text-secondary);">${req.motive || 'Sin justificación'}</span>
-          </div>
-
-          <div style="margin-bottom:12px;">
-            <strong style="font-size:0.78rem; display:block; margin-bottom:6px;">Selección de Campos a Autorizar:</strong>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              ${fieldsCheckboxHTML}
-            </div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:0.78rem; color:var(--color-text-secondary);">Duración:</span>
-              <select class="auth-duration-select input input-xs" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary); padding: 2px 6px;">
-                <option value="10">10 minutos</option>
-                <option value="15" selected>15 minutos</option>
-                <option value="30">30 minutos</option>
-              </select>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-danger btn-xs btn-reject-request" data-id="${req.id}">Rechazar</button>
-              <button class="btn btn-primary btn-xs btn-approve-request" data-id="${req.id}">Autorizar</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    const historyItems = historyList.map(req => {
-      const statusColor = {
-        Aprobado: 'var(--color-success)',
-        Rechazado: 'var(--color-error)',
-        Expirado: 'var(--color-text-secondary)'
-      }[req.status] || 'var(--color-text-primary)';
-
-      const resolvedStr = req.approvedAt ? TimeService.formatDate(req.approvedAt, true) : '—';
-      const expireStr = req.expiresAt ? TimeService.formatDate(req.expiresAt, true) : '—';
-      const approvedLabels = (req.approvedFields || []).map(f => labelMap[f] || f).join(', ');
-
-      return `
-        <tr style="border-bottom:1px solid var(--color-border); font-size:0.78rem;">
-          <td style="padding:10px 8px;"><strong>${req.employeeName}</strong></td>
-          <td style="padding:10px 8px;">${req.clientName}</td>
-          <td style="padding:10px 8px; color:var(--color-text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${req.motive}">
-            ${req.motive || '—'}
-          </td>
-          <td style="padding:10px 8px;"><strong style="color:${statusColor};">${req.status}</strong></td>
-          <td style="padding:10px 8px; color:var(--color-text-secondary); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${approvedLabels}">
-            ${approvedLabels || 'Ninguno'}
-          </td>
-          <td style="padding:10px 8px; color:var(--color-text-secondary);">${TimeService.formatDate(req.requestedAt, true)}</td>
-          <td style="padding:10px 8px; color:var(--color-text-secondary);">${resolvedStr}</td>
-          <td style="padding:10px 8px; color:var(--color-text-secondary);">${expireStr}</td>
-        </tr>
-      `;
-    }).join('');
-
-    return `
-      <div style="display:grid; grid-template-columns:1fr; gap:20px;">
-        <div class="card p-5">
-          <h3 class="text-md font-bold mb-4">🔑 Solicitudes de Credenciales Pendientes</h3>
-          <div id="pending-requests-wrapper">
-            ${pendingCards || '<div class="text-center py-6 text-secondary" style="font-size:0.85rem;">🔕 No hay solicitudes de credenciales pendientes.</div>'}
-          </div>
-        </div>
-
-        <div class="card p-5">
-          <h3 class="text-md font-bold mb-4">📚 Historial de Solicitudes y Autorizaciones</h3>
-          <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; text-align:left;">
-              <thead>
-                <tr style="border-bottom:2px solid var(--color-border); color:var(--color-text-secondary); font-size:0.75rem; font-weight:700;">
-                  <th style="padding:8px;">Empleado</th>
-                  <th style="padding:8px;">Cliente</th>
-                  <th style="padding:8px;">Motivo</th>
-                  <th style="padding:8px;">Estado</th>
-                  <th style="padding:8px;">Datos Aprobados</th>
-                  <th style="padding:8px;">Solicitado</th>
-                  <th style="padding:8px;">Resuelto</th>
-                  <th style="padding:8px;">Expiración</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${historyItems || '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--color-text-secondary);">No hay registros de autorizaciones previas.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  bindAuthorizationsEvents(contentEl) {
-    contentEl.addEventListener('click', async (e) => {
-      const approveBtn = e.target.closest('.btn-approve-request');
-      if (approveBtn) {
-        const id = approveBtn.getAttribute('data-id');
-        this.processApproval(id, true, contentEl);
-        return;
-      }
-
-      const rejectBtn = e.target.closest('.btn-reject-request');
-      if (rejectBtn) {
-        const id = rejectBtn.getAttribute('data-id');
-        this.processApproval(id, false, contentEl);
-        return;
-      }
-    });
-  }
-
-  async processApproval(requestId, isApprove, contentEl) {
-    const req = this.state.authRequests.find(r => r.id === requestId);
-    if (!req) return;
-
-    const requestCard = contentEl.querySelector(`[data-req-id="${requestId}"]`);
-    if (!requestCard) return;
-
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, update, get, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (!db) return;
-
-      if (!isApprove) {
-        const comment = prompt('Motivo de rechazo (opcional):') || '';
-        await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
-          status: 'Rechazado',
-          approvedAt: Date.now(),
-          comment: comment,
-          authorizedBy: this.currentUser.displayName
-        });
-
-        const notifRef = push(ref(db, `${this.companyId}/notifications`));
-        await set(notifRef, {
-          id: notifRef.key,
-          toUid: req.employeeId,
-          title: '❌ Solicitud de Credenciales Rechazada',
-          message: `El propietario rechazó tu solicitud de credenciales para ${req.clientName}. Motivo: ${comment || 'Sin justificación'}`,
-          timestamp: Date.now(),
-          read: false
-        });
-
-        await FirestoreService.logAudit({
-          action: 'OWNER_REJECT_CREDENTIALS',
-          companyId: this.companyId,
-          description: `El propietario ${this.currentUser.displayName} rechazó la solicitud de credenciales de ${req.employeeName} para el cliente ${req.clientName}.`
-        });
-
-        NotificationService.success('Solicitud rechazada.');
-        this.loadData();
-        return;
-      }
-
-      const approvedCheckboxes = requestCard.querySelectorAll('.auth-field-chk:checked');
-      const approvedFields = Array.from(approvedCheckboxes).map(chk => chk.value);
-
-      if (approvedFields.length === 0) {
-        alert('Debes seleccionar al menos un campo.');
-        return;
-      }
-
-      const durationMin = parseInt(requestCard.querySelector('.auth-duration-select').value) || 15;
-
-      const clientSnap = await get(ref(db, `${this.companyId}/clients/${req.clientId}`));
-      if (!clientSnap.exists()) {
-        alert('El cliente no existe.');
-        return;
-      }
-
-      const client = clientSnap.val();
-      const rawCreds = client.credentials || {};
-      const approvedData = {};
-
-      approvedFields.forEach(field => {
-        if (rawCreds[field]) {
-          approvedData[field] = EncryptionService.decrypt(rawCreds[field]);
-        } else {
-          approvedData[field] = '—';
-        }
-      });
-
-      const timestamp = Date.now();
-      const expiresAt = timestamp + durationMin * 60 * 1000;
-
-      await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
-        status: 'Aprobado',
-        approvedAt: timestamp,
-        expiresAt: expiresAt,
-        expirationDurationMin: durationMin,
-        approvedFields: approvedFields,
-        approvedData: approvedData,
-        authorizedBy: this.currentUser.displayName
-      });
-
-      const notifRef = push(ref(db, `${this.companyId}/notifications`));
-      await set(notifRef, {
-        id: notifRef.key,
-        toUid: req.employeeId,
-        title: '🔑 Solicitud de Credenciales Aprobada',
-        message: `Se te ha concedido acceso temporal (${durationMin} min) a las credenciales de ${req.clientName}`,
-        timestamp: Date.now(),
-        read: false
-      });
-
-      await FirestoreService.logAudit({
-        action: 'OWNER_APPROVE_CREDENTIALS',
-        companyId: this.companyId,
-        description: `El propietario ${this.currentUser.displayName} aprobó la solicitud de credenciales de ${req.employeeName} para el cliente ${req.clientName}. Campos: ${approvedFields.join(', ')}. Expiración: ${durationMin} min.`
-      });
-
-      NotificationService.success(`Solicitud autorizada por ${durationMin} minutos.`);
-      this.loadData();
-    } catch (e) {
-      console.error(e);
-      alert(`Error al procesar la aprobación: ${e.message || e}`);
-    }
-  }
-
-  startExpirationSweeper() {
-    if (this.sweeperInterval) clearInterval(this.sweeperInterval);
-
-    this.sweeperInterval = setInterval(async () => {
-      const expiredList = this.state.authRequests.filter(r => r.status === 'Aprobado' && r.expiresAt && r.expiresAt < Date.now());
-      if (expiredList.length === 0) return;
-
-      try {
-        const { db } = await import('../../../config/firebase.config.js');
-        const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-        if (db) {
-          for (const req of expiredList) {
-            await update(ref(db, `${this.companyId}/auth_requests/${req.id}`), {
-              status: 'Expirado',
-              approvedData: null
-            });
-
-            await FirestoreService.logAudit({
-              action: 'CREDENTIALS_EXPIRED',
-              companyId: this.companyId,
-              description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos eliminados.`
-            });
-          }
-        }
-      } catch (err) {
-        console.warn('[Sweeper] Error sweeps:', err.message);
-      }
-    }, 10000);
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LOAD DATA & SUBSCRIBERS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  async loadData() {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, get } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (!db || !this.companyId) return;
-
-      const empSnapshot = await get(ref(db, `${this.companyId}/employees`));
-      if (empSnapshot.exists()) {
-        const data = empSnapshot.val();
-        this.state.employees = Object.keys(data)
-          .map(k => ({ uid: k, ...data[k] }))
-          .filter(e => e.role !== 'SUPER_ADMIN' && e.role !== 'OWNER' && e.active !== false);
-      }
-
-      const cliSnapshot = await get(ref(db, `${this.companyId}/clients`));
-      if (cliSnapshot.exists()) {
-        const data = cliSnapshot.val();
-        this.state.clients = Object.keys(data).map(k => ({ id: k, ...data[k] }));
-      }
-
-      const asgSnapshot = await get(ref(db, `${this.companyId}/assignments`));
-      if (asgSnapshot.exists()) {
-        const data = asgSnapshot.val();
-        this.state.assignments = Object.keys(data)
-          .map(k => ({ id: k, ...data[k] }))
-          .sort((a, b) => b.assignedAt - a.assignedAt);
-      }
-
-      const reqSnapshot = await get(ref(db, `${this.companyId}/auth_requests`));
-      if (reqSnapshot.exists()) {
-        const data = reqSnapshot.val();
-        this.state.authRequests = Object.keys(data)
-          .map(k => ({ id: k, ...data[k] }))
-          .sort((a, b) => b.requestedAt - a.requestedAt);
-      }
-
-      // Load pending clients
-      const pcSnapshot = await get(ref(db, `${this.companyId}/pending_clients`));
-      if (pcSnapshot.exists()) {
-        const data = pcSnapshot.val();
-        this.state.pendingClients = Object.keys(data)
-          .map(k => ({ id: k, ...data[k] }))
-          .sort((a, b) => b.createdAt - a.createdAt);
-      }
-
-      this.renderActiveTabContent();
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  subscribeToRealtimeData() {
-    import('../../../config/firebase.config.js').then(({ db }) => {
-      import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
-        if (!db || !this.companyId) return;
-
-        this.dbUnsubscribe = onValue(ref(db, `${this.companyId}/assignments`), (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            this.state.assignments = Object.keys(data)
-              .map(k => ({ id: k, ...data[k] }))
-              .sort((a, b) => b.assignedAt - a.assignedAt);
-          } else {
-            this.state.assignments = [];
-          }
-          if (this.state.activeTab === 'history') {
-            this.renderActiveTabContent();
-          }
-        });
-
-        this.authRequestsUnsubscribe = onValue(ref(db, `${this.companyId}/auth_requests`), (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            this.state.authRequests = Object.keys(data)
-              .map(k => ({ id: k, ...data[k] }))
-              .sort((a, b) => b.requestedAt - a.requestedAt);
-          } else {
-            this.state.authRequests = [];
-          }
-          if (this.state.activeTab === 'authorizations') {
-            this.renderActiveTabContent();
-          }
-        });
-
-        // Realtime listener for pending clients
-        this.pendingClientsUnsubscribe = onValue(ref(db, `${this.companyId}/pending_clients`), (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            this.state.pendingClients = Object.keys(data)
-              .map(k => ({ id: k, ...data[k] }))
-              .sort((a, b) => b.createdAt - a.createdAt);
-          } else {
-            this.state.pendingClients = [];
-          }
-          if (this.state.activeTab === 'pending-clients') {
-            this.renderActiveTabContent();
-          }
-        });
-      });
-    });
-  }
-
-  async updateAssignmentStatus(id, newStatus) {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (db) {
-        await update(ref(db, `${this.companyId}/assignments/${id}`), {
-          status: newStatus,
-          completedAt: newStatus === 'Finalizado' ? Date.now() : 0
-        });
-
-        const assignment = this.state.assignments.find(a => a.id === id);
-        if (assignment) {
-          const notifRef = push(ref(db, `${this.companyId}/notifications`));
-          await set(notifRef, {
-            id: notifRef.key,
-            toUid: 'OWNER',
-            title: '💼 Estado de Trabajo Actualizado',
-            message: `El empleado ${assignment.employeeName} actualizó el estado de la tarea para ${assignment.clientName} a "${newStatus}"`,
-            timestamp: Date.now(),
-            read: false
-          });
-        }
-      }
-
-      NotificationService.success(`Asignación marcada como ${newStatus}.`);
-      this.loadData();
-    } catch (e) {
-      console.error(e);
-      NotificationService.error('Error al actualizar estado.');
-    }
-  }
-
-  async deleteAssignment(id) {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, remove } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (db) {
-        await remove(ref(db, `${this.companyId}/assignments/${id}`));
-      }
-
-      NotificationService.success('Asignación eliminada permanentemente.');
-      this.loadData();
-    } catch (e) {
-      console.error(e);
-      NotificationService.error('Error al eliminar la asignación.');
-    }
-  }
-
-  openEditAssignmentModal(id) {
-    const asg = this.state.assignments.find(a => a.id === id);
-    if (!asg) return;
-
-    let modalOverlay = document.getElementById('edit-assignment-modal-container');
-    if (modalOverlay) modalOverlay.remove();
-
-    const employeeOpts = this.state.employees.map(e => {
-      const selected = e.uid === asg.employeeId ? 'selected' : '';
-      return `<option value="${e.uid}" ${selected}>${e.displayName}</option>`;
-    }).join('');
-
-    const formHTML = `
-      <form id="edit-asg-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
-        <div class="form-group">
-          <label class="form-label">Cliente</label>
-          <input type="text" class="input input-md" value="${asg.clientName}" disabled style="opacity: 0.6;" />
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-          <div class="form-group">
-            <label class="form-label" for="edit-asg-employee">Reasignar Empleado</label>
-            <select id="edit-asg-employee" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              ${employeeOpts}
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="edit-asg-priority">Prioridad</label>
-            <select id="edit-asg-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="Baja" ${asg.priority === 'Baja' ? 'selected' : ''}>🟢 Baja</option>
-              <option value="Media" ${asg.priority === 'Media' ? 'selected' : ''}>🟡 Media</option>
-              <option value="Alta" ${asg.priority === 'Alta' ? 'selected' : ''}>🟠 Alta</option>
-              <option value="Urgente" ${asg.priority === 'Urgente' ? 'selected' : ''}>🔴 Urgente</option>
-            </select>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-          <div class="form-group">
-            <label class="form-label" for="edit-asg-date">Fecha Programada</label>
-            <input type="date" id="edit-asg-date" class="input input-md" value="${asg.scheduledDate || ''}" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="edit-asg-time">Hora Programada</label>
-            <input type="time" id="edit-asg-time" class="input input-md" value="${asg.scheduledTime || ''}" />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="edit-asg-status">Estado del Servicio</label>
-          <select id="edit-asg-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-            <option value="Pendiente" ${asg.status === 'Pendiente' ? 'selected' : ''}>🟡 Pendiente</option>
-            <option value="En proceso" ${asg.status === 'En proceso' ? 'selected' : ''}>🔵 En proceso</option>
-            <option value="Finalizado" ${asg.status === 'Finalizado' ? 'selected' : ''}>🟢 Finalizado</option>
-            <option value="Cancelado" ${asg.status === 'Cancelado' ? 'selected' : ''}>🔴 Cancelado</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="edit-asg-description">Descripción de la Tarea</label>
-          <textarea id="edit-asg-description" class="input" style="height:70px; padding:10px;" required>${asg.description}</textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="edit-asg-notes">Observaciones Internas</label>
-          <textarea id="edit-asg-notes" class="input" style="height:60px; padding:10px;">${asg.internalObservations || ''}</textarea>
-        </div>
-      </form>
-    `;
-
-    const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="edit-asg-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="edit-asg-submit-btn">Guardar Cambios</button>
-    `;
-
-    const editModal = new Modal({
-      title: '✏️ Editar y Reasignar Tarea',
-      bodyHTML: formHTML,
-      footerHTML: footerHTML,
-      size: 'md'
-    });
-
-    const el = editModal.mount();
-    el.setAttribute('id', 'edit-assignment-modal-container');
-    document.body.appendChild(el);
-
-    el.querySelector('#edit-asg-cancel-btn')?.addEventListener('click', () => editModal.close());
-    el.querySelector('#edit-asg-submit-btn')?.addEventListener('click', async () => {
-      const form = el.querySelector('#edit-asg-form');
-      if (!form || !form.reportValidity()) return;
-
-      const employeeId = el.querySelector('#edit-asg-employee').value;
-      const priority = el.querySelector('#edit-asg-priority').value;
-      const scheduledDate = el.querySelector('#edit-asg-date').value;
-      const scheduledTime = el.querySelector('#edit-asg-time').value;
-      const status = el.querySelector('#edit-asg-status').value;
-      const description = el.querySelector('#edit-asg-description').value.trim();
-      const internalObservations = el.querySelector('#edit-asg-notes').value.trim();
-
-      const employee = this.state.employees.find(emp => emp.uid === employeeId);
-      if (!employee) return;
-
-      const submitBtn = el.querySelector('#edit-asg-submit-btn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando...';
-
-      try {
-        const { db } = await import('../../../config/firebase.config.js');
-        const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-        if (db) {
-          const updates = {
-            employeeId: employeeId,
-            employeeName: employee.displayName,
-            priority: priority,
-            scheduledDate: scheduledDate,
-            scheduledTime: scheduledTime,
-            status: status,
-            description: description,
-            internalObservations: internalObservations,
-            completedAt: status === 'Finalizado' ? Date.now() : 0
-          };
-
-          await update(ref(db, `${this.companyId}/assignments/${id}`), updates);
-
-          if (employeeId !== asg.employeeId) {
-            const notifRef = push(ref(db, `${this.companyId}/notifications`));
-            await set(notifRef, {
-              id: notifRef.key,
-              toUid: employeeId,
-              title: '🛠️ Tarea Reasignada',
-              message: `Se te ha reasignado el servicio para ${asg.clientName}: ${description.substring(0, 50)}...`,
-              timestamp: Date.now(),
-              read: false
-            });
-          }
-        }
-
-        NotificationService.success('Tarea actualizada con éxito.');
-        editModal.close();
-        this.loadData();
-      } catch (err) {
-        console.error(err);
-        alert(`Error al guardar cambios: ${err.message || err}`);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar Cambios';
       }
     });
   }
 
   unmount() {
-    if (this.sweeperInterval) {
-      clearInterval(this.sweeperInterval);
-    }
-    if (this.dbUnsubscribe) {
-      this.dbUnsubscribe();
-    }
-    if (this.authRequestsUnsubscribe) {
-      this.authRequestsUnsubscribe();
-    }
-    if (this.pendingClientsUnsubscribe) {
-      this.pendingClientsUnsubscribe();
-    }
+    if (this.sweeperInterval) clearInterval(this.sweeperInterval);
+    if (this.dbUnsubscribe) this.dbUnsubscribe();
+    if (this.authRequestsUnsubscribe) this.authRequestsUnsubscribe();
+    if (this.pendingClientsUnsubscribe) this.pendingClientsUnsubscribe();
+    if (this.pendingLocationsUnsubscribe) this.pendingLocationsUnsubscribe();
     this.layout.unmount();
     super.unmount();
   }

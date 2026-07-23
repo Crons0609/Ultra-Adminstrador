@@ -17,10 +17,12 @@ export class ClientAssignmentsView extends Component {
     this.uid = this.currentUser.uid || '';
 
     this.state = {
-      activeTab: 'active', // 'active' | 'history' | 'register-client'
+      activeTab: 'active', // 'active' | 'history' | 'register-client' | 'gps-location'
       assignments: [],
       authRequests: [],
-      pendingClients: [], // Requests sent by this employee
+      pendingClients: [], 
+      pendingLocations: [], // Location requests sent by this employee
+      clientsCatalog: [], // All clients loaded to support search lookup
       filters: {
         searchQuery: '',
         status: 'ALL',
@@ -28,7 +30,6 @@ export class ClientAssignmentsView extends Component {
         dateAssigned: '',
         dateScheduled: ''
       },
-      // Temp object for new client form before confirmation
       newClientForm: {
         displayName: '',
         companyName: '',
@@ -46,7 +47,13 @@ export class ClientAssignmentsView extends Component {
         priority: 'Media',
         gps: null
       },
-      confirmingNewClient: false
+      confirmingNewClient: false,
+      
+      // GPS Location tab state
+      gpsSelectedClientId: '',
+      gpsCapturedData: null, // { lat, lng, accuracy, capturedAt }
+      gpsObservations: '',
+      confirmingGpsLocation: false
     };
 
     this.layout = new PageLayout({
@@ -180,6 +187,7 @@ export class ClientAssignmentsView extends Component {
           <button class="assign-tab-btn ${this.state.activeTab === 'active' ? 'active' : ''}" data-tab="active">⚡ Trabajos Activos</button>
           <button class="assign-tab-btn ${this.state.activeTab === 'history' ? 'active' : ''}" data-tab="history">📚 Historial de Trabajos</button>
           <button class="assign-tab-btn ${this.state.activeTab === 'register-client' ? 'active' : ''}" data-tab="register-client">➕ Registrar Cliente</button>
+          <button class="assign-tab-btn ${this.state.activeTab === 'gps-location' ? 'active' : ''}" data-tab="gps-location">📍 Registrar Ubicación GPS</button>
         </div>
 
         <div id="waiter-filter-bar" style="margin-bottom: 20px;"></div>
@@ -190,6 +198,7 @@ export class ClientAssignmentsView extends Component {
     this.dbUnsubscribe = null;
     this.authRequestsUnsubscribe = null;
     this.pendingClientsUnsubscribe = null;
+    this.pendingLocationsUnsubscribe = null;
     this.timerInterval = null;
     this.maps = {};
   }
@@ -205,7 +214,6 @@ export class ClientAssignmentsView extends Component {
     await this.loadMyAssignments();
     this.subscribeToAssignments();
     
-    // Start active countdown clock ticker
     this.startCountdownTicker();
 
     return element;
@@ -220,7 +228,7 @@ export class ClientAssignmentsView extends Component {
         tabBtn.classList.add('active');
         this.state.activeTab = tab;
         
-        // Reset filters when switching tabs
+        // Reset filters
         this.state.filters = {
           searchQuery: '',
           status: 'ALL',
@@ -229,6 +237,9 @@ export class ClientAssignmentsView extends Component {
           dateScheduled: ''
         };
         this.state.confirmingNewClient = false;
+        this.state.confirmingGpsLocation = false;
+        this.state.gpsSelectedClientId = '';
+        this.state.gpsCapturedData = null;
         
         this.renderFilters();
         this.renderAssignments();
@@ -243,6 +254,7 @@ export class ClientAssignmentsView extends Component {
 
       if (!db || !this.companyId) return;
 
+      // Load assignments
       const snapshot = await get(ref(db, `${this.companyId}/assignments`));
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -252,6 +264,7 @@ export class ClientAssignmentsView extends Component {
           .sort((a, b) => b.assignedAt - a.assignedAt);
       }
 
+      // Load auth requests
       const reqSnapshot = await get(ref(db, `${this.companyId}/auth_requests`));
       if (reqSnapshot.exists()) {
         const data = reqSnapshot.val();
@@ -260,7 +273,7 @@ export class ClientAssignmentsView extends Component {
           .filter(r => r.employeeId === this.uid);
       }
 
-      // Load pending client requests
+      // Load pending clients
       const pcSnapshot = await get(ref(db, `${this.companyId}/pending_clients`));
       if (pcSnapshot.exists()) {
         const data = pcSnapshot.val();
@@ -268,6 +281,23 @@ export class ClientAssignmentsView extends Component {
           .map(k => ({ id: k, ...data[k] }))
           .filter(r => r.employeeId === this.uid)
           .sort((a, b) => b.createdAt - a.createdAt);
+      }
+
+      // Load clients catalog (all clients to support search lookup in GPS tab)
+      const clientsSnapshot = await get(ref(db, `${this.companyId}/clients`));
+      if (clientsSnapshot.exists()) {
+        const data = clientsSnapshot.val();
+        this.state.clientsCatalog = Object.keys(data).map(k => ({ id: k, ...data[k] }));
+      }
+
+      // Load pending locations
+      const plSnapshot = await get(ref(db, `${this.companyId}/pending_locations`));
+      if (plSnapshot.exists()) {
+        const data = plSnapshot.val();
+        this.state.pendingLocations = Object.keys(data)
+          .map(k => ({ id: k, ...data[k] }))
+          .filter(r => r.employeeId === this.uid)
+          .sort((a, b) => b.capturedAt - a.capturedAt);
       }
 
       this.renderFilters();
@@ -282,7 +312,6 @@ export class ClientAssignmentsView extends Component {
       import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
         if (!db || !this.companyId) return;
 
-        // Assignments listener
         this.dbUnsubscribe = onValue(ref(db, `${this.companyId}/assignments`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -298,7 +327,6 @@ export class ClientAssignmentsView extends Component {
           }
         });
 
-        // Authorizations listener
         this.authRequestsUnsubscribe = onValue(ref(db, `${this.companyId}/auth_requests`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -313,7 +341,6 @@ export class ClientAssignmentsView extends Component {
           }
         });
 
-        // Pending Clients listener
         this.pendingClientsUnsubscribe = onValue(ref(db, `${this.companyId}/pending_clients`), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
@@ -328,6 +355,22 @@ export class ClientAssignmentsView extends Component {
             this.renderAssignments();
           }
         });
+
+        // Realtime listener for pending locations
+        this.pendingLocationsUnsubscribe = onValue(ref(db, `${this.companyId}/pending_locations`), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            this.state.pendingLocations = Object.keys(data)
+              .map(k => ({ id: k, ...data[k] }))
+              .filter(r => r.employeeId === this.uid)
+              .sort((a, b) => b.capturedAt - a.capturedAt);
+          } else {
+            this.state.pendingLocations = [];
+          }
+          if (this.state.activeTab === 'gps-location') {
+            this.renderAssignments();
+          }
+        });
       });
     });
   }
@@ -336,8 +379,9 @@ export class ClientAssignmentsView extends Component {
     const f = this.state.filters;
     const isHistory = this.state.activeTab === 'history';
     const isRegister = this.state.activeTab === 'register-client';
+    const isGps = this.state.activeTab === 'gps-location';
 
-    if (isRegister) {
+    if (isRegister || isGps) {
       this.filterBar.innerHTML = '';
       return;
     }
@@ -387,40 +431,16 @@ export class ClientAssignmentsView extends Component {
     bindFilter('filt-scheduled', 'dateScheduled');
   }
 
-  getFilteredAssignments() {
-    const f = this.state.filters;
-    const isHistory = this.state.activeTab === 'history';
-
-    return this.state.assignments.filter(asg => {
-      const matchTab = isHistory 
-        ? (asg.status === 'Finalizado' || asg.status === 'Cancelado')
-        : (asg.status === 'Pendiente' || asg.status === 'En proceso');
-
-      if (!matchTab) return false;
-
-      const query = f.searchQuery.toLowerCase().trim();
-      const matchText = !query || 
-        asg.clientName.toLowerCase().includes(query) ||
-        (asg.description && asg.description.toLowerCase().includes(query)) ||
-        (asg.clientPhone && asg.clientPhone.toLowerCase().includes(query));
-
-      const matchStatus = f.status === 'ALL' || asg.status === f.status;
-      const matchPriority = f.priority === 'ALL' || asg.priority === f.priority;
-
-      const assignedDateStr = new Date(asg.assignedAt).toISOString().split('T')[0];
-      const matchAssignedDate = !f.dateAssigned || assignedDateStr === f.dateAssigned;
-
-      const matchScheduledDate = !f.dateScheduled || asg.scheduledDate === f.dateScheduled;
-
-      return matchText && matchStatus && matchPriority && matchAssignedDate && matchScheduledDate;
-    });
-  }
-
   renderAssignments() {
     if (!this.container) return;
 
     if (this.state.activeTab === 'register-client') {
       this.renderRegisterClientTab();
+      return;
+    }
+
+    if (this.state.activeTab === 'gps-location') {
+      this.renderGpsLocationTab();
       return;
     }
 
@@ -496,13 +516,7 @@ export class ClientAssignmentsView extends Component {
               dvrUser: 'Usuario DVR',
               dvrPassword: 'Clave DVR',
               nvrUser: 'Usuario NVR',
-              nvrPassword: 'Clave NVR',
-              ipCameraUser: 'Usuario Cam IP',
-              ipCameraPassword: 'Clave Cam IP',
-              appUser: 'Usuario App',
-              appPassword: 'Clave App',
-              encryptionCode: 'Código Cifrado',
-              otherCredentials: 'Otras Credenciales'
+              nvrPassword: 'Clave NVR'
             };
 
             const credsFieldsHTML = Object.keys(credsData).map(key => `
@@ -535,23 +549,6 @@ export class ClientAssignmentsView extends Component {
               </div>
             `;
           }
-        } else if (activeRequest.status === 'Rechazado') {
-          authModuleHTML = `
-            <div style="background: rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.15); padding:8px 12px; border-radius:6px; font-size:0.78rem; margin-top:6px;">
-              <div style="color:var(--color-error); font-weight:700; display:flex; justify-content:space-between;">
-                <span>❌ Solicitud Rechazada</span>
-                <button class="btn btn-secondary btn-xs btn-request-creds" data-client-id="${asg.clientId}" data-asg-id="${asg.id}" style="font-size:0.65rem; padding: 2px 6px;">Reintentar</button>
-              </div>
-              ${activeRequest.comment ? `<div class="text-secondary" style="font-size:0.7rem; margin-top:4px;">Motivo: ${activeRequest.comment}</div>` : ''}
-            </div>
-          `;
-        } else {
-          authModuleHTML = `
-            <div style="background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; font-size:0.78rem; display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-              <span class="text-secondary">🔑 Acceso Expirado (Temporal)</span>
-              <button class="btn btn-secondary btn-xs btn-request-creds" data-client-id="${asg.clientId}" data-asg-id="${asg.id}">Solicitar</button>
-            </div>
-          `;
         }
       }
 
@@ -560,16 +557,10 @@ export class ClientAssignmentsView extends Component {
         actionHTML = `<button class="btn btn-info btn-sm w-100 btn-start-job" data-id="${asg.id}">🚀 Iniciar Trabajo</button>`;
       } else if (asg.status === 'En proceso') {
         actionHTML = `<button class="btn btn-success btn-sm w-100 btn-finish-job" data-id="${asg.id}">✅ Finalizar Trabajo</button>`;
-      } else if (asg.status === 'Finalizado') {
-        actionHTML = `
-          <div style="font-size:0.75rem; color:var(--color-success); text-align:center; font-weight:700; background:rgba(34,197,94,0.05); padding:6px; border-radius:6px; border:1px solid rgba(34,197,94,0.15);">
-            🎉 Completado el ${TimeService.formatDate(asg.completedAt, true)}
-          </div>
-        `;
       } else {
         actionHTML = `
-          <div style="font-size:0.75rem; color:var(--color-error); text-align:center; font-weight:700; background:rgba(239,68,68,0.05); padding:6px; border-radius:6px; border:1px solid rgba(239,68,68,0.15);">
-            ✕ Tarea Cancelada
+          <div style="font-size:0.75rem; color:var(--color-success); text-align:center; font-weight:700; background:rgba(34,197,94,0.05); padding:6px; border-radius:6px; border:1px solid rgba(34,197,94,0.15);">
+            🎉 Completado/Cancelado
           </div>
         `;
       }
@@ -581,13 +572,8 @@ export class ClientAssignmentsView extends Component {
         <div class="contact-bar">
           <a class="contact-btn" href="tel:${phoneClean}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--color-text-primary);">📞 Llamar</a>
           <a class="contact-btn" href="https://wa.me/${phoneClean.replace('+', '')}?text=${whatsappMsg}" target="_blank" rel="noopener" style="background: #25d366; color: #fff;">💬 WhatsApp</a>
-          ${asg.clientEmail ? `<a class="contact-btn" href="mailto:${asg.clientEmail}" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); color: var(--color-accent);">✉️ Correo</a>` : ''}
         </div>
       ` : '';
-
-      const mapsLink = asg.clientMapsUrl 
-        ? `<a href="${asg.clientMapsUrl}" target="_blank" rel="noopener" class="text-info" style="text-decoration:none; font-size:0.75rem;">🗺️ Google Maps</a>`
-        : '';
 
       return `
         <div class="job-card animate-fade-in" style="border-left: 4px solid ${prioColor};">
@@ -615,48 +601,19 @@ export class ClientAssignmentsView extends Component {
               <span class="job-meta-icon">📍</span>
               <span><strong>Dirección:</strong> ${asg.clientAddress || '—'}</span>
             </div>
-            ${asg.clientReference ? `
-              <div class="job-meta-item">
-                <span class="job-meta-icon">🧭</span>
-                <span><strong>Referencia:</strong> ${asg.clientReference}</span>
-              </div>
-            ` : ''}
             <div class="job-meta-item">
               <span class="job-meta-icon">⏰</span>
               <span>${scheduledStr}</span>
             </div>
-            ${asg.internalObservations ? `
-              <div class="job-meta-item" style="color:var(--color-warning);">
-                <span class="job-meta-icon">⚠️</span>
-                <span><strong>Notas de Admin:</strong> ${asg.internalObservations}</span>
-              </div>
-            ` : ''}
             ${executionHTML}
-            ${asg.comments ? `
-              <div class="job-meta-item" style="color:var(--color-success); border-top:1px solid rgba(255,255,255,0.05); padding-top:6px; margin-top:4px;">
-                <span class="job-meta-icon">💬</span>
-                <span><strong>Comentario de cierre:</strong> ${asg.comments}</span>
-              </div>
-            ` : ''}
-            ${asg.photoUrl ? `
-              <div class="job-meta-item">
-                <span class="job-meta-icon">🖼️</span>
-                <span><a href="${asg.photoUrl}" target="_blank" style="color:var(--color-accent); text-decoration:none;">📄 Ver archivo / foto adjunta</a></span>
-              </div>
-            ` : ''}
           </div>
 
           ${contactBarHTML}
           ${authModuleHTML}
 
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; border-top:1px solid rgba(255,255,255,0.03); padding-top:8px;">
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-secondary btn-xs btn-view-technical" data-client-id="${asg.clientId}">📋 Ficha Técnica</button>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:0.75rem; color:${prioColor}; font-weight:700;">Prioridad: ${asg.priority}</span>
-              ${mapsLink}
-            </div>
+            <button class="btn btn-secondary btn-xs btn-view-technical" data-client-id="${asg.clientId}">📋 Ficha Técnica</button>
+            <span style="font-size:0.75rem; color:${prioColor}; font-weight:700;">Prioridad: ${asg.priority}</span>
           </div>
 
           <div style="margin-top:auto; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -668,7 +625,7 @@ export class ClientAssignmentsView extends Component {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // NEW CLIENT REGISTRATION FLOW (EMPLOYEE)
+  // REGISTER CLIENT TAB (EMPLOYEE PRE-REGISTRATION)
   // ═══════════════════════════════════════════════════════════════════════════
 
   renderRegisterClientTab() {
@@ -679,7 +636,6 @@ export class ClientAssignmentsView extends Component {
 
     const formVal = this.state.newClientForm;
 
-    // Tracking/history of previous requests submitted
     const trackingRows = this.state.pendingClients.map(c => {
       const badge = {
         Pendiente: '<span class="badge" style="background:rgba(234,179,8,0.1); color:var(--color-warning);">Pendiente</span>',
@@ -702,7 +658,6 @@ export class ClientAssignmentsView extends Component {
 
     this.container.innerHTML = `
       <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; grid-column:1 / -1; align-items:flex-start;">
-        <!-- Registration Form Card -->
         <div class="card p-6 animate-fade-in">
           <h3 class="text-md font-bold mb-4">➕ Registrar Nuevo Cliente (Petición de Aprobación)</h3>
           
@@ -749,84 +704,73 @@ export class ClientAssignmentsView extends Component {
 
             <div class="form-group">
               <label class="form-label" for="reg-address">Dirección Completa <span class="form-label-required"></span></label>
-              <input type="text" id="reg-address" class="input input-md" placeholder="Ej. Calle Principal 102" value="${formVal.address}" required />
+              <input type="text" id="reg-address" class="input input-md" value="${formVal.address}" required />
             </div>
 
             <div class="form-group">
               <label class="form-label" for="reg-ref">Referencia de Ubicación <span class="form-label-required"></span></label>
-              <input type="text" id="reg-ref" class="input input-md" placeholder="Ej. Frente a iglesia católica" value="${formVal.reference}" required />
+              <input type="text" id="reg-ref" class="input input-md" value="${formVal.reference}" required />
             </div>
 
-            <!-- GPS Capture Box -->
             <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <strong style="font-size:0.8rem; color:var(--color-text-primary);">📍 Ubicación GPS del Dispositivo</strong>
                 <button type="button" class="btn btn-secondary btn-xs" id="btn-get-gps">🌍 Obtener ubicación actual</button>
               </div>
-              
               <div id="gps-coords-display" style="font-size:0.75rem; color:var(--color-text-secondary);">
                 ${formVal.gps 
-                  ? `Latitud: <strong>${formVal.gps.lat}</strong>, Longitud: <strong>${formVal.gps.lng}</strong> (Capturado: ${TimeService.formatDate(formVal.gps.capturedAt, true)})`
-                  : '⚠️ No se ha capturado la ubicación GPS del cliente en campo.'}
+                  ? `Latitud: <strong>${formVal.gps.lat}</strong>, Longitud: <strong>${formVal.gps.lng}</strong>`
+                  : '⚠️ Sin coordenadas GPS capturadas.'}
               </div>
-
               <div id="waiter-preview-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:10px; display:${formVal.gps ? 'block' : 'none'}; z-index:5;"></div>
             </div>
 
-            <div class="form-section-title">🛠️ Información de Servicio</div>
+            <div class="form-section-title">🛠️ Servicio</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
               <div class="form-group">
-                <label class="form-label" for="reg-service">Tipo de Servicio Solicitado <span class="form-label-required"></span></label>
-                <input type="text" id="reg-service" class="input input-md" placeholder="Ej. Instalación de CCTV" value="${formVal.serviceType}" required />
+                <label class="form-label" for="reg-service">Tipo de Servicio <span class="form-label-required"></span></label>
+                <input type="text" id="reg-service" class="input input-md" value="${formVal.serviceType}" required />
               </div>
               <div class="form-group">
-                <label class="form-label" for="reg-priority">Prioridad Inicial <span class="form-label-required"></span></label>
-                <select id="reg-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
-                  <option value="Baja" ${formVal.priority === 'Baja' ? 'selected' : ''}>Baja</option>
-                  <option value="Media" ${formVal.priority === 'Media' ? 'selected' : ''}>Media</option>
-                  <option value="Alta" ${formVal.priority === 'Alta' ? 'selected' : ''}>Alta</option>
-                  <option value="Urgente" ${formVal.priority === 'Urgente' ? 'selected' : ''}>Urgente</option>
+                <label class="form-label" for="reg-priority">Prioridad <span class="form-label-required"></span></label>
+                <select id="reg-priority" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
+                  <option value="Baja">Baja</option>
+                  <option value="Media" selected>Media</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Urgente">Urgente</option>
                 </select>
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="reg-desc">Descripción del Trabajo <span class="form-label-required"></span></label>
-              <textarea id="reg-desc" class="input" style="height:60px; padding:10px;" placeholder="Describe detalladamente el problema o servicio..." required>${formVal.problemDescription}</textarea>
+              <textarea id="reg-desc" class="input" style="height:60px; padding:10px;" required>${formVal.problemDescription}</textarea>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="reg-equip">Equipos Instalados / Modelos (Opcional)</label>
-              <input type="text" id="reg-equip" class="input input-md" placeholder="Ej. DVR Hikvision 4 Canales" value="${formVal.installedEquipment}" />
+              <label class="form-label" for="reg-equip">Equipos Instalados (Opcional)</label>
+              <input type="text" id="reg-equip" class="input input-md" value="${formVal.installedEquipment}" />
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="reg-obs">Observaciones Generales</label>
-              <textarea id="reg-obs" class="input" style="height:50px; padding:10px;" placeholder="Notas adicionales del cliente...">${formVal.observations}</textarea>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-              <button type="submit" class="btn btn-primary">Siguiente: Previsualizar Resumen</button>
+            <div style="display:flex; justify-content:flex-end;">
+              <button type="submit" class="btn btn-primary">Siguiente: Previsualizar</button>
             </div>
           </form>
         </div>
 
-        <!-- Tracking/Logs Side Card -->
-        <div class="card p-5 animate-fade-in">
-          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Historial de Solicitudes</h3>
+        <div class="card p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Historial de Peticiones</h3>
           <div style="overflow-x:auto;">
             <table style="width:100%; border-collapse:collapse; text-align:left;">
               <thead>
                 <tr style="border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); font-size:0.7rem; font-weight:700;">
                   <th style="padding:6px 4px;">Cliente</th>
                   <th style="padding:6px 4px;">Fecha</th>
-                  <th style="padding:6px 4px;">Servicio</th>
                   <th style="padding:6px 4px;">Estado</th>
-                  <th style="padding:6px 4px;">Comentario</th>
                 </tr>
               </thead>
               <tbody>
-                ${trackingRows || '<tr><td colspan="5" style="text-align:center; padding:15px; color:var(--color-text-secondary); font-size:0.7rem;">No has enviado solicitudes aún.</td></tr>'}
+                ${trackingRows || '<tr><td colspan="3" style="text-align:center; padding:15px; color:var(--color-text-secondary); font-size:0.7rem;">Ninguna petición.</td></tr>'}
               </tbody>
             </table>
           </div>
@@ -834,17 +778,11 @@ export class ClientAssignmentsView extends Component {
       </div>
     `;
 
-    // Bind Geolocation button
-    this.container.querySelector('#btn-get-gps')?.addEventListener('click', () => {
-      this.triggerGPSCapture();
-    });
+    this.container.querySelector('#btn-get-gps')?.addEventListener('click', () => this.triggerGPSCapture());
 
-    // Handle Form Submit (Goes to Confirmation Review screen)
     const form = this.container.querySelector('#emp-new-client-form');
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
-
-      // Read values and store in state
       this.state.newClientForm = {
         displayName: form.querySelector('#reg-name').value.trim(),
         companyName: form.querySelector('#reg-company').value.trim(),
@@ -855,281 +793,374 @@ export class ClientAssignmentsView extends Component {
         city: form.querySelector('#reg-city').value.trim(),
         department: form.querySelector('#reg-dept').value.trim(),
         reference: form.querySelector('#reg-ref').value.trim(),
-        observations: form.querySelector('#reg-obs').value.trim(),
+        observations: form.querySelector('#reg-equip').value.trim(), // simple notes mapping
         serviceType: form.querySelector('#reg-service').value.trim(),
         problemDescription: form.querySelector('#reg-desc').value.trim(),
         installedEquipment: form.querySelector('#reg-equip').value.trim(),
         priority: form.querySelector('#reg-priority').value,
         gps: this.state.newClientForm.gps
       };
-
       this.state.confirmingNewClient = true;
       this.renderAssignments();
     });
 
-    // Re-init map if GPS is already captured and stored in state
     if (formVal.gps) {
+      this.loadLeaflet().then(() => this.initMap('waiter-preview-map', formVal.gps.lat, formVal.gps.lng));
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //📍 REGISTER/UPDATE CLIENT GPS TAB (EMPLOYEE ACTION SCREEN)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  renderGpsLocationTab() {
+    const hasPerm = this.currentUser.permissions?.registrar_ubicacion_clientes === true;
+
+    if (!hasPerm) {
+      this.container.innerHTML = `
+        <div class="card p-8 text-center" style="grid-column:1 / -1; max-width:600px; margin: 30px auto; border:1px solid rgba(239,68,68,0.2); background:rgba(239,68,68,0.02);">
+          <div style="font-size:3rem; margin-bottom:12px;">⚠️</div>
+          <h4 class="font-bold text-md" style="color:var(--color-error);">Acceso Restringido</h4>
+          <p class="text-secondary text-sm mt-2">
+            No tienes el permiso <strong>"Registrar ubicación de clientes"</strong> asignado a tu cuenta. Solicita la activación de este permiso al propietario del negocio.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    if (this.state.confirmingGpsLocation) {
+      this.renderGpsConfirmationScreen();
+      return;
+    }
+
+    // Filter clients catalog to show ONLY clients assigned to this employee's assignments!
+    const assignedClientIds = new Set(this.state.assignments.map(a => a.clientId));
+    const myClients = this.state.clientsCatalog.filter(c => assignedClientIds.has(c.id));
+
+    const clientOptionsHTML = myClients.map(c => `
+      <option value="${c.id}" ${this.state.gpsSelectedClientId === c.id ? 'selected' : ''}>
+        ${c.displayName} ${c.companyName ? `(${c.companyName})` : ''} — Tel: ${c.phone}
+      </option>
+    `).join('');
+
+    // Summary details of selected client
+    let clientCardHTML = '';
+    const selectedClient = myClients.find(c => c.id === this.state.gpsSelectedClientId);
+
+    if (selectedClient) {
+      const activeJob = this.state.assignments.find(a => a.clientId === selectedClient.id && a.status !== 'Finalizado');
+      const hasGps = selectedClient.gps ? '🟢 Sí' : '⚪ No registrada';
+      
+      clientCardHTML = `
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:8px; font-size:0.8rem;">
+          <div><span class="text-secondary">Cliente:</span> <strong>${selectedClient.displayName}</strong></div>
+          ${selectedClient.companyName ? `<div><span class="text-secondary">Empresa:</span> <strong>${selectedClient.companyName}</strong></div>` : ''}
+          <div><span class="text-secondary">Teléfono:</span> <strong>${selectedClient.phone}</strong></div>
+          <div><span class="text-secondary">Dirección:</span> <strong>${selectedClient.address || '—'}</strong></div>
+          <div><span class="text-secondary">Ubicación GPS Oficial:</span> <strong>${hasGps}</strong></div>
+          ${activeJob ? `
+            <div style="margin-top:6px; padding:6px; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.15); border-radius:6px;">
+              ⚡ Servicio Activo: <strong>${activeJob.description}</strong> (${activeJob.status})
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Historical list of location updates submitted by employee
+    const locationsRows = this.state.pendingLocations.map(l => {
+      const badge = {
+        Pendiente: '<span class="badge" style="background:rgba(234,179,8,0.1); color:var(--color-warning);">Pendiente</span>',
+        Aprobado: '<span class="badge" style="background:rgba(34,197,94,0.1); color:var(--color-success);">Aprobado</span>',
+        Rechazado: '<span class="badge" style="background:rgba(239,68,68,0.1); color:var(--color-error);">Rechazado</span>'
+      }[l.status] || `<span class="badge">${l.status}</span>`;
+
+      return `
+        <tr style="border-bottom:1px solid var(--color-border); font-size:0.75rem;">
+          <td style="padding:8px;"><strong>${l.clientName}</strong></td>
+          <td style="padding:8px; font-family:monospace; color:var(--color-accent);">${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}</td>
+          <td style="padding:8px; color:var(--color-text-secondary);">${TimeService.formatDate(l.capturedAt)}</td>
+          <td style="padding:8px;">${badge}</td>
+          <td style="padding:8px; color:var(--color-text-secondary); font-size:0.7rem; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${l.comment || '—'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    this.container.innerHTML = `
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; grid-column:1 / -1; align-items:flex-start;">
+        
+        <!-- Action Card -->
+        <div class="card p-6 animate-fade-in">
+          <h3 class="text-md font-bold mb-4">📍 Registrar o Actualizar Ubicación GPS de Cliente</h3>
+          
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="form-group">
+              <label class="form-label" for="gps-client-select">Selecciona el Cliente Asignado <span class="form-label-required"></span></label>
+              <select id="gps-client-select" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
+                <option value="" disabled selected>Escoge un cliente...</option>
+                ${clientOptionsHTML}
+              </select>
+            </div>
+
+            <div id="gps-client-summary-card">
+              ${clientCardHTML}
+            </div>
+
+            <!-- GPS Capture Module -->
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px; margin-top:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong style="font-size:0.8rem; color:var(--color-text-primary);">📍 GPS del Dispositivo</strong>
+                <button type="button" class="btn btn-primary btn-xs" id="btn-gps-capture-action" ${!selectedClient ? 'disabled' : ''}>🌍 Capturar Ubicación Actual</button>
+              </div>
+
+              <div id="gps-action-coords-display" style="font-size:0.75rem; color:var(--color-text-secondary);">
+                ${this.state.gpsCapturedData 
+                  ? `Latitud: <strong>${this.state.gpsCapturedData.lat}</strong>, Longitud: <strong>${this.state.gpsCapturedData.lng}</strong> (Precisión: ${this.state.gpsCapturedData.accuracy}m)`
+                  : '⚠️ No se han capturado coordenadas GPS.'}
+              </div>
+
+              <div id="gps-action-preview-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:10px; display:${this.state.gpsCapturedData ? 'block' : 'none'}; z-index:5;"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="gps-obs-input">Observaciones de Campo (Opcional)</label>
+              <textarea id="gps-obs-input" class="input" style="height:60px; padding:10px;" placeholder="Ej. El medidor está en el poste frente a la cochera.">${this.state.gpsObservations}</textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button class="btn btn-primary" id="btn-gps-confirm-next" ${!this.state.gpsCapturedData || !selectedClient ? 'disabled' : ''}>Siguiente: Confirmar Ubicación</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- History/Logs Side Card -->
+        <div class="card p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">Historial de Ubicaciones</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; text-align:left;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--color-border); color:var(--color-text-secondary); font-size:0.7rem; font-weight:700;">
+                  <th style="padding:6px 4px;">Cliente</th>
+                  <th style="padding:6px 4px;">Coords</th>
+                  <th style="padding:6px 4px;">Fecha</th>
+                  <th style="padding:6px 4px;">Estado</th>
+                  <th style="padding:6px 4px;">Comentario</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${locationsRows || '<tr><td colspan="5" style="text-align:center; padding:15px; color:var(--color-text-secondary); font-size:0.7rem;">Ninguna ubicación registrada.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Dropdown change trigger
+    this.container.querySelector('#gps-client-select')?.addEventListener('change', (e) => {
+      this.state.gpsSelectedClientId = e.target.value;
+      this.state.gpsCapturedData = null;
+      this.renderAssignments();
+    });
+
+    // Capture GPS coordinates trigger
+    this.container.querySelector('#btn-gps-capture-action')?.addEventListener('click', () => {
+      this.triggerGpsActionCapture();
+    });
+
+    // Go to GPS confirmation screen
+    this.container.querySelector('#btn-gps-confirm-next')?.addEventListener('click', () => {
+      this.state.gpsObservations = this.container.querySelector('#gps-obs-input').value.trim();
+      this.state.confirmingGpsLocation = true;
+      this.renderAssignments();
+    });
+
+    // Re-init map
+    if (this.state.gpsCapturedData) {
       this.loadLeaflet().then(() => {
-        this.initMap('waiter-preview-map', formVal.gps.lat, formVal.gps.lng);
+        this.initMap('gps-action-preview-map', this.state.gpsCapturedData.lat, this.state.gpsCapturedData.lng);
       });
     }
   }
 
-  triggerGPSCapture() {
-    const coordsDisplay = this.container.querySelector('#gps-coords-display');
+  triggerGpsActionCapture() {
+    const display = this.container.querySelector('#gps-action-coords-display');
     if (!navigator.geolocation) {
-      alert('La geolocalización no está soportada por tu navegador.');
+      alert('La geolocalización no está soportada.');
       return;
     }
 
-    coordsDisplay.innerHTML = '⚡ Obteniendo coordenadas de satélite...';
+    display.innerHTML = '⚡ Adquiriendo precisión del satélite...';
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy || 0);
         const timestamp = Date.now();
 
-        this.state.newClientForm.gps = {
+        this.state.gpsCapturedData = {
           lat,
           lng,
+          accuracy,
           capturedAt: timestamp
         };
 
-        coordsDisplay.innerHTML = `Latitud: <strong>${lat}</strong>, Longitud: <strong>${lng}</strong> (Capturado: ${TimeService.formatDate(timestamp, true)})`;
-        
-        const mapContainer = this.container.querySelector('#waiter-preview-map');
+        display.innerHTML = `Latitud: <strong>${lat}</strong>, Longitud: <strong>${lng}</strong> (Precisión: ${accuracy} metros)`;
+
+        const mapContainer = this.container.querySelector('#gps-action-preview-map');
         mapContainer.style.display = 'block';
 
         this.loadLeaflet().then(() => {
-          this.initMap('waiter-preview-map', lat, lng);
+          this.initMap('gps-action-preview-map', lat, lng);
         });
+
+        const nextBtn = this.container.querySelector('#btn-gps-confirm-next');
+        if (nextBtn) nextBtn.disabled = false;
       },
       (error) => {
         console.error(error);
-        alert(`No se pudo obtener la ubicación: ${error.message}`);
-        coordsDisplay.innerHTML = '⚠️ Error al obtener coordenadas.';
+        alert(`Error al geolocalizar: ${error.message}`);
+        display.innerHTML = '⚠️ Error de geolocalización.';
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
-  renderConfirmationScreen() {
-    const val = this.state.newClientForm;
+  renderGpsConfirmationScreen() {
+    const client = this.state.clientsCatalog.find(c => c.id === this.state.gpsSelectedClientId);
+    const gps = this.state.gpsCapturedData;
 
     this.container.innerHTML = `
-      <div class="card p-6 animate-fade-in" style="max-width:700px; margin:0 auto; grid-column:1 / -1;">
-        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">📋 Confirmar Datos del Cliente Antes de Enviar</h3>
+      <div class="card p-6 animate-fade-in" style="max-width:650px; margin:0 auto; grid-column:1 / -1;">
+        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">📍 Confirmar Envío de Ubicación GPS</h3>
         
         <div style="display:flex; flex-direction:column; gap:12px; font-size:0.85rem; color:var(--color-text-primary); margin-bottom:20px;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Nombre del Cliente:</span>
-              <strong>${val.displayName}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Empresa / Negocio:</span>
-              <strong>${val.companyName || '—'}</strong>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Teléfono Principal:</span>
-              <strong>${val.phone}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Teléfono Secundario:</span>
-              <strong>${val.phoneSecondary || '—'}</strong>
-            </div>
-          </div>
-
           <div>
-            <span class="text-secondary" style="font-size:0.75rem; display:block;">Correo Electrónico:</span>
-            <strong>${val.email}</strong>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Cliente Seleccionado:</span>
+            <strong>${client?.displayName}</strong>
           </div>
-
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Ciudad:</span>
-              <strong>${val.city}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Departamento:</span>
-              <strong>${val.department}</strong>
-            </div>
-          </div>
-
           <div>
-            <span class="text-secondary" style="font-size:0.75rem; display:block;">Dirección de Domicilio:</span>
-            <strong>${val.address}</strong>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Teléfono:</span>
+            <strong>${client?.phone}</strong>
           </div>
-
           <div>
-            <span class="text-secondary" style="font-size:0.75rem; display:block;">Punto de Referencia:</span>
-            <strong>${val.reference}</strong>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Coordenadas Capturadas:</span>
+            Latitud: <strong>${gps.lat}</strong>, Longitud: <strong>${gps.lng}</strong> (Precisión: ${gps.accuracy}m)
           </div>
-
-          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Tipo de Servicio:</span>
-              <strong>${val.serviceType}</strong>
-            </div>
-            <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Prioridad Inicial:</span>
-              <strong>${val.priority}</strong>
-            </div>
-          </div>
-
           <div>
-            <span class="text-secondary" style="font-size:0.75rem; display:block;">Descripción del Problema:</span>
-            <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">${val.problemDescription}</div>
+            <span class="text-secondary" style="font-size:0.75rem; display:block;">Fecha y Hora de Captura:</span>
+            <strong>${TimeService.formatDate(gps.capturedAt, true)}</strong>
           </div>
-
-          ${val.installedEquipment ? `
+          ${this.state.gpsObservations ? `
             <div>
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Equipos Instalados:</span>
-              <strong>${val.installedEquipment}</strong>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">Observaciones de Campo:</span>
+              <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">${this.state.gpsObservations}</div>
             </div>
           ` : ''}
 
-          <!-- GPS map preview inside confirmation -->
-          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
-            <span class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:4px;">Ubicación GPS a Enviar:</span>
-            ${val.gps 
-              ? `Latitud: <strong>${val.gps.lat}</strong>, Longitud: <strong>${val.gps.lng}</strong>`
-              : '<span class="text-error">⚠️ Sin datos GPS capturados.</span>'}
-            <div id="employee-confirm-map" style="height: 180px; border-radius: 6px; border:1px solid var(--color-border); margin-top:8px; z-index:5; display:${val.gps ? 'block' : 'none'};"></div>
+          <div>
+            <span class="text-secondary" style="font-size:0.75rem; display:block; margin-bottom:6px;">Mapa de Previsualización:</span>
+            <div id="gps-confirm-preview-map" style="height:180px; border-radius:6px; border:1px solid var(--color-border); z-index:5;"></div>
           </div>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
-          <button class="btn btn-secondary btn-sm" id="btn-confirm-back">✏️ Modificar Datos</button>
-          <button class="btn btn-primary btn-sm" id="btn-confirm-send">🚀 Confirmar y Enviar al Dueño</button>
+          <button class="btn btn-secondary btn-sm" id="btn-gps-confirm-back">Cancel / Re-capturar</button>
+          <button class="btn btn-primary btn-sm" id="btn-gps-confirm-submit">🚀 Enviar para Aprobación</button>
         </div>
       </div>
     `;
 
-    // Bind back button
-    this.container.querySelector('#btn-confirm-back')?.addEventListener('click', () => {
-      this.state.confirmingNewClient = false;
+    this.container.querySelector('#btn-gps-confirm-back')?.addEventListener('click', () => {
+      this.state.confirmingGpsLocation = false;
       this.renderAssignments();
     });
 
-    // Bind send button
-    this.container.querySelector('#btn-confirm-send')?.addEventListener('click', async () => {
-      const sendBtn = this.container.querySelector('#btn-confirm-send');
-      sendBtn.disabled = true;
-      sendBtn.textContent = 'Enviando petición...';
+    this.container.querySelector('#btn-gps-confirm-submit')?.addEventListener('click', async () => {
+      const submitBtn = this.container.querySelector('#btn-gps-confirm-submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando ubicación...';
 
       try {
         const { db } = await import('../../../config/firebase.config.js');
         const { ref, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
 
         if (db) {
-          const newRef = push(ref(db, `${this.companyId}/pending_clients`));
-          const requestId = newRef.key;
+          const locRef = push(ref(db, `${this.companyId}/pending_locations`));
+          const locId = locRef.key;
 
-          const requestData = {
-            id: requestId,
+          const locationRequestData = {
+            id: locId,
+            clientId: client.id,
+            clientName: client.displayName,
             employeeId: this.uid,
             employeeName: this.currentUser.displayName || 'Técnico',
-            createdAt: Date.now(),
+            lat: gps.lat,
+            lng: gps.lng,
+            accuracy: gps.accuracy,
+            capturedAt: gps.capturedAt,
             status: 'Pendiente',
-            comment: '',
-            // Personal
-            displayName: val.displayName,
-            companyName: val.companyName,
-            phone: val.phone,
-            phoneSecondary: val.phoneSecondary,
-            email: val.email,
-            address: val.address,
-            city: val.city,
-            department: val.department,
-            reference: val.reference,
-            observations: val.observations,
-            // Service
-            serviceType: val.serviceType,
-            problemDescription: val.problemDescription,
-            installedEquipment: val.installedEquipment,
-            priority: val.priority,
-            gps: val.gps || null
+            observations: this.state.gpsObservations,
+            comment: ''
           };
 
-          await set(newRef, requestData);
+          await set(locRef, locationRequestData);
 
-          // Push toast notify to DB for OWNER
+          // Notify Owner
           const notifRef = push(ref(db, `${this.companyId}/notifications`));
           await set(notifRef, {
             id: notifRef.key,
             toUid: 'OWNER',
-            title: '👥 Nuevo Cliente Pendiente',
-            message: `El empleado ${this.currentUser.displayName} pre-registró al cliente "${val.displayName}" en campo.`,
+            title: '📍 Nueva Ubicación Pendiente',
+            message: `El empleado ${this.currentUser.displayName} envió una actualización de coordenadas para el cliente "${client.displayName}"`,
             timestamp: Date.now(),
             read: false
           });
 
           // Log Audit Trace
           await FirestoreService.logAudit({
-            action: 'EMPLOYEE_REQUEST_CLIENT',
+            action: 'EMPLOYEE_SUBMIT_LOCATION_UPDATE',
             companyId: this.companyId,
-            description: `El empleado ${this.currentUser.displayName} (${this.currentUser.email}) solicitó pre-registrar el cliente "${val.displayName}" con GPS [${val.gps ? `${val.gps.lat}, ${val.gps.lng}` : 'Sin GPS'}].`
+            description: `El empleado ${this.currentUser.displayName} (${this.currentUser.email}) registró ubicación GPS para el cliente "${client.displayName}" (Coordenadas: [${gps.lat}, ${gps.lng}], Precisión: ${gps.accuracy}m).`
           });
         }
 
-        NotificationService.success('Petición de registro enviada correctamente.');
-        
-        // Reset state newClientForm
-        this.state.newClientForm = {
-          displayName: '',
-          companyName: '',
-          phone: '',
-          phoneSecondary: '',
-          email: '',
-          address: '',
-          city: '',
-          department: '',
-          reference: '',
-          observations: '',
-          serviceType: '',
-          problemDescription: '',
-          installedEquipment: '',
-          priority: 'Media',
-          gps: null
-        };
-        this.state.confirmingNewClient = false;
+        NotificationService.success('Ubicación enviada para aprobación del dueño.');
+        this.state.confirmingGpsLocation = false;
+        this.state.gpsSelectedClientId = '';
+        this.state.gpsCapturedData = null;
+        this.state.gpsObservations = '';
         this.renderAssignments();
       } catch (err) {
         console.error(err);
-        alert(`Error al enviar datos: ${err.message || err}`);
-        sendBtn.disabled = false;
-        sendBtn.textContent = 'Confirmar y Enviar al Dueño';
+        alert(`Error al enviar coordenadas: ${err.message || err}`);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Enviar para Aprobación';
       }
     });
 
-    // Re-init map
-    if (val.gps) {
-      this.loadLeaflet().then(() => {
-        this.initMap('employee-confirm-map', val.gps.lat, val.gps.lng);
-      });
-    }
+    this.loadLeaflet().then(() => {
+      this.initMap('gps-confirm-preview-map', gps.lat, gps.lng);
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MAP LEAFLET RESOURCE LOADER
+  // MAP LEAFLET DYNAMIC ASYNC RESOURCE LOADER
   // ═══════════════════════════════════════════════════════════════════════════
 
   async loadLeaflet() {
     if (window.L) return window.L;
 
     return new Promise((resolve, reject) => {
-      // Load CSS
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
 
-      // Load JS
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.onload = () => resolve(window.L);
@@ -1162,216 +1193,241 @@ export class ClientAssignmentsView extends Component {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // LIFE SOURCING STAGERS
+  // FINISH CODES AND LIFECYCLES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async updateStatus(id, newStatus, comments = '', photoUrl = '') {
+  async openTechnicalDataModal(clientId) {
     try {
       const { db } = await import('../../../config/firebase.config.js');
-      const { ref, update, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+      const { ref, get } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
 
-      if (db) {
-        const timestamp = Date.now();
-        const updates = {
-          status: newStatus,
-          completedAt: newStatus === 'Finalizado' ? timestamp : 0
-        };
+      if (!db) return;
 
-        if (comments) updates.comments = comments;
-        if (photoUrl) updates.photoUrl = photoUrl;
-
-        await update(ref(db, `${this.companyId}/assignments/${id}`), updates);
-
-        const assignment = this.state.assignments.find(a => a.id === id);
-        if (assignment) {
-          const notifRef = push(ref(db, `${this.companyId}/notifications`));
-          await set(notifRef, {
-            id: notifRef.key,
-            toUid: 'OWNER',
-            title: '💼 Estado de Trabajo Actualizado',
-            message: `El empleado ${this.currentUser.displayName} actualizó el estado de la tarea de ${assignment.clientName} a "${newStatus}"`,
-            timestamp: timestamp,
-            read: false
-          });
-        }
+      const snap = await get(ref(db, `${this.companyId}/clients/${clientId}`));
+      if (!snap.exists()) {
+        alert('No se pudo encontrar la información técnica.');
+        return;
       }
 
-      NotificationService.success(`Tarea actualizada a "${newStatus}" con éxito.`);
-      this.loadMyAssignments();
-    } catch (err) {
-      console.error(err);
-      NotificationService.error('Error al actualizar el estado de la tarea.');
-    }
-  }
+      const client = snap.val();
+      const tech = client.technical_info || {};
 
-  openFinishJobModal(id) {
-    let modalOverlay = document.getElementById('finish-job-modal-container');
-    if (modalOverlay) modalOverlay.remove();
+      let modalOverlay = document.getElementById('view-technical-modal-container');
+      if (modalOverlay) modalOverlay.remove();
 
-    const formHTML = `
-      <form id="finish-job-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
-        <div class="form-group">
-          <label class="form-label" for="finish-comments">Comentarios o Notas de Cierre <span class="form-label-required"></span></label>
-          <textarea id="finish-comments" class="input" style="height:100px; padding:10px;" placeholder="Describe detalladamente las reparaciones o el estado final del servicio..." required></textarea>
+      const detailsHTML = `
+        <div style="color:var(--color-text-primary); display:flex; flex-direction:column; gap:12px; font-size:0.85rem;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div>
+              <span class="text-secondary" style="display:block; font-size:0.75rem;">Marca / Modelo:</span>
+              <strong>${tech.brandModel || '—'}</strong>
+            </div>
+            <div>
+              <span class="text-secondary" style="display:block; font-size:0.75rem;">Número de Serie:</span>
+              <strong>${tech.serialNumber || '—'}</strong>
+            </div>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+            <span class="text-secondary" style="display:block; font-size:0.75rem;">Descripción del Producto Instalado:</span>
+            <strong>${tech.productDescription || '—'}</strong>
+          </div>
         </div>
+      `;
 
-        <div class="form-group">
-          <label class="form-label" for="finish-photo">Fotografía de Evidencia / Archivo Adjunto (Opcional)</label>
-          <input type="file" id="finish-photo" class="input input-md" accept="image/*,application/pdf" style="padding-top:6px;" />
-          <span class="text-xs text-secondary">Sube una fotografía de evidencia o reporte en PDF.</span>
-        </div>
-      </form>
-    `;
+      const technicalModal = new Modal({
+        title: `📋 Ficha Técnica: ${client.displayName}`,
+        bodyHTML: detailsHTML,
+        footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-close-tech-modal">Cerrar Ficha</button>`,
+        size: 'md'
+      });
 
-    const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="finish-cancel-btn">Cancelar</button>
-      <button class="btn btn-success btn-sm" id="finish-submit-btn">Completar Servicio</button>
-    `;
+      const el = technicalModal.mount();
+      el.setAttribute('id', 'view-technical-modal-container');
+      document.body.appendChild(el);
 
-    const finishModal = new Modal({
-      title: '✅ Completar y Entregar Tarea',
-      bodyHTML: formHTML,
-      footerHTML: footerHTML,
-      size: 'md'
-    });
-
-    const el = finishModal.mount();
-    el.setAttribute('id', 'finish-job-modal-container');
-    document.body.appendChild(el);
-
-    el.querySelector('#finish-cancel-btn')?.addEventListener('click', () => finishModal.close());
-    el.querySelector('#finish-submit-btn')?.addEventListener('click', async () => {
-      const form = el.querySelector('#finish-job-form');
-      if (!form || !form.reportValidity()) return;
-
-      const submitBtn = el.querySelector('#finish-submit-btn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando informe...';
-
-      const comments = el.querySelector('#finish-comments').value.trim();
-      const fileInput = el.querySelector('#finish-photo');
-      const file = fileInput?.files ? fileInput.files[0] : null;
-
-      let photoUrl = '';
-      try {
-        if (file) {
-          submitBtn.textContent = 'Subiendo archivo...';
-          photoUrl = await StorageService.uploadFile(file, 'jobs');
-        }
-
-        await this.updateStatus(id, 'Finalizado', comments, photoUrl);
-
-        const assignment = this.state.assignments.find(a => a.id === id);
-        if (assignment) {
-          const req = this.state.authRequests.find(r => r.clientId === assignment.clientId && r.assignmentId === assignment.id && r.status === 'Aprobado');
-          if (req) {
-            await this.expireRequest(req.id);
-          }
-
-          try {
-            await FirestoreService.logAudit({
-              action: 'EMPLOYEE_FINISH_JOB',
-              companyId: this.companyId,
-              description: `El empleado ${this.currentUser.displayName} (${this.currentUser.email}) completó el trabajo para el cliente ${assignment.clientName}. Comentario: ${comments}`
-            });
-          } catch (auditErr) {
-            console.warn('[AuditLogs] Falló el registro de auditoría:', auditErr.message);
-          }
-        }
-
-        finishModal.close();
-      } catch (err) {
-        console.error(err);
-        alert(`Error al guardar informe: ${err.message || err}`);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Completar Servicio';
-      }
-    });
-  }
-
-  async expireRequest(requestId) {
-    try {
-      const { db } = await import('../../../config/firebase.config.js');
-      const { ref, update } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
-
-      if (db) {
-        await update(ref(db, `${this.companyId}/auth_requests/${requestId}`), {
-          status: 'Expirado',
-          approvedData: null
-        });
-
-        const req = this.state.authRequests.find(r => r.id === requestId);
-        if (req) {
-          await FirestoreService.logAudit({
-            action: 'CREDENTIALS_EXPIRED',
-            companyId: this.companyId,
-            description: `Acceso temporal de credenciales expirado para el técnico ${req.employeeName} (Cliente: ${req.clientName}). Datos de forma segura.`
-          });
-        }
-      }
-
-      NotificationService.success('Acceso revocado y datos eliminados.');
-      this.loadMyAssignments();
+      el.querySelector('#btn-close-tech-modal')?.addEventListener('click', () => technicalModal.close());
     } catch (e) {
       console.error(e);
     }
   }
 
-  startCountdownTicker() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+  openRequestCredsModal(clientId, assignmentId) {
+    const assignment = this.state.assignments.find(a => a.id === assignmentId);
+    if (!assignment) return;
 
-    this.timerInterval = setInterval(async () => {
-      let needsRefresh = false;
-      const now = Date.now();
+    let modalOverlay = document.getElementById('request-creds-modal-container');
+    if (modalOverlay) modalOverlay.remove();
 
-      for (const req of this.state.authRequests) {
-        if (req.status === 'Aprobado' && req.expiresAt) {
-          const remainSecs = Math.max(0, Math.floor((req.expiresAt - now) / 1000));
-          const el = document.getElementById(`countdown-${req.id}`);
-          
-          if (el) {
-            if (remainSecs > 0) {
-              const min = Math.floor(remainSecs / 60);
-              const sec = remainSecs % 60;
-              el.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-            } else {
-              needsRefresh = true;
-              await this.expireRequest(req.id);
-            }
-          }
+    const formHTML = `
+      <form id="request-creds-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:700; margin-bottom:8px; display:block;">Selecciona los Datos Requeridos <span class="form-label-required"></span></label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
+              <input type="checkbox" name="req-field" value="dvrUser" />
+              <span>👤 Usuario DVR</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
+              <input type="checkbox" name="req-field" value="dvrPassword" />
+              <span>🔑 Clave DVR</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
+              <input type="checkbox" name="req-field" value="nvrUser" />
+              <span>👤 Usuario NVR/XVR</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:6px 8px; border-radius:4px; cursor:pointer;">
+              <input type="checkbox" name="req-field" value="nvrPassword" />
+              <span>🔑 Clave NVR/XVR</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="req-motive">Motivo o Justificación del Acceso <span class="form-label-required"></span></label>
+          <textarea id="req-motive" class="input" style="height:70px; padding:10px;" placeholder="Motive..." required></textarea>
+        </div>
+      </form>
+    `;
+
+    const footerHTML = `
+      <button class="btn btn-secondary btn-sm" id="req-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="req-submit-btn">Enviar Solicitud</button>
+    `;
+
+    const requestModal = new Modal({
+      title: '🔑 Solicitar Acceso a Credenciales',
+      bodyHTML: formHTML,
+      footerHTML: footerHTML,
+      size: 'md'
+    });
+
+    const el = requestModal.mount();
+    el.setAttribute('id', 'request-creds-modal-container');
+    document.body.appendChild(el);
+
+    el.querySelector('#req-cancel-btn')?.addEventListener('click', () => requestModal.close());
+    el.querySelector('#req-submit-btn')?.addEventListener('click', async () => {
+      const form = el.querySelector('#request-creds-form');
+      if (!form || !form.reportValidity()) return;
+
+      const checkedBoxes = form.querySelectorAll('input[name="req-field"]:checked');
+      if (checkedBoxes.length === 0) {
+        alert('Debes seleccionar al menos una credencial.');
+        return;
+      }
+
+      const requestedFields = Array.from(checkedBoxes).map(chk => chk.value);
+      const motive = el.querySelector('#req-motive').value.trim();
+
+      const submitBtn = el.querySelector('#req-submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+
+      try {
+        const { db } = await import('../../../config/firebase.config.js');
+        const { ref, push, set } = await import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js');
+
+        if (db) {
+          const reqRef = push(ref(db, `${this.companyId}/auth_requests`));
+          const reqId = reqRef.key;
+
+          const requestData = {
+            id: reqId,
+            employeeId: this.uid,
+            employeeName: this.currentUser.displayName || 'Técnico',
+            clientId: clientId,
+            clientName: assignment.clientName,
+            assignmentId: assignmentId,
+            requestedFields: requestedFields,
+            motive: motive,
+            status: 'Pendiente',
+            requestedAt: Date.now(),
+            approvedAt: 0,
+            expiresAt: 0,
+            comment: '',
+            authorizedBy: ''
+          };
+
+          await set(reqRef, requestData);
+
+          const notifRef = push(ref(db, `${this.companyId}/notifications`));
+          await set(notifRef, {
+            id: notifRef.key,
+            toUid: 'OWNER',
+            title: '🔑 Solicitud de Acceso Especial',
+            message: `El empleado ${this.currentUser.displayName} solicita credenciales para el cliente ${assignment.clientName}`,
+            timestamp: Date.now(),
+            read: false
+          });
+
+          await FirestoreService.logAudit({
+            action: 'EMPLOYEE_REQUEST_CREDENTIALS',
+            companyId: this.companyId,
+            description: `El empleado ${this.currentUser.displayName} solicitó acceso granular a las credenciales del cliente ${assignment.clientName}. Motivo: ${motive}.`
+          });
         }
-      }
 
-      if (needsRefresh) {
-        this.renderAssignments();
+        NotificationService.success('Solicitud enviada con éxito.');
+        requestModal.close();
+        this.loadMyAssignments();
+      } catch (err) {
+        console.error(err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Enviar Solicitud';
       }
-    }, 1000);
+    });
   }
 
-  formatExecutionTime(assignedAt, completedAt) {
-    if (!assignedAt || !completedAt) return '—';
-    const diffMs = completedAt - assignedAt;
-    if (diffMs <= 0) return 'Menos de 1 min';
-    
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffSecs / 60);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-    
-    const parts = [];
-    if (diffDays > 0) {
-      parts.push(`${diffDays} día${diffDays > 1 ? 's' : ''}`);
-    }
-    const remainHours = diffHours % 24;
-    if (remainHours > 0) {
-      parts.push(`${remainHours} hora${remainHours > 1 ? 's' : ''}`);
-    }
-    const remainMins = diffMins % 60;
-    if (remainMins > 0 || parts.length === 0) {
-      parts.push(`${remainMins} min`);
-    }
-    
-    return parts.join(', ');
+  bindActionEvents(element) {
+    element.addEventListener('click', async (e) => {
+      const copyBtn = e.target.closest('.btn-copy-cred');
+      if (copyBtn) {
+        navigator.clipboard.writeText(copyBtn.getAttribute('data-val'));
+        NotificationService.success('Copiado.');
+        return;
+      }
+
+      const closeAccessBtn = e.target.closest('.btn-close-access');
+      if (closeAccessBtn) {
+        const reqId = closeAccessBtn.getAttribute('data-id');
+        if (confirm('¿Deseas revocar el acceso?')) {
+          await this.expireRequest(reqId);
+        }
+        return;
+      }
+
+      const techBtn = e.target.closest('.btn-view-technical');
+      if (techBtn) {
+        this.openTechnicalDataModal(techBtn.getAttribute('data-client-id'));
+        return;
+      }
+
+      const reqCredsBtn = e.target.closest('.btn-request-creds');
+      if (reqCredsBtn) {
+        this.openRequestCredsModal(reqCredsBtn.getAttribute('data-client-id'), reqCredsBtn.getAttribute('data-asg-id'));
+        return;
+      }
+
+      const startBtn = e.target.closest('.btn-start-job');
+      if (startBtn) {
+        const id = startBtn.getAttribute('data-id');
+        const assignment = this.state.assignments.find(a => a.id === id);
+        if (confirm(`¿Iniciar trabajo para "${assignment.clientName}"?`)) {
+          await this.updateStatus(id, 'En proceso');
+          await FirestoreService.logAudit({
+            action: 'EMPLOYEE_START_JOB',
+            companyId: this.companyId,
+            description: `El empleado ${this.currentUser.displayName} inició el trabajo para el cliente ${assignment.clientName}.`
+          });
+        }
+        return;
+      }
+
+      const finishBtn = e.target.closest('.btn-finish-job');
+      if (finishBtn) {
+        this.openFinishJobModal(finishBtn.getAttribute('data-id'));
+        return;
+      }
+    });
   }
 
   unmount() {
@@ -1386,6 +1442,9 @@ export class ClientAssignmentsView extends Component {
     }
     if (this.pendingClientsUnsubscribe) {
       this.pendingClientsUnsubscribe();
+    }
+    if (this.pendingLocationsUnsubscribe) {
+      this.pendingLocationsUnsubscribe();
     }
     this.layout.unmount();
     super.unmount();
