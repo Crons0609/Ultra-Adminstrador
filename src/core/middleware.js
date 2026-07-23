@@ -35,6 +35,44 @@ export function roleGuard(allowedRoles) {
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
     const userRole = state.activeRole || currentUser.role;
+    const company = state.currentCompany;
+    const path = route.path || '';
+
+    // Business type category guards validation
+    if (company && userRole !== 'SUPER_ADMIN') {
+      try {
+        const { getBusinessCategory, getModuleGuards } = await import('../config/business-types.config.js');
+        const category = getBusinessCategory(company.businessType || '');
+        const guards = getModuleGuards(company.businessType || '');
+        const isRestaurant = (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA');
+
+        if (!isRestaurant && ['/kitchen/kds', '/kitchen/stats', '/waiter/tables', '/waiter/orders'].includes(path)) {
+          console.warn(`Access Denied: Route '${path}' is restricted to Gastronomy businesses.`);
+          redirectUserDashboard(userRole, router);
+          return false;
+        }
+
+        if ((path === '/waiter/client-assignments' || path === '/owner/client-assignments') && !guards.enableServiceRequests) {
+          console.warn(`Access Denied: Client assignments are disabled for this business type.`);
+          redirectUserDashboard(userRole, router);
+          return false;
+        }
+
+        if ((path === '/manager/vehicles' || path === '/manager/rentals') && !guards.enableRentals && !guards.enableVehiclesCatalog) {
+          console.warn(`Access Denied: Rentals are disabled for this business type.`);
+          redirectUserDashboard(userRole, router);
+          return false;
+        }
+
+        if (path === '/manager/appointments' && !guards.enableAppointments) {
+          console.warn(`Access Denied: Appointments are disabled for this business type.`);
+          redirectUserDashboard(userRole, router);
+          return false;
+        }
+      } catch (err) {
+        console.warn('[roleGuard] Guards validation failed:', err);
+      }
+    }
 
     if (userRole === 'SUPER_ADMIN' || userRole === 'OWNER') {
       if (userRole !== 'SUPER_ADMIN') {
@@ -120,7 +158,18 @@ export function redirectUserDashboard(role, router) {
       router.navigate('/cashier/pos');
       break;
     case 'WAITER':
-      router.navigate('/waiter/tables');
+      try {
+        const { getBusinessCategory } = await import('../config/business-types.config.js');
+        const companyObj = GlobalStore.getState().currentCompany;
+        const categoryObj = getBusinessCategory(companyObj?.businessType || '');
+        if (categoryObj === 'GASTRONOMIA' || categoryObj === 'BAR_DISCOTECA') {
+          router.navigate('/waiter/tables');
+        } else {
+          router.navigate('/waiter/client-assignments');
+        }
+      } catch (err) {
+        router.navigate('/waiter/tables');
+      }
       break;
     case 'KITCHEN':
       router.navigate('/kitchen/kds');

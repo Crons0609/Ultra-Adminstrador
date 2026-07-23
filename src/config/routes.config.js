@@ -65,6 +65,7 @@ const getPricingView = () => import('../modules/manager/views/pricing.view.js').
 const getPublicCatalogView = () => import('../modules/customer/views/catalog.view.js').then(m => m.PublicCatalogView);
 const getPublicProductDetailView = () => import('../modules/customer/views/product-detail.view.js').then(m => m.PublicProductDetailView);
 const getCatalogSettingsView = () => import('../modules/manager/views/catalog-settings.view.js').then(m => m.CatalogSettingsView);
+const getItemInfoView = () => import('../modules/customer/views/item-info.view.js').then(m => m.ItemInfoView);
 
 // Owner Module
 const getOwnerFinanceView = () => import('../modules/owner/views/finance.view.js').then(m => m.FinanceView);
@@ -92,6 +93,7 @@ const getSuperAdminBillingView = () => import('../modules/super-admin/views/bill
 const getSuperAdminLogsView = () => import('../modules/super-admin/views/logs.view.js').then(m => m.LogsView);
 const getSuperAdminSettingsView = () => import('../modules/super-admin/views/settings.view.js').then(m => m.SettingsView);
 const getSuperAdminUsersView = () => import('../modules/super-admin/views/users.view.js').then(m => m.UsersView);
+const getSuperAdminSupportView = () => import('../modules/super-admin/views/support-center.view.js').then(m => m.SupportCenterView);
 
 // ─── Lazy Route Adapter ───────────────────────────────────────────────────────
 /**
@@ -134,6 +136,7 @@ export const ROUTES = [
   { path: '/customer/menu/:companyId/:branchId/:tableId', view: lazyView(getCustomerMenuView), middlewares: [] },
   { path: '/customer/cart', view: lazyView(getCustomerCartView), middlewares: [] },
   { path: '/customer/order-status', view: lazyView(getOrderStatusView), middlewares: [] },
+  { path: '/customer/item-info/:companyId/:itemId', view: lazyView(getItemInfoView), middlewares: [] },
 
   // Waiter routes
   { path: '/waiter/tables', view: lazyView(getWaiterTablesView), middlewares: [roleGuard([USER_ROLES.WAITER, USER_ROLES.MANAGER])] },
@@ -195,6 +198,7 @@ export const ROUTES = [
 
   // Super Admin routes
   { path: '/super-admin/companies', view: lazyView(getSuperAdminCompaniesView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
+  { path: '/super-admin/support', view: lazyView(getSuperAdminSupportView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/users', view: lazyView(getSuperAdminUsersView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/plans', view: lazyView(getSuperAdminPlansView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/monitoring', view: lazyView(getSuperAdminMonitoringView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },

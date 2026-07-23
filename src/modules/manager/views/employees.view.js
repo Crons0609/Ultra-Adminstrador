@@ -14,15 +14,20 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { GeolocationService } from '../../../services/geolocation.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
+import { getBusinessCategory } from '../../../config/business-types.config.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
     super(params);
 
-    const currentUser = GlobalStore.getState().currentUser || {};
-    this.companyId = currentUser.companyId || 'company-test';
-    this.branchId = currentUser.branchId || 'main';
-    this.currentUser = currentUser;
+    const { currentUser, currentCompany } = GlobalStore.getState();
+    this.companyId = currentUser?.companyId || 'company-test';
+    this.branchId = currentUser?.branchId || 'main';
+    this.currentUser = currentUser || {};
+    this.currentCompany = currentCompany || {};
+
+    const category = getBusinessCategory(this.currentCompany.businessType || '');
+    this.isRestaurant = (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA');
 
     // Initialize state
     this.state = {
@@ -137,6 +142,7 @@ export class EmployeesView extends Component {
         </div>
 
         <!-- Waiter Table Distribution Panel -->
+        ${this.isRestaurant ? `
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
@@ -148,6 +154,7 @@ export class EmployeesView extends Component {
             <p class="text-secondary" style="font-size:0.85rem;">Cargando datos de distribución...</p>
           </div>
         </div>
+        ` : ''}
       `
     });
 
@@ -200,7 +207,10 @@ export class EmployeesView extends Component {
     // Load data from Cloud Firestore
     this.loadEmployees();
     this.subscribeToLocations(element);
-    this.subscribeToTablesDistribution(element);
+    
+    if (this.isRestaurant) {
+      this.subscribeToTablesDistribution(element);
+    }
 
     return element;
   }

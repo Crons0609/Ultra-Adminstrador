@@ -8,6 +8,8 @@ import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
+import { db } from '../../config/firebase.config.js';
+import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 
 export class Sidebar extends Component {
   constructor(props = {}) {
@@ -70,6 +72,7 @@ export class Sidebar extends Component {
               { label: 'Monitoreo', path: '#/super-admin/monitoring', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>` },
               { label: 'Planes', path: '#/super-admin/plans', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>` },
               { label: 'Facturación', path: '#/super-admin/billing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
+              { label: 'Soporte Clientes', path: '#/super-admin/support', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, badgeId: 'sidebar-support-badge' },
             ]
           },
           {
@@ -256,10 +259,15 @@ export class Sidebar extends Component {
       menuHTML += `<span class="sidebar-group-label">${group.label}</span>`;
       group.items.forEach(item => {
         const isActive = currentHash === item.path || currentHash.startsWith(item.path + '/');
+        const badgeHTML = item.badgeId 
+          ? `<span id="${item.badgeId}" class="sidebar-item-badge" style="margin-left:auto; background:var(--color-error); color:#fff; font-size:0.65rem; font-weight:700; border-radius:10px; padding:1px 6px; display:${this._pendingTicketsCount > 0 ? 'inline-flex' : 'none'};">${this._pendingTicketsCount || 0}</span>`
+          : '';
+
         menuHTML += `
           <a href="${item.path}" class="sidebar-item${isActive ? ' active' : ''}" title="${item.label}">
             <span class="sidebar-icon">${item.icon}</span>
             <span class="sidebar-item-label">${item.label}</span>
+            ${badgeHTML}
             ${isActive ? '<span class="sidebar-active-indicator"></span>' : ''}
           </a>
         `;
@@ -341,6 +349,31 @@ export class Sidebar extends Component {
     // info or role changes (e.g. after async session/company restore).
     this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
     this._unsubRole   = GlobalStore.subscribe('activeRole',     () => this.update());
+
+    // Support tickets realtime badge count listener
+    const { currentUser, activeRole } = GlobalStore.getState();
+    const role = activeRole || (currentUser ? currentUser.role : '');
+    if (role === 'SUPER_ADMIN' && db) {
+      this._unsubTickets = onValue(ref(db, 'support_tickets'), (snapshot) => {
+        let pendingCount = 0;
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          Object.values(data).forEach(t => {
+            if (t.status === 'Pendiente') pendingCount++;
+          });
+        }
+        this._pendingTicketsCount = pendingCount;
+        const badgeEl = this.element?.querySelector('#sidebar-support-badge');
+        if (badgeEl) {
+          if (pendingCount > 0) {
+            badgeEl.textContent = pendingCount;
+            badgeEl.style.display = 'inline-flex';
+          } else {
+            badgeEl.style.display = 'none';
+          }
+        }
+      });
+    }
   }
 
   unmount() {
@@ -349,6 +382,7 @@ export class Sidebar extends Component {
     }
     if (this._unsubCompany) this._unsubCompany();
     if (this._unsubRole)    this._unsubRole();
+    if (this._unsubTickets) this._unsubTickets();
     super.unmount();
   }
 }
