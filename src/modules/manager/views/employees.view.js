@@ -36,6 +36,12 @@ export class EmployeesView extends Component {
       tables: []
     };
 
+    // Leaflet map instance variables
+    this.map = null;
+    this.mapMarkers = {};
+    this.viewportInitialized = false;
+    this.sidebarEventsSetup = false;
+
     // Initialize DataTable
     this.table = new DataTable({
       columns: [
@@ -137,7 +143,21 @@ export class EmployeesView extends Component {
             <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">🔄 Actualizar</button>
           </div>
           <div id="gps-map-panel">
-            <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">📡 Cargando ubicaciones GPS...</div>
+            <!-- Sidebar + Map split grid layout -->
+            <div id="gps-map-layout" class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4" style="min-height: 500px; display: none;">
+              <!-- Left Sidebar for Employees -->
+              <div id="gps-map-sidebar" class="flex flex-col gap-2 overflow-y-auto max-h-[300px] lg:max-h-[500px] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-3 rounded-[var(--radius-lg)]">
+                <!-- Sidebar contents updated dynamically -->
+              </div>
+              <!-- Right Map Container -->
+              <div id="gps-map-container" class="relative h-[400px] lg:h-[500px] border border-[var(--color-border)] rounded-[var(--radius-lg)] bg-[var(--color-bg-secondary)] overflow-hidden" style="z-index: 1;">
+              </div>
+            </div>
+            
+            <!-- Placeholder for no locations or loading -->
+            <div id="gps-map-placeholder">
+              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">📡 Cargando ubicaciones GPS...</div>
+            </div>
           </div>
         </div>
 
@@ -285,14 +305,71 @@ export class EmployeesView extends Component {
     }
   }
 
+  initMap() {
+    const container = this.layout.$('#gps-map-container');
+    if (!container || this.map) return;
+
+    if (typeof L === 'undefined') {
+      console.warn('[EmployeesView] Leaflet library (L) is not loaded yet.');
+      return;
+    }
+
+    const locations = this.state.locations.filter(l => l.latitude && l.longitude);
+    const initialCenter = locations.length > 0
+      ? [locations[0].latitude, locations[0].longitude]
+      : [0, 0];
+
+    try {
+      this.map = L.map(container, {
+        center: initialCenter,
+        zoom: 14,
+        zoomControl: true
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(this.map);
+
+      this.mapMarkers = {};
+    } catch (e) {
+      console.error('[EmployeesView] Error initializing Leaflet map:', e);
+    }
+  }
+
+  centerMapOnEmployee(employeeId, lat, lng) {
+    if (!this.map) return;
+    this.map.setView([lat, lng], 16, { animate: true });
+    
+    // Highlight the card in the sidebar
+    const sidebar = this.layout.$('#gps-map-sidebar');
+    if (sidebar) {
+      sidebar.querySelectorAll('.gps-sidebar-card').forEach(card => {
+        if (card.getAttribute('data-employee-id') === employeeId) {
+          card.classList.add('active');
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          card.classList.remove('active');
+        }
+      });
+    }
+
+    const marker = this.mapMarkers[employeeId];
+    if (marker) {
+      marker.openPopup();
+    }
+  }
+
   renderGpsMap() {
-    const panel = this.layout.$('#gps-map-panel');
-    if (!panel) return;
+    const layout = this.layout.$('#gps-map-layout');
+    const placeholder = this.layout.$('#gps-map-placeholder');
+    if (!layout || !placeholder) return;
 
     const locations = this.state.locations.filter(l => l.latitude && l.longitude);
 
     if (locations.length === 0) {
-      panel.innerHTML = `
+      placeholder.style.display = 'block';
+      placeholder.innerHTML = `
         <div style="text-align:center; padding: var(--space-6);">
           <div style="font-size:2.5rem; margin-bottom:var(--space-3);">🛰️</div>
           <p class="font-semibold" style="margin-bottom:6px;">Sin ubicaciones activas</p>
@@ -302,63 +379,162 @@ export class EmployeesView extends Component {
           </p>
         </div>
       `;
+      layout.style.display = 'none';
       return;
     }
 
-    // If there's a single location, show a full-width map iframe.
-    // If multiple, show cards + individual map links.
-    const now = Date.now();
+    placeholder.style.display = 'none';
+    layout.style.display = 'grid';
 
-    const locationCards = locations.map(loc => {
-      const employee = this.state.employees.find(e => e.uid === (loc.employeeId || loc.id));
+    // Initialize or adjust map size
+    if (!this.map) {
+      this.initMap();
+    } else {
+      this.map.invalidateSize();
+    }
+
+    const now = Date.now();
+    const activeIds = new Set();
+
+    // 1. Process active employee locations on map
+    locations.forEach(loc => {
+      const employeeId = loc.employeeId || loc.id;
+      activeIds.add(employeeId);
+
+      const employee = this.state.employees.find(e => e.uid === employeeId);
       const name = loc.displayName || employee?.displayName || loc.email || 'Empleado';
       const status = loc.status || 'Disponible';
       const lastUpdated = loc.updatedAt?.epochMs || (typeof loc.updatedAt === 'number' ? loc.updatedAt : null);
       const elapsed = lastUpdated ? Math.round((now - lastUpdated) / 60000) : null;
       const elapsedText = elapsed === null ? '' : elapsed < 1 ? 'Hace un momento' : `Hace ${elapsed} min`;
       const accuracy = loc.accuracy ? `~${Math.round(loc.accuracy)}m` : '';
-      const mapsUrl = `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`;
-      const embedUrl = `https://maps.google.com/maps?q=${loc.latitude},${loc.longitude}&z=16&output=embed`;
-
       const statusColor = status === 'DISPONIBLE' || status === 'Disponible'
         ? '#10b981' : status === 'OCUPADO' ? '#f59e0b' : '#6b7280';
 
+      const isStale = elapsed !== null && elapsed > 10;
+      const opacity = isStale ? 0.65 : 1.0;
+
+      // Custom marker design (circular pin with employee initials)
+      const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const markerHtml = `
+        <div class="custom-map-marker" style="border: 3px solid ${statusColor}; opacity: ${opacity};">
+          ${initials}
+          ${!isStale ? `
+            <span style="
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              border-radius: 50%;
+              border: 3px solid ${statusColor};
+              animation: marker-pulse 2s infinite ease-out;
+              pointer-events: none;
+              left: -3px;
+              top: -3px;
+            "></span>
+          ` : ''}
+        </div>
+      `;
+
+      const popupHtml = `
+        <div style="font-family: inherit; font-size: 0.85rem; padding: 4px; color: var(--color-text-primary);">
+          <strong style="display: block; font-size: 0.95rem; margin-bottom: 4px;">${name}</strong>
+          <div style="color: var(--color-text-secondary); margin-bottom: 2px;">
+            Cargo: ${employee?.customRole || employee?.role || 'Empleado'}
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
+            <span style="font-weight: 600; color: ${statusColor};">${status}</span>
+            ${isStale ? '<span style="color:#ef4444; font-weight:600; font-size:0.75rem;">(Inactivo)</span>' : ''}
+          </div>
+          <div style="font-size: 0.75rem; color: var(--color-text-tertiary); margin-bottom: 8px; line-height: 1.3;">
+            ${elapsedText ? `Última conexión: ${elapsedText}<br>` : ''}
+            ${accuracy ? `Precisión: ${accuracy}` : ''}
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <a class="btn btn-primary btn-xs" href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" rel="noopener" style="text-decoration: none; color: white;">
+              🗺️ Google Maps
+            </a>
+          </div>
+        </div>
+      `;
+
+      const latLng = [loc.latitude, loc.longitude];
+
+      if (this.map && typeof L !== 'undefined') {
+        const markerIcon = L.divIcon({
+          html: markerHtml,
+          className: '',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+          popupAnchor: [0, -20]
+        });
+
+        if (this.mapMarkers[employeeId]) {
+          const marker = this.mapMarkers[employeeId];
+          marker.setLatLng(latLng);
+          marker.setIcon(markerIcon);
+          marker.setPopupContent(popupHtml);
+        } else {
+          const marker = L.marker(latLng, { icon: markerIcon }).addTo(this.map);
+          marker.bindPopup(popupHtml);
+          this.mapMarkers[employeeId] = marker;
+        }
+      }
+    });
+
+    // 2. Remove markers for employees that are no longer active
+    Object.keys(this.mapMarkers).forEach(id => {
+      if (!activeIds.has(id)) {
+        try {
+          this.mapMarkers[id].remove();
+        } catch (e) {
+          console.warn('[EmployeesView] Error removing marker:', e);
+        }
+        delete this.mapMarkers[id];
+      }
+    });
+
+    // 3. Render employees list in the sidebar
+    const sidebarHtml = locations.map(loc => {
+      const employeeId = loc.employeeId || loc.id;
+      const employee = this.state.employees.find(e => e.uid === employeeId);
+      const name = loc.displayName || employee?.displayName || loc.email || 'Empleado';
+      const status = loc.status || 'Disponible';
+      const lastUpdated = loc.updatedAt?.epochMs || (typeof loc.updatedAt === 'number' ? loc.updatedAt : null);
+      const elapsed = lastUpdated ? Math.round((now - lastUpdated) / 60000) : null;
+      const elapsedText = elapsed === null ? '' : elapsed < 1 ? 'Hace un momento' : `Hace ${elapsed} min`;
+      const accuracy = loc.accuracy ? `~${Math.round(loc.accuracy)}m` : '';
+      const statusColor = status === 'DISPONIBLE' || status === 'Disponible' ? '#10b981' : status === 'OCUPADO' ? '#f59e0b' : '#6b7280';
+      const isStale = elapsed !== null && elapsed > 10;
+
       return `
-        <div style="
-          background: var(--color-bg-secondary);
-          border: 1px solid var(--color-border);
-          border-radius: var(--radius-lg);
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        ">
-          <!-- Map Embed -->
-          <div style="position:relative; height:220px; background: #1a1a2e; overflow:hidden;">
-            <iframe
-              src="${embedUrl}"
-              style="width:100%; height:100%; border:none; pointer-events:auto;"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              title="Ubicación de ${name}"
-            ></iframe>
+        <div class="gps-sidebar-card" data-employee-id="${employeeId}" style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <strong style="font-size: 0.85rem; color: var(--color-text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 160px;" title="${name}">${name}</strong>
+            <span style="font-size: 0.72rem; color: var(--color-text-secondary); background: var(--color-bg-primary); padding: 2px 6px; border-radius: var(--radius-md); border: 1px solid var(--color-border); white-space: nowrap;">
+              ${employee?.customRole || employee?.role || 'Empleado'}
+            </span>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: ${statusColor}; font-weight: 600;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block;"></span>
+              ${status}
+            </span>
+            ${elapsedText ? `<span class="text-secondary" style="font-size: 0.7rem;">${elapsedText}</span>` : ''}
+            ${isStale ? `<span style="color: #ef4444; font-size: 0.7rem; font-weight: 600;">⚠️ Inactivo</span>` : ''}
           </div>
 
-          <!-- Employee Info -->
-          <div style="padding: var(--space-4); display:flex; justify-content:space-between; align-items:center; gap:var(--space-3); flex-wrap:wrap;">
-            <div>
-              <div style="font-weight:700; font-size:0.9rem;">${name}</div>
-              <div style="display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap;">
-                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; color:${statusColor}; font-weight:600;">
-                  <span style="width:6px; height:6px; border-radius:50%; background:currentColor; display:inline-block;"></span>
-                  ${status}
-                </span>
-                ${elapsedText ? `<span class="text-secondary" style="font-size:0.72rem;">${elapsedText}</span>` : ''}
-                ${accuracy ? `<span class="text-secondary" style="font-size:0.72rem;">📡 ${accuracy}</span>` : ''}
-              </div>
-            </div>
-            <div style="display:flex; gap:var(--space-2);">
-              <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-primary btn-xs">
-                🗺️ Ver en Maps
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 6px;">
+            <span style="font-size: 0.68rem; color: var(--color-text-tertiary);">
+              ${accuracy ? `📡 Precisión: ${accuracy}` : ''}
+            </span>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-secondary btn-xs btn-center-map" data-lat="${loc.latitude}" data-lng="${loc.longitude}" data-employee-id="${employeeId}">
+                📍 Centrar
+              </button>
+              <a href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" rel="noopener" class="btn btn-secondary btn-xs" style="padding: 2px 6px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">
+                🔗 Maps
               </a>
             </div>
           </div>
@@ -366,11 +542,44 @@ export class EmployeesView extends Component {
       `;
     }).join('');
 
-    panel.innerHTML = `
-      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:var(--space-4);">
-        ${locationCards}
-      </div>
-    `;
+    const sidebar = this.layout.$('#gps-map-sidebar');
+    if (sidebar) {
+      sidebar.innerHTML = sidebarHtml;
+    }
+
+    // 4. Setup event delegation on sidebar
+    if (sidebar && !this.sidebarEventsSetup) {
+      sidebar.addEventListener('click', (e) => {
+        const centerBtn = e.target.closest('.btn-center-map');
+        const card = e.target.closest('.gps-sidebar-card');
+        
+        if (centerBtn) {
+          e.stopPropagation();
+          const lat = parseFloat(centerBtn.getAttribute('data-lat'));
+          const lng = parseFloat(centerBtn.getAttribute('data-lng'));
+          const empId = centerBtn.getAttribute('data-employee-id');
+          this.centerMapOnEmployee(empId, lat, lng);
+        } else if (card) {
+          const empId = card.getAttribute('data-employee-id');
+          const loc = this.state.locations.find(l => (l.employeeId || l.id) === empId);
+          if (loc && loc.latitude && loc.longitude) {
+            this.centerMapOnEmployee(empId, loc.latitude, loc.longitude);
+          }
+        }
+      });
+      this.sidebarEventsSetup = true;
+    }
+
+    // 5. Center map to fit all bounds only on initial load
+    if (!this.viewportInitialized && locations.length > 0 && this.map && typeof L !== 'undefined') {
+      try {
+        const bounds = L.latLngBounds(locations.map(l => [l.latitude, l.longitude]));
+        this.map.fitBounds(bounds, { padding: [50, 50] });
+        this.viewportInitialized = true;
+      } catch (e) {
+        console.warn('[EmployeesView] Error fitting map bounds:', e);
+      }
+    }
   }
 
   subscribeToTablesDistribution(element) {
@@ -932,6 +1141,18 @@ export class EmployeesView extends Component {
   }
 
   unmount() {
+    if (this.map) {
+      try {
+        this.map.remove();
+      } catch (err) {
+        console.warn('[EmployeesView] Error removing map:', err);
+      }
+      this.map = null;
+    }
+    this.mapMarkers = {};
+    this.viewportInitialized = false;
+    this.sidebarEventsSetup = false;
+
     this.listeners.forEach(id => FirestoreService.unsubscribe(id));
     this.listeners = [];
     this.table.unmount();

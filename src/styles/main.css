@@ -29,6 +29,7 @@
 @import url('./components/public-catalog.css');
 @import url('./components/barcode.css');
 @import url('./components/pos.css');
+@import url('./components/map.css');
 
 /* 4. Active Color Themes */
 @import url('./themes/light.css');
