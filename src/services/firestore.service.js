@@ -860,6 +860,48 @@ export class FirestoreService {
     });
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SAAS GLOBAL CONFIGURATION — stored at global/saas_config
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Read the global SaaS configuration object from Firebase RTDB.
+   * Stored at the path: global/saas_config
+   *
+   * @param {string} [_companyId] - Ignored, always reads from global path.
+   * @returns {Promise<Object|null>}
+   */
+  static async getCompanyConfig(_companyId = 'global') {
+    if (!db) return null;
+    try {
+      const configRef = ref(db, 'global/saas_config');
+      const snap = await get(configRef);
+      return snap.exists() ? snap.val() : null;
+    } catch (err) {
+      console.warn('[FirestoreService] getCompanyConfig failed:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Write / merge fields into the global SaaS configuration object.
+   * Stored at the path: global/saas_config
+   *
+   * @param {string} [_companyId] - Ignored, always writes to global path.
+   * @param {Object} data - Fields to merge into the config node.
+   * @returns {Promise<void>}
+   */
+  static async updateCompanyConfig(_companyId = 'global', data = {}) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const configRef = ref(db, 'global/saas_config');
+    // Strip undefined values to avoid Firebase errors
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
+    await update(configRef, { ...clean, updatedAtLocal: TimeService.timestamp() });
+    console.log('[FirestoreService] ✅ SaaS config updated at global/saas_config');
+  }
+
   static async listPlans() {
     const plans = await this.queryGlobal('saas_plans');
     return plans.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));

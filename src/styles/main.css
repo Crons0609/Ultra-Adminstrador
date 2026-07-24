@@ -30,6 +30,7 @@
 @import url('./components/barcode.css');
 @import url('./components/pos.css');
 @import url('./components/map.css');
+@import url('./components/settings-panel.css');
 
 /* 4. Active Color Themes */
 @import url('./themes/light.css');

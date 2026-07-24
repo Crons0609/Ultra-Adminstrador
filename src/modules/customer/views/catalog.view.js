@@ -1,6 +1,7 @@
 import { Component } from '../../../core/component.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { AppearanceService } from '../../../services/appearance.service.js';
 
 export class PublicCatalogView extends Component {
   constructor(params = {}) {
@@ -130,11 +131,22 @@ export class PublicCatalogView extends Component {
     }
   }
 
-  applyCatalogStyles(root) {
+  async applyCatalogStyles(root) {
     const cfg = this.state.config || {};
     const isStore = this.state.businessCategory === 'SUPERMERCADO_TIENDA';
 
-    // Tiendas use a supermarket-green accent unless the admin customized the color
+    // 1. Apply theme chosen by Business Owner
+    try {
+      const companyAppearance = await FirestoreService.getCompanyConfig(this.companyId);
+      if (companyAppearance) {
+        AppearanceService.applyToPublicCatalog(root, companyAppearance);
+        return;
+      }
+    } catch (e) {
+      console.warn('[CatalogView] Could not load company appearance config:', e);
+    }
+
+    // 2. Fallback to catalog config colors
     const primaryColor = cfg.colors?.primary || (isStore ? '#16a34a' : '#7c75ff');
     root.style.setProperty('--pub-primary', primaryColor);
     if (cfg.colors?.secondary) root.style.setProperty('--pub-secondary-accent', cfg.colors.secondary);

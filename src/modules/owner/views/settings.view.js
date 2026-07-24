@@ -16,6 +16,35 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
 import { auth, db } from '../../../config/firebase.config.js';
 import { ref, get, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { AppearanceService, THEMES } from '../../../services/appearance.service.js';
+
+// Build the theme grid HTML for Business Owners
+function buildOwnerThemeGrid() {
+  return Object.entries(THEMES).map(([key, theme]) => `
+    <div class="owner-theme-preset-card" data-theme="${key}" title="${theme.label}" style="
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 10px 8px; border-radius: 10px; cursor: pointer;
+      border: 2px solid transparent; transition: all 0.2s ease;
+      background: var(--color-bg-tertiary);
+    ">
+      <div style="
+        width: 52px; height: 34px; border-radius: 6px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.15);
+        display: flex; gap: 2px; padding: 3px;
+        background: ${theme.bgPrimary || '#0a0a0b'};
+      ">
+        <div style="flex: 0.7; border-radius: 3px; background: ${theme.sidebarBg || '#111'}"></div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+          <div style="height: 8px; border-radius: 2px; background: ${theme.surface || '#16161a'}"></div>
+          <div style="flex: 1; border-radius: 2px; background: ${theme.accent || '#7c75ff'}; opacity:0.8"></div>
+        </div>
+      </div>
+      <span style="font-size: 0.65rem; font-weight: 600; text-align: center; color: var(--color-text-secondary); line-height: 1.2;">
+        ${theme.emoji || ''} ${theme.label}
+      </span>
+    </div>
+  `).join('');
+}
 
 export class SettingsView extends Component {
   constructor(params = {}) {
@@ -433,21 +462,97 @@ export class SettingsView extends Component {
                     </div>
                   </div>
 
-                  <!-- Visual Themes Toggle -->
-                  <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
-                    <label class="form-label" style="font-weight: 600; display: block; margin-bottom: 8px;">Tema Visual del Sistema</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-                      <div class="theme-preview-box theme-preview-dark" id="theme-btn-dark">
-                        🌃 Tema Oscuro (Premium)
+                  <!-- Visual Themes & Business Appearance Section -->
+                  <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-4); margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4);">
+                    <div>
+                      <label class="form-label" style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; color: var(--color-text-primary);">
+                        🎨 Apariencia y Tema de tu Negocio
+                      </label>
+                      <span class="text-xs text-secondary">Elige la apariencia que mejor represente a tu negocio. Se aplicará a tu panel y al de todos tus empleados.</span>
+                    </div>
+
+                    <!-- Theme Preset Grid (22 Presets) -->
+                    <div id="owner-theme-presets-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px;">
+                      ${buildOwnerThemeGrid()}
+                    </div>
+                    <input type="hidden" id="owner-theme-select" value="dark" />
+
+                    <!-- Typography & Components Style -->
+                    <div style="background: var(--color-bg-tertiary); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px;">
+                      <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-primary);">Tipografía y Bordes</span>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                          <label class="form-label" for="owner-font-family-select" style="font-size: 0.75rem;">Fuente</label>
+                          <select id="owner-font-family-select" class="input input-md" style="font-size: 0.78rem;">
+                            <option value="Inter">Inter</option>
+                            <option value="Outfit">Outfit</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Poppins">Poppins</option>
+                          </select>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label" for="owner-font-size-select" style="font-size: 0.75rem;">Tamaño Fuente</label>
+                          <select id="owner-font-size-select" class="input input-md" style="font-size: 0.78rem;">
+                            <option value="12px">Compacto (12px)</option>
+                            <option value="14px">Normal (14px)</option>
+                            <option value="16px">Grande (16px)</option>
+                          </select>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label" for="owner-border-radius-input" style="font-size: 0.75rem;">Redondeo (px)</label>
+                          <input type="number" id="owner-border-radius-input" class="input input-md" min="0" max="24" value="8" style="font-size: 0.78rem;" />
+                        </div>
                       </div>
-                      <div class="theme-preview-box theme-preview-light" id="theme-btn-light">
-                        ☀️ Tema Claro (Limpio)
+                    </div>
+
+                    <!-- Custom Colors Panel (when theme = custom) -->
+                    <div id="owner-custom-colors-panel" style="background: var(--color-bg-tertiary); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px; opacity: 0.5; pointer-events: none;">
+                      <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-primary);">Colores Personalizados <span style="font-size:0.7rem; color:var(--color-accent);">(Modo "Personalizado")</span></span>
+                      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px;">
+                        <div class="form-group">
+                          <label class="form-label" style="font-size:0.7rem;">Color Principal</label>
+                          <div class="color-picker-group" style="padding: 2px 6px;">
+                            <input type="color" id="owner-primary-color-input" class="color-picker-input" value="#7c75ff" style="width:24px; height:24px;" />
+                            <span class="color-hex-text" style="font-size:0.75rem;">#7C75FF</span>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label" style="font-size:0.7rem;">Fondo Principal</label>
+                          <div class="color-picker-group" style="padding: 2px 6px;">
+                            <input type="color" id="owner-bg-color-input" class="color-picker-input" value="#0a0a0b" style="width:24px; height:24px;" />
+                            <span class="color-hex-text" style="font-size:0.75rem;">#0A0A0B</span>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label" style="font-size:0.7rem;">Tarjetas</label>
+                          <div class="color-picker-group" style="padding: 2px 6px;">
+                            <input type="color" id="owner-card-color-input" class="color-picker-input" value="#16161a" style="width:24px; height:24px;" />
+                            <span class="color-hex-text" style="font-size:0.75rem;">#16161A</span>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label class="form-label" style="font-size:0.7rem;">Menú Lateral</label>
+                          <div class="color-picker-group" style="padding: 2px 6px;">
+                            <input type="color" id="owner-sidebar-color-input" class="color-picker-input" value="#111113" style="width:24px; height:24px;" />
+                            <span class="color-hex-text" style="font-size:0.75rem;">#111113</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Live Preview Box -->
+                    <div style="padding: 10px; border-radius: var(--radius-md); border: 1px dashed var(--color-accent); background: rgba(124,117,255,0.04); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                      <span style="font-size: 0.78rem; font-weight: 600; color: var(--color-text-primary);">👁️ Vista Previa en Vivo</span>
+                      <div style="display: flex; gap: 6px; align-items: center;">
+                        <button type="button" class="btn btn-primary btn-xs">Botón Principal</button>
+                        <span style="background: var(--color-success-light); color: var(--color-success); font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600;">Éxito</span>
+                        <span style="background: var(--color-accent-light); color: var(--color-accent); font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600;">Destacado</span>
                       </div>
                     </div>
                   </div>
 
                   <button type="submit" id="btn-save-preferences" class="btn btn-primary btn-md" style="align-self: flex-start; margin-top: var(--space-2);">
-                    Guardar Preferencias
+                    💾 Guardar Preferencias del Negocio
                   </button>
                 </form>
               </div>
@@ -603,14 +708,33 @@ export class SettingsView extends Component {
       alertsForm.addEventListener('submit', (e) => this.handleSaveAlertsConfig(e, root));
     }
 
-    // 10. Visual Theme selection buttons
-    const themeBtnDark = root.querySelector('#theme-btn-dark');
-    const themeBtnLight = root.querySelector('#theme-btn-light');
-
-    if (themeBtnDark && themeBtnLight) {
-      themeBtnDark.addEventListener('click', () => this.setThemeClass('theme-dark', root));
-      themeBtnLight.addEventListener('click', () => this.setThemeClass('theme-light', root));
+    // 10. Visual Theme selection grid & pickers
+    const themeGrid = root.querySelector('#owner-theme-presets-grid');
+    if (themeGrid) {
+      themeGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('.owner-theme-preset-card');
+        if (!card) return;
+        this.selectOwnerTheme(card.dataset.theme, root);
+      });
     }
+
+    // Color pickers live preview
+    root.querySelectorAll('.color-picker-input').forEach(input => {
+      input.addEventListener('input', () => {
+        const hexText = input.nextElementSibling;
+        if (hexText) hexText.textContent = input.value.toUpperCase();
+        if (root.querySelector('#owner-theme-select')?.value === 'custom') {
+          AppearanceService.applyConfig(this.readOwnerAppearanceFields(root));
+        }
+      });
+    });
+
+    // Typography & Radii live preview
+    ['#owner-font-family-select', '#owner-font-size-select', '#owner-border-radius-input'].forEach(sel => {
+      root.querySelector(sel)?.addEventListener('input', () => {
+        AppearanceService.applyConfig(this.readOwnerAppearanceFields(root));
+      });
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1604,7 +1728,72 @@ export class SettingsView extends Component {
   // DATA ACTIONS: PREFERENCIAS DEL DASHBOARD
   // ═══════════════════════════════════════════════════════════════════════════
 
-  populatePreferencesForm(root) {
+  selectOwnerTheme(themeName, root) {
+    const themeInput = root.querySelector('#owner-theme-select');
+    if (themeInput) themeInput.value = themeName;
+
+    // Highlight active card
+    root.querySelectorAll('.owner-theme-preset-card').forEach(card => {
+      const isActive = card.dataset.theme === themeName;
+      card.style.borderColor = isActive ? 'var(--color-accent)' : 'transparent';
+      card.style.background = isActive ? 'var(--color-accent-light)' : 'var(--color-bg-tertiary)';
+    });
+
+    // Custom colors panel toggle
+    const customPanel = root.querySelector('#owner-custom-colors-panel');
+    if (customPanel) {
+      customPanel.style.opacity = themeName === 'custom' ? '1' : '0.5';
+      customPanel.style.pointerEvents = themeName === 'custom' ? 'auto' : 'none';
+    }
+
+    // Apply live
+    if (themeName !== 'custom') {
+      const preset = AppearanceService.getThemeDefaults(themeName);
+      this.fillOwnerColorFields(root, {
+        primaryColor: preset.accent,
+        bgColor: preset.bgPrimary,
+        cardColor: preset.surface,
+        sidebarColor: preset.sidebarBg,
+      });
+      AppearanceService.applyThemePreset(themeName);
+      AppearanceService._applyBodyClass(themeName);
+    } else {
+      AppearanceService.applyConfig(this.readOwnerAppearanceFields(root));
+    }
+  }
+
+  fillOwnerColorFields(root, colors = {}) {
+    const map = {
+      primaryColor: '#owner-primary-color-input',
+      bgColor: '#owner-bg-color-input',
+      cardColor: '#owner-card-color-input',
+      sidebarColor: '#owner-sidebar-color-input',
+    };
+    Object.entries(map).forEach(([key, sel]) => {
+      if (!colors[key]) return;
+      const input = root.querySelector(sel);
+      if (input) {
+        input.value = colors[key];
+        const hexText = input.nextElementSibling;
+        if (hexText) hexText.textContent = colors[key].toUpperCase();
+      }
+    });
+  }
+
+  readOwnerAppearanceFields(root) {
+    return {
+      theme:        root.querySelector('#owner-theme-select')?.value || 'dark',
+      fontFamily:   root.querySelector('#owner-font-family-select')?.value || 'Inter',
+      fontSize:     root.querySelector('#owner-font-size-select')?.value || '14px',
+      borderRadius: Number(root.querySelector('#owner-border-radius-input')?.value || 8),
+      primaryColor: root.querySelector('#owner-primary-color-input')?.value || '#7c75ff',
+      bgColor:      root.querySelector('#owner-bg-color-input')?.value || '#0a0a0b',
+      cardColor:    root.querySelector('#owner-card-color-input')?.value || '#16161a',
+      sidebarColor: root.querySelector('#owner-sidebar-color-input')?.value || '#111113',
+    };
+  }
+
+  async populatePreferencesForm(root) {
     const langSelect = root.querySelector('#pref-lang-select');
     const timezoneSelect = root.querySelector('#pref-timezone-select');
     const dateSelect = root.querySelector('#pref-date-select');
@@ -1623,30 +1812,27 @@ export class SettingsView extends Component {
     if (alertEmail) alertEmail.checked = p.emailNotifications !== false;
     if (alertSounds) alertSounds.checked = p.alertSounds !== false;
 
-    this.updateThemeButtonsHighlight(p.theme || 'theme-dark', root);
-  }
-
-  updateThemeButtonsHighlight(activeTheme, root) {
-    const themeBtnDark = root.querySelector('#theme-btn-dark');
-    const themeBtnLight = root.querySelector('#theme-btn-light');
-
-    if (themeBtnDark && themeBtnLight) {
-      themeBtnDark.style.boxShadow = activeTheme === 'theme-dark' ? '0 0 0 2px var(--color-accent)' : 'none';
-      themeBtnLight.style.boxShadow = activeTheme === 'theme-light' ? '0 0 0 2px var(--color-accent)' : 'none';
+    // Fetch company-specific appearance config from Firebase
+    try {
+      const companyConfig = await FirestoreService.getCompanyConfig(this.companyId);
+      if (companyConfig) {
+        const theme = companyConfig.theme || 'dark';
+        this.selectOwnerTheme(theme, root);
+        if (root.querySelector('#owner-font-family-select')) root.querySelector('#owner-font-family-select').value = companyConfig.fontFamily || 'Inter';
+        if (root.querySelector('#owner-font-size-select')) root.querySelector('#owner-font-size-select').value = companyConfig.fontSize || '14px';
+        if (root.querySelector('#owner-border-radius-input')) root.querySelector('#owner-border-radius-input').value = companyConfig.borderRadius ?? 8;
+        this.fillOwnerColorFields(root, {
+          primaryColor: companyConfig.primaryColor,
+          bgColor: companyConfig.bgColor,
+          cardColor: companyConfig.cardColor,
+          sidebarColor: companyConfig.sidebarColor,
+        });
+      } else {
+        this.selectOwnerTheme('dark', root);
+      }
+    } catch {
+      this.selectOwnerTheme('dark', root);
     }
-  }
-
-  setThemeClass(theme, root) {
-    this.state.preferences.theme = theme;
-    this.updateThemeButtonsHighlight(theme, root);
-    this.applyVisualPreferences(theme);
-    NotificationService.info(`Tema visual cambiado a ${theme === 'theme-dark' ? 'Modo Oscuro' : 'Modo Claro'}. Guarda las preferencias para conservarlo.`);
-  }
-
-  applyVisualPreferences(theme) {
-    document.body.classList.remove('theme-light', 'theme-dark');
-    document.body.classList.add(theme);
-    localStorage.setItem('theme', theme);
   }
 
   async handleSavePreferences(e, root) {
@@ -1662,7 +1848,7 @@ export class SettingsView extends Component {
     const timezone = root.querySelector('#pref-timezone-select').value;
     const dateFormat = root.querySelector('#pref-date-select').value;
     const timeFormat = root.querySelector('#pref-time-select').value;
-    const theme = this.state.preferences.theme || 'theme-dark';
+    const appearance = this.readOwnerAppearanceFields(root);
 
     try {
       this.state.preferences = {
@@ -1671,28 +1857,37 @@ export class SettingsView extends Component {
         timezone,
         dateFormat,
         timeFormat,
-        theme
+        theme: appearance.theme
       };
 
+      // 1. Save company appearance config under ${companyId}/config/appearance in Firebase RTDB
+      if (this.companyId) {
+        await FirestoreService.updateCompanyConfig(this.companyId, appearance);
+      }
+
+      // 2. Save user preferences
       if (db && this.uid) {
         await update(ref(db, `users/${this.uid}/preferences`), this.state.preferences);
       }
 
-      // Audit Log
+      // 3. Apply live to current session
+      AppearanceService.applyConfig(appearance);
+
+      // 4. Audit Log
       await FirestoreService.logAudit({
         action: 'OWNER_SAVE_PREFERENCES',
         companyId: this.companyId,
-        description: `El dueño actualizó las preferencias visuales y regionales del panel.`
+        description: `El dueño actualizó la apariencia [${appearance.theme}] y preferencias del negocio.`
       });
 
-      NotificationService.success('Preferencias de panel guardadas correctamente.');
+      NotificationService.success('✅ ¡Apariencia y preferencias de tu negocio guardadas con éxito!');
     } catch (err) {
       console.error('[SettingsView] Error saving preferences:', err);
       NotificationService.error('Error al guardar preferencias en la base de datos.');
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Guardar Preferencias';
+        saveBtn.textContent = '💾 Guardar Preferencias del Negocio';
       }
     }
   }

@@ -17,6 +17,7 @@ import { AuthService } from './services/auth.service.js';
 import { FirestoreService } from './services/firestore.service.js';
 import { AnimationService } from './services/animation.service.js';
 import { GeolocationService } from './services/geolocation.service.js';
+import { AppearanceService } from './services/appearance.service.js';
 
 class App {
   constructor() {
@@ -27,8 +28,9 @@ class App {
    * Main application initializer. Called once when the DOM is ready.
    */
   async init() {
-    // 1. Apply saved theme or default
-    this.applyTheme();
+    // 1. Apply saved theme fallback immediately (prevents flash before Firebase loads)
+    const fallbackTheme = localStorage.getItem('theme') || APP_CONFIG.defaultTheme;
+    document.body.classList.add(fallbackTheme);
 
     // 2. Register service worker for PWA capabilities
     this.registerServiceWorker();
@@ -73,7 +75,10 @@ class App {
     // 5. Purge old local-DB cache keys — all data now lives in Firebase RTDB
     this.clearLocalDbCache();
 
-    // 6. Remove loading screen, initialize smooth scroll and SPA router
+    // 6. Load and apply global appearance config from Firebase (colors, theme, fonts)
+    await AppearanceService.loadAndApply();
+
+    // 7. Remove loading screen, initialize smooth scroll and SPA router
     this.hideLoadingScreen();
     AnimationService.initGlobalScroll();
     this.router = new Router(ROUTES, 'app');
@@ -165,11 +170,11 @@ class App {
   }
 
   /**
-   * Apply saved theme from localStorage or fall back to APP_CONFIG.defaultTheme.
+   * @deprecated Use AppearanceService.loadAndApply() instead.
+   * Kept as a stub for backwards compatibility.
    */
   applyTheme() {
-    const savedTheme = localStorage.getItem('theme') || APP_CONFIG.defaultTheme;
-    document.body.classList.add(savedTheme);
+    // Now handled by AppearanceService.loadAndApply() in init()
   }
 
   /**
