@@ -14,6 +14,7 @@ import { auth, db } from '../config/firebase.config.js';
 import { GlobalStore } from '../core/state.js';
 import { FirestoreService } from './firestore.service.js';
 import { TimeService } from './time.service.js';
+import { AppearanceService } from './appearance.service.js';
 
 // Firebase Auth modular imports (CDN v12.16.0)
 import {
@@ -133,6 +134,8 @@ export class AuthService {
         activeRole: userSession.role,
         isAuthenticated: true
       });
+
+      AppearanceService.loadAndApply().catch(e => console.warn('[AuthService] Could not apply appearance on login:', e));
 
       await FirestoreService.updatePath(`users/${firebaseUser.uid}`, {
         lastLoginAt: serverTimestamp(),
@@ -477,6 +480,8 @@ export class AuthService {
       isAuthenticated: false
     });
 
+    AppearanceService.loadAndApply().catch(e => console.warn('[AuthService] Could not reset appearance on logout:', e));
+
     console.log('[AuthService] ✅ Signed out successfully.');
   }
 
@@ -591,6 +596,8 @@ export class AuthService {
             activeRole: userSession.role,
             isAuthenticated: true
           });
+
+          AppearanceService.loadAndApply().catch(e => console.warn('[AuthService] Could not apply appearance on session restore:', e));
 
           clearTimeout(timeout);
           resolve(userSession);

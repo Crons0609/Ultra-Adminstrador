@@ -526,35 +526,83 @@ const CSS_VARS_MAP = {
 
 export class AppearanceService {
   static _lastConfig = null;
+  static _activeUnsubscribe = null;
 
   /**
-   * Loads the active appearance config for the target company or global SaaS.
-   * If companyId is passed, fetches company config, falling back to global SaaS config.
-   *
-   * @param {string|null} [companyId]
+   * Cleans up any existing real-time theme listener.
    */
-  static async loadAndApply(companyId = null) {
+  static stopThemeListener() {
+    if (typeof AppearanceService._activeUnsubscribe === 'function') {
+      AppearanceService._activeUnsubscribe();
+      AppearanceService._activeUnsubscribe = null;
+    }
+  }
+
+  /**
+   * Loads and applies the active appearance config in real-time.
+   * - Programmers read & subscribe to programmer_preferences/{programmerId}
+   * - Business users (Owners, Managers, Employees) read & subscribe to business_settings/{businessId}
+   * - Public visitors read & subscribe to business_settings/{targetCompanyId}
+   *
+   * @param {string|null} [targetCompanyId] - Explicit business ID for public tenant views
+   */
+  static async loadAndApply(targetCompanyId = null) {
     try {
-      let targetCompanyId = companyId;
-      if (!targetCompanyId) {
-        const { currentUser } = GlobalStore.getState();
-        targetCompanyId = currentUser?.companyId || 'global';
+      AppearanceService.stopThemeListener();
+
+      const { currentUser, activeRole } = GlobalStore.getState();
+      const isProgrammer = currentUser?.role === 'SUPER_ADMIN' || activeRole === 'SUPER_ADMIN';
+
+      if (targetCompanyId) {
+        // Public tenant view
+        const config = await FirestoreService.getBusinessSettings(targetCompanyId);
+        AppearanceService.applyConfig(config || { theme: 'dark' });
+
+        AppearanceService._activeUnsubscribe = FirestoreService.subscribeBusinessSettings(
+          targetCompanyId,
+          (liveConfig) => {
+            AppearanceService.applyConfig(liveConfig || { theme: 'dark' });
+          }
+        );
+        console.log(`[AppearanceService] 🎨 Listening to business_settings [${targetCompanyId}] for public viewer.`);
+        return;
       }
 
-      let config = await FirestoreService.getCompanyConfig(targetCompanyId);
-      
-      // Fallback to global SaaS config if tenant hasn't set custom appearance
-      if (!config && targetCompanyId !== 'global') {
-        config = await FirestoreService.getCompanyConfig('global');
+      if (isProgrammer && currentUser?.uid) {
+        // Programmer individual preferences
+        const uid = currentUser.uid;
+        const config = await FirestoreService.getProgrammerPreferences(uid);
+        AppearanceService.applyConfig(config || { theme: 'dark' });
+
+        AppearanceService._activeUnsubscribe = FirestoreService.subscribeProgrammerPreferences(
+          uid,
+          (liveConfig) => {
+            AppearanceService.applyConfig(liveConfig || { theme: 'dark' });
+          }
+        );
+        console.log(`[AppearanceService] 🎨 Listening to programmer_preferences [${uid}] for Programmer.`);
+        return;
       }
 
-      if (config) {
-        AppearanceService.applyConfig(config);
-        console.log(`[AppearanceService] ✅ Appearance applied for tenant [${targetCompanyId}].`);
-      } else {
-        AppearanceService.applyThemePreset('dark');
-        console.log('[AppearanceService] ℹ️ No saved config found — applying default dark theme.');
+      const companyId = currentUser?.companyId;
+      if (companyId) {
+        // Business identity for Owner / Manager / Employee
+        const config = await FirestoreService.getBusinessSettings(companyId);
+        AppearanceService.applyConfig(config || { theme: 'dark' });
+
+        AppearanceService._activeUnsubscribe = FirestoreService.subscribeBusinessSettings(
+          companyId,
+          (liveConfig) => {
+            AppearanceService.applyConfig(liveConfig || { theme: 'dark' });
+          }
+        );
+        console.log(`[AppearanceService] 🎨 Listening to business_settings [${companyId}] for business user.`);
+        return;
       }
+
+      // Default fallback if unauthenticated / no company
+      AppearanceService.applyThemePreset('dark');
+      console.log('[AppearanceService] ℹ️ No specific context — applying default dark theme.');
     } catch (err) {
       console.warn('[AppearanceService] Could not load config:', err.message);
       AppearanceService.applyThemePreset('dark');

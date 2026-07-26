@@ -1838,6 +1838,16 @@ export class SettingsView extends Component {
   async handleSavePreferences(e, root) {
     e.preventDefault();
 
+    const { currentUser } = GlobalStore.getState();
+    const canEdit = currentUser?.role === 'OWNER' ||
+                    currentUser?.role === 'SUPER_ADMIN' ||
+                    currentUser?.permissions?.modificar_apariencia === true;
+
+    if (!canEdit) {
+      NotificationService.error('No tienes permisos suficientes para modificar la identidad visual del negocio.');
+      return;
+    }
+
     const saveBtn = root.querySelector('#btn-save-preferences');
     if (saveBtn) {
       saveBtn.disabled = true;
@@ -1860,9 +1870,18 @@ export class SettingsView extends Component {
         theme: appearance.theme
       };
 
-      // 1. Save company appearance config under ${companyId}/config/appearance in Firebase RTDB
+      const existingConfig = (this.companyId ? await FirestoreService.getBusinessSettings(this.companyId) : null) || {};
+
+      const changedFields = {};
+      Object.keys(appearance).forEach(key => {
+        if (JSON.stringify(existingConfig[key]) !== JSON.stringify(appearance[key])) {
+          changedFields[key] = { before: existingConfig[key] ?? 'N/A', after: appearance[key] };
+        }
+      });
+
+      // 1. Save company appearance config under business_settings/{companyId} in Firebase RTDB
       if (this.companyId) {
-        await FirestoreService.updateCompanyConfig(this.companyId, appearance);
+        await FirestoreService.updateBusinessSettings(this.companyId, appearance);
       }
 
       // 2. Save user preferences
@@ -1875,12 +1894,13 @@ export class SettingsView extends Component {
 
       // 4. Audit Log
       await FirestoreService.logAudit({
-        action: 'OWNER_SAVE_PREFERENCES',
+        action: 'BUSINESS_THEME_UPDATE',
         companyId: this.companyId,
-        description: `El dueño actualizó la apariencia [${appearance.theme}] y preferencias del negocio.`
+        description: `El usuario (${currentUser?.email || this.uid}) actualizó la identidad visual del negocio [Tema: ${appearance.theme}].`,
+        metadata: { changedFields }
       });
 
-      NotificationService.success('✅ ¡Apariencia y preferencias de tu negocio guardadas con éxito!');
+      NotificationService.success('✅ ¡Apariencia e identidad visual de tu negocio guardadas con éxito!');
     } catch (err) {
       console.error('[SettingsView] Error saving preferences:', err);
       NotificationService.error('Error al guardar preferencias en la base de datos.');

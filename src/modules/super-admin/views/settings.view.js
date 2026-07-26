@@ -710,85 +710,82 @@ export class SettingsView extends Component {
     if (!root) return;
 
     try {
-      console.log('[SettingsView] Cargando configuración global del SaaS...');
-      const config = await FirestoreService.getCompanyConfig('global');
+      console.log('[SettingsView] Cargando configuración global del SaaS y preferencias del programador...');
+      const saasConfig = await FirestoreService.getSaaSConfig() || {};
+      const { currentUser } = GlobalStore.getState();
+      const progConfig = (currentUser?.uid ? await FirestoreService.getProgrammerPreferences(currentUser.uid) : null) || {};
 
-      if (config) {
-        this.config = config;
+      this.config = { ...saasConfig, ...progConfig };
 
-        // Identidad
-        this._setVal(root, '#saas-name-input',     config.saasName);
-        this._setVal(root, '#saas-comm-name-input', config.saasCommercialName);
-        this._setVal(root, '#saas-slogan-input',    config.saasSlogan);
-        this._setVal(root, '#saas-desc-input',      config.saasDescription);
-        this._setVal(root, '#logo-main-input',      config.logoMain);
-        this._setVal(root, '#logo-dark-input',      config.logoDark);
-        this._setVal(root, '#favicon-input',        config.favicon);
-        this._setVal(root, '#app-icon-input',       config.appIcon);
-        this._setVal(root, '#login-bg-input',       config.loginBg);
+      // Identidad Global
+      this._setVal(root, '#saas-name-input',     saasConfig.saasName);
+      this._setVal(root, '#saas-comm-name-input', saasConfig.saasCommercialName);
+      this._setVal(root, '#saas-slogan-input',    saasConfig.saasSlogan);
+      this._setVal(root, '#saas-desc-input',      saasConfig.saasDescription);
+      this._setVal(root, '#logo-main-input',      saasConfig.logoMain);
+      this._setVal(root, '#logo-dark-input',      saasConfig.logoDark);
+      this._setVal(root, '#favicon-input',        saasConfig.favicon);
+      this._setVal(root, '#app-icon-input',       saasConfig.appIcon);
+      this._setVal(root, '#login-bg-input',       saasConfig.loginBg);
 
-        // Apariencia — select preset card
-        const savedTheme = config.theme || 'dark';
-        this._selectTheme(root, savedTheme);
+      // Apariencia Individual del Programador (fallback a saasConfig)
+      const appearanceSource = Object.keys(progConfig).length > 0 ? progConfig : saasConfig;
+      const savedTheme = appearanceSource.theme || 'dark';
+      this._selectTheme(root, savedTheme);
 
-        // Typography
-        this._setVal(root, '#font-family-select', config.fontFamily || 'Inter');
-        this._setVal(root, '#font-size-select',   config.fontSize || '14px');
-        this._setVal(root, '#border-radius-input', config.borderRadius ?? 8);
-        this._setVal(root, '#button-style-select', config.buttonStyle || 'rounded');
+      // Typography
+      this._setVal(root, '#font-family-select', appearanceSource.fontFamily || 'Inter');
+      this._setVal(root, '#font-size-select',   appearanceSource.fontSize || '14px');
+      this._setVal(root, '#border-radius-input', appearanceSource.borderRadius ?? 8);
+      this._setVal(root, '#button-style-select', appearanceSource.buttonStyle || 'rounded');
 
-        // Custom colors
-        this._fillColorFields(root, {
-          primaryColor: config.primaryColor,
-          bgColor:      config.bgColor,
-          cardColor:    config.cardColor,
-          sidebarColor: config.sidebarColor,
-          successColor: config.successColor,
-          warningColor: config.warningColor,
-          errorColor:   config.errorColor,
-          textColor:    config.textColor,
-          textSecColor: config.textSecColor,
-        });
+      // Custom colors
+      this._fillColorFields(root, {
+        primaryColor: appearanceSource.primaryColor,
+        bgColor:      appearanceSource.bgColor,
+        cardColor:    appearanceSource.cardColor,
+        sidebarColor: appearanceSource.sidebarColor,
+        successColor: appearanceSource.successColor,
+        warningColor: appearanceSource.warningColor,
+        errorColor:   appearanceSource.errorColor,
+        textColor:    appearanceSource.textColor,
+        textSecColor: appearanceSource.textSecColor,
+      });
 
-        // General
-        this._setVal(root, '#company-name-input',      config.companyName);
-        this._setVal(root, '#saas-branch-limit-input', config.branchLimit ?? 5);
-        this._setVal(root, '#timezone-select',         config.timezone || 'America/Managua');
-        this._setVal(root, '#language-select',         config.language || 'es');
-        this._setVal(root, '#date-format-select',      config.dateFormat || 'DD/MM/YYYY');
-        this._setVal(root, '#time-format-select',      config.timeFormat || '24h');
-        this._setVal(root, '#currency-select',         config.currency || 'NIO');
-        this._setVal(root, '#currency-symbol-input',   config.currencySymbol || 'C$');
-        this._setVal(root, '#decimals-input',          config.decimals ?? 2);
-        this._setVal(root, '#default-country-input',   config.defaultCountry || 'Nicaragua');
+      // General
+      this._setVal(root, '#company-name-input',      saasConfig.companyName);
+      this._setVal(root, '#saas-branch-limit-input', saasConfig.branchLimit ?? 5);
+      this._setVal(root, '#timezone-select',         saasConfig.timezone || 'America/Managua');
+      this._setVal(root, '#language-select',         saasConfig.language || 'es');
+      this._setVal(root, '#date-format-select',      saasConfig.dateFormat || 'DD/MM/YYYY');
+      this._setVal(root, '#time-format-select',      saasConfig.timeFormat || '24h');
+      this._setVal(root, '#currency-select',         saasConfig.currency || 'NIO');
+      this._setVal(root, '#currency-symbol-input',   saasConfig.currencySymbol || 'C$');
+      this._setVal(root, '#decimals-input',          saasConfig.decimals ?? 2);
+      this._setVal(root, '#default-country-input',   saasConfig.defaultCountry || 'Nicaragua');
 
-        // Copias
-        this._setCheck(root, '#backup-auto-toggle', config.backupAutoEnabled);
-        this._setVal(root,   '#backup-cron-input',  config.backupCron || '0 0 * * *');
+      // Copias
+      this._setCheck(root, '#backup-auto-toggle', saasConfig.backupAutoEnabled);
+      this._setVal(root,   '#backup-cron-input',  saasConfig.backupCron || '0 0 * * *');
 
-        // Mantenimiento
-        this._setCheck(root, '#mantenimiento-toggle-tab', config.maintenanceMode);
-        this._setVal(root,   '#maint-message-input',      config.maintenanceMessage);
+      // Mantenimiento
+      this._setCheck(root, '#mantenimiento-toggle-tab', saasConfig.maintenanceMode);
+      this._setVal(root,   '#maint-message-input',      saasConfig.maintenanceMessage);
 
-        // Cron / Advanced
-        this.setCronEndpointValue(root, config.keepAliveCron);
-        this._setCheck(root, '#cron-enabled-toggle',   config.keepAliveCron?.enabled);
-        this._setVal(root,   '#cron-provider-input',   config.keepAliveCron?.provider || 'cron-job.org');
-        this._setVal(root,   '#cron-interval-input',   config.keepAliveCron?.intervalMinutes || 10);
-        this._setVal(root,   '#cron-external-url-input', config.keepAliveCron?.externalApiUrl);
-        this._setVal(root,   '#cron-token-input',      config.keepAliveCron?.token);
+      // Cron / Advanced
+      this.setCronEndpointValue(root, saasConfig.keepAliveCron);
+      this._setCheck(root, '#cron-enabled-toggle',   saasConfig.keepAliveCron?.enabled);
+      this._setVal(root,   '#cron-provider-input',   saasConfig.keepAliveCron?.provider || 'cron-job.org');
+      this._setVal(root,   '#cron-interval-input',   saasConfig.keepAliveCron?.intervalMinutes || 10);
+      this._setVal(root,   '#cron-external-url-input', saasConfig.keepAliveCron?.externalApiUrl);
+      this._setVal(root,   '#cron-token-input',      saasConfig.keepAliveCron?.token);
 
-        if (config.keepAliveCron?.lastTestAtLocal?.epochMs) {
-          const el = root.querySelector('#cron-last-run');
-          if (el) el.textContent = `Última prueba: ${TimeService.formatDate(config.keepAliveCron.lastTestAtLocal.epochMs, true)}`;
-        }
-
-        console.log('[SettingsView] ✅ Configuración cargada correctamente desde Firebase.');
-      } else {
-        this.setCronEndpointValue(root);
-        this._selectTheme(root, 'dark');
-        console.log('[SettingsView] ℹ️ No hay configuración guardada aún en Firebase.');
+      if (saasConfig.keepAliveCron?.lastTestAtLocal?.epochMs) {
+        const el = root.querySelector('#cron-last-run');
+        if (el) el.textContent = `Última prueba: ${TimeService.formatDate(saasConfig.keepAliveCron.lastTestAtLocal.epochMs, true)}`;
       }
+
+      console.log('[SettingsView] ✅ Configuración cargada correctamente desde Firebase.');
     } catch (err) {
       console.warn('[SettingsView] Error cargando config:', err.message);
       this.setCronEndpointValue(root);
@@ -818,11 +815,15 @@ export class SettingsView extends Component {
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando…'; }
 
     try {
-      const existingConfig = await FirestoreService.getCompanyConfig('global') || {};
+      const { currentUser } = GlobalStore.getState();
+      const programmerUid = currentUser?.uid;
 
-      const newConfig = {
-        ...existingConfig,
-        // Identidad
+      const existingSaas = await FirestoreService.getSaaSConfig() || {};
+      const existingProg = programmerUid ? (await FirestoreService.getProgrammerPreferences(programmerUid) || {}) : {};
+
+      const saasConfig = {
+        ...existingSaas,
+        // Identidad Global
         saasName:           root.querySelector('#saas-name-input')?.value.trim()       || 'Ultra Administrador',
         saasCommercialName: root.querySelector('#saas-comm-name-input')?.value.trim()  || '',
         saasSlogan:         root.querySelector('#saas-slogan-input')?.value.trim()     || '',
@@ -832,21 +833,6 @@ export class SettingsView extends Component {
         favicon:            root.querySelector('#favicon-input')?.value.trim()         || '',
         appIcon:            root.querySelector('#app-icon-input')?.value.trim()        || '',
         loginBg:            root.querySelector('#login-bg-input')?.value.trim()        || '',
-        // Apariencia
-        theme:        root.querySelector('#theme-select')?.value            || 'dark',
-        fontFamily:   root.querySelector('#font-family-select')?.value      || 'Inter',
-        fontSize:     root.querySelector('#font-size-select')?.value        || '14px',
-        borderRadius: Number(root.querySelector('#border-radius-input')?.value || 8),
-        buttonStyle:  root.querySelector('#button-style-select')?.value     || 'rounded',
-        primaryColor: root.querySelector('#primary-color-input')?.value     || '#3b82f6',
-        bgColor:      root.querySelector('#bg-color-input')?.value          || '#0a0a0b',
-        cardColor:    root.querySelector('#card-color-input')?.value        || '#16161a',
-        sidebarColor: root.querySelector('#sidebar-color-input')?.value     || '#111113',
-        successColor: root.querySelector('#success-color-input')?.value     || '#34d399',
-        warningColor: root.querySelector('#warning-color-input')?.value     || '#fbbf24',
-        errorColor:   root.querySelector('#error-color-input')?.value       || '#f87171',
-        textColor:    root.querySelector('#text-color-input')?.value        || '#ededef',
-        textSecColor: root.querySelector('#text-sec-color-input')?.value    || '#8b8c94',
         // General
         companyName:    root.querySelector('#company-name-input')?.value.trim()   || '',
         branchLimit:    Number(root.querySelector('#saas-branch-limit-input')?.value || 5),
@@ -866,25 +852,45 @@ export class SettingsView extends Component {
         maintenanceMessage: root.querySelector('#maint-message-input')?.value.trim() || '',
       };
 
-      // Compute changed fields for audit log
-      const changedFields = {};
-      Object.keys(newConfig).forEach(key => {
-        if (key === 'keepAliveCron') return;
-        if (JSON.stringify(existingConfig[key]) !== JSON.stringify(newConfig[key])) {
-          changedFields[key] = { before: existingConfig[key] ?? 'N/A', after: newConfig[key] };
+      const progAppearance = {
+        theme:        root.querySelector('#theme-select')?.value            || 'dark',
+        fontFamily:   root.querySelector('#font-family-select')?.value      || 'Inter',
+        fontSize:     root.querySelector('#font-size-select')?.value        || '14px',
+        borderRadius: Number(root.querySelector('#border-radius-input')?.value || 8),
+        buttonStyle:  root.querySelector('#button-style-select')?.value     || 'rounded',
+        primaryColor: root.querySelector('#primary-color-input')?.value     || '#3b82f6',
+        bgColor:      root.querySelector('#bg-color-input')?.value          || '#0a0a0b',
+        cardColor:    root.querySelector('#card-color-input')?.value        || '#16161a',
+        sidebarColor: root.querySelector('#sidebar-color-input')?.value     || '#111113',
+        successColor: root.querySelector('#success-color-input')?.value     || '#34d399',
+        warningColor: root.querySelector('#warning-color-input')?.value     || '#fbbf24',
+        errorColor:   root.querySelector('#error-color-input')?.value       || '#f87171',
+        textColor:    root.querySelector('#text-color-input')?.value        || '#ededef',
+        textSecColor: root.querySelector('#text-sec-color-input')?.value    || '#8b8c94',
+      };
+
+      // Compute changed fields
+      const saasChanged = {};
+      Object.keys(saasConfig).forEach(key => {
+        if (JSON.stringify(existingSaas[key]) !== JSON.stringify(saasConfig[key])) {
+          saasChanged[key] = { before: existingSaas[key] ?? 'N/A', after: saasConfig[key] };
         }
       });
 
-      const activeTabBtn = root.querySelector('.settings-tab-btn.active');
-      const categoryName = activeTabBtn ? activeTabBtn.textContent.trim() : 'General';
+      const progChanged = {};
+      Object.keys(progAppearance).forEach(key => {
+        if (JSON.stringify(existingProg[key]) !== JSON.stringify(progAppearance[key])) {
+          progChanged[key] = { before: existingProg[key] ?? 'N/A', after: progAppearance[key] };
+        }
+      });
 
-      if (Object.keys(changedFields).length === 0) {
+      if (Object.keys(saasChanged).length === 0 && Object.keys(progChanged).length === 0) {
         NotificationService.info('No se detectaron cambios para guardar.');
         return;
       }
 
       // Double-confirm if enabling maintenance mode
-      if (changedFields.maintenanceMode && newConfig.maintenanceMode === true) {
+      if (saasChanged.maintenanceMode && saasConfig.maintenanceMode === true) {
         const ok = confirm('⚠️ ¿Confirmas que deseas ACTIVAR el Modo Mantenimiento? Se bloqueará el acceso a los locales de forma inmediata.');
         if (!ok) {
           NotificationService.info('Guardado cancelado — Modo Mantenimiento no fue activado.');
@@ -892,20 +898,32 @@ export class SettingsView extends Component {
         }
       }
 
-      // 1. Persist to Firebase
-      await FirestoreService.updateCompanyConfig('global', newConfig);
-      this.config = newConfig;
+      // 1. Persist Global SaaS config
+      if (Object.keys(saasChanged).length > 0) {
+        await FirestoreService.updateSaaSConfig(saasConfig);
+        await FirestoreService.logAudit({
+          action: 'GLOBAL_CONFIG_CHANGE',
+          companyId: 'global',
+          description: `Configuración global del SaaS actualizada. Campos: ${Object.keys(saasChanged).join(', ')}`,
+          metadata: { changedFields: saasChanged }
+        });
+      }
 
-      // 2. Apply to the live UI immediately
-      AppearanceService.applyConfig(newConfig);
+      // 2. Persist Programmer personal appearance preferences
+      if (programmerUid && Object.keys(progChanged).length > 0) {
+        await FirestoreService.updateProgrammerPreferences(programmerUid, progAppearance);
+        await FirestoreService.logAudit({
+          action: 'PROGRAMMER_THEME_UPDATE',
+          companyId: 'programmer',
+          description: `El programador actualizó sus preferencias visuales personales [Tema: ${progAppearance.theme}].`,
+          metadata: { changedFields: progChanged }
+        });
+      }
 
-      // 3. Audit log
-      await FirestoreService.logAudit({
-        action: 'GLOBAL_CONFIG_CHANGE',
-        companyId: 'global',
-        description: `Config global actualizada en [${categoryName}]. Campos: ${Object.keys(changedFields).join(', ')}`,
-        metadata: { category: categoryName, changedFields }
-      });
+      this.config = { ...saasConfig, ...progAppearance };
+
+      // 3. Apply to live UI
+      AppearanceService.applyConfig(progAppearance);
 
       NotificationService.success('✅ Configuración guardada y aplicada correctamente.');
     } catch (err) {

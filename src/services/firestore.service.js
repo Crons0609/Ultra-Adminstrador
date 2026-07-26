@@ -532,31 +532,129 @@ export class FirestoreService {
     console.log(`[DB] ✅ Company info updated: /${companyId}/informacion_local`);
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THEME & VISUAL PREFERENCES (ISOLATED BY USER ROLE & BUSINESS)
+  // ═══════════════════════════════════════════════════════════════════════════
+
   /**
-   * Get company config.
-   * @param {string} companyId
+   * Reads programmer preferences from programmer_preferences/{programmerId}.
+   * @param {string} programmerId
    * @returns {Promise<Object|null>}
    */
-  static async getCompanyConfig(companyId) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
-    const configRef = ref(db, `${companyId}/config`);
-    const snap = await get(configRef);
-    return snap.exists() ? snap.val() : null;
+  static async getProgrammerPreferences(programmerId) {
+    if (!db || !programmerId) return null;
+    try {
+      const prefRef = ref(db, `programmer_preferences/${programmerId}`);
+      const snap = await get(prefRef);
+      return snap.exists() ? snap.val() : null;
+    } catch (err) {
+      console.warn('[FirestoreService] getProgrammerPreferences failed:', err.message);
+      return null;
+    }
   }
 
   /**
-   * Update company config fields.
+   * Updates programmer preferences at programmer_preferences/{programmerId}.
+   * @param {string} programmerId
+   * @param {Object} data
+   * @returns {Promise<void>}
+   */
+  static async updateProgrammerPreferences(programmerId, data = {}) {
+    if (!db || !programmerId) throw new Error('[FirestoreService] Database not initialized or invalid programmerId.');
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
+    const prefRef = ref(db, `programmer_preferences/${programmerId}`);
+    await update(prefRef, { ...clean, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
+    console.log(`[DB] ✅ Programmer preferences updated: programmer_preferences/${programmerId}`);
+  }
+
+  /**
+   * Listens for changes on programmer_preferences/{programmerId}.
+   * @param {string} programmerId
+   * @param {Function} callback
+   * @returns {Function} Unsubscribe function
+   */
+  static subscribeProgrammerPreferences(programmerId, callback) {
+    if (!db || !programmerId) return () => {};
+    const prefRef = ref(db, `programmer_preferences/${programmerId}`);
+    return onValue(prefRef, (snapshot) => {
+      callback(snapshot.exists() ? snapshot.val() : null);
+    });
+  }
+
+  /**
+   * Reads business settings (visual appearance & identity) from business_settings/{businessId}.
+   * @param {string} businessId
+   * @returns {Promise<Object|null>}
+   */
+  static async getBusinessSettings(businessId) {
+    if (!db || !businessId) return null;
+    try {
+      const settingsRef = ref(db, `business_settings/${businessId}`);
+      const snap = await get(settingsRef);
+      return snap.exists() ? snap.val() : null;
+    } catch (err) {
+      console.warn('[FirestoreService] getBusinessSettings failed:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Updates business settings at business_settings/{businessId}.
+   * @param {string} businessId
+   * @param {Object} data
+   * @returns {Promise<void>}
+   */
+  static async updateBusinessSettings(businessId, data = {}) {
+    if (!db || !businessId) throw new Error('[FirestoreService] Database not initialized or invalid businessId.');
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
+    const settingsRef = ref(db, `business_settings/${businessId}`);
+    await update(settingsRef, { ...clean, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
+    console.log(`[DB] ✅ Business settings updated: business_settings/${businessId}`);
+  }
+
+  /**
+   * Listens for changes on business_settings/{businessId}.
+   * @param {string} businessId
+   * @param {Function} callback
+   * @returns {Function} Unsubscribe function
+   */
+  static subscribeBusinessSettings(businessId, callback) {
+    if (!db || !businessId) return () => {};
+    const settingsRef = ref(db, `business_settings/${businessId}`);
+    return onValue(settingsRef, (snapshot) => {
+      callback(snapshot.exists() ? snapshot.val() : null);
+    });
+  }
+
+  /**
+   * Backwards compatible helper for fetching config.
+   * Reads from global/saas_config if companyId === 'global', or business_settings/{companyId} otherwise.
+   * @param {string} companyId
+   * @returns {Promise<Object|null>}
+   */
+  static async getCompanyConfig(companyId = 'global') {
+    if (companyId === 'global') {
+      return this.getSaaSConfig();
+    }
+    return this.getBusinessSettings(companyId);
+  }
+
+  /**
+   * Backwards compatible helper for updating config.
+   * Updates global/saas_config if companyId === 'global', or business_settings/{companyId} otherwise.
    * @param {string} companyId
    * @param {Object} data
    * @returns {Promise<void>}
    */
-  static async updateCompanyConfig(companyId, data) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
-    const configRef = ref(db, `${companyId}/config`);
-    await update(configRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
-    console.log(`[DB] ✅ Company config updated: /${companyId}/config`);
+  static async updateCompanyConfig(companyId = 'global', data = {}) {
+    if (companyId === 'global') {
+      return this.updateSaaSConfig(data);
+    }
+    return this.updateBusinessSettings(companyId, data);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -868,17 +966,16 @@ export class FirestoreService {
    * Read the global SaaS configuration object from Firebase RTDB.
    * Stored at the path: global/saas_config
    *
-   * @param {string} [_companyId] - Ignored, always reads from global path.
    * @returns {Promise<Object|null>}
    */
-  static async getCompanyConfig(_companyId = 'global') {
+  static async getSaaSConfig() {
     if (!db) return null;
     try {
       const configRef = ref(db, 'global/saas_config');
       const snap = await get(configRef);
       return snap.exists() ? snap.val() : null;
     } catch (err) {
-      console.warn('[FirestoreService] getCompanyConfig failed:', err.message);
+      console.warn('[FirestoreService] getSaaSConfig failed:', err.message);
       return null;
     }
   }
@@ -887,11 +984,10 @@ export class FirestoreService {
    * Write / merge fields into the global SaaS configuration object.
    * Stored at the path: global/saas_config
    *
-   * @param {string} [_companyId] - Ignored, always writes to global path.
    * @param {Object} data - Fields to merge into the config node.
    * @returns {Promise<void>}
    */
-  static async updateCompanyConfig(_companyId = 'global', data = {}) {
+  static async updateSaaSConfig(data = {}) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
     const configRef = ref(db, 'global/saas_config');
     // Strip undefined values to avoid Firebase errors

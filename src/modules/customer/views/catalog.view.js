@@ -89,7 +89,12 @@ export class PublicCatalogView extends Component {
       this.state.categories = uniqueCats;
       this.checkDataLoaded(root);
     });
-    this.listeners.push(productsListener);
+    const settingsUnsub = FirestoreService.subscribeBusinessSettings(this.companyId, (companyAppearance) => {
+      if (companyAppearance) {
+        AppearanceService.applyToPublicCatalog(root, companyAppearance);
+      }
+    });
+    this.listeners.push(settingsUnsub);
   }
 
   recordVisitorStats() {
@@ -135,15 +140,15 @@ export class PublicCatalogView extends Component {
     const cfg = this.state.config || {};
     const isStore = this.state.businessCategory === 'SUPERMERCADO_TIENDA';
 
-    // 1. Apply theme chosen by Business Owner
+    // 1. Apply theme chosen by Business Owner from business_settings
     try {
-      const companyAppearance = await FirestoreService.getCompanyConfig(this.companyId);
+      const companyAppearance = await FirestoreService.getBusinessSettings(this.companyId);
       if (companyAppearance) {
         AppearanceService.applyToPublicCatalog(root, companyAppearance);
         return;
       }
     } catch (e) {
-      console.warn('[CatalogView] Could not load company appearance config:', e);
+      console.warn('[CatalogView] Could not load business appearance config:', e);
     }
 
     // 2. Fallback to catalog config colors
