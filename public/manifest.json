@@ -1,7 +1,7 @@
 {
   "name": "Ultra Administrador",
   "short_name": "UltraAdmin",
-  "description": "SaaS Multiempresa de administración de restaurantes, bares y cafeterías en tiempo real.",
+  "description": "Ultra Administrador — Plataforma SaaS desarrollada por ProLine System.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0b",
@@ -9,12 +9,12 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/assets/icons/icon-192.png",
+      "src": "/assets/logo_ultra_administrador.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/assets/icons/icon-512.png",
+      "src": "/assets/logo_ultra_administrador.png",
       "type": "image/png",
       "sizes": "512x512"
     }

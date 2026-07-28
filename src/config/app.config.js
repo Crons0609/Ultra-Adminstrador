@@ -10,6 +10,15 @@ export const APP_CONFIG = {
   /** Short name for PWA manifest */
   shortName: 'UltraAdmin',
 
+  /** Software development company / Owner */
+  company: 'ProLine System',
+
+  /** System official logo URL */
+  logo: '/assets/logo_ultra_administrador.png',
+
+  /** Copyright notice */
+  copyright: '© 2026 Ultra Administrador by ProLine System. Todos los derechos reservados.',
+
   /** Application version — bump on each release */
   version: '1.0.0',
 

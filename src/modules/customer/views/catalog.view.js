@@ -248,7 +248,7 @@ export class PublicCatalogView extends Component {
 
       <!-- Footer -->
       <footer class="pub-footer">
-        <p>&copy; ${new Date().getFullYear()} ${companyName} &mdash; Creado con Ultra Administrador.</p>
+        <p>&copy; ${new Date().getFullYear()} ${companyName} &mdash; Desarrollado con <strong>Ultra Administrador</strong> de <strong>ProLine System</strong>. Todos los derechos reservados.</p>
       </footer>
 
       <!-- Floating WhatsApp -->

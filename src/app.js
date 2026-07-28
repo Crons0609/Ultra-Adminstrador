@@ -206,14 +206,21 @@ class App {
       font-family: 'Inter', sans-serif;
     `;
     loader.innerHTML = `
+      <img src="/assets/logo_ultra_administrador.png" 
+           alt="Ultra Administrador" 
+           onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src='assets/logo_ultra_administrador.png';}else if(this.dataset.tried==='1'){this.dataset.tried='2';this.src='logo_ultra_administrador.png';}else if(this.dataset.tried==='2'){this.dataset.tried='3';this.src='/logo_ultra_administrador.png';}" 
+           style="width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(139,92,246,0.35)); margin-bottom: 8px;" />
       <div style="
-        width: 48px; height: 48px;
-        border: 3px solid rgba(139,92,246,0.3);
+        width: 44px; height: 44px;
+        border: 3px solid rgba(139,92,246,0.25);
         border-top-color: #8b5cf6;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       "></div>
-      <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">Cargando Ultra Administrador...</p>
+      <div style="text-align: center;">
+        <p style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 2px;">Ultra Administrador</p>
+        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.45); margin: 0;">Un producto de ProLine System</p>
+      </div>
       <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     `;
     document.body.appendChild(loader);

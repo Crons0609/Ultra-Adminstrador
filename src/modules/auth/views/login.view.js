@@ -62,21 +62,29 @@ export class LoginView extends Component {
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              width: 56px;
-              height: 56px;
-              border-radius: var(--radius-lg);
-              background: var(--color-accent);
-              margin-bottom: var(--space-4);
-              font-size: 1.75rem;
-            ">🍽️</div>
+              width: 84px;
+              height: 84px;
+              border-radius: var(--radius-xl);
+              background: rgba(255,255,255,0.03);
+              border: 1px solid rgba(255,255,255,0.1);
+              padding: 10px;
+              margin-bottom: var(--space-3);
+              box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            ">
+              <img src="/assets/logo_ultra_administrador.png" 
+                   alt="Ultra Administrador" 
+                   onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src='assets/logo_ultra_administrador.png';}else if(this.dataset.tried==='1'){this.dataset.tried='2';this.src='logo_ultra_administrador.png';}else if(this.dataset.tried==='2'){this.dataset.tried='3';this.src='/logo_ultra_administrador.png';}" 
+                   style="width: 100%; height: 100%; object-fit: contain;" />
+            </div>
             <h1 class="hero-title" style="
               font-family: var(--font-display);
-              font-size: 1.5rem;
-              font-weight: 700;
+              font-size: 1.6rem;
+              font-weight: 800;
               color: var(--color-text-primary);
               margin: 0 0 var(--space-1);
+              letter-spacing: -0.02em;
             ">${APP_CONFIG.name}</h1>
-            <p class="hero-subtitle" style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">
+            <p class="hero-subtitle" style="color: var(--color-text-secondary); font-size: 0.85rem; margin: 0;">
               Accede a tu panel de administración
             </p>
           </div>
@@ -246,8 +254,13 @@ export class LoginView extends Component {
                 >
                   ⚡ Crear Cuenta SuperAdmin
                 </button>
-              </form>
             </div>
+          </div>
+
+          <!-- Login Footer Copyright -->
+          <div style="text-align: center; margin-top: var(--space-6); font-size: 0.75rem; color: var(--color-text-tertiary);">
+            <p style="margin: 0;">&copy; ${new Date().getFullYear()} <strong>Ultra Administrador</strong>. Todos los derechos reservados.</p>
+            <p style="margin: 2px 0 0; opacity: 0.75;">Desarrollado por <strong style="color: var(--color-accent-light, #a78bfa);">ProLine System</strong></p>
           </div>
 
         </div>

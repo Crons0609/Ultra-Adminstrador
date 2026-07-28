@@ -281,12 +281,17 @@ export class Sidebar extends Component {
     const userInitial = userName ? userName[0].toUpperCase() : 'U';
     const userEmail = currentUser ? currentUser.email : '';
 
+    const companyLogo = (currentCompany && currentCompany.logo) ? currentCompany.logo : '/assets/logo_ultra_administrador.png';
+
     return `
       <aside class="sidebar" id="main-sidebar">
         <!-- Logo / Company Branding -->
         <div class="sidebar-brand">
-          <div class="sidebar-brand-avatar" style="background: linear-gradient(135deg, ${roleColor}22, ${roleColor}44); border: 1px solid ${roleColor}55; color: ${roleColor};">
-            ${companyInitial}
+          <div class="sidebar-brand-avatar" style="overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid ${roleColor}44; display: flex; align-items: center; justify-content: center; padding: 3px;">
+            <img src="${companyLogo}" 
+                 alt="${companyName}" 
+                 style="width: 100%; height: 100%; object-fit: contain;" 
+                 onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src='assets/logo_ultra_administrador.png';}else if(this.dataset.tried==='1'){this.dataset.tried='2';this.src='logo_ultra_administrador.png';}else if(this.dataset.tried==='2'){this.dataset.tried='3';this.src='/logo_ultra_administrador.png';}" />
           </div>
           <div class="sidebar-brand-info">
             <span class="sidebar-brand-name">${companyName}</span>
@@ -315,6 +320,11 @@ export class Sidebar extends Component {
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
           </button>
+        </div>
+
+        <!-- ProLine System Rights Badge -->
+        <div style="padding: 6px 16px 10px; text-align: center; font-size: 0.65rem; color: var(--color-text-tertiary); opacity: 0.75; letter-spacing: 0.02em;">
+          <span>Ultra Administrador &bull; <strong>ProLine System</strong></span>
         </div>
       </aside>
     `;

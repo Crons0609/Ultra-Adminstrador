@@ -46,8 +46,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static assets from public and src directories
+// Serve static assets from public, assets, and src directories
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/src', express.static(path.join(__dirname, 'src')));
 
 // SPA fallback: redirect all other requests to index.html
