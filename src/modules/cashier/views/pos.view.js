@@ -51,110 +51,304 @@ export class POSView extends Component {
         ? 'Procesa cobros de barras, VIPs y registros de covers/entradas.'
         : 'Procesa cobros de mesas, órdenes separadas y ventas directas.',
       contentHTML: `
+        <style>
+          .pos-grid {
+            display: grid;
+            grid-template-columns: minmax(350px, 420px) 1fr;
+            gap: 12px;
+            align-items: start;
+          }
+          @media (max-width: 1024px) {
+            .pos-grid { grid-template-columns: 1fr; }
+          }
+          .pos-billing-panel {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          .pos-bill-request-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(251, 146, 60, 0.08);
+            border: 1px solid rgba(251, 146, 60, 0.25);
+            border-radius: 6px;
+            padding: 6px 10px;
+            gap: 6px;
+          }
+          .pos-ticket-header {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .pos-ticket-container {
+            min-height: 90px;
+            max-height: 140px;
+            overflow-y: auto;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.18);
+            padding: 4px;
+          }
+          .pos-ticket-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 6px;
+            border-bottom: 1px dotted var(--color-border);
+            font-size: 0.78rem;
+          }
+          .pos-ticket-item:last-child { border-bottom: none; }
+          .pos-qty-btn {
+            width: 20px; height: 20px; border-radius: 4px;
+            border: 1px solid var(--color-border);
+            background: rgba(255,255,255,0.06);
+            color: var(--color-text-primary);
+            font-weight: bold; cursor: pointer; display: inline-flex;
+            align-items: center; justify-content: center;
+            font-size: 0.75rem;
+          }
+          .pos-qty-btn:hover { background: rgba(255,255,255,0.15); }
+          .pos-item-delete {
+            background: none; border: none; color: var(--color-danger);
+            cursor: pointer; padding: 2px 4px; border-radius: 4px; opacity: 0.8; font-size: 0.75rem;
+          }
+          .pos-item-delete:hover { opacity: 1; background: rgba(239,68,68,0.1); }
+          
+          /* Quick Cash Buttons */
+          .quick-cash-row {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+          }
+          .quick-cash-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--color-border);
+            border-radius: 4px; padding: 2px 8px;
+            font-size: 0.7rem; font-weight: 700;
+            color: var(--color-text-primary);
+            cursor: pointer; transition: all 0.15s;
+          }
+          .quick-cash-btn:hover {
+            background: var(--color-accent); color: #fff; border-color: var(--color-accent);
+          }
+          .pos-catalog-panel {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            box-shadow: var(--shadow-sm);
+            max-height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+          }
+          .pos-catalog-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            padding-right: 4px;
+          }
+          .pos-catalog-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: all 0.15s ease;
+            user-select: none;
+            min-height: 44px;
+            flex-shrink: 0;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .pos-catalog-item:hover {
+            border-color: var(--color-accent);
+            background: rgba(255,255,255,0.07);
+          }
+          .pos-catalog-item-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1 1 auto;
+            min-width: 0;
+          }
+          .pos-catalog-item-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+            min-width: 0;
+            flex: 1;
+          }
+          .pos-catalog-item-side {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+          }
+          .pos-catalog-item-add {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 4px;
+            padding: 3px 10px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            transition: all 0.15s;
+          }
+          .pos-catalog-item:hover .pos-catalog-item-add {
+            background: #10b981;
+            color: #000;
+          }
+          .pos-categories-bar {
+            display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px;
+            scrollbar-width: thin;
+          }
+          .pos-category-tab {
+            white-space: nowrap; padding: 4px 10px; border-radius: 14px;
+            background: rgba(255,255,255,0.04); border: 1px solid var(--color-border);
+            font-size: 0.72rem; font-weight: 600; color: var(--color-text-secondary);
+            cursor: pointer; transition: all 0.15s;
+          }
+          .pos-category-tab:hover { background: rgba(255,255,255,0.08); color: var(--color-text-primary); }
+          .pos-category-tab.active {
+            background: var(--color-accent); color: #fff; border-color: var(--color-accent);
+          }
+        </style>
+
         <div class="pos-grid animate-fade-in">
           <!-- Left Panel: Ticket & Checkout -->
           <div class="pos-billing-panel">
             
             <!-- Cover & Capacity Tracker (Only for Bars/Clubs) -->
-            <div id="pos-aforo-panel" style="display:${this.isBar ? 'block' : 'none'}; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: var(--radius-lg); padding: var(--space-4); margin-bottom: 12px;">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-xs font-bold" style="color:#a855f7;">🕺 Aforo actual: <strong id="pos-aforo-count">0 / 300</strong></span>
-                <button class="btn btn-xs btn-primary font-semibold" id="pos-btn-cover" style="background:#a855f7; border:none; padding:4px 10px; border-radius:6px; cursor:pointer;">+ Cover ($100)</button>
+            <div id="pos-aforo-panel" style="display:${this.isBar ? 'block' : 'none'}; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 6px; padding: 6px 10px; margin-bottom: 4px;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-xs font-bold" style="color:#a855f7;">🕺 Aforo: <strong id="pos-aforo-count">0 / 300</strong></span>
+                <button class="btn btn-xs btn-primary font-semibold" id="pos-btn-cover" style="background:#a855f7; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">+ Cover ($100)</button>
               </div>
-              <div class="kpi-progress-bar" style="background:rgba(255,255,255,0.06); height:6px;">
+              <div class="kpi-progress-bar" style="background:rgba(255,255,255,0.06); height:4px;">
                 <div id="pos-aforo-bar" class="kpi-progress-fill" style="width: 0%; background:#a855f7; transition:width 0.4s;"></div>
               </div>
             </div>
 
-            <div class="pos-panel-header" style="display:flex; flex-direction:column; gap: var(--space-2); margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 12px;">
-              
-              <!-- Panel de Solicitudes de Cuenta Pendientes -->
-              <div id="pos-bill-requests-panel" style="display:none; background: rgba(251,146,60,0.07); border: 1px solid rgba(251,146,60,0.25); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 8px;">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                  <span style="font-size:0.9rem;">🧾</span>
-                  <span class="font-bold" style="font-size:0.78rem; color:#fb923c;">Solicitudes de Cuenta</span>
-                  <span id="pos-bill-requests-count" class="badge animate-pulse" style="background:#fb923c22; color:#fb923c; border:1px solid #fb923c44; font-size:0.65rem; margin-left:auto;">0</span>
-                </div>
-                <div id="pos-bill-requests-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+            <!-- Panel de Solicitudes de Cuenta Pendientes -->
+            <div id="pos-bill-requests-panel" style="display:none; background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.3); border-radius: 6px; padding: 8px; margin-bottom: 4px;">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span style="font-size:0.9rem;">🧾</span>
+                <span class="font-bold" style="font-size:0.78rem; color:#fb923c;">Solicitudes de Cuenta</span>
+                <span id="pos-bill-requests-count" class="badge animate-pulse" style="background:#fb923c; color:#000; font-weight:800; font-size:0.65rem; margin-left:auto; padding:1px 6px;">0</span>
               </div>
+              <div id="pos-bill-requests-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+            </div>
 
-              <!-- Table / Comanda Loader -->
+            <!-- Selector de Mesa / Comanda Activa -->
+            <div style="display:flex; flex-direction:column; gap: 4px;">
               <div>
-                <label class="form-label font-semibold" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">📥 Cargar ${this.isBar ? 'VIP / Área / Barra' : 'Mesa / Pedido Activo'}</label>
-                <select id="pos-table-selector" class="input input-sm w-full" style="height:36px; font-size:0.82rem;">
+                <label class="form-label font-semibold" style="font-size: 0.75rem; margin-bottom: 2px; display: block;">📥 Cargar ${this.isBar ? 'VIP / Área / Barra' : 'Mesa / Pedido Activo'}</label>
+                <select id="pos-table-selector" class="input input-sm w-full" style="height:32px; font-size:0.8rem; font-weight:600;">
                   <option value="">-- Venta Directa (Sin Mesa) --</option>
                 </select>
               </div>
 
               <!-- Client Selector for Separated Bills -->
-              <div id="pos-client-selector-group" style="display:none;">
-                <label class="form-label" style="font-size:0.75rem; margin-bottom: 4px; display: block;">👤 Cliente (Cuenta Separada):</label>
-                <select id="pos-client-selector" class="input input-sm w-full" style="height:36px; font-size:0.82rem;">
+              <div id="pos-client-selector-group" style="display:none; background:rgba(124,117,255,0.06); border:1px solid rgba(124,117,255,0.2); border-radius:6px; padding:6px 8px;">
+                <label class="form-label font-semibold" style="font-size:0.72rem; margin-bottom: 2px; display: block; color:var(--color-accent);">👤 Cliente (Cuenta Separada):</label>
+                <select id="pos-client-selector" class="input input-sm w-full" style="height:30px; font-size:0.78rem; font-weight:700;">
                   <option value="">-- Seleccionar Cliente --</option>
                 </select>
               </div>
 
               <!-- Barcode scanner input -->
-              <div style="margin-top: 4px;">
-                <label class="form-label font-semibold" style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-                  <span>⚡</span> Escaneo Continuo
+              <div>
+                <label class="form-label font-semibold" style="font-size: 0.72rem; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                  <span>⚡</span> Código de Barras
                 </label>
                 <div id="pos-scan-container"></div>
               </div>
             </div>
 
+            <!-- Header Informativo del Ticket Activo -->
+            <div class="pos-ticket-header" id="pos-ticket-header">
+              <span class="font-bold text-xs" style="color:var(--color-text-secondary);" id="pos-ticket-title">🛒 Venta Directa</span>
+              <span class="text-xs text-secondary" id="pos-ticket-items-count">0 ítems</span>
+            </div>
+
             <!-- Cart Items List -->
-            <div class="pos-ticket-container" id="pos-ticket-container" style="max-height: 280px; overflow-y: auto;">
-              <div class="pos-ticket-empty">
-                <div class="pos-ticket-empty-icon">🛒</div>
-                <h4>El ticket está vacío</h4>
-                <p class="text-xs">Carga una mesa ocupada, escanea un artículo o haz clic en los productos del catálogo.</p>
+            <div class="pos-ticket-container" id="pos-ticket-container">
+              <div class="pos-ticket-empty" style="text-align:center; padding:12px 0;">
+                <div class="pos-ticket-empty-icon" style="font-size:1.6rem; margin-bottom:2px;">🛒</div>
+                <h4 class="font-semibold text-xs">El ticket está vacío</h4>
+                <p class="text-xs text-secondary mt-1" style="font-size:0.7rem;">Carga una mesa, escanea o haz clic en el catálogo.</p>
               </div>
             </div>
 
             <!-- Summary & Payment -->
-            <div class="pos-billing-summary">
-              <div class="pos-calc-row">
-                <span>Subtotal:</span>
-                <span id="pos-summary-subtotal">$0.00</span>
+            <div class="pos-billing-summary" style="background:rgba(0,0,0,0.15); border:1px solid var(--color-border); border-radius:6px; padding:8px 10px;">
+              <div class="pos-calc-row" style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
+                <span class="text-secondary">Subtotal: <span id="pos-summary-subtotal" class="font-semibold" style="color:var(--color-text-primary);">$0.00</span></span>
+                <span class="text-secondary">IVA (15%): <span id="pos-summary-tax" class="font-semibold" style="color:var(--color-text-primary);">$0.00</span></span>
               </div>
-              <div class="pos-calc-row">
-                <span>Impuesto (15%):</span>
-                <span id="pos-summary-tax">$0.00</span>
-              </div>
-              <div class="pos-calc-row" style="font-weight: 700;">
-                <span class="text-primary">Total a Pagar:</span>
-                <span class="pos-calc-total" id="pos-summary-total">$0.00</span>
+              <div class="pos-calc-row" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:4px; margin-bottom:6px;">
+                <span class="font-bold text-xs">Total a Pagar:</span>
+                <span class="pos-calc-total" id="pos-summary-total" style="font-size:1.2rem; font-weight:800; color:#10b981;">$0.00</span>
               </div>
 
               <!-- Payment Method Selection -->
-              <div style="margin-top: var(--space-3);">
-                <span class="form-label font-semibold" style="font-size: 0.78rem;">Método de Pago:</span>
-                <div class="pos-payment-selector">
-                  <button type="button" class="pos-payment-btn active" data-method="EFECTIVO">💵 Efectivo</button>
-                  <button type="button" class="pos-payment-btn" data-method="TARJETA">💳 Tarjeta</button>
-                  <button type="button" class="pos-payment-btn" data-method="TRANSFERENCIA">🏦 Transf.</button>
+              <div>
+                <span class="form-label font-semibold" style="font-size: 0.7rem;">Método de Pago:</span>
+                <div class="pos-payment-selector" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-top:2px;">
+                  <button type="button" class="pos-payment-btn active" data-method="EFECTIVO" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">💵 Efectivo</button>
+                  <button type="button" class="pos-payment-btn" data-method="TARJETA" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">💳 Tarjeta</button>
+                  <button type="button" class="pos-payment-btn" data-method="TRANSFERENCIA" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">🏦 Transf.</button>
                 </div>
               </div>
 
               <!-- Cash payment input & change calculator -->
-              <div id="pos-cash-details" class="form-group" style="margin-bottom: var(--space-3); margin-top:8px;">
+              <div id="pos-cash-details" class="form-group" style="margin-top:6px; background:rgba(255,255,255,0.02); border:1px solid var(--color-border); border-radius:6px; padding:6px;">
                 <div style="display: flex; gap: var(--space-2); align-items: center;">
                   <div style="flex: 1;">
-                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 2px;" for="pos-cash-paid">Efectivo Recibido:</label>
-                    <input type="number" id="pos-cash-paid" class="input input-sm" placeholder="0.00" min="0" step="any" style="width:100%" />
+                    <label class="form-label font-semibold" style="font-size: 0.68rem; margin-bottom: 1px; display:block;" for="pos-cash-paid">Efectivo Recibido ($):</label>
+                    <input type="number" id="pos-cash-paid" class="input input-sm" placeholder="0.00" min="0" step="any" style="width:100%; height:28px; font-weight:800; font-size:0.85rem; color:#10b981; padding:2px 6px;" />
                   </div>
                   <div style="flex: 1; text-align: right;">
-                    <span class="form-label" style="font-size: 0.72rem; display: block; margin-bottom: 2px;">Cambio:</span>
-                    <strong class="text-success text-md" id="pos-cash-change">$0.00</strong>
+                    <span class="form-label font-semibold" style="font-size: 0.68rem; display: block; margin-bottom: 1px;">Cambio / Vuelto:</span>
+                    <strong class="text-success" id="pos-cash-change" style="font-size:1rem; font-weight:800;">$0.00</strong>
                   </div>
+                </div>
+
+                <!-- Billetes Rápidos -->
+                <div class="quick-cash-row" id="pos-quick-cash-row">
+                  <button type="button" class="quick-cash-btn" data-val="exact">Exacto</button>
+                  <button type="button" class="quick-cash-btn" data-val="50">+$50</button>
+                  <button type="button" class="quick-cash-btn" data-val="100">+$100</button>
+                  <button type="button" class="quick-cash-btn" data-val="200">+$200</button>
+                  <button type="button" class="quick-cash-btn" data-val="500">+$500</button>
                 </div>
               </div>
 
               <!-- Checkout Actions -->
-              <div style="display: flex; gap: var(--space-2); margin-top: 10px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="pos-clear-cart" style="flex: 1;">Vaciar</button>
-                <button type="button" class="btn btn-primary btn-sm pos-checkout-btn" id="pos-complete-checkout" style="flex: 2; ${this.isBar ? 'background:#a855f7;' : ''}">Completar Venta</button>
+              <div style="display: flex; gap: 6px; margin-top: 6px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="pos-clear-cart" style="flex: 1; height:36px; font-weight:600; font-size:0.75rem;">Vaciar</button>
+                <button type="button" class="btn btn-primary btn-sm pos-checkout-btn" id="pos-complete-checkout" style="flex: 2; height:36px; font-weight:800; font-size:0.85rem; background:#10b981; border:none; ${this.isBar ? 'background:#a855f7;' : ''}">
+                  💳 Completar y Cobrar
+                </button>
               </div>
             </div>
           </div>
@@ -162,10 +356,9 @@ export class POSView extends Component {
           <!-- Right Panel: Catalog selection -->
           <div class="pos-catalog-panel">
             <!-- Search toolbar -->
-            <div class="pos-catalog-toolbar">
-              <div class="inv-search" style="flex: 1; margin: 0;">
-                <span class="inv-search-icon">🔍</span>
-                <input type="text" id="pos-catalog-search" class="input input-md" placeholder="Buscar por nombre o SKU..." />
+            <div class="pos-catalog-toolbar" style="margin-bottom:6px;">
+              <div class="inv-search" style="margin: 0;">
+                <input type="text" id="pos-catalog-search" class="input input-md" placeholder="🔍 Buscar producto..." style="height:34px; font-size:0.8rem;" />
               </div>
             </div>
 
@@ -176,7 +369,7 @@ export class POSView extends Component {
 
             <!-- Products Grid -->
             <div class="pos-catalog-grid" id="pos-catalog-grid">
-              <p class="text-xs text-secondary text-center py-5" style="grid-column: 1 / -1;">Cargando catálogo de productos...</p>
+              <p class="text-xs text-secondary text-center py-5" style="grid-column: 1 / -1;">Cargando catálogo...</p>
             </div>
           </div>
         </div>
@@ -293,6 +486,30 @@ export class POSView extends Component {
     if (cashPaidInput) {
       cashPaidInput.addEventListener('input', (e) => {
         this.state.amountPaid = e.target.value;
+        this.recalculateTotals();
+      });
+    }
+
+    // Billetes rápidos handler
+    const quickCashRow = root.querySelector('#pos-quick-cash-row');
+    if (quickCashRow) {
+      quickCashRow.addEventListener('click', (e) => {
+        const btn = e.target.closest('.quick-cash-btn');
+        if (!btn) return;
+        const val = btn.getAttribute('data-val');
+        const cashInput = root.querySelector('#pos-cash-paid');
+        const subtotal = this.state.cart.reduce((sum, item) => sum + item.total, 0);
+        const total = subtotal * 1.15;
+
+        if (val === 'exact') {
+          this.state.amountPaid = total > 0 ? total.toFixed(2) : '0';
+        } else {
+          const num = Number(val);
+          const current = Number(this.state.amountPaid || 0);
+          this.state.amountPaid = (current + num).toFixed(2);
+        }
+
+        if (cashInput) cashInput.value = this.state.amountPaid;
         this.recalculateTotals();
       });
     }
@@ -441,13 +658,75 @@ export class POSView extends Component {
     panel.style.display = 'block';
     if (countBadge) countBadge.textContent = billOrders.length;
 
-    list.innerHTML = billOrders.map(o => `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(251,146,60,0.05); border:1px solid rgba(251,146,60,0.15); border-radius:6px; padding:6px 10px; font-size:0.75rem;">
-        <span class="font-bold" style="color:#fb923c;">${o.tableName || `Mesa ${o.tableId}`}</span>
-        <span class="text-secondary">$${Number(o.total || 0).toFixed(2)}</span>
-        <button class="btn btn-xs btn-primary" style="background:#fb923c; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.7rem;" onclick="document.querySelector('#pos-table-selector').value='${o.tableId}'; document.querySelector('#pos-table-selector').dispatchEvent(new Event('change'));">Cargar</button>
-      </div>
-    `).join('');
+    list.innerHTML = billOrders.map(o => {
+      const tableName = o.tableName || `Mesa ${o.tableId.replace(/^mesa-/i, '')}`;
+      const clientInfo = o.clientName ? ` · ${o.clientName}` : (o.accountType === 'SEPARADO' ? ` · Comensal` : '');
+      const orderLabel = `${tableName}${clientInfo}`;
+
+      return `
+        <div class="pos-bill-request-card">
+          <div style="display:flex; flex-direction:column;">
+            <span class="font-bold" style="color:#fb923c; font-size:0.82rem;">${orderLabel}</span>
+            <span class="text-xs text-secondary">${o.items ? o.items.length : 0} artículos</span>
+          </div>
+          <span class="font-bold text-sm" style="color:#10b981;">$${Number(o.total || 0).toFixed(2)}</span>
+          <button class="btn btn-xs btn-primary pos-btn-load-bill" 
+                  data-table-id="${o.tableId}" 
+                  data-order-id="${o.id}"
+                  style="background:#fb923c; color:#000; border:none; padding:4px 12px; border-radius:6px; cursor:pointer; font-weight:800; font-size:0.75rem;">
+            Cargar 📥
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    // Listener para cargar directamente la comanda/cliente seleccionado
+    list.querySelectorAll('.pos-btn-load-bill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tableId = btn.getAttribute('data-table-id');
+        const orderId = btn.getAttribute('data-order-id');
+        this.loadSpecificOrder(tableId, orderId);
+      });
+    });
+  }
+
+  loadSpecificOrder(tableId, orderId) {
+    const root = this.layout.element;
+    const tableSelector = root?.querySelector('#pos-table-selector');
+    const clientSelector = root?.querySelector('#pos-client-selector');
+    const clientGroup = root?.querySelector('#pos-client-selector-group');
+
+    this.state.loadedTableId = tableId;
+    if (tableSelector) tableSelector.value = tableId;
+
+    const targetOrder = this.state.orders.find(o => o.id === orderId);
+    if (!targetOrder) return;
+
+    this.state.loadedOrderId = orderId;
+    this.state.cart = JSON.parse(JSON.stringify(targetOrder.items || []));
+
+    // Configurar selector de cliente si existen múltiples comandas
+    const tableOrders = this.state.orders.filter(o => o.tableId === tableId && o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
+    if (tableOrders.length > 1 || targetOrder.accountType === 'SEPARADO') {
+      if (clientGroup) clientGroup.style.display = 'block';
+      if (clientSelector) {
+        clientSelector.innerHTML = `
+          <option value="">-- Seleccionar Cliente --</option>
+          ${tableOrders.map(o => {
+            const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
+            return `<option value="${o.id}" ${o.id === orderId ? 'selected' : ''}>${label}</option>`;
+          }).join('')}
+        `;
+        clientSelector.value = orderId;
+      }
+    } else {
+      if (clientGroup) clientGroup.style.display = 'none';
+    }
+
+    this.renderTicket();
+    this.recalculateTotals();
+    const nameInfo = targetOrder.clientName ? `${targetOrder.tableName || `Mesa ${tableId}`} (${targetOrder.clientName})` : (targetOrder.tableName || `Mesa ${tableId}`);
+    NotificationService.success(`Cuenta de ${nameInfo} cargada.`);
   }
 
   mergeTablesAndPopulateSelector(element) {
@@ -602,23 +881,29 @@ export class POSView extends Component {
       return;
     }
 
+    const isBar = this.isBar;
     grid.innerHTML = filtered.map(p => {
       const stock = Number(p.stock || 0);
       const isLow = stock <= Number(p.minStock || 0);
       const formattedPrice = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(p.price || 0);
+      const stockColor = stock === 0 ? '#ef4444' : (isLow ? '#f59e0b' : '#94a3b8');
+      const emoji = isBar ? '🍹' : '🍽️';
+      const productName = p.name || p.nombre || p.title || 'Producto';
+
+      const iconHtml = p.image
+        ? `<img src="${p.image}" style="width:26px;height:26px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>';" />`
+        : `<span style="font-size:1.1rem;line-height:1;flex-shrink:0;">${emoji}</span>`;
 
       return `
-        <div class="pos-catalog-item hover-lift" data-id="${p.id}" title="${p.name}">
-          ${p.image
-            ? `<img src="${p.image}" class="pos-catalog-item-image" onerror="this.src=''" />`
-            : `<div class="pos-catalog-item-image" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem; ${this.isBar ? 'color:#a855f7;' : ''}">🍹</div>`
-          }
-          <div class="pos-catalog-item-info">
-            <span class="pos-catalog-item-name">${p.name}</span>
-            <span class="pos-catalog-item-price">${formattedPrice}</span>
-            <span class="pos-catalog-item-stock ${stock === 0 ? 'text-danger font-semibold' : (isLow ? 'text-warning' : '')}">
-              Stock: ${stock} ${p.unit || 'uds'}
-            </span>
+        <div class="pos-catalog-item" data-id="${p.id}" title="Agregar ${productName}">
+          <div class="pos-catalog-item-main">
+            ${iconHtml}
+            <span class="pos-catalog-item-title">${productName}</span>
+          </div>
+          <div class="pos-catalog-item-side">
+            <span style="font-size:0.72rem;font-weight:600;color:${stockColor};">${stock}&nbsp;${p.unit || 'uds'}</span>
+            <span style="font-size:0.85rem;font-weight:800;color:#10b981;">${formattedPrice}</span>
+            <span class="pos-catalog-item-add">+ Agregar</span>
           </div>
         </div>
       `;
@@ -703,15 +988,37 @@ export class POSView extends Component {
   }
 
   renderTicket() {
-    const container = this.layout.$('#pos-ticket-container');
+    const root = this.layout.element;
+    const container = root?.querySelector('#pos-ticket-container');
+    const titleEl = root?.querySelector('#pos-ticket-title');
+    const countEl = root?.querySelector('#pos-ticket-items-count');
+
+    const totalQty = this.state.cart.reduce((sum, i) => sum + (i.qty || 1), 0);
+    if (countEl) countEl.textContent = `${totalQty} artículos`;
+
+    // Actualizar encabezado del ticket
+    if (titleEl) {
+      if (this.state.loadedOrderId) {
+        const order = this.state.orders.find(o => o.id === this.state.loadedOrderId);
+        const tableName = order?.tableName || `Mesa ${this.state.loadedTableId.replace(/^mesa-/i, '')}`;
+        const client = order?.clientName ? ` · Cliente: ${order.clientName}` : '';
+        titleEl.innerHTML = `<span style="color:#fb923c; font-weight:800;">🧾 ${tableName}${client}</span>`;
+      } else if (this.state.loadedTableId) {
+        const table = this.state.tables.find(t => t.id === this.state.loadedTableId);
+        titleEl.innerHTML = `<span style="color:#a855f7; font-weight:800;">📌 ${table?.name || `Mesa ${this.state.loadedTableId}`}</span>`;
+      } else {
+        titleEl.innerHTML = `<span class="font-bold">🛒 Venta Directa (Mostrador)</span>`;
+      }
+    }
+
     if (!container) return;
 
     if (this.state.cart.length === 0) {
       container.innerHTML = `
-        <div class="pos-ticket-empty">
-          <div class="pos-ticket-empty-icon">🛒</div>
-          <h4>El ticket está vacío</h4>
-          <p class="text-xs">Carga una mesa ocupada, escanea un artículo o haz clic en los productos del catálogo.</p>
+        <div class="pos-ticket-empty" style="text-center py-6">
+          <div class="pos-ticket-empty-icon" style="font-size:2.2rem; margin-bottom:6px;">🛒</div>
+          <h4 class="font-semibold text-sm">El ticket está vacío</h4>
+          <p class="text-xs text-secondary mt-1">Carga una mesa ocupada, escanea un artículo o haz clic en los productos del catálogo.</p>
         </div>
       `;
       return;
@@ -720,22 +1027,19 @@ export class POSView extends Component {
     container.innerHTML = this.state.cart.map(item => `
       <div class="pos-ticket-item animate-slide-up">
         <div>
-          <div class="pos-item-name" title="${item.name}">${item.name}</div>
-          <span class="pos-item-sku">SKU: ${item.sku}</span>
+          <div class="pos-item-name font-bold" title="${item.name}">${item.name}</div>
+          <span class="text-xs text-secondary" style="font-size:0.7rem;">$${Number(item.price).toFixed(2)} c/u</span>
         </div>
-        <div class="pos-item-qty-control">
+        <div class="d-flex align-items-center gap-1">
           <button class="pos-qty-btn" data-id="${item.productId}" data-change="-1">-</button>
-          <span class="pos-qty-val">${item.qty}</span>
+          <span class="font-bold text-xs" style="min-width:18px; text-align:center;">${item.qty}</span>
           <button class="pos-qty-btn" data-id="${item.productId}" data-change="1">+</button>
         </div>
-        <div class="pos-item-price">
-          $${Number(item.price).toFixed(2)}
-        </div>
-        <div class="pos-item-subtotal">
+        <div class="font-bold text-xs text-right" style="min-width:55px; color:#10b981;">
           $${Number(item.total).toFixed(2)}
         </div>
         <div>
-          <button class="pos-item-delete" data-id="${item.productId}" title="Eliminar fila">🗑️</button>
+          <button class="pos-item-delete" data-id="${item.productId}" title="Quitar artículo">🗑️</button>
         </div>
       </div>
     `).join('');

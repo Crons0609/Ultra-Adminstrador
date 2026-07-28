@@ -29,7 +29,7 @@ const getWaiterOrdersView = () => import('../modules/waiter/views/orders.view.js
 
 // Kitchen Module
 const getKDSView = () => import('../modules/kitchen/views/kds.view.js').then(m => m.KDSView);
-const getKitchenStatsView = () => import('../modules/kitchen/views/stats.view.js').then(m => m.StatsView);
+const getKitchenStatsView = () => import('../modules/kitchen/views/stats.view.js').then(m => m.KitchenStatsView || m.StatsView);
 
 // Cashier Module
 const getPOSView = () => import('../modules/cashier/views/pos.view.js').then(m => m.POSView);

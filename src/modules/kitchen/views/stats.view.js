@@ -147,3 +147,5 @@ export class KitchenStatsView extends Component {
     super.unmount();
   }
 }
+
+export { KitchenStatsView as StatsView };
