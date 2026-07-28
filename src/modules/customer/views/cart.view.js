@@ -11,11 +11,13 @@ import { NotificationService } from '../../../services/notification.service.js';
 export class CartView extends Component {
   constructor(params = {}) {
     super(params);
-    this.companyId = sessionStorage.getItem('ua_customer_companyId') || '';
-    this.branchId = sessionStorage.getItem('ua_customer_branchId') || 'main';
-    this.tableId = sessionStorage.getItem('ua_customer_tableId') || '';
-    this.accountType = sessionStorage.getItem('ua_customer_accountType') || 'CONJUNTA';
-    this.clientName = sessionStorage.getItem('ua_customer_clientName') || '';
+    this.companyId    = sessionStorage.getItem('ua_customer_companyId') || '';
+    this.branchId     = sessionStorage.getItem('ua_customer_branchId') || 'main';
+    this.tableId      = sessionStorage.getItem('ua_customer_tableId') || '';
+    // qrToken used to reconstruct the secure back-to-menu URL
+    this.qrToken      = sessionStorage.getItem('ua_customer_qrToken') || '';
+    this.accountType  = sessionStorage.getItem('ua_customer_accountType') || 'CONJUNTA';
+    this.clientName   = sessionStorage.getItem('ua_customer_clientName') || '';
     
     this.state = {
       cart: JSON.parse(sessionStorage.getItem('ua_customer_cart') || '[]'),
@@ -109,7 +111,7 @@ export class CartView extends Component {
           <button class="btn-back-menu" id="btn-back">← Menú</button>
           <div>
             <h2 class="font-bold" style="font-size: 1.25rem; color: var(--pub-text);">Tu Pedido</h2>
-            <p class="text-xs text-secondary">Mesa ${this.tableId.replace('mesa-', '')} · ${this.accountType === 'CONJUNTA' ? 'Cuenta Conjunta' : `Cuenta Separada (${this.clientName})`}</p>
+            <p class="text-xs text-secondary">Mesa: ${this.tableId.replace(/^[a-z]+-/i, '')} · ${this.accountType === 'CONJUNTA' ? 'Cuenta Conjunta' : `Cuenta Separada (${this.clientName})`}</p>
           </div>
         </div>
 
@@ -167,7 +169,11 @@ export class CartView extends Component {
 
   bindCartEvents(root) {
     root.querySelector('#btn-back')?.addEventListener('click', () => {
-      window.location.hash = `/customer/menu/${this.companyId}/${this.branchId}/${this.tableId}`;
+      // Navigate back using the secure qrToken URL to preserve URL opacity
+      const backUrl = this.qrToken
+        ? `/customer/menu/${this.companyId}/${this.branchId}/${this.qrToken}`
+        : `/customer/menu/${this.companyId}/${this.branchId}/${this.tableId}`;
+      window.location.hash = backUrl;
     });
 
     const notesArea = root.querySelector('#order-notes');

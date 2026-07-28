@@ -23,13 +23,14 @@ export class MenuView extends Component {
       this.companyId = params.companyId || sessionStorage.getItem('ua_customer_companyId') || '';
     }
     this.branchId = params.branchId || sessionStorage.getItem('ua_customer_branchId') || 'main';
-    this.tableId = params.tableId || sessionStorage.getItem('ua_customer_tableId') || '';
 
-    // Default tableId fallback
-    if (!this.tableId) this.tableId = 'general';
+    // qrToken comes from the URL (opaque UUID); tableId is resolved from DB.
+    // If no qrToken in params, fall back to existing session (e.g. refreshing page).
+    this.qrToken = params.qrToken || null;
+    this.tableId = sessionStorage.getItem('ua_customer_tableId') || '';
+
     if (this.companyId) sessionStorage.setItem('ua_customer_companyId', this.companyId);
-    if (this.branchId) sessionStorage.setItem('ua_customer_branchId', this.branchId);
-    if (this.tableId) sessionStorage.setItem('ua_customer_tableId', this.tableId);
+    if (this.branchId)  sessionStorage.setItem('ua_customer_branchId', this.branchId);
 
     // Auto-default accountType for non-restaurant scans or general locations
     let savedAccountType = sessionStorage.getItem('ua_customer_accountType');
@@ -75,13 +76,84 @@ export class MenuView extends Component {
       return root;
     }
 
+    // If we received a qrToken in the URL, resolve it to a real tableId first.
+    if (this.qrToken) {
+      this._resolveQRToken(root);
+    } else if (this.tableId) {
+      // Session already has a valid tableId (page refresh / back navigation)
+      this._continueMount(root);
+    } else {
+      this._renderInvalidToken(root);
+    }
+
+    return root;
+  }
+
+  /**
+   * Resolve the opaque qrToken against the qr_codes collection in Firestore.
+   * If found, persist the real tableId to session and continue mounting.
+   * If not found (invalid / tampered token), block access with an error screen.
+   * @private
+   */
+  async _resolveQRToken(root) {
+    try {
+      root.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
+          <p class="text-secondary text-sm">Verificando acceso a la mesa…</p>
+        </div>
+      `;
+
+      const qrData = await FirestoreService.readPath(`${this.companyId}/qr_codes/${this.qrToken}`);
+
+      if (!qrData || !qrData.tableId) {
+        this._renderInvalidToken(root);
+        return;
+      }
+
+      // Token is valid — persist the real tableId for all downstream views
+      this.tableId = qrData.tableId;
+      sessionStorage.setItem('ua_customer_tableId', this.tableId);
+      sessionStorage.setItem('ua_customer_qrToken', this.qrToken);
+
+      // Auto-default accountType for general locations
+      let savedAccountType = sessionStorage.getItem('ua_customer_accountType');
+      if (!savedAccountType && (this.tableId === 'general' || this.tableId.includes('zona') || this.tableId.includes('habitacion'))) {
+        savedAccountType = 'CONJUNTA';
+        sessionStorage.setItem('ua_customer_accountType', 'CONJUNTA');
+        this.state.accountType = 'CONJUNTA';
+      }
+
+      this._continueMount(root);
+    } catch (e) {
+      console.error('[MenuView] QR token resolution failed:', e);
+      this._renderInvalidToken(root);
+    }
+  }
+
+  /** Render a user-friendly invalid-token error. @private */
+  _renderInvalidToken(root) {
+    root.innerHTML = `
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
+          <div style="font-size: 3rem; margin-bottom: 15px;">🔒</div>
+          <h3 class="font-bold text-lg">Acceso Inválido</h3>
+          <p class="text-xs text-secondary mt-2">
+            Este código QR no es válido o ya no está disponible.<br>
+            Por favor escanea el código QR de tu mesa nuevamente.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  /** Continue normal mount flow after tableId is known. @private */
+  _continueMount(root) {
+    if (!this.tableId) this.tableId = 'general';
     if (!this.state.accountType) {
       this.renderSetupScreen(root);
     } else {
       this.loadMenuData(root);
     }
-
-    return root;
   }
 
   // 1. Initial screen: choose account type (joint or separate)

@@ -12,11 +12,12 @@ import { getBusinessCategory } from '../../../config/business-types.config.js';
 export class OrderStatusView extends Component {
   constructor(params = {}) {
     super(params);
-    this.companyId = sessionStorage.getItem('ua_customer_companyId') || '';
-    this.tableId = sessionStorage.getItem('ua_customer_tableId') || '';
-    this.orderId = sessionStorage.getItem('ua_customer_orderId') || '';
-    this.accountType = sessionStorage.getItem('ua_customer_accountType') || 'CONJUNTA';
-    this.clientName = sessionStorage.getItem('ua_customer_clientName') || '';
+    this.companyId    = sessionStorage.getItem('ua_customer_companyId') || '';
+    this.tableId      = sessionStorage.getItem('ua_customer_tableId') || '';
+    this.orderId      = sessionStorage.getItem('ua_customer_orderId') || '';
+    this.qrToken      = sessionStorage.getItem('ua_customer_qrToken') || '';
+    this.accountType  = sessionStorage.getItem('ua_customer_accountType') || 'CONJUNTA';
+    this.clientName   = sessionStorage.getItem('ua_customer_clientName') || '';
 
     this.state = {
       order: null,
@@ -46,7 +47,10 @@ export class OrderStatusView extends Component {
         </div>
       `;
       root.querySelector('#btn-err-back')?.addEventListener('click', () => {
-        window.location.hash = `/customer/menu/${this.companyId}/main/${this.tableId}`;
+        const backUrl = this.qrToken
+          ? `/customer/menu/${this.companyId}/main/${this.qrToken}`
+          : `/customer/menu/${this.companyId}/main/${this.tableId}`;
+        window.location.hash = backUrl;
       });
       return root;
     }
@@ -120,7 +124,10 @@ export class OrderStatusView extends Component {
         </div>
       `;
       root.querySelector('#btn-not-found-back')?.addEventListener('click', () => {
-        window.location.hash = `/customer/menu/${this.companyId}/main/${this.tableId}`;
+        const backUrl = this.qrToken
+          ? `/customer/menu/${this.companyId}/main/${this.qrToken}`
+          : `/customer/menu/${this.companyId}/main/${this.tableId}`;
+        window.location.hash = backUrl;
       });
       return;
     }
@@ -327,7 +334,10 @@ export class OrderStatusView extends Component {
 
   bindEvents(root) {
     root.querySelector('#btn-order-more')?.addEventListener('click', () => {
-      window.location.hash = `/customer/menu/${this.companyId}/main/${this.tableId}`;
+      const backUrl = this.qrToken
+        ? `/customer/menu/${this.companyId}/main/${this.qrToken}`
+        : `/customer/menu/${this.companyId}/main/${this.tableId}`;
+      window.location.hash = backUrl;
     });
 
     root.querySelector('#btn-ask-bill')?.addEventListener('click', () => this.askForBill());

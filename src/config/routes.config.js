@@ -134,7 +134,9 @@ export const ROUTES = [
 
   // Customer routes — accessed via QR code, no login needed (QR token auth in Phase 5)
   { path: '/customer/menu', view: lazyView(getCustomerMenuView), middlewares: [] },
-  { path: '/customer/menu/:companyId/:branchId/:tableId', view: lazyView(getCustomerMenuView), middlewares: [] },
+  // :qrToken is an opaque UUID that the server resolves to a real tableId.
+  // Clients cannot enumerate other tables by changing the token in the URL.
+  { path: '/customer/menu/:companyId/:branchId/:qrToken', view: lazyView(getCustomerMenuView), middlewares: [] },
   { path: '/customer/cart', view: lazyView(getCustomerCartView), middlewares: [] },
   { path: '/customer/order-status', view: lazyView(getOrderStatusView), middlewares: [] },
   { path: '/customer/item-info/:companyId/:itemId', view: lazyView(getItemInfoView), middlewares: [] },

@@ -15,6 +15,7 @@ import { db } from '../../../config/firebase.config.js';
 import { ref, get, update, push, set, remove, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { generateQRToken } from '../../../utils/helpers.js';
 
 export class QRCodesView extends Component {
   constructor(params = {}) {
@@ -30,7 +31,7 @@ export class QRCodesView extends Component {
     const category = getBusinessCategory(this.currentCompany.businessType || '');
     this.isRestaurantMode = (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA');
 
-    // URLs setups
+    // URLs setups — base URL without table segment (token appended per-table at generation time)
     const rawBaseUrl = `${window.location.origin}/#/customer/menu/${this.companyId}/${this.branchId}/`;
     this.baseMenuUrl = encodeURI(rawBaseUrl);
 
@@ -240,7 +241,7 @@ export class QRCodesView extends Component {
       <div class="card p-4 text-center hover-lift" style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
         <div id="saved-qr-canvas-${qr.id}" style="width:180px;height:180px;display:flex;align-items:center;justify-content:center;background:white;border-radius:var(--radius-sm);overflow:hidden;padding:4px;"></div>
         <h4 style="font-weight:700;font-size:0.9rem;margin:0;">${qr.label || qr.tableId}</h4>
-        <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">${qr.url}</p>
+        <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">🔑 Token: ${(qr.qrToken || qr.id || '').slice(0,8)}…</p>
         <div style="display:flex;gap:6px;width:100%;">
           <button class="btn btn-secondary btn-sm" style="flex:1;font-size:0.72rem;" onclick="navigator.clipboard.writeText('${qr.url}').then(()=>alert('URL copiada'))">📋 Copiar</button>
           <button class="btn btn-sm btn-delete-saved-qr" data-id="${qr.id}" style="flex:0.6;font-size:0.72rem;background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2);">🗑</button>
@@ -285,16 +286,24 @@ export class QRCodesView extends Component {
 
     let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--space-4);" id="qr-cards-grid">`;
     for (let i = 1; i <= count; i++) {
+      // Each table gets a cryptographically secure random token — clients cannot
+      // enumerate other tables by incrementing a number in the URL.
+      const qrToken = generateQRToken();
       const tableId = `${tableType}-${prefix}${i}`;
       const label   = `${typeLabel} ${prefix}${i}`;
-      const rawUrl  = `${baseUrl}/${tableId}`;
+      // The URL uses the opaque qrToken instead of the predictable tableId
+      const rawUrl  = `${baseUrl}/${qrToken}`;
       const url     = encodeURI(rawUrl);
       html += `
-        <div class="card p-4 text-center hover-lift" data-table-id="${tableId}" data-url="${url}" data-label="${label}"
+        <div class="card p-4 text-center hover-lift"
+             data-table-id="${tableId}"
+             data-qr-token="${qrToken}"
+             data-url="${url}"
+             data-label="${label}"
              style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
           <div id="qr-canvas-${i}" style="width:180px;height:180px;display:flex;align-items:center;justify-content:center;background:white;border-radius:var(--radius-sm);overflow:hidden;padding:4px;"></div>
           <h4 style="font-weight:700;font-size:1rem;margin:0;">${label}</h4>
-          <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">${url}</p>
+          <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">🔑 Token: ${qrToken.slice(0,8)}…</p>
           <button class="btn btn-secondary btn-sm" style="width:100%;font-size:0.75rem;" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('URL copiada: ${label}'))">📋 Copiar URL</button>
         </div>`;
     }
@@ -325,17 +334,25 @@ export class QRCodesView extends Component {
     const cards = grid.querySelectorAll('.card');
     let saved = 0;
     for (let card of cards) {
-      const tableId = card.getAttribute('data-table-id');
-      const url     = card.getAttribute('data-url');
-      const label   = card.getAttribute('data-label');
+      const tableId  = card.getAttribute('data-table-id');
+      const qrToken  = card.getAttribute('data-qr-token');
+      const url      = card.getAttribute('data-url');
+      const label    = card.getAttribute('data-label');
+
+      if (!qrToken) {
+        console.warn('[QRCodesView] Card missing qr-token attribute, skipping:', tableId);
+        continue;
+      }
 
       try {
+        // Save using qrToken as the document ID for O(1) lookup during customer scan
         await FirestoreService.create('qr_codes', {
           tableId,
+          qrToken,
           url,
           label,
           createdAt: Date.now()
-        });
+        }, qrToken);
         saved++;
       } catch(e) {
         console.warn('[QRCodesView] Could not save QR:', tableId, e.message);

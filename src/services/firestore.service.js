@@ -1187,6 +1187,20 @@ export class FirestoreService {
   }
 
   /**
+   * Read data at any arbitrary RTDB path (one-time fetch, no auth required).
+   * Used for public QR token resolution and similar unauthenticated reads.
+   * @param {string} path - Absolute RTDB path
+   * @returns {Promise<Object|null>} The value at that path, or null if not found
+   */
+  static async readPath(path) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const pathRef = ref(db, path);
+    const snap = await get(pathRef);
+    return snap.exists() ? snap.val() : null;
+  }
+
+  /**
    * Update data at any arbitrary RTDB path (merge, non-destructive).
    * @param {string} path
    * @param {Object} data
