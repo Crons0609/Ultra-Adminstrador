@@ -205,9 +205,6 @@ export class QRCodesView extends Component {
     element.querySelector('#btn-delete-all-saved-qrs')?.addEventListener('click', () => this.deleteRestaurantAllSavedQRs());
 
     this.subscribeToSavedRestaurantQRs(element);
-    
-    // Auto-generate initial set of QRs for immediate preview
-    setTimeout(() => this.generateRestaurantQRCodes(element), 100);
   }
 
   subscribeToSavedRestaurantQRs(element) {
@@ -324,12 +321,14 @@ export class QRCodesView extends Component {
   async saveRestaurantQRsToDB(element) {
     const grid = element.querySelector('#qr-cards-grid');
     if (!grid || grid.children.length === 0) {
-      NotificationService.warn('Primero genera los códigos QR antes de guardarlos.');
+      NotificationService.warn('Primero presiona "Generar Códigos QR" antes de guardarlos.');
       return;
     }
 
     const btn = element.querySelector('#btn-save-qrs');
+    const cardBtn = element.querySelector('#btn-save-qrs-card');
     if (btn) { btn.disabled = true; btn.textContent = '💾 Guardando...'; }
+    if (cardBtn) { cardBtn.disabled = true; cardBtn.textContent = '💾 Guardando...'; }
 
     const cards = grid.querySelectorAll('.card');
     let saved = 0;
@@ -360,6 +359,20 @@ export class QRCodesView extends Component {
     }
 
     if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar QR en DB'; }
+    if (cardBtn) { cardBtn.disabled = false; cardBtn.textContent = '💾 Guardar QR en DB'; }
+
+    // Clear the preview draft container so that only the official saved QRs section is visible
+    const container = element.querySelector('#qr-grid-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-secondary" id="qr-empty-state">
+          <span style="font-size: 3rem; display: block; margin-bottom: 12px;">✅</span>
+          <p class="font-semibold" style="color:var(--color-success);">¡Códigos QR guardados con éxito!</p>
+          <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">Los códigos QR oficiales están almacenados arriba en la base de datos.</p>
+        </div>
+      `;
+    }
+
     NotificationService.success(`${saved} códigos QR guardados permanentemente en la base de datos.`);
   }
 
@@ -381,9 +394,10 @@ export class QRCodesView extends Component {
   }
 
   printRestaurantAllQR(element) {
-    const grid = element.querySelector('#qr-cards-grid');
+    // Prefer generated preview grid if active, otherwise print saved QRs grid
+    const grid = element.querySelector('#qr-cards-grid') || element.querySelector('#saved-qr-grid');
     if (!grid || grid.children.length === 0) {
-      NotificationService.warn('Primero genera los códigos QR antes de imprimir.');
+      NotificationService.warn('Primero genera o guarda códigos QR antes de imprimir.');
       return;
     }
     const printArea = document.createElement('div');
