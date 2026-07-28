@@ -148,9 +148,14 @@ export class QRCodesView extends Component {
             <label class="form-label" for="qr-prefix">Prefijo del número</label>
             <input type="text" id="qr-prefix" class="input input-md" value="" placeholder="Ej. A, VIP, Sin prefijo..." />
           </div>
-          <div class="form-group">
-            <label class="form-label" for="qr-base-url" style="font-size:0.75rem;">URL base del menú</label>
+          <div class="form-group" style="font-size:0.75rem;">
+            <label class="form-label" for="qr-base-url">URL base del menú</label>
             <input type="text" id="qr-base-url" class="input input-md" value="${this.baseMenuUrl}" style="font-size:0.72rem;" />
+          </div>
+          <div style="grid-column: 1 / -1; margin-top: var(--space-2); display: flex; gap: var(--space-3); flex-wrap: wrap;">
+            <button class="btn btn-primary btn-md" id="btn-generate-qr-card" style="font-weight: 700;">⚡ Generar Códigos QR</button>
+            <button class="btn btn-success btn-md" id="btn-save-qrs-card" style="background:#34d399;border:none;color:#000;font-weight:700;">💾 Guardar QR en DB</button>
+            <button class="btn btn-secondary btn-md" id="btn-print-all-card">🖨️ Imprimir Todo</button>
           </div>
         </div>
       </div>
@@ -182,13 +187,26 @@ export class QRCodesView extends Component {
       </div>
     `;
 
-    // Action buttons inside layout header
-    document.querySelector('#btn-generate-qr')?.addEventListener('click', () => this.generateRestaurantQRCodes(element));
-    document.querySelector('#btn-save-qrs')?.addEventListener('click',    () => this.saveRestaurantQRsToDB(element));
-    document.querySelector('#btn-print-all')?.addEventListener('click',   () => this.printRestaurantAllQR(element));
+    // Action button listeners bound directly on element (header actions and card buttons)
+    const onGenerate = () => this.generateRestaurantQRCodes(element);
+    const onSave     = () => this.saveRestaurantQRsToDB(element);
+    const onPrint    = () => this.printRestaurantAllQR(element);
+
+    element.querySelector('#btn-generate-qr')?.addEventListener('click', onGenerate);
+    element.querySelector('#btn-generate-qr-card')?.addEventListener('click', onGenerate);
+
+    element.querySelector('#btn-save-qrs')?.addEventListener('click', onSave);
+    element.querySelector('#btn-save-qrs-card')?.addEventListener('click', onSave);
+
+    element.querySelector('#btn-print-all')?.addEventListener('click', onPrint);
+    element.querySelector('#btn-print-all-card')?.addEventListener('click', onPrint);
+
     element.querySelector('#btn-delete-all-saved-qrs')?.addEventListener('click', () => this.deleteRestaurantAllSavedQRs());
 
     this.subscribeToSavedRestaurantQRs(element);
+    
+    // Auto-generate initial set of QRs for immediate preview
+    setTimeout(() => this.generateRestaurantQRCodes(element), 100);
   }
 
   subscribeToSavedRestaurantQRs(element) {
@@ -1247,6 +1265,11 @@ export class QRCodesView extends Component {
         safeUrl = encodeURI(url);
       }
 
+      if (typeof window.qrcode !== 'function') {
+        this._renderFallbackQR(container, safeUrl);
+        return;
+      }
+
       const qr = window.qrcode(0, 'H');
       qr.addData(safeUrl);
       qr.make();
@@ -1316,6 +1339,11 @@ export class QRCodesView extends Component {
     container.innerHTML = svgTag;
     const svg = container.querySelector('svg');
     if (svg) { svg.style.width = '100%'; svg.style.height = '100%'; svg.style.display = 'block'; }
+  }
+
+  _renderFallbackQR(container, safeUrl) {
+    const encoded = encodeURIComponent(safeUrl);
+    container.innerHTML = `<img src="https://quickchart.io/qr?text=${encoded}&size=180&margin=1" alt="QR Code" style="width:100%;height:100%;object-fit:contain;" onerror="this.onerror=null;this.src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}';" />`;
   }
 
   async loadQRLibrary() {
