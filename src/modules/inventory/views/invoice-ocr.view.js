@@ -565,14 +565,14 @@ export class InvoiceOCRView extends Component {
 
   renderTabsNav() {
     return `
-      <div class="d-flex gap-2 border-b mb-4 pb-2">
-        <button id="tab-btn-digitize" class="btn ${this.state.activeTab === 'digitize' ? 'btn-primary' : 'btn-secondary'} btn-sm">
+      <div class="d-flex gap-2 border-b mb-4 pb-2 overflow-x-auto touch-scroll flex-nowrap" style="-webkit-overflow-scrolling: touch;">
+        <button id="tab-btn-digitize" class="btn ${this.state.activeTab === 'digitize' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
           📄 Cargar / Digitalizar
         </button>
-        <button id="tab-btn-history" class="btn ${this.state.activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm">
+        <button id="tab-btn-history" class="btn ${this.state.activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
           📜 Historial de Facturas
         </button>
-        <button id="tab-btn-stats" class="btn ${this.state.activeTab === 'stats' ? 'btn-primary' : 'btn-secondary'} btn-sm">
+        <button id="tab-btn-stats" class="btn ${this.state.activeTab === 'stats' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
           📊 Indicadores & Márgenes
         </button>
       </div>
@@ -587,10 +587,10 @@ export class InvoiceOCRView extends Component {
     return `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Column 1: Upload & Image Filters -->
-        <div class="card p-5">
+        <div class="card p-4 sm:p-5">
           <h3 class="text-md font-bold mb-3">1. Subir Factura o Fotografía</h3>
           
-          <div id="invoice-dropzone" class="border-dashed border-2 p-6 text-center rounded-lg mb-4 cursor-pointer hover:bg-slate-800 transition">
+          <div id="invoice-dropzone" class="border-dashed border-2 p-4 sm:p-6 text-center rounded-lg mb-4 cursor-pointer hover:bg-slate-800 transition">
             <input type="file" id="invoice-file-input" accept="image/*,.pdf" class="hidden" />
             <label for="invoice-file-input" class="cursor-pointer">
               <div class="text-3xl mb-2">📸 / 📁</div>
@@ -631,19 +631,19 @@ export class InvoiceOCRView extends Component {
         <!-- Column 2 & 3: Extracted Header & Line Items Table -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Supplier Header Form -->
-          <div class="card p-5">
-            <div class="d-flex justify-between align-items-center mb-3">
+          <div class="card p-4 sm:p-5">
+            <div class="d-flex justify-between align-items-center mb-3 flex-wrap gap-2">
               <h3 class="text-md font-bold">2. Datos Extraídos del Proveedor</h3>
               ${this.state.hasScannedData ? '<span class="badge badge-success text-xs">✨ OCR Completado</span>' : ''}
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
               <div>
                 <label class="font-medium text-secondary d-flex justify-between">
                   Proveedor
                   ${(this.state.confidenceScores.supplierName || 100) < 80 ? '<span class="badge badge-warning text-xs">⚠️ Baja Confianza</span>' : ''}
                 </label>
-                <input type="text" class="form-input text-xs w-full mt-1" value="${this.state.supplierName}" placeholder="Nombre de la empresa" />
+                <input type="text" class="input input-sm text-xs w-full mt-1" value="${this.state.supplierName}" placeholder="Nombre de la empresa" />
               </div>
 
               <div>
@@ -651,7 +651,7 @@ export class InvoiceOCRView extends Component {
                   RUC / Identificación Fiscal
                   ${(this.state.confidenceScores.ruc || 100) < 80 ? '<span class="badge badge-warning text-xs">⚠️ Baja Confianza</span>' : ''}
                 </label>
-                <input type="text" class="form-input text-xs w-full mt-1 font-mono" value="${this.state.ruc}" placeholder="Ej. 20123456789" />
+                <input type="text" class="input input-sm text-xs w-full mt-1 font-mono" value="${this.state.ruc}" placeholder="Ej. 20123456789" />
               </div>
 
               <div>
@@ -659,29 +659,29 @@ export class InvoiceOCRView extends Component {
                   Nº Factura
                   ${(this.state.confidenceScores.invoiceNumber || 100) < 80 ? '<span class="badge badge-warning text-xs">⚠️ Baja Confianza</span>' : ''}
                 </label>
-                <input type="text" class="form-input text-xs w-full mt-1 font-mono" value="${this.state.invoiceNumber}" placeholder="Ej. F001-0029" />
+                <input type="text" class="input input-sm text-xs w-full mt-1 font-mono" value="${this.state.invoiceNumber}" placeholder="Ej. F001-0029" />
               </div>
 
               <div>
                 <label class="font-medium text-secondary">Fecha de Emisión</label>
-                <input type="date" class="form-input text-xs w-full mt-1" value="${this.state.invoiceDate}" />
+                <input type="date" class="input input-sm text-xs w-full mt-1" value="${this.state.invoiceDate}" />
               </div>
 
               <div>
                 <label class="font-medium text-secondary">Teléfono</label>
-                <input type="text" class="form-input text-xs w-full mt-1" value="${this.state.phone}" />
+                <input type="text" class="input input-sm text-xs w-full mt-1" value="${this.state.phone}" />
               </div>
 
               <div>
                 <label class="font-medium text-secondary">Correo Electrónico</label>
-                <input type="email" class="form-input text-xs w-full mt-1" value="${this.state.email}" />
+                <input type="email" class="input input-sm text-xs w-full mt-1" value="${this.state.email}" />
               </div>
             </div>
           </div>
 
           <!-- Items Table -->
-          <div class="card p-5">
-            <div class="d-flex justify-between align-items-center mb-3">
+          <div class="card p-4 sm:p-5">
+            <div class="d-flex justify-between align-items-center mb-3 flex-wrap gap-2">
               <div>
                 <h3 class="text-md font-bold">3. Tabla Editable de Productos Detectados</h3>
                 <p class="text-xs text-secondary">Define márgenes de ganancia y verifica precios antes de importar.</p>
@@ -689,46 +689,46 @@ export class InvoiceOCRView extends Component {
               <button class="btn btn-secondary btn-xs" id="btn-add-item-row">➕ Agregar Fila</button>
             </div>
 
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs text-left">
+            <div class="overflow-x-auto touch-scroll border rounded-lg" style="-webkit-overflow-scrolling: touch;">
+              <table class="w-full text-xs text-left" style="min-width: 680px;">
                 <thead>
-                  <tr class="border-b text-secondary">
-                    <th class="py-2">Producto</th>
-                    <th class="py-2">SKU</th>
-                    <th class="py-2 w-16">Cant.</th>
-                    <th class="py-2 w-24">Costo Unit.</th>
-                    <th class="py-2 w-20">Margen %</th>
-                    <th class="py-2 w-24">P. Venta</th>
-                    <th class="py-2 w-24">Subtotal</th>
-                    <th class="py-2 text-right">Acción</th>
+                  <tr class="border-b text-secondary bg-slate-900/50">
+                    <th class="py-2.5 px-3">Producto</th>
+                    <th class="py-2.5 px-2 w-28">SKU</th>
+                    <th class="py-2.5 px-2 w-20 text-center">Cant.</th>
+                    <th class="py-2.5 px-2 w-24 text-right">Costo Unit.</th>
+                    <th class="py-2.5 px-2 w-20 text-center">Margen %</th>
+                    <th class="py-2.5 px-2 w-24 text-right">P. Venta</th>
+                    <th class="py-2.5 px-2 w-24 text-right">Subtotal</th>
+                    <th class="py-2.5 px-2 text-center w-12">Acción</th>
                   </tr>
                 </thead>
                 <tbody id="items-table-body">
                   ${this.state.items.map(item => `
                     <tr data-item-id="${item.id}" class="border-b hover:bg-slate-900 transition">
-                      <td class="py-2 pr-2">
-                        <input type="text" data-field="name" class="form-input text-xs w-full" value="${item.name}" />
+                      <td class="py-2 px-3">
+                        <input type="text" data-field="name" class="input input-sm text-xs w-full" value="${item.name}" />
                         ${item.confidence < 80 ? '<span class="text-amber-400 text-[10px]">⚠️ Confianza OCR: ' + item.confidence + '%</span>' : ''}
                       </td>
-                      <td class="py-2 pr-2">
-                        <input type="text" data-field="sku" class="form-input text-xs w-full font-mono" value="${item.sku}" />
+                      <td class="py-2 px-2">
+                        <input type="text" data-field="sku" class="input input-sm text-xs w-full font-mono" value="${item.sku}" />
                       </td>
-                      <td class="py-2 pr-2">
-                        <input type="number" data-field="quantity" class="form-input text-xs w-full text-center" value="${item.quantity}" min="1" step="1" />
+                      <td class="py-2 px-2">
+                        <input type="number" data-field="quantity" class="input input-sm text-xs w-full text-center" value="${item.quantity}" min="1" step="1" />
                       </td>
-                      <td class="py-2 pr-2">
-                        <input type="number" data-field="costPrice" class="form-input text-xs w-full text-right" value="${item.costPrice.toFixed(2)}" step="0.1" />
+                      <td class="py-2 px-2">
+                        <input type="number" data-field="costPrice" class="input input-sm text-xs w-full text-right" value="${item.costPrice.toFixed(2)}" step="0.1" />
                       </td>
-                      <td class="py-2 pr-2">
-                        <input type="number" data-field="profitMargin" class="form-input text-xs w-full text-center text-emerald-400 font-bold" value="${item.profitMargin}" min="0" step="5" />
+                      <td class="py-2 px-2">
+                        <input type="number" data-field="profitMargin" class="input input-sm text-xs w-full text-center text-emerald-400 font-bold" value="${item.profitMargin}" min="0" step="5" />
                       </td>
-                      <td class="py-2 pr-2 font-bold text-emerald-400 td-selling-price">
+                      <td class="py-2 px-2 font-bold text-emerald-400 text-right td-selling-price">
                         S/ ${(item.sellingPrice || 0).toFixed(2)}
                       </td>
-                      <td class="py-2 pr-2 font-semibold td-subtotal">
+                      <td class="py-2 px-2 font-semibold text-right td-subtotal">
                         S/ ${(item.subtotal || 0).toFixed(2)}
                       </td>
-                      <td class="py-2 text-right">
+                      <td class="py-2 px-2 text-center">
                         <button class="btn btn-secondary btn-xs btn-delete-row text-red-400">🗑️</button>
                       </td>
                     </tr>
@@ -738,13 +738,13 @@ export class InvoiceOCRView extends Component {
             </div>
 
             <!-- Totals Footer Summary -->
-            <div class="d-flex justify-between align-items-center mt-4 pt-3 border-t">
-              <div class="d-flex gap-2">
-                <button class="btn btn-secondary btn-sm" id="btn-clear-form">🧹 Limpiar</button>
-                <button class="btn btn-primary btn-sm" id="btn-confirm-import">📥 Confirmar e Importar al Inventario</button>
+            <div class="d-flex flex-column sm:flex-row justify-between align-items-stretch sm:align-items-center gap-3 mt-4 pt-3 border-t">
+              <div class="d-flex flex-column sm:flex-row gap-2">
+                <button class="btn btn-secondary btn-sm w-full sm:w-auto" id="btn-clear-form">🧹 Limpiar</button>
+                <button class="btn btn-primary btn-sm w-full sm:w-auto" id="btn-confirm-import">📥 Confirmar e Importar al Inventario</button>
               </div>
 
-              <div class="text-right text-xs space-y-1">
+              <div class="text-left sm:text-right text-xs space-y-1 bg-slate-900/60 p-3 sm:p-0 rounded-lg">
                 <div>Subtotal: <span id="summary-subtotal" class="font-semibold">S/ ${subtotal.toFixed(2)}</span></div>
                 <div>IGV (18%): <span id="summary-tax" class="text-secondary">S/ ${tax.toFixed(2)}</span></div>
                 <div class="text-sm font-bold text-emerald-400">Total Factura: <span id="summary-total">S/ ${grandTotal.toFixed(2)}</span></div>
@@ -758,21 +758,24 @@ export class InvoiceOCRView extends Component {
 
   renderMatchModal() {
     return `
-      <div class="fixed inset-0 bg-black/80 d-flex align-items-center justify-center p-4 z-50">
-        <div class="card max-w-3xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-          <div class="d-flex justify-between align-items-center border-b pb-3">
-            <h3 class="text-lg font-bold">🔍 Validación y Resolución de Productos en Inventario</h3>
-            <span class="text-xs text-secondary">Evita duplicados en tu base de datos</span>
+      <div class="modal-overlay">
+        <div class="modal-container modal-lg p-4 sm:p-6 space-y-4">
+          <div class="modal-header px-0 pt-0 pb-3">
+            <div>
+              <h3 class="modal-title text-base sm:text-lg">🔍 Validación y Resolución de Productos</h3>
+              <span class="text-xs text-secondary">Evita duplicados en tu base de datos</span>
+            </div>
+            <button class="modal-close" id="btn-cancel-match">&times;</button>
           </div>
 
           <p class="text-xs text-secondary">
             El sistema ha comparado los productos escaneados con tu inventario actual. Selecciona la acción deseada para cada producto:
           </p>
 
-          <div class="space-y-3">
+          <div class="modal-body px-0 space-y-3">
             ${this.state.matchedProducts.map((m, idx) => `
-              <div class="border rounded p-3 text-xs bg-slate-900 space-y-2">
-                <div class="d-flex justify-between font-bold">
+              <div class="border rounded-lg p-3 text-xs bg-slate-900 space-y-2">
+                <div class="d-flex flex-column sm:flex-row justify-between font-bold gap-1">
                   <span>${m.scannedItem.name} (SKU: ${m.scannedItem.sku})</span>
                   <span class="text-emerald-400">Cant: ${m.scannedItem.quantity} | Costo: S/ ${m.scannedItem.costPrice.toFixed(2)}</span>
                 </div>
@@ -786,7 +789,7 @@ export class InvoiceOCRView extends Component {
 
                 <div>
                   <label class="font-medium text-secondary">Acción al importar:</label>
-                  <select data-index="${idx}" class="select-match-action form-input text-xs w-full mt-1">
+                  <select data-index="${idx}" class="select-match-action select select-sm text-xs w-full mt-1">
                     ${m.existingProduct ? `
                       <option value="UPDATE_STOCK_AND_PRICE" selected>🟢 [RECOMENDADO] Sumar Stock (+${m.scannedItem.quantity}) y Actualizar Precios</option>
                       <option value="ONLY_UPDATE_COST">🟡 Solo Actualizar Costo de Adquisición (Mantener Stock Actual)</option>
@@ -800,9 +803,9 @@ export class InvoiceOCRView extends Component {
             `).join('')}
           </div>
 
-          <div class="d-flex justify-end gap-2 pt-3 border-t">
-            <button class="btn btn-secondary btn-sm" id="btn-cancel-match">Cancelar</button>
-            <button class="btn btn-success btn-sm font-bold" id="btn-final-confirm-import">✅ Procesar Importación Definitiva</button>
+          <div class="modal-footer px-0 pb-0 pt-3 border-t">
+            <button class="btn btn-secondary btn-sm w-full sm:w-auto" id="btn-cancel-match">Cancelar</button>
+            <button class="btn btn-success btn-sm font-bold w-full sm:w-auto" id="btn-final-confirm-import">✅ Procesar Importación Definitiva</button>
           </div>
         </div>
       </div>
@@ -811,16 +814,16 @@ export class InvoiceOCRView extends Component {
 
   renderHistoryTab() {
     return `
-      <div class="card p-5 space-y-4">
-        <div class="d-flex justify-between align-items-center">
+      <div class="card p-4 sm:p-5 space-y-4">
+        <div class="d-flex flex-column sm:flex-row justify-between align-items-start sm:align-items-center gap-3">
           <div>
             <h3 class="text-md font-bold">Historial de Facturas de Proveedores Importadas</h3>
             <p class="text-xs text-secondary">Consulta compras pasadas, estado de procesamiento y audit logs.</p>
           </div>
 
-          <div class="d-flex gap-2">
-            <input type="text" id="history-search" class="form-input text-xs" placeholder="Buscar proveedor o factura..." />
-            <select id="history-filter-status" class="form-input text-xs">
+          <div class="d-flex flex-column sm:flex-row gap-2 w-full sm:w-auto">
+            <input type="text" id="history-search" class="input input-sm text-xs w-full sm:w-auto" placeholder="Buscar proveedor o factura..." />
+            <select id="history-filter-status" class="select select-sm text-xs w-full sm:w-auto">
               <option value="ALL">Todos los Estados</option>
               <option value="Confirmada">Confirmadas</option>
               <option value="Pendiente">Pendientes</option>
@@ -828,17 +831,17 @@ export class InvoiceOCRView extends Component {
           </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left">
+        <div class="overflow-x-auto touch-scroll border rounded-lg" style="-webkit-overflow-scrolling: touch;">
+          <table class="w-full text-xs text-left" style="min-width: 650px;">
             <thead>
-              <tr class="border-b text-secondary">
-                <th class="py-2">Fecha</th>
-                <th class="py-2">Nº Factura</th>
-                <th class="py-2">Proveedor</th>
-                <th class="py-2">Monto Total</th>
-                <th class="py-2">Items</th>
-                <th class="py-2">Estado</th>
-                <th class="py-2">Importado Por</th>
+              <tr class="border-b text-secondary bg-slate-900/50">
+                <th class="py-2.5 px-3">Fecha</th>
+                <th class="py-2.5 px-3">Nº Factura</th>
+                <th class="py-2.5 px-3">Proveedor</th>
+                <th class="py-2.5 px-3 text-right">Monto Total</th>
+                <th class="py-2.5 px-3 text-center">Items</th>
+                <th class="py-2.5 px-3 text-center">Estado</th>
+                <th class="py-2.5 px-3">Importado Por</th>
               </tr>
             </thead>
             <tbody id="history-tbody">

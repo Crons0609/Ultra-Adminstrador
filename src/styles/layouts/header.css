@@ -1,10 +1,11 @@
 /**
  * @file header.css
- * @description Premium top header bar with glassmorphism, breadcrumb, user chip, and mobile controls.
+ * @description Premium top header bar — glassmorphism, breadcrumb, user chip, mobile hamburger.
+ * RESPONSIVE: Hamburger shown on <1024px, breadcrumb adapts, actions collapse on mobile.
  */
 
 .header {
-  height: 64px;
+  height: var(--header-height);
   background-color: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   display: flex;
@@ -13,79 +14,79 @@
   padding: 0 var(--space-6);
   position: fixed;
   top: 0;
-  /* Left offset matches sidebar width; collapses to rail width when sidebar is collapsed */
-  left: 264px;
+  left: var(--sidebar-width);
   right: 0;
   z-index: 90;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: left var(--transition-normal);
+  overflow: hidden; /* Prevent child overflow from breaking layout */
 }
 
-/* Adjust header left position when sidebar collapses to rail */
+/* Sidebar collapsed: shrink left offset */
 body.sidebar-collapsed .header {
-  left: 64px;
+  left: var(--sidebar-collapsed-width);
 }
-
-/* On mobile the header spans full width */
-@media (max-width: 768px) {
-  .header {
-    left: 0;
-  }
-  body.sidebar-collapsed .header {
-    left: 0;
-  }
-}
-
 
 /* ─── Left side ─── */
 .header-left {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
 }
 
 .header-breadcrumb {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .header-greeting {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .header-divider {
   color: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
 
 .header-page-title {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Right side ─── */
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 /* Real-time clock */
 .header-clock {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.03em;
-  min-width: 72px;
+  min-width: 66px;
   text-align: right;
+  white-space: nowrap;
 }
 
-/* ─── Hamburger ─── */
+/* ─── Hamburger Menu Toggle ─── */
 .menu-toggle {
   background: transparent;
   border: none;
@@ -97,6 +98,9 @@ body.sidebar-collapsed .header {
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
 }
 .menu-toggle:hover {
   background-color: var(--color-surface-hover);
@@ -114,6 +118,7 @@ body.sidebar-collapsed .header {
   border-radius: var(--radius-md);
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 .header-action:hover {
@@ -132,6 +137,7 @@ body.sidebar-collapsed .header {
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 .header-user-chip:hover {
   background-color: var(--color-surface-hover);
@@ -147,17 +153,19 @@ body.sidebar-collapsed .header {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: white;
+  flex-shrink: 0;
 }
 
 .header-user-name {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-primary);
+  white-space: nowrap;
 }
 
-/* ─── Legacy user-avatar (for sidebar footer) ─── */
+/* ─── Legacy user-avatar ─── */
 .user-avatar {
   width: 32px;
   height: 32px;
@@ -168,31 +176,80 @@ body.sidebar-collapsed .header {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
-/* ─── Responsive ─── */
-@media (max-width: 768px) {
+/* ─── GPS Header Button ─── */
+.gps-header-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.gps-header-btn:hover { background: var(--color-surface-hover); border-color: var(--color-border-hover); }
+.gps-header-btn.active  { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #10b981; }
+.gps-header-btn.inactive { background: rgba(239, 68, 68, 0.08);  border-color: rgba(239, 68, 68, 0.25);  color: #ef4444; }
+
+.gps-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.gps-header-btn.active .gps-dot { animation: pulse-gps-green 1.8s infinite; }
+
+@keyframes pulse-gps-green {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.5; }
+}
+
+/* ─── Tablet + Mobile Responsive (<1024px) ─── */
+@media (max-width: 1023px) {
+  .header {
+    left: 0;
+    padding: 0 var(--space-4);
+  }
+  body.sidebar-collapsed .header {
+    left: 0;
+  }
   .menu-toggle {
     display: flex;
   }
-  .header {
-    padding: 0 var(--space-4);
-  }
   .header-greeting,
-  .header-divider,
+  .header-divider {
+    display: none;
+  }
+}
+
+/* ─── Small Mobile (<640px) ─── */
+@media (max-width: 640px) {
+  .header {
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+  }
+
   .header-clock {
     display: none;
   }
+
   .header-user-name {
     display: none;
   }
   .header-user-chip {
     padding: 4px;
   }
-}
 
-@media (max-width: 640px) {
+  /* Scanner button: icon-only */
   .scanner-toggle-btn span,
   .scanner-toggle-kbd {
     display: none !important;
@@ -203,68 +260,24 @@ body.sidebar-collapsed .header {
     height: 36px;
     border-radius: var(--radius-md);
   }
-}
 
-/* ─── Header GPS Location Button ─── */
-.gps-header-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-}
-
-.gps-header-btn:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-border-hover);
-}
-
-.gps-header-btn.active {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: #10b981;
-}
-
-.gps-header-btn.inactive {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.25);
-  color: #ef4444;
-}
-
-.gps-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.gps-header-btn.active .gps-dot {
-  animation: pulse-gps-green 1.8s infinite;
-}
-
-@keyframes pulse-gps-green {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.4); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@media (max-width: 640px) {
+  /* GPS button: icon-only */
   .gps-header-btn span {
     display: none;
   }
   .gps-header-btn {
     padding: 6px;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     justify-content: center;
     border-radius: var(--radius-md);
   }
 }
 
+/* ─── Extra small (<400px) ─── */
+@media (max-width: 399px) {
+  /* Hide secondary header actions to avoid overflow */
+  .header-action.header-action-secondary {
+    display: none;
+  }
+}

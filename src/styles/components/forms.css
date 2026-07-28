@@ -1,8 +1,10 @@
 /**
  * @file forms.css
- * @description Labels, form groups, switches, checkboxes and basic layout forms.
+ * @description Form groups, labels, checkboxes, switches — responsive grid layouts.
+ * RESPONSIVE: Multi-column forms collapse to 1 column on <640px.
  */
 
+/* ─── Form Group ─── */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -10,8 +12,9 @@
   margin-bottom: var(--space-4);
 }
 
+/* ─── Labels ─── */
 .form-label {
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -21,20 +24,45 @@
   color: var(--color-danger);
 }
 
-/* Custom Checkbox */
+/* ─── Multi-column form grids ─── */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+/* Collapse to 1-col on mobile */
+@media (max-width: 640px) {
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Custom Checkbox ─── */
 .checkbox-container {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
   user-select: none;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
+  /* Touch target */
+  min-height: 36px;
 }
 
 .checkbox-input {
   appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
+  min-width: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-primary);
@@ -44,9 +72,7 @@
   transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-.checkbox-input:hover {
-  border-color: var(--color-border-hover);
-}
+.checkbox-input:hover { border-color: var(--color-border-hover); }
 
 .checkbox-input:checked {
   background-color: var(--color-accent);
@@ -65,19 +91,22 @@
   transform: rotate(45deg);
 }
 
-/* Custom Switch Toggle */
+/* ─── Custom Switch Toggle ─── */
 .switch-container {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
   cursor: pointer;
   user-select: none;
+  min-height: 36px;
 }
 
 .switch-input {
   appearance: none;
+  -webkit-appearance: none;
   width: 36px;
   height: 20px;
+  min-width: 36px;
   background-color: var(--color-border);
   border-radius: var(--radius-full);
   position: relative;
@@ -98,10 +127,34 @@
   transition: transform var(--transition-fast);
 }
 
-.switch-input:checked {
-  background-color: var(--color-accent);
+.switch-input:checked { background-color: var(--color-accent); }
+.switch-input:checked::after { transform: translateX(16px); }
+
+/* ─── Form Section Headers ─── */
+.form-section-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.switch-input:checked::after {
-  transform: translateX(16px);
+/* ─── Form Actions Row ─── */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }

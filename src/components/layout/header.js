@@ -137,9 +137,9 @@ export class Header extends Component {
     // Check and auto-resume or prompt employee for GPS tracking
     GeolocationService.checkAndPromptGPS();
 
-    // 1. Sidebar toggle — supports both mobile slide-in and desktop rail collapse
+    // 1. Sidebar toggle — supports both mobile/tablet slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');
-    const isMobile  = () => window.innerWidth <= 768;
+    const isMobile  = () => window.innerWidth <= 1023;
 
     // ── Create mobile overlay (appended to body so it covers full screen) ──
     // The component only mounts firstElementChild, so we cannot rely on the

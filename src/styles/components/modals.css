@@ -1,6 +1,7 @@
 /**
  * @file modals.css
- * @description Overlay backdrop filters, centered slide-up card layout, and close button styling.
+ * @description Modal overlays — responsive full-screen on mobile, scroll-safe on all devices.
+ * RESPONSIVE: Bottom-sheet style on mobile <640px, centered card on larger screens.
  */
 
 .modal-overlay {
@@ -9,7 +10,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
@@ -18,8 +19,11 @@
   z-index: 1000;
   padding: var(--space-4);
   animation: fadeIn var(--transition-normal) forwards;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* ─── Modal Container ─── */
 .modal-container {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -29,28 +33,39 @@
   max-width: 500px;
   display: flex;
   flex-direction: column;
+  max-height: calc(100svh - 2 * var(--space-4));
   overflow: hidden;
   animation: slideUp var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Prevent shrinking below content */
+  flex-shrink: 0;
 }
 
-.modal-container.modal-sm { max-width: 380px; }
-.modal-container.modal-lg { max-width: 800px; }
-.modal-container.modal-xl { max-width: 1140px; }
+/* ─── Size Variants ─── */
+.modal-container.modal-sm  { max-width: 380px; }
+.modal-container.modal-lg  { max-width: 800px; }
+.modal-container.modal-xl  { max-width: min(1140px, calc(100vw - 2 * var(--space-4))); }
+.modal-container.modal-full { max-width: calc(100vw - 2 * var(--space-4)); max-height: calc(100svh - 2 * var(--space-4)); }
 
-/* Modal Elements */
+/* ─── Modal Header ─── */
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0; /* Never compress the header */
 }
 
 .modal-title {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--color-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modal-close {
@@ -64,20 +79,26 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
+  flex-shrink: 0;
   transition: color var(--transition-fast), background-color var(--transition-fast);
+  /* Ensure tap target */
+  min-width: 32px;
+  min-height: 32px;
 }
-
 .modal-close:hover {
   background-color: var(--color-bg-secondary);
   color: var(--color-text-primary);
 }
 
+/* ─── Modal Body (scrollable) ─── */
 .modal-body {
   padding: var(--space-5);
   overflow-y: auto;
-  max-height: calc(100vh - 200px);
+  flex: 1 1 auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* ─── Modal Footer ─── */
 .modal-footer {
   display: flex;
   align-items: center;
@@ -86,4 +107,53 @@
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
   background-color: var(--color-bg-secondary);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ─── Mobile: Full-width bottom card ─── */
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end; /* Slide up from bottom */
+    padding: 0;
+  }
+
+  .modal-container {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92svh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    /* Add bottom safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: slideUpMobile var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Force sm/lg/xl to also be full-width on mobile */
+  .modal-container.modal-sm,
+  .modal-container.modal-lg,
+  .modal-container.modal-xl {
+    max-width: 100%;
+  }
+
+  .modal-header {
+    padding: var(--space-4);
+  }
+  .modal-body {
+    padding: var(--space-4);
+  }
+  .modal-footer {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-2);
+  }
+  /* Full-width buttons on mobile footer */
+  .modal-footer .btn,
+  .modal-footer button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  @keyframes slideUpMobile {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
 }

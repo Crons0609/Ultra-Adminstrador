@@ -1,39 +1,49 @@
 /**
  * @file page.css
- * @description Main application layout, sidebar alignments, content bounds, and footer layouts.
+ * @description Main application layout — sidebar offset, content bounds, page headers.
+ * RESPONSIVE: Fluid padding via clamp(), sidebar offset managed via CSS variables.
  */
 
 .app-container {
   display: flex;
-  min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--color-bg-primary);
+  overflow-x: hidden;
 }
 
 .main-content {
   flex-grow: 1;
-  margin-left: 264px;
+  margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Prevent flex items from overflowing */
-  min-height: 100vh;
-  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  padding-top: 64px; /* Reserve space for the fixed header */
+  min-width: 0;        /* Prevent flex overflow */
+  min-height: 100svh;
+  transition: margin-left var(--transition-normal);
+  padding-top: var(--header-height);
+  overflow-x: hidden;  /* Contain any child overflow */
 }
 
-/* When sidebar is in collapsed/rail mode, shrink the main content offset */
+/* Sidebar in collapsed/rail mode */
 body.sidebar-collapsed .main-content {
-  margin-left: 64px;
+  margin-left: var(--sidebar-collapsed-width);
 }
 
+/* ─── Page Body ─── */
 .page-body {
   flex-grow: 1;
-  padding: var(--space-6);
+  padding: clamp(12px, 3vw, 24px);
   max-width: 1400px;
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
 }
 
+/* Full-width variant (no max-width cap) */
+.page-body.page-body-full {
+  max-width: 100%;
+}
+
+/* ─── Page Header ─── */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -46,16 +56,16 @@ body.sidebar-collapsed .main-content {
 .page-title-group {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .page-subtitle {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
   margin-top: var(--space-1);
 }
 
-/* Adjust layout when sidebar is hidden on small screens */
-/* Hover lift utility */
+/* ─── Hover lift animation ─── */
 .hover-lift {
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -64,16 +74,30 @@ body.sidebar-collapsed .main-content {
   box-shadow: var(--shadow-lg);
 }
 
-@media (max-width: 768px) {
+/* ─── Mobile Responsive ─── */
+@media (max-width: 1023px) {
   .main-content {
     margin-left: 0;
   }
-  .page-body {
-    padding: var(--space-4);
-  }
-  /* On mobile, collapsed class does nothing — mobile uses open/close instead */
   body.sidebar-collapsed .main-content {
     margin-left: 0;
   }
 }
 
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .page-header > *:last-child {
+    width: 100%;
+  }
+
+  .page-header > *:last-child .btn,
+  .page-header > *:last-child button {
+    width: 100%;
+    justify-content: center;
+  }
+}
