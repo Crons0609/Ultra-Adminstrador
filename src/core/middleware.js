@@ -41,8 +41,9 @@ export function roleGuard(allowedRoles) {
 
     // Business type category guards validation
     if (company && userRole !== 'SUPER_ADMIN') {
-      const category = getBusinessCategory(company.businessType || '');
-      const guards = getModuleGuards(company.businessType || '');
+      const bType = company.businessType || company.rubro || company.type || company.category || company.name || '';
+      const category = getBusinessCategory(bType);
+      const guards = getModuleGuards(bType);
       const isRestaurant = (category === 'GASTRONOMIA' || category === 'BAR_DISCOTECA');
 
       if (!isRestaurant && ['/kitchen/kds', '/kitchen/stats', '/waiter/tables', '/waiter/orders'].includes(path)) {

@@ -54,9 +54,9 @@ export class FinanceView extends Component {
       `,
       contentHTML: `
         <!-- Financial KPI cards -->
-        <div class="grid-stats">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-4);">
           <div class="card p-4 hover-lift">
-            <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex justify-between align-items-start">
               <span class="text-sm text-secondary">Ingresos Totales</span>
               <span style="font-size: 1.2rem; color: var(--color-success);">📈</span>
             </div>
@@ -65,7 +65,7 @@ export class FinanceView extends Component {
           </div>
 
           <div class="card p-4 hover-lift">
-            <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex justify-between align-items-start">
               <span class="text-sm text-secondary">Gastos Registrados</span>
               <span style="font-size: 1.2rem; color: var(--color-danger);">📉</span>
             </div>
@@ -74,7 +74,7 @@ export class FinanceView extends Component {
           </div>
 
           <div class="card p-4 hover-lift">
-            <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex justify-between align-items-start">
               <span class="text-sm text-secondary">Utilidad Neta (Balance)</span>
               <span style="font-size: 1.2rem;" id="val-profit-icon">⚖️</span>
             </div>
@@ -84,10 +84,10 @@ export class FinanceView extends Component {
         </div>
 
         <!-- Multi-period chart -->
-        <div class="card p-5 mt-6">
-          <div class="d-flex justify-content-between align-items-center mb-4" style="flex-wrap:wrap;gap:var(--space-3);">
+        <div class="card p-4 sm:p-5 mt-6">
+          <div class="d-flex justify-between align-items-center mb-4 flex-wrap gap-3">
             <h3 class="text-lg font-semibold">Flujo de Caja</h3>
-            <div class="d-flex gap-2" id="period-tabs" style="flex-wrap:wrap;">
+            <div class="d-flex gap-2 flex-wrap" id="period-tabs">
               ${[
                 ['daily',     'Diario'],
                 ['weekly',    'Semanal'],
@@ -104,21 +104,21 @@ export class FinanceView extends Component {
         </div>
 
         <!-- Detailed sold items list -->
-        <div class="card p-5 mt-6">
-          <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="card p-4 sm:p-5 mt-6">
+          <div class="d-flex justify-between align-items-center mb-4 flex-wrap gap-2">
             <h3 class="text-lg font-semibold">Historial Detallado de Ventas</h3>
             <span class="text-xs text-secondary" id="sales-list-count">0 transacciones</span>
           </div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="sales-detail-table">
+          <div class="overflow-x-auto touch-scroll border rounded-lg" style="-webkit-overflow-scrolling: touch;">
+            <table style="width:100%;min-width:600px;border-collapse:collapse;font-size:0.82rem;" id="sales-detail-table">
               <thead>
-                <tr style="border-bottom:1px solid var(--color-border);">
-                  <th style="text-align:left;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Producto</th>
-                  <th style="text-align:center;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Cant.</th>
-                  <th style="text-align:right;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">P. Unit.</th>
-                  <th style="text-align:right;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Total</th>
-                  <th style="text-align:center;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Hora</th>
-                  <th style="text-align:center;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Método de Pago</th>
+                <tr style="border-bottom:1px solid var(--color-border);background:rgba(255,255,255,0.02);">
+                  <th style="text-align:left;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Producto</th>
+                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Cant.</th>
+                  <th style="text-align:right;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">P. Unit.</th>
+                  <th style="text-align:right;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Total</th>
+                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Hora</th>
+                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Método de Pago</th>
                 </tr>
               </thead>
               <tbody id="sales-detail-body">

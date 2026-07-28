@@ -20,10 +20,10 @@ export class Sidebar extends Component {
     const { currentCompany } = GlobalStore.getState();
     const cfg = currentCompany?.config || {};
 
-    // Compute automatic guards from business type, then merge with super-admin cfg overrides.
-    // cfg values take precedence (super-admin can force-enable a module even if the rubro doesn't have it).
-    const category = getBusinessCategory(currentCompany?.businessType || '');
-    const autoGuards = getModuleGuards(currentCompany?.businessType || '');
+    // Compute automatic guards from business type (fallback to rubro/type/name), then merge with super-admin cfg overrides.
+    const bType = currentCompany?.businessType || currentCompany?.rubro || currentCompany?.type || currentCompany?.category || currentCompany?.name || '';
+    const category = getBusinessCategory(bType);
+    const autoGuards = getModuleGuards(bType);
     const guards = { ...autoGuards, ...cfg };
 
     // Helper: build menu items filtered by their module guard

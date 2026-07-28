@@ -13,7 +13,11 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 export class ServiceRequestsView extends Component {
   constructor(params = {}) {
     super(params);
-    this.layout = new PageLayout({ title: 'Solicitudes de Servicio' });
+    this.layout = new PageLayout({
+      title: 'Solicitudes de Servicio',
+      subtitle: 'Bandeja de solicitudes de clientes y seguimiento de órdenes',
+      contentHTML: '<div id="page-content"></div>'
+    });
     this.requests = [];
     this.filter = 'PENDIENTE';
   }

@@ -131,10 +131,10 @@ export function getBusinessTypeOptions(selectedValue = '') {
  * @param {string} businessType
  * @returns {'GASTRONOMIA'|'RENT_A_CAR'|'BARBERIA'|'VENTAS'|'SERVICIOS_PERSONALIZADOS'|'PERSONALIZADA'|'OTROS'}
  */
-export function getBusinessCategory(businessType) {
-  if (!businessType) return 'OTROS';
+export function getBusinessCategory(businessType = '') {
+  if (!businessType) return 'GASTRONOMIA'; // Default a Gastronomía si no hay rubro explícito
 
-  const typeLower = businessType.toLowerCase().trim();
+  const typeLower = String(businessType).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
   // Bares, Discotecas y Ocio Nocturno
   if (
@@ -149,17 +149,24 @@ export function getBusinessCategory(businessType) {
     return 'BAR_DISCOTECA';
   }
 
-  // Gastronomy
+  // Gastronomy / Restaurantes / Pizzerías
   if (
     typeLower.includes('restaurante') ||
     typeLower.includes('comida') ||
-    typeLower.includes('pizzer') ||
+    typeLower.includes('pizz') ||
     typeLower.includes('cafeter') ||
     typeLower.includes('helader') ||
     typeLower.includes('panader') ||
     typeLower.includes('pasteler') ||
     typeLower.includes('food truck') ||
-    typeLower.includes('cocina')
+    typeLower.includes('cocina') ||
+    typeLower.includes('taco') ||
+    typeLower.includes('burger') ||
+    typeLower.includes('sushi') ||
+    typeLower.includes('marisco') ||
+    typeLower.includes('carne') ||
+    typeLower.includes('buffet') ||
+    typeLower.includes('gastronomia')
   ) {
     return 'GASTRONOMIA';
   }
