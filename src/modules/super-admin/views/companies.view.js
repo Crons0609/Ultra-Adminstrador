@@ -346,126 +346,130 @@ export class CompaniesView extends Component {
 
 
     const formHTML = `
-      <form id="add-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary); max-height: 80vh; overflow-y: auto; padding-right: 8px;">
-        <div class="form-group">
+      <form id="add-company-form" class="d-flex flex-column gap-4" style="color: var(--color-text-primary); max-height: 75vh; overflow-y: auto; padding-right: 4px;">
+        <div class="form-group mb-0">
           <label class="form-label" for="comp-name">Nombre de la Empresa / Local</label>
           <input type="text" id="comp-name" class="input input-md" placeholder="Ej. Pizzería San Pedro" required />
         </div>
 
         <!-- OWNER CREDENTIALS -->
         <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
-          <label class="form-label mb-2" style="font-weight: 600; color: var(--color-accent);">Credenciales del Dueño (Owner)</label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-            <div class="form-group">
+          <label class="form-label mb-3" style="font-weight: 600; color: var(--color-accent); display: block;">🔑 Credenciales del Dueño (Owner)</label>
+          <div class="form-grid-2">
+            <div class="form-group mb-0">
               <label class="form-label" for="owner-email">Correo Electrónico</label>
               <input type="email" id="owner-email" class="input input-md" placeholder="dueno@negocio.com" required />
             </div>
-            <div class="form-group">
+            <div class="form-group mb-0">
               <label class="form-label" for="owner-password">Contraseña de Acceso</label>
               <input type="password" id="owner-password" class="input input-md" placeholder="Mín. 6 caracteres" minlength="6" required />
             </div>
           </div>
         </div>
 
-        <!-- TIPO + PLAN (2 col) -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
-          <div class="form-group">
-            <label class="form-label" for="comp-type">Tipo de Negocio</label>
-            <select id="comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              ${getBusinessTypeOptions()}
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="comp-plan">Plan SaaS</label>
-            <select id="comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              ${planOptionsHTML}
-            </select>
-          </div>
-        </div>
-
-        <!-- ESTADO + FECHA LÍMITE (2 col) — visible sin scroll -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
-          <div class="form-group">
-            <label class="form-label" for="comp-status">Estado del Negocio</label>
-            <select id="comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="ACTIVO">Activo (Cuenta normal)</option>
-              <option value="INACTIVO">Inactivo (Suspendido)</option>
-              <option value="FALTA_PAGO">Falta de Pago (Bloqueo)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="comp-expiration">📅 Fecha Límite de Suscripción</label>
-            <input type="date" id="comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" />
-            <small style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 4px; display: block;">Dejar vacío si no tiene vencimiento</small>
+        <!-- TIPO + PLAN (2 col responsive) -->
+        <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
+          <div class="form-grid-2">
+            <div class="form-group mb-0">
+              <label class="form-label" for="comp-type">Tipo de Negocio</label>
+              <select id="comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                ${getBusinessTypeOptions()}
+              </select>
+            </div>
+            <div class="form-group mb-0">
+              <label class="form-label" for="comp-plan">Plan SaaS</label>
+              <select id="comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                ${planOptionsHTML}
+              </select>
+            </div>
           </div>
         </div>
 
-        <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
-          <label class="form-label mb-2" style="font-weight: 600;">Parámetros y Módulos Habilitados</label>
+        <!-- ESTADO + FECHA LÍMITE (2 col responsive) -->
+        <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
+          <div class="form-grid-2">
+            <div class="form-group mb-0">
+              <label class="form-label" for="comp-status">Estado del Negocio</label>
+              <select id="comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
+                <option value="ACTIVO">Activo (Cuenta normal)</option>
+                <option value="INACTIVO">Inactivo (Suspendido)</option>
+                <option value="FALTA_PAGO">Falta de Pago (Bloqueo)</option>
+              </select>
+            </div>
+            <div class="form-group mb-0">
+              <label class="form-label" for="comp-expiration">📅 Fecha Límite de Suscripción</label>
+              <input type="date" id="comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" />
+              <small style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 4px; display: block;">Dejar vacío si no tiene vencimiento</small>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
+          <label class="form-label mb-3" style="font-weight: 600; color: var(--color-text-primary); font-size: 0.92rem; display: block;">⚙️ Parámetros y Módulos Habilitados</label>
           
-          <div class="d-flex flex-column gap-2">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-kds" checked style="accent-color: var(--color-accent);" />
+          <div class="d-flex flex-column gap-2" style="background: var(--color-bg-tertiary); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-kds" checked class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Pantalla de Cocina (KDS)</span>
             </label>
             
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-qr" checked style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-qr" checked class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Menú Digital QR para mesas</span>
             </label>
             
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-whatsapp" checked style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-whatsapp" checked class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>WhatsApp Automation Hub (API WhatsApp de negocio)</span>
             </label>
             
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-telegram" checked style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-telegram" checked class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Telegram Automation Hub (Bot Telegram de negocio)</span>
             </label>
             
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-billing" checked style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-billing" checked class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-vehicles-catalog" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-vehicles-catalog" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Catálogo de Vehículos (Rent a Car)</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-rentals" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-rentals" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Gestión de Alquileres</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-rental-reminders" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-rental-reminders" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Recordatorios de Alquiler</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-appointments" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-appointments" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Citas y Reservas</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-schedules" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-schedules" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Horarios de Personal (Estilistas)</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-service-requests" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-service-requests" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Solicitudes de Trabajo Personalizado</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-staff-roles" checked style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-staff-roles" checked class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Roles de Personal (Mesero/Cocina/Cajero)</span>
             </label>
 
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-              <input type="checkbox" id="mod-employee-pricing" style="accent-color: var(--color-accent);" />
+            <label class="checkbox-container">
+              <input type="checkbox" id="mod-employee-pricing" class="checkbox-input" style="accent-color: var(--color-accent);" />
               <span>Precios Especiales Vendedor/Público</span>
             </label>
           </div>
@@ -483,7 +487,7 @@ export class CompaniesView extends Component {
       title: 'Registrar y Configurar Nuevo Negocio',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
-      size: 'md'
+      size: 'lg'
     });
 
     document.body.appendChild(this.modalInstance.mount());
@@ -616,6 +620,12 @@ export class CompaniesView extends Component {
     }
   }
 
+  openCredentialsModal(company) {
+    if (company) {
+      this.showOwnerCredentialsModal(company.name, company.ownerEmail || 'Sin correo', company.ownerPassword || '••••••••');
+    }
+  }
+
   /**
    * Helper to display credentials and access URL copy dialog
    */
@@ -736,20 +746,20 @@ export class CompaniesView extends Component {
       <div style="display: flex; flex-direction: column; gap: var(--space-4); max-height: 75vh; overflow-y: auto; padding-right: 4px;">
 
         <!-- Company Settings -->
-        <form id="edit-company-form" style="display: flex; flex-direction: column; gap: var(--space-3); color: var(--color-text-primary);">
-          <div class="form-group">
+        <form id="edit-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
+          <div class="form-group mb-0">
             <label class="form-label" for="edit-comp-name">Nombre de la Empresa</label>
             <input type="text" id="edit-comp-name" class="input input-md" value="${row.name}" required />
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-            <div class="form-group">
+          <div class="form-grid-2">
+            <div class="form-group mb-0">
               <label class="form-label" for="edit-comp-type">Tipo de Negocio</label>
               <select id="edit-comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 ${getBusinessTypeOptions(row.businessType)}
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-0">
               <label class="form-label" for="edit-comp-plan">Plan SaaS</label>
               <select id="edit-comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 ${plans.length > 0
@@ -764,8 +774,8 @@ export class CompaniesView extends Component {
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-            <div class="form-group">
+          <div class="form-grid-2">
+            <div class="form-group mb-0">
               <label class="form-label" for="edit-comp-status">Estado del Negocio</label>
               <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
@@ -775,7 +785,7 @@ export class CompaniesView extends Component {
                 <option value="ELIMINADO" ${row.status === 'ELIMINADO' ? 'selected' : ''}>Papelera (eliminación lógica)</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-0">
               <label class="form-label" for="edit-comp-expiration">Fecha Límite de Suscripción (Opcional)</label>
               <input type="date" id="edit-comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" value="${row.subscriptionExpiresAt || ''}" />
             </div>
@@ -783,57 +793,57 @@ export class CompaniesView extends Component {
 
           <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
             <label class="form-label mb-2" style="font-weight: 600;">Módulos Habilitados</label>
-            <div class="d-flex flex-column gap-2">
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-kds" ${row.config?.enableKDS ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+            <div class="d-flex flex-column gap-2" style="background: var(--color-bg-tertiary); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-kds" ${row.config?.enableKDS ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Pantalla de Cocina (KDS)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-qr" ${row.config?.enableQR ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-qr" ${row.config?.enableQR ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Menú Digital QR para mesas</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp !== false ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-whatsapp" ${row.config?.enableWhatsApp !== false ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>WhatsApp Automation Hub (API WhatsApp de negocio)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-telegram" ${row.config?.enableTelegram !== false ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-telegram" ${row.config?.enableTelegram !== false ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Telegram Automation Hub (Bot Telegram de negocio)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-billing" ${row.config?.enableBilling ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Facturación Electrónica Mexicana (SAT CFDI 4.0)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-vehicles-catalog" ${row.config?.enableVehiclesCatalog ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-vehicles-catalog" ${row.config?.enableVehiclesCatalog ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Catálogo de Vehículos (Rent a Car)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-rentals" ${row.config?.enableRentals ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-rentals" ${row.config?.enableRentals ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Gestión de Alquileres</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-rental-reminders" ${row.config?.enableRentalReminders ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-rental-reminders" ${row.config?.enableRentalReminders ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Recordatorios de Alquiler</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-appointments" ${row.config?.enableAppointments ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-appointments" ${row.config?.enableAppointments ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Citas y Reservas</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-schedules" ${row.config?.enableSchedules ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-schedules" ${row.config?.enableSchedules ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Horarios de Personal (Estilistas)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-service-requests" ${row.config?.enableServiceRequests ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-service-requests" ${row.config?.enableServiceRequests ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Solicitudes de Trabajo Personalizado</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-staff-roles" ${row.config?.enableStaffRoles ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-staff-roles" ${row.config?.enableStaffRoles ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Roles de Personal (Mesero/Cocina/Cajero)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer;">
-                <input type="checkbox" id="edit-mod-employee-pricing" ${row.config?.enableEmployeePricing ? 'checked' : ''} style="accent-color: var(--color-accent);" />
+              <label class="checkbox-container">
+                <input type="checkbox" id="edit-mod-employee-pricing" ${row.config?.enableEmployeePricing ? 'checked' : ''} class="checkbox-input" style="accent-color: var(--color-accent);" />
                 <span>Precios Especiales Vendedor/Público</span>
               </label>
             </div>

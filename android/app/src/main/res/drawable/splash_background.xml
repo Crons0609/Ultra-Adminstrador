@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash screen background gradient.
+  Used as windowBackground in Theme.UltraAdmin.Splash.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:startColor="#0a0a0b"
+        android:centerColor="#0f0f14"
+        android:endColor="#0a0a0b"
+        android:angle="135"
+        android:type="linear" />
+</shape>

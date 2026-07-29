@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- ─── Production: strict HTTPS only ─── -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- ─── Firebase Hosting domain ─── -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">web.app</domain>
+        <domain includeSubdomains="true">firebaseapp.com</domain>
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">gstatic.com</domain>
+        <domain includeSubdomains="true">fonts.googleapis.com</domain>
+        <domain includeSubdomains="true">esm.sh</domain>
+        <domain includeSubdomains="true">unpkg.com</domain>
+        <domain includeSubdomains="true">cdn.tailwindcss.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- ─── Local dev domains (cleartext allowed) ─── -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+
+    <!-- ─── Debug only overrides ─── -->
+    <debug-overrides cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+
+</network-security-config>

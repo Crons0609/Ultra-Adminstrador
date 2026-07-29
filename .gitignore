@@ -37,3 +37,36 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# ─── Android ────────────────────────────────────
+# Build outputs
+android/build/
+android/app/build/
+android/captures/
+android/.gradle/
+android/local.properties
+
+# APK / AAB binaries (never commit these)
+*.apk
+*.aab
+*.ap_
+
+# Keystore files (NEVER commit — keep safe offline)
+*.jks
+*.keystore
+android/app/keystore/
+
+# Gradle caches
+.gradle/
+
+# Android Studio IDE files
+android/.idea/
+android/*.iml
+
+# Generated R files and other generated sources
+android/app/src/main/java/com/ultraadmin/app/BuildConfig.java
+
+# ProGuard mapping (keep locally for crash de-obfuscation, don't commit)
+android/app/mapping.txt
+android/app/seeds.txt
+android/app/usage.txt

@@ -33,7 +33,8 @@
 
 /* ─── Flexbox utilities ─── */
 .flex-row       { flex-direction: row; }
-.flex-col       { flex-direction: column; }
+.flex-col,
+.flex-column    { flex-direction: column; }
 .flex-wrap      { flex-wrap: wrap; }
 .flex-nowrap    { flex-wrap: nowrap; }
 .flex-grow-1    { flex-grow: 1; }

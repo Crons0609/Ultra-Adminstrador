@@ -15,6 +15,7 @@ import { GlobalStore } from '../core/state.js';
 import { FirestoreService } from './firestore.service.js';
 import { TimeService } from './time.service.js';
 import { AppearanceService } from './appearance.service.js';
+import { SavedAccountsService } from './saved-accounts.service.js';
 
 // Firebase Auth modular imports (CDN v12.16.0)
 import {
@@ -159,11 +160,110 @@ export class AuthService {
         }
       }
 
+      // Auto-save this account to the profile switcher (no password stored here)
+      const companyName = GlobalStore.getState()?.currentCompany?.name || '';
+      SavedAccountsService.save(userSession, null, companyName);
+
       console.log('[AuthService] ✅ Login exitoso:', email, '| Rol:', userSession.role);
       return userSession;
 
     } catch (error) {
-      console.error('[AuthService] ❌ Login error:', error.code || '', error.message);
+      console.warn('[AuthService] ⚠️ Primary Auth failed, checking RTDB fallback...', error.code || '', error.message);
+
+      // ── Secondary authentication fallback: Check RTDB /users for storedPassword ──
+      if (db) {
+        try {
+          const usersSnap = await get(ref(db, 'users'));
+          if (usersSnap.exists()) {
+            let matchedUid = null;
+            let userProfile = null;
+
+            usersSnap.forEach(snap => {
+              const u = snap.val() || {};
+              const userEmail = (u.email || '').toLowerCase().trim();
+              if (userEmail === cleanEmail) {
+                matchedUid = snap.key;
+                userProfile = u;
+              }
+            });
+
+            if (userProfile && (userProfile.storedPassword === password || userProfile.password === password)) {
+              console.log('[AuthService] ✅ Fallback authentication successful via RTDB storedPassword for:', cleanEmail);
+
+              // Validate company status if not SuperAdmin
+              if (userProfile.companyId && userProfile.companyId !== 'global') {
+                const companySnap = await get(ref(db, `companies/${userProfile.companyId}`));
+                if (!companySnap.exists()) {
+                  throw new Error('El negocio asociado a esta cuenta ha sido desactivado, comunícate con soporte al cliente');
+                }
+                const companyMeta = companySnap.val() || {};
+                if (companyMeta.status === 'ELIMINADO') {
+                  throw new Error('El negocio asociado a esta cuenta se encuentra desactivado');
+                }
+              }
+
+              // Auto-unlock account & reset attempts
+              await update(ref(db, `users/${matchedUid}`), {
+                accountLocked: false,
+                failedAttempts: 0,
+                lockoutUntil: 0
+              }).catch(() => {});
+
+              try {
+                localStorage.removeItem(`ultra_login_lockout_${cleanEmail}`);
+              } catch (_) {}
+
+              const userSession = {
+                uid: matchedUid,
+                email: userProfile.email || cleanEmail,
+                displayName: userProfile.displayName || 'Usuario',
+                role: userProfile.role || 'CUSTOMER',
+                customRole: userProfile.customRole || '',
+                companyId: userProfile.companyId || 'global',
+                branchId: userProfile.branchId || 'main',
+                permissions: userProfile.permissions || {}
+              };
+
+              GlobalStore.set({
+                currentUser: userSession,
+                activeRole: userSession.role,
+                isAuthenticated: true
+              });
+
+              AppearanceService.loadAndApply().catch(e => console.warn('[AuthService] Could not apply appearance on login:', e));
+
+              await FirestoreService.updatePath(`users/${matchedUid}`, {
+                lastLoginAt: serverTimestamp(),
+                lastLoginAtLocal: TimeService.timestamp()
+              }).catch(() => {});
+
+              await FirestoreService.logAudit({
+                action: 'LOGIN',
+                companyId: userSession.companyId || 'global',
+                description: `Inicio de sesión (RTDB Sync): ${userSession.email}`
+              }).catch(() => {});
+
+              if (userSession.companyId && userSession.companyId !== 'global') {
+                try {
+                  const companyInfo = await FirestoreService.getCompanyInfo(userSession.companyId);
+                  if (companyInfo) {
+                    GlobalStore.set({ currentCompany: companyInfo });
+                  }
+                } catch (e) {
+                  console.warn('[AuthService] Could not load company info after login:', e.message);
+                }
+              }
+
+              return userSession;
+            }
+          }
+        } catch (fallbackErr) {
+          if (fallbackErr.message && fallbackErr.message.includes('desactivado')) {
+            throw fallbackErr;
+          }
+          console.warn('[AuthService] Fallback RTDB login check error:', fallbackErr.message);
+        }
+      }
 
       const code = error.code || '';
       if (
@@ -1005,18 +1105,99 @@ export class AuthService {
   }
 
   /**
-   * Admin method to reset or change a user's password with audit logging.
+   * Resets lockout state and unlocks a user account in RTDB and localStorage.
+   * @param {string} emailOrUid
+   */
+  static async unlockUserAccount(emailOrUid) {
+    if (!db || !emailOrUid) return false;
+
+    let targetUid = emailOrUid;
+    let cleanEmail = (emailOrUid || '').toLowerCase().trim();
+
+    try {
+      if (cleanEmail.includes('@')) {
+        const usersSnap = await get(ref(db, 'users'));
+        if (usersSnap.exists()) {
+          usersSnap.forEach(snap => {
+            const u = snap.val() || {};
+            if ((u.email || '').toLowerCase().trim() === cleanEmail) {
+              targetUid = snap.key;
+            }
+          });
+        }
+      }
+
+      if (targetUid) {
+        await update(ref(db, `users/${targetUid}`), {
+          accountLocked: false,
+          failedAttempts: 0,
+          lockoutUntil: 0,
+          unlockedAt: Date.now()
+        }).catch(e => console.warn('[AuthService] Could not unlock RTDB user:', e.message));
+      }
+
+      if (cleanEmail.includes('@')) {
+        try {
+          localStorage.removeItem(`ultra_login_lockout_${cleanEmail}`);
+        } catch (_) {}
+      }
+
+      console.log('[AuthService] ✅ Account unlocked for:', emailOrUid);
+      return true;
+    } catch (e) {
+      console.warn('[AuthService] Error unlocking account:', e.message);
+      return false;
+    }
+  }
+
+  /**
+   * Admin method to reset or change a user's password with audit logging and automatic account unlock.
    */
   static async adminUpdateUserPassword(targetUid, targetEmail, newPassword) {
     if (!db) throw new Error('Base de datos no inicializada.');
 
     const currentUser = GlobalStore.getState().currentUser || {};
     const timestamp = Date.now();
+    const cleanEmail = (targetEmail || '').toLowerCase().trim();
 
-    await update(ref(db, `users/${targetUid}`), {
+    const updates = {
       storedPassword: newPassword,
+      accountLocked: false,
+      failedAttempts: 0,
+      lockoutUntil: 0,
+      unlockedAt: timestamp,
       updatedAt: timestamp
-    });
+    };
+
+    await update(ref(db, `users/${targetUid}`), updates);
+
+    // Also update company ownerPassword or employee record if user belongs to a company
+    try {
+      const userSnap = await get(ref(db, `users/${targetUid}`));
+      if (userSnap.exists()) {
+        const userData = userSnap.val() || {};
+        const companyId = userData.companyId;
+        if (companyId && companyId !== 'global') {
+          await update(ref(db, `companies/${companyId}`), {
+            ownerPassword: newPassword,
+            updatedAt: timestamp
+          }).catch(() => {});
+          await update(ref(db, `${companyId}/employees/${targetUid}`), {
+            storedPassword: newPassword,
+            accountLocked: false,
+            updatedAt: timestamp
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('[AuthService] Could not sync password to company branch:', e.message);
+    }
+
+    if (cleanEmail) {
+      try {
+        localStorage.removeItem(`ultra_login_lockout_${cleanEmail}`);
+      } catch (_) {}
+    }
 
     try {
       const auditRef = push(ref(db, 'audit_logs'));
@@ -1028,7 +1209,7 @@ export class AuthService {
         targetEmail,
         timestamp,
         isoDate: new Date().toISOString(),
-        details: `Contraseña restablecida por el programador para el usuario ${targetEmail}.`
+        details: `Contraseña restablecida y cuenta desbloqueada para el usuario ${targetEmail}.`
       });
     } catch (e) {
       console.warn('[AuthService] Audit log write failed:', e);

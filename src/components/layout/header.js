@@ -11,6 +11,7 @@ import { BarcodeScannerService } from '../../services/barcode-scanner.service.js
 import { BarcodeRegistryService } from '../../services/barcode-registry.service.js';
 import { GeolocationService } from '../../services/geolocation.service.js';
 import { NotificationService } from '../../services/notification.service.js';
+import { SavedAccountsService } from '../../services/saved-accounts.service.js';
 
 export class Header extends Component {
   constructor(props = {}) {
@@ -121,12 +122,74 @@ export class Header extends Component {
           ` : ''}
 
           <!-- User Profile Chip -->
-          <div class="header-user-chip" id="header-user-chip">
+          <div class="header-user-chip" id="header-user-chip" style="position:relative; cursor:pointer;">
             <div class="header-user-avatar">${userInitial}</div>
             <span class="header-user-name">${userName}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="opacity: 0.5">
+            <svg id="user-chip-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="opacity: 0.5; transition: transform 0.2s;">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
+
+            <!-- Account Switcher Dropdown -->
+            <div id="user-accounts-dropdown" style="
+              display: none;
+              position: absolute;
+              top: calc(100% + 10px);
+              right: 0;
+              min-width: 260px;
+              background: var(--color-bg-secondary);
+              border: 1px solid rgba(255,255,255,0.08);
+              border-radius: 14px;
+              box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+              z-index: 9999;
+              overflow: hidden;
+              animation: dropdown-in 0.18s ease;
+            ">
+              <!-- Current user header -->
+              <div style="
+                padding: 14px 16px 10px;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+              ">
+                <div style="font-size:11px; color: var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">Perfil activo</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="
+                    width:34px; height:34px; border-radius:50%;
+                    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+                    display:flex; align-items:center; justify-content:center;
+                    font-weight:700; color:#fff; font-size:14px; flex-shrink:0;
+                  ">${userInitial}</div>
+                  <div>
+                    <div style="font-weight:600; font-size:13px; color:var(--color-text-primary);">${currentUser?.displayName || userName}</div>
+                    <div style="font-size:11px; color:var(--color-text-secondary);">${currentUser?.email || ''}</div>
+                  </div>
+                  <div style="margin-left:auto;">
+                    <span style="
+                      background:rgba(139,92,246,0.15); color:#a78bfa;
+                      border-radius:20px; padding:2px 8px; font-size:10px; font-weight:600;
+                    ">${currentUser?.role || ''}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Saved accounts list (injected dynamically) -->
+              <div id="saved-accounts-list"></div>
+
+              <!-- Divider + Logout -->
+              <div style="border-top: 1px solid rgba(255,255,255,0.06); padding: 8px;">
+                <button id="btn-header-logout" style="
+                  width:100%; display:flex; align-items:center; gap:10px;
+                  padding: 10px 12px; border-radius:10px; border:none; cursor:pointer;
+                  background:transparent; color: var(--color-danger);
+                  font-size:13px; font-weight:600; transition: background 0.15s;
+                " onmouseover="this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.background='transparent'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -238,10 +301,130 @@ export class Header extends Component {
     };
     window.addEventListener('hashchange', this._hashHandler);
 
-    // 5. User chip — logout dropdown on click
+    // 5. User chip — account switcher dropdown
     const userChip = this.$('#header-user-chip');
+    const dropdown = this.$('#user-accounts-dropdown');
+    const arrow    = this.$('#user-chip-arrow');
+
+    const closeDropdown = () => {
+      if (dropdown) { dropdown.style.display = 'none'; }
+      if (arrow)    { arrow.style.transform = ''; }
+      document.removeEventListener('click', this._dropdownOutsideHandler);
+    };
+
+    const openDropdown = () => {
+      if (!dropdown) return;
+
+      // Render saved other accounts
+      const currentEmail = this.state.currentUser?.email;
+      const others = SavedAccountsService.getAll().filter(a => a.email !== currentEmail);
+      const listEl = this.$('#saved-accounts-list');
+
+      if (listEl) {
+        if (others.length === 0) {
+          listEl.innerHTML = `
+            <div style="padding:12px 16px; font-size:12px; color:var(--color-text-tertiary); text-align:center;">
+              No hay otras cuentas guardadas
+            </div>`;
+        } else {
+          listEl.innerHTML = `
+            <div style="padding:8px 8px 4px; font-size:11px; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.08em; padding-left:14px;">
+              Cambiar cuenta
+            </div>
+            ${others.map(acc => `
+              <button class="saved-account-row" data-email="${acc.email}" style="
+                width:100%; display:flex; align-items:center; gap:10px;
+                padding: 10px 12px; border-radius:10px; border:none; cursor:pointer;
+                background:transparent; color: var(--color-text-primary);
+                font-size:13px; transition: background 0.15s; text-align:left;
+                margin: 0 0 2px;
+              " onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                <div style="
+                  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+                  background: linear-gradient(135deg, #0891b2, #06b6d4);
+                  display:flex; align-items:center; justify-content:center;
+                  font-weight:700; color:#fff; font-size:13px;
+                ">${acc.initial}</div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${acc.displayName}</div>
+                  <div style="font-size:11px; color:var(--color-text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${acc.email}</div>
+                </div>
+                <button class="btn-remove-account" data-email="${acc.email}" title="Eliminar cuenta guardada" style="
+                  flex-shrink:0; background:none; border:none; cursor:pointer;
+                  color:var(--color-text-tertiary); padding:4px; border-radius:6px;
+                  font-size:14px; line-height:1;
+                " onmouseover="this.style.color='var(--color-danger)'" onmouseout="this.style.color='var(--color-text-tertiary)'">&times;</button>
+              </button>
+            `).join('')}
+          `;
+
+          // Account row click → switch account
+          listEl.querySelectorAll('.saved-account-row').forEach(row => {
+            row.addEventListener('click', async (e) => {
+              if (e.target.closest('.btn-remove-account')) return;
+              const email = row.dataset.email;
+              const saved = SavedAccountsService.getByEmail(email);
+              const password = SavedAccountsService.getPassword(email);
+              closeDropdown();
+
+              if (password) {
+                // Has saved password → try auto-login
+                try {
+                  NotificationService.info(`Cambiando a ${saved.displayName}...`);
+                  await AuthService.logout();
+                  await AuthService.login(email, password);
+                  SavedAccountsService.touch(email);
+                  window.location.reload();
+                } catch {
+                  NotificationService.error('No se pudo cambiar de cuenta. Inicia sesión manualmente.');
+                  await AuthService.logout();
+                  window.location.hash = '#/login';
+                }
+              } else {
+                // No password saved → go to login with email pre-filled
+                await AuthService.logout();
+                const encoded = encodeURIComponent(email);
+                window.location.hash = `#/login?email=${encoded}`;
+              }
+            });
+          });
+
+          // Remove account buttons
+          listEl.querySelectorAll('.btn-remove-account').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              SavedAccountsService.remove(btn.dataset.email);
+              openDropdown(); // re-render
+            });
+          });
+        }
+      }
+
+      dropdown.style.display = 'block';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+
+      // Close on outside click
+      setTimeout(() => {
+        this._dropdownOutsideHandler = (e) => {
+          if (!userChip?.contains(e.target)) closeDropdown();
+        };
+        document.addEventListener('click', this._dropdownOutsideHandler);
+      }, 0);
+    };
+
     if (userChip) {
-      userChip.addEventListener('click', async () => {
+      userChip.addEventListener('click', (e) => {
+        const isOpen = dropdown?.style.display === 'block';
+        if (isOpen) { closeDropdown(); } else { openDropdown(); }
+      });
+    }
+
+    // Logout button inside dropdown
+    const logoutBtn = this.$('#btn-header-logout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        closeDropdown();
         if (confirm('¿Seguro que deseas cerrar sesión?')) {
           await AuthService.logout();
           window.location.hash = '#/login';

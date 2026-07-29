@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Temp images captured by camera for upload -->
+    <external-files-path
+        name="ultra_images"
+        path="Pictures/" />
+
+    <!-- Files downloaded within the app -->
+    <external-files-path
+        name="ultra_downloads"
+        path="Downloads/" />
+
+    <!-- Cache directory for temporary files -->
+    <cache-path
+        name="ultra_cache"
+        path="." />
+</paths>

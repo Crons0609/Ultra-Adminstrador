@@ -20,7 +20,13 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: left var(--transition-normal);
-  overflow: hidden; /* Prevent child overflow from breaking layout */
+  /* NOTE: overflow must NOT be hidden — the account switcher dropdown extends below */
+}
+
+/* Account switcher dropdown entrance animation */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
 
 /* Sidebar collapsed: shrink left offset */

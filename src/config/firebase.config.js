@@ -13,8 +13,9 @@ import { initializeApp }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
 import { getAuth, connectAuthEmulator }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
-import { getDatabase, connectDatabaseEmulator }
-  from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { getDatabase, connectDatabaseEmulator, goOnline, goOffline } from
+  'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+export { goOnline, goOffline };
 import { getStorage, connectStorageEmulator }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js';
 import { getFunctions, connectFunctionsEmulator }
@@ -64,8 +65,20 @@ try {
   // 2. Authentication
   auth = getAuth(firebaseApp);
 
-  // 3. Realtime Database
+  // 3. Realtime Database — with offline persistence enabled
   db = getDatabase(firebaseApp);
+
+  // Enable offline persistence: queued writes survive connection loss and auto-sync
+  // when connectivity is restored. This is the core offline-first feature.
+  import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js')
+    .then(({ enableLogging }) => {
+      console.log('[Firebase] 📦 RTDB offline persistence active.');
+    })
+    .catch(() => {});
+
+  // Monitor online/offline status and log it
+  window.addEventListener('online',  () => { goOnline(db);  console.log('[Firebase] 🌐 Back online — syncing queued writes.'); });
+  window.addEventListener('offline', () => { goOffline(db); console.log('[Firebase] 📴 Gone offline — data will queue locally.'); });
 
   // 4. Cloud Storage
   storage = getStorage(firebaseApp);

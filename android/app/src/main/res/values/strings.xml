@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ultra Administrador</string>
+    <string name="app_description">Sistema SaaS Multi-Tenant — ProLine System</string>
+    <string name="loading">Cargando…</string>
+    <string name="offline_title">Sin conexión</string>
+    <string name="offline_message">Verifica tu conexión a Internet e inténtalo de nuevo.</string>
+    <string name="retry">Reintentar</string>
+    <string name="permission_camera">Ultra Administrador necesita acceso a la cámara</string>
+    <string name="permission_location">Ultra Administrador necesita acceso a tu ubicación</string>
+    <string name="permission_storage">Ultra Administrador necesita acceso al almacenamiento</string>
+</resources>

@@ -18,6 +18,7 @@ import { FirestoreService } from './services/firestore.service.js';
 import { AnimationService } from './services/animation.service.js';
 import { GeolocationService } from './services/geolocation.service.js';
 import { AppearanceService } from './services/appearance.service.js';
+import { OfflineSyncService } from './services/offline-sync.service.js';
 
 class App {
   constructor() {
@@ -75,10 +76,13 @@ class App {
     // 5. Purge old local-DB cache keys — all data now lives in Firebase RTDB
     this.clearLocalDbCache();
 
-    // 6. Load and apply global appearance config from Firebase (colors, theme, fonts)
+    // 6. Initialize offline sync service — queues writes when offline, syncs on reconnect
+    OfflineSyncService.init();
+
+    // 7. Load and apply global appearance config from Firebase (colors, theme, fonts)
     await AppearanceService.loadAndApply();
 
-    // 7. Remove loading screen, initialize smooth scroll and SPA router
+    // 8. Remove loading screen, initialize smooth scroll and SPA router
     this.hideLoadingScreen();
     AnimationService.initGlobalScroll();
     this.router = new Router(ROUTES, 'app');

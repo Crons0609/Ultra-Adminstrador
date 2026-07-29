@@ -30,7 +30,7 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
   max-height: calc(100svh - 2 * var(--space-4));
@@ -41,9 +41,10 @@
 }
 
 /* ─── Size Variants ─── */
-.modal-container.modal-sm  { max-width: 380px; }
-.modal-container.modal-lg  { max-width: 800px; }
-.modal-container.modal-xl  { max-width: min(1140px, calc(100vw - 2 * var(--space-4))); }
+.modal-container.modal-sm   { max-width: 420px; }
+.modal-container.modal-md   { max-width: 620px; }
+.modal-container.modal-lg   { max-width: 850px; }
+.modal-container.modal-xl   { max-width: min(1140px, calc(100vw - 2 * var(--space-4))); }
 .modal-container.modal-full { max-width: calc(100vw - 2 * var(--space-4)); max-height: calc(100svh - 2 * var(--space-4)); }
 
 /* ─── Modal Header ─── */
@@ -63,9 +64,7 @@
   font-weight: 600;
   color: var(--color-text-primary);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .modal-close {
@@ -130,6 +129,7 @@
 
   /* Force sm/lg/xl to also be full-width on mobile */
   .modal-container.modal-sm,
+  .modal-container.modal-md,
   .modal-container.modal-lg,
   .modal-container.modal-xl {
     max-width: 100%;
@@ -137,6 +137,10 @@
 
   .modal-header {
     padding: var(--space-4);
+  }
+  .modal-title {
+    font-size: var(--text-lg);
+    word-break: break-word;
   }
   .modal-body {
     padding: var(--space-4);

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ─── Base App Theme ─── -->
+    <style name="Theme.UltraAdmin" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent_primary</item>
+        <item name="colorPrimaryVariant">@color/accent_secondary</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+        <item name="colorSurface">@color/bg_surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/bg_primary</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- ─── Splash Theme (used before setContentView) ─── -->
+    <style name="Theme.UltraAdmin.Splash" parent="Theme.UltraAdmin">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <!-- ─── Main Fullscreen Theme (WebView host) ─── -->
+    <style name="Theme.UltraAdmin.Fullscreen" parent="Theme.UltraAdmin">
+        <item name="android:windowBackground">@color/bg_primary</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <!-- Prevent white flash when WebView loads -->
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+</resources>
