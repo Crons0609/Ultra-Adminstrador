@@ -11,6 +11,7 @@ export class Router {
     this.rootElement = document.getElementById(rootElementId);
     this.currentRoute = null;
     this.currentViewInstance = null;
+    this._navId = 0; // Navigation guard counter — increments on every route change
 
     // Listen to hash change events
     window.addEventListener('hashchange', () => this.handleRouteChange());
@@ -31,6 +32,10 @@ export class Router {
    * Route change handler. Resolves path, processes middleware, and mounts views.
    */
   async handleRouteChange() {
+    // Navigation guard: each call gets a unique ID.
+    // If a newer navigation starts before this one finishes, this one aborts.
+    const navId = ++this._navId;
+
     let hashPath = window.location.hash.slice(1) || '/';
     
     // Simple dynamic parameter parsing (e.g. /customer/menu/:companyId/:branchId/:tableId)
@@ -46,6 +51,10 @@ export class Router {
 
     // Execute middleware chain (Auth guards, roles validations)
     const canAccess = await this.executeMiddlewares(route);
+
+    // Abort if a newer navigation has started since we awaited
+    if (navId !== this._navId) return;
+
     if (!canAccess) {
       // Middleware handles redirection, stop execution here
       return;
@@ -55,6 +64,11 @@ export class Router {
     if (this.currentViewInstance && typeof this.currentViewInstance.unmount === 'function') {
       this.currentViewInstance.unmount();
     }
+
+    // Clean up any orphaned modal overlays left in the DOM and reset body scroll lock
+    // (modals whose unmount() was never called because the view's innerHTML was cleared)
+    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
 
     // Initialize and render new View component
     try {
@@ -66,6 +80,10 @@ export class Router {
       if (this.rootElement) {
         this.rootElement.innerHTML = '';
         const renderedElement = await this.currentViewInstance.mount();
+
+        // Abort if another navigation started while we were mounting
+        if (navId !== this._navId) return;
+
         if (renderedElement instanceof HTMLElement) {
           this.rootElement.appendChild(renderedElement);
           AnimationService.animatePageEntrance(renderedElement);
@@ -82,6 +100,7 @@ export class Router {
         } catch (_) {}
       }
     } catch (error) {
+      if (navId !== this._navId) return; // Ignore errors from superseded navigations
       console.error('Error mounting route view:', error);
       // Fallback to error route or display generic error layout
       if (this.rootElement) {

@@ -72,15 +72,17 @@ export class Modal extends Component {
   }
 
   unmount() {
-    // Restore background scroll — only if no other modals are open
-    const remainingModals = document.querySelectorAll('.modal-overlay');
-    if (remainingModals.length <= 1) {
-      document.body.classList.remove('modal-open');
-    }
-
+    // Remove this modal's element from DOM first
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
+
+    // Restore background scroll only if no other modals remain
+    const remainingModals = document.querySelectorAll('.modal-overlay');
+    if (remainingModals.length === 0) {
+      document.body.classList.remove('modal-open');
+    }
+
     super.unmount();
   }
 }
