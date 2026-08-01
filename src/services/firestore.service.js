@@ -364,10 +364,16 @@ export class FirestoreService {
       businessType: companyData.businessType || 'Restaurante',
       plan: companyData.plan || 'FREE',
       status: companyData.status || 'ACTIVO',
+      country: companyData.country || 'Nicaragua',
+      state: companyData.state || '',
+      city: companyData.city || '',
+      postalCode: companyData.postalCode || '',
+      address: companyData.address || '',
       subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
       ownerId: companyData.ownerId || '',
       ownerEmail: companyData.ownerEmail || '',
       ownerPassword: companyData.ownerPassword || '',
+      modules: companyData.modules || configData.modules || {},
       createdAt: now,
       updatedAt: now,
       createdAtLocal: localNow,
@@ -379,21 +385,31 @@ export class FirestoreService {
       nombre: companyData.name,
       propietario: companyData.ownerId || '',
       telefono: companyData.phone || '',
+      pais: companyData.country || 'Nicaragua',
+      estado: companyData.state || '',
+      municipio: companyData.city || '',
+      codigoPostal: companyData.postalCode || '',
       direccion: companyData.address || '',
       correo: companyData.ownerEmail || '',
       horario: '',
       logo: '',
       businessType: companyData.businessType || 'Restaurante',
       subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
+      modules: companyData.modules || configData.modules || {},
       configuracion: defaultConfig
     };
     updates[`${companyId}/config`] = {
       ...defaultConfig,
+      modules: companyData.modules || configData.modules || {},
       updatedAt: now,
       updatedAtLocal: localNow
     };
     updates[`${companyId}/branches/main`] = {
       name: 'Principal',
+      country: companyData.country || 'Nicaragua',
+      state: companyData.state || '',
+      city: companyData.city || '',
+      postalCode: companyData.postalCode || '',
       address: companyData.address || '',
       phone: companyData.phone || '',
       active: true,
@@ -859,6 +875,26 @@ export class FirestoreService {
       updates[`${companyId}/informacion_local/nombre`] = data.name;
       updates[`${companyId}/branches/main/name`] = 'Principal';
     }
+    if (data.country !== undefined) {
+      updates[`${companyId}/informacion_local/pais`] = data.country;
+      updates[`${companyId}/branches/main/country`] = data.country;
+    }
+    if (data.state !== undefined) {
+      updates[`${companyId}/informacion_local/estado`] = data.state;
+      updates[`${companyId}/branches/main/state`] = data.state;
+    }
+    if (data.city !== undefined) {
+      updates[`${companyId}/informacion_local/municipio`] = data.city;
+      updates[`${companyId}/branches/main/city`] = data.city;
+    }
+    if (data.postalCode !== undefined) {
+      updates[`${companyId}/informacion_local/codigoPostal`] = data.postalCode;
+      updates[`${companyId}/branches/main/postalCode`] = data.postalCode;
+    }
+    if (data.address !== undefined) {
+      updates[`${companyId}/informacion_local/direccion`] = data.address;
+      updates[`${companyId}/branches/main/address`] = data.address;
+    }
     if (data.businessType !== undefined) {
       updates[`${companyId}/informacion_local/businessType`] = data.businessType;
     }
@@ -867,6 +903,11 @@ export class FirestoreService {
     }
     if (data.status !== undefined) {
       updates[`${companyId}/config/status`] = data.status;
+    }
+    if (data.modules !== undefined) {
+      updates[`companies/${companyId}/modules`] = data.modules;
+      updates[`${companyId}/config/modules`] = data.modules;
+      updates[`${companyId}/informacion_local/modules`] = data.modules;
     }
     if (data.subscriptionExpiresAt !== undefined) {
       updates[`${companyId}/informacion_local/subscriptionExpiresAt`] = data.subscriptionExpiresAt;

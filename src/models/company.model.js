@@ -13,7 +13,20 @@ export class Company {
    * @param {string} data.status - 'ACTIVE' | 'SUSPENDED'
    * @param {Object} [data.config] - Customized features flags per tenant
    */
-  constructor({ id, name, logo = '', plan = 'BASIC', status = 'ACTIVE', config = {} }) {
+  constructor({
+    id,
+    name,
+    logo = '',
+    plan = 'BASIC',
+    status = 'ACTIVE',
+    country = 'Nicaragua',
+    state = '',
+    city = '',
+    postalCode = '',
+    address = '',
+    modules = {},
+    config = {}
+  }) {
     if (!id) throw new Error('Company validation: ID is required');
     if (!name) throw new Error('Company validation: Name is required');
 
@@ -22,6 +35,12 @@ export class Company {
     this.logo = logo;
     this.plan = plan;
     this.status = status;
+    this.country = country || 'Nicaragua';
+    this.state = state || '';
+    this.city = city || '';
+    this.postalCode = postalCode || '';
+    this.address = address || '';
+    this.modules = modules || {};
     
     // Default tenant feature configuration flags
     this.config = {
@@ -30,18 +49,25 @@ export class Company {
       enableKDS: true,
       enablePWA: true,
       customDomain: null,
+      modules: this.modules,
       ...config
     };
   }
 
   static fromFirestore(docSnapshot) {
-    const data = docSnapshot.data();
+    const data = docSnapshot.data ? docSnapshot.data() : docSnapshot;
     return new Company({
-      id: docSnapshot.id,
+      id: docSnapshot.id || data.id,
       name: data.name,
       logo: data.logo,
       plan: data.plan,
       status: data.status,
+      country: data.country || 'Nicaragua',
+      state: data.state || '',
+      city: data.city || '',
+      postalCode: data.postalCode || '',
+      address: data.address || '',
+      modules: data.modules || data.config?.modules || {},
       config: data.config
     });
   }
@@ -52,7 +78,17 @@ export class Company {
       logo: this.logo,
       plan: this.plan,
       status: this.status,
-      config: this.config
+      country: this.country,
+      state: this.state,
+      city: this.city,
+      postalCode: this.postalCode,
+      address: this.address,
+      modules: this.modules,
+      config: {
+        ...this.config,
+        modules: this.modules
+      }
     };
   }
 }
+

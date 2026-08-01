@@ -84,6 +84,7 @@ const getOwnerSupplierRemindersView = () => import('../modules/owner/views/suppl
 const getOwnerCreditSystemView = () => import('../modules/owner/views/credit-system.view.js').then(m => m.CreditSystemView);
 const getOwnerSettingsView = () => import('../modules/owner/views/settings.view.js').then(m => m.SettingsView);
 const getOwnerClientAssignmentsView = () => import('../modules/owner/views/client-assignments.view.js').then(m => m.ClientAssignmentsView);
+const getOwnerMigrationView = () => import('../modules/owner/views/migration.view.js').then(m => m.MigrationView);
 const getWaiterClientAssignmentsView = () => import('../modules/waiter/views/client-assignments.view.js').then(m => m.ClientAssignmentsView);
 
 // Super Admin Module
@@ -200,6 +201,7 @@ export const ROUTES = [
   { path: '/owner/credit-system', view: lazyView(getOwnerCreditSystemView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
   { path: '/owner/settings', view: lazyView(getOwnerSettingsView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
   { path: '/owner/client-assignments', view: lazyView(getOwnerClientAssignmentsView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
+  { path: '/owner/migration', view: lazyView(getOwnerMigrationView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
 
   // Super Admin routes
   { path: '/super-admin/companies', view: lazyView(getSuperAdminCompaniesView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },

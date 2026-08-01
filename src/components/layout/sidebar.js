@@ -8,6 +8,7 @@ import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
+import { MODULE_REGISTRY, isModuleEnabled } from '../../config/modules.config.js';
 import { db } from '../../config/firebase.config.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 
@@ -58,6 +59,7 @@ export class Sidebar extends Component {
       telegram: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`,
       reminders: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><circle cx="18" cy="4" r="3" fill="var(--color-danger)"/></svg>`,
       creditSystem: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="6" y1="16" x2="10" y2="16"/><line x1="14" y1="16" x2="18" y2="16"/></svg>`,
+      migration: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
       settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     };
 
@@ -85,89 +87,34 @@ export class Sidebar extends Component {
         ]
       },
       OWNER: {
-        groups: [
-          {
-            label: 'General',
-            items: [
-              { label: 'Dashboard', path: '#/manager/dashboard', icon: icons.dashboard },
-              { label: 'Empleados', path: '#/manager/employees', icon: icons.employees },
-              ...guardedItem('Inventario', '#/inventory/products', icons.inventory, guards.showInventory),
-              ...guardedItem('Lector de Facturas', '#/owner/invoice-ocr', icons.inventory, guards.showInventory),
-              ...guardedItem('Activos y Equipos', '#/manager/assets', icons.assets, guards.showAssets),
-              ...guardedItem('Vehículos', '#/manager/vehicles', icons.car, guards.enableVehiclesCatalog),
-              ...guardedItem('Herramientas', '#/manager/tools', icons.tools, guards.showTools),
-              ...guardedItem('Insumos', '#/manager/supplies', icons.supplies, guards.showSupplies),
-              ...guardedItem('Historial Escaneos', '#/manager/scan-history', icons.history, guards.showScanHistory),
-              ...guardedItem('Códigos QR', '#/manager/qr-codes', icons.qr, guards.enableQR),
-              ...guardedItem('Solicitudes', '#/manager/service-requests', icons.inbox, guards.enableServiceRequests),
-              ...guardedItem('Alquileres', '#/manager/rentals', icons.calendar, guards.enableRentals),
-              ...guardedItem('Citas', '#/manager/appointments', icons.calendar, guards.enableAppointments),
-              ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, guards.enableEmployeePricing),
-              { label: 'Página Pública', path: '#/manager/catalog-settings', icon: icons.globe },
-              { label: 'Ajustes', path: '#/owner/settings', icon: icons.settings },
-              ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
-                ? [{ label: 'Asignación de Clientes', path: '#/owner/client-assignments', icon: icons.calendar }]
-                : []
-              ),
-            ]
-          },
-          {
-            label: 'Finanzas',
-            items: [
-              { label: 'Control Financiero', path: '#/owner/finance', icon: icons.finance },
-              { label: 'Gastos', path: '#/owner/expenses', icon: icons.expenses },
-              { label: 'Balance General', path: '#/owner/balance', icon: icons.balance },
-              { label: 'Proyecciones', path: '#/owner/projections', icon: icons.projections },
-              { label: 'Clientes Recurrentes', path: '#/owner/recurring-clients', icon: icons.recurringClients },
-              { label: 'Cuentas por Cobrar', path: '#/owner/accounts-receivable', icon: icons.receivable },
-              { label: 'Sistema de Crédito', path: '#/owner/credit-system', icon: icons.creditSystem },
-              { label: 'Recordatorios de Pago', path: '#/owner/payment-reminders', icon: icons.reminders },
-              { label: 'Cuentas por Pagar', path: '#/owner/accounts-payable', icon: icons.payable },
-              { label: 'Servicios Básicos', path: '#/owner/basic-services', icon: icons.services },
-              { label: 'Avisos a Proveedores', path: '#/owner/supplier-reminders', icon: icons.payable },
-            ]
-          },
-          {
-            label: 'Automatización',
-            items: [
-              { label: 'WhatsApp Automation', path: '#/owner/whatsapp', icon: icons.whatsapp },
-              { label: 'Telegram Automation', path: '#/owner/telegram', icon: icons.telegram },
-            ]
-          }
-        ]
+        groups: (() => {
+          // Filter MODULE_REGISTRY by company's enabled modules and generate dynamic groups
+          const enabledModules = MODULE_REGISTRY.filter(m =>
+            m.allowedRoles.includes('OWNER') && isModuleEnabled(currentCompany, m.id)
+          );
+
+          // Group by category and filter out empty categories
+          const categoryOrder = ['General', 'Finanzas', 'Operaciones', 'Automatización'];
+          return categoryOrder
+            .map(cat => ({
+              label: cat,
+              items: enabledModules
+                .filter(m => m.category === cat)
+                .map(m => ({ label: m.name, path: m.path, icon: m.icon }))
+            }))
+            .filter(g => g.items.length > 0);
+        })()
       },
       MANAGER: {
-        groups: [
-          {
-            label: 'Operaciones',
-            items: [
-              { label: 'Dashboard', path: '#/manager/dashboard', icon: icons.dashboard },
-              { label: 'Empleados', path: '#/manager/employees', icon: icons.employees },
-              ...guardedItem('Inventario', '#/inventory/products', icons.inventory, guards.showInventory),
-              ...guardedItem('Lector de Facturas', '#/owner/invoice-ocr', icons.inventory, guards.showInventory),
-              ...guardedItem('Activos y Equipos', '#/manager/assets', icons.assets, guards.showAssets),
-              ...guardedItem('Vehículos', '#/manager/vehicles', icons.car, guards.enableVehiclesCatalog),
-              ...guardedItem('Herramientas', '#/manager/tools', icons.tools, guards.showTools),
-              ...guardedItem('Insumos', '#/manager/supplies', icons.supplies, guards.showSupplies),
-              ...guardedItem('Historial Escaneos', '#/manager/scan-history', icons.history, guards.showScanHistory),
-              ...guardedItem('Códigos QR', '#/manager/qr-codes', icons.qr, guards.enableQR),
-              ...guardedItem('Solicitudes', '#/manager/service-requests', icons.inbox, guards.enableServiceRequests),
-              ...guardedItem('Alquileres', '#/manager/rentals', icons.calendar, guards.enableRentals),
-              ...guardedItem('Citas', '#/manager/appointments', icons.calendar, guards.enableAppointments),
-              ...guardedItem('Precios Especiales', '#/manager/pricing', icons.tag, guards.enableEmployeePricing),
-              { label: 'Reportes', path: '#/manager/reports', icon: icons.reports },
-              { label: 'Página Pública', path: '#/manager/catalog-settings', icon: icons.globe },
-              { label: 'Recordatorios de Pago', path: '#/owner/payment-reminders', icon: icons.reminders },
-              { label: 'Avisos a Proveedores', path: '#/owner/supplier-reminders', icon: icons.payable },
-              { label: 'WhatsApp Automation', path: '#/owner/whatsapp', icon: icons.whatsapp },
-              { label: 'Telegram Automation', path: '#/owner/telegram', icon: icons.telegram },
-              ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
-                ? [{ label: 'Asignación de Clientes', path: '#/owner/client-assignments', icon: icons.calendar }]
-                : []
-              ),
-            ]
-          }
-        ]
+        groups: (() => {
+          // Filter MODULE_REGISTRY by company's enabled modules and generate dynamic groups for manager
+          const enabledModules = MODULE_REGISTRY.filter(m =>
+            m.allowedRoles.includes('MANAGER') && isModuleEnabled(currentCompany, m.id)
+          );
+          // Manager gets one flat group with all allowed modules
+          const allItems = enabledModules.map(m => ({ label: m.name, path: m.path, icon: m.icon }));
+          return allItems.length > 0 ? [{ label: 'Operaciones', items: allItems }] : [{ label: 'Operaciones', items: [] }];
+        })()
       },
       CASHIER: {
         groups: [
