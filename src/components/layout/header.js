@@ -47,6 +47,10 @@ export class Header extends Component {
       '#/waiter/orders': 'Pedidos',
       '#/kitchen/kds': 'Kitchen Display',
       '#/kitchen/stats': 'Estadísticas de Cocina',
+      '#/hr/recruitment': 'Recursos Humanos (RH)',
+      '#/calendar/work-calendar': 'Calendario Laboral',
+      '#/owner/whatsapp': 'WhatsApp Automation',
+      '#/owner/telegram': 'Telegram Automation',
     };
     for (const [path, title] of Object.entries(pages)) {
       if (hash === path || hash.startsWith(path + '/')) return title;

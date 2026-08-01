@@ -228,7 +228,10 @@ class App {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
-        .then(reg => console.log('[App] Service Worker registered:', reg.scope))
+        .then(reg => {
+          console.log('[App] Service Worker registered:', reg.scope);
+          reg.update().catch(() => {});
+        })
         .catch(err => console.warn('[App] Service Worker registration failed:', err));
     }
   }

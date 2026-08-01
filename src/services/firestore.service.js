@@ -592,9 +592,9 @@ export class FirestoreService {
       address: data.direccion || '',
       email: data.correo || '',
       status,
-      modules,
       ...data,
       config,
+      modules,
     };
   }
 

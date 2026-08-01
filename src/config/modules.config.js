@@ -377,13 +377,11 @@ export function isModuleEnabled(company, moduleId) {
   if (!company) return true; // Fallback if company not loaded yet
   
   // Extract modules map from company root, config, or informacion_local
-  const modules = company.modules || company.config?.modules || company.informacion_local?.modules;
+  const modules = company.modules || company.config?.modules || company.informacion_local?.modules || {};
 
-  // 1. If company has explicit module key defined, return boolean
-  if (modules && typeof modules === 'object' && Object.keys(modules).length > 0) {
-    if (modules[moduleId] !== undefined) {
-      return Boolean(modules[moduleId]);
-    }
+  // 1. If explicitly defined as boolean in company modules object, return that
+  if (modules && typeof modules === 'object' && modules[moduleId] !== undefined) {
+    return Boolean(modules[moduleId]);
   }
 
   // 2. Backwards compatibility legacy key mappings
@@ -409,13 +407,7 @@ export function isModuleEnabled(company, moduleId) {
     return Boolean(company.config[legacyKey]);
   }
 
-  // 3. If company has an explicit module configuration object, but this specific module key is missing,
-  // it means the module was added to system registry after company was created and has NOT been enabled yet.
-  if (modules && typeof modules === 'object' && Object.keys(modules).length > 0) {
-    return false;
-  }
-
-  // 4. Fallback for brand-new or unconfigured legacy company objects: use registry default
+  // 3. Fallback to defaultEnabled defined in MODULE_REGISTRY
   const moduleDef = getModuleById(moduleId);
   return moduleDef ? moduleDef.defaultEnabled : true;
 }

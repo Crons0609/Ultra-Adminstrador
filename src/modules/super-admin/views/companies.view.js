@@ -283,10 +283,10 @@ export class CompaniesView extends Component {
         const cbId = `${idPrefix}mod-registry-${m.id}`;
         html += `
           <label for="${cbId}" style="display:flex; align-items:center; gap:12px; padding:10px var(--space-3); cursor:pointer; border-bottom:1px solid var(--color-border); user-select:none;">
-            <!-- hidden native checkbox (source of truth) -->
-            <input type="checkbox" id="${cbId}" class="mod-registry-toggle" data-module-id="${m.id}" ${on ? 'checked' : ''} style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;" />
+            <!-- native checkbox (source of truth) -->
+            <input type="checkbox" id="${cbId}" class="mod-registry-toggle" data-module-id="${m.id}" ${on ? 'checked' : ''} style="position:absolute; opacity:0; width:1px; height:1px; margin:-1px; cursor:pointer;" />
             <!-- visual toggle track -->
-            <span class="mod-track" style="display:inline-flex; align-items:center; flex-shrink:0; width:38px; height:22px; border-radius:11px; transition:background 0.22s; position:relative; pointer-events:none;">
+            <span class="mod-track" style="display:inline-flex; align-items:center; flex-shrink:0; width:38px; height:22px; border-radius:11px; transition:background 0.22s; position:relative;">
               <!-- thumb -->
               <span class="mod-thumb" style="display:block; width:16px; height:16px; border-radius:50%; background:#ffffff; box-shadow:0 1px 4px rgba(0,0,0,0.4); transition:transform 0.22s; position:absolute; top:3px; left:0;"></span>
             </span>

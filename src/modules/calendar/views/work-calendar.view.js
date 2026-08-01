@@ -12,6 +12,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { CalendarService, EVENT_TYPES, ABSENCE_TYPES } from '../../../services/calendar.service.js';
+import { isModuleEnabled } from '../../../config/modules.config.js';
 
 export class WorkCalendarView extends Component {
   constructor(params = {}) {
@@ -94,7 +95,10 @@ export class WorkCalendarView extends Component {
           </div>
 
           <!-- Action Buttons -->
-          <div style="display:flex; gap:var(--space-2);">
+          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap;">
+            ${isOwnerOrManager && isModuleEnabled(this.currentCompany, 'hrRecruitment') ? `
+              <a href="#/hr/recruitment" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:600;">👥 Recursos Humanos (RH)</a>
+            ` : ''}
             ${isOwnerOrManager ? `
               <button class="btn btn-secondary btn-sm" id="btn-cal-settings" title="Configurar límite de ausencias y festivos">⚙️ Reglas</button>
             ` : ''}
