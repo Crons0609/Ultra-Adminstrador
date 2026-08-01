@@ -95,8 +95,12 @@ export class RecruitmentView extends Component {
   }
 
   unmount() {
+    // Cancel all Firebase real-time listeners
     this.listeners.forEach(off => off && off());
     this.listeners = [];
+    // Clear element references so orphaned callbacks cannot write to the DOM
+    this.element = null;
+    super.unmount();
   }
 
   bindHeaderTabs(element) {
@@ -211,6 +215,9 @@ export class RecruitmentView extends Component {
   renderActiveTabUI(element) {
     const root = element || this.element || this.layout.element;
     if (!root) return;
+
+    // Guard: if element is no longer attached to the document (navigated away), do not write
+    if (!root.isConnected) return;
 
     const container = root.querySelector('#hr-recruitment-view-root');
     if (!container) return;
