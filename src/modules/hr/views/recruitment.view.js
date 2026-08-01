@@ -1014,6 +1014,46 @@ export class RecruitmentView extends Component {
     this.state.selectedCandidate = cand;
     const stConfig = CANDIDATE_STATUSES[cand.status] || CANDIDATE_STATUSES.NUEVO;
 
+    const docsHTML = (cand.documents && Object.keys(cand.documents).length > 0)
+      ? Object.entries(cand.documents).map(([docId, imgId]) => {
+          const docDef = this.state.requestedDocuments.find(d => d.id === docId);
+          const docName = docDef ? docDef.name : docId;
+          return `
+            <div style="background:var(--color-bg-primary); padding:10px; border-radius:8px; border:1px solid var(--color-border); display:flex; flex-direction:column; gap:6px;">
+              <span style="font-size:0.78rem; font-weight:600; color:var(--color-text-secondary);">${docName}</span>
+              ${ImageDisplay.renderTag(imgId, '', 'width:100%; max-height:120px; object-fit:cover; border-radius:6px; border:1px solid var(--color-border);', cand.companyId)}
+            </div>
+          `;
+        }).join('')
+      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">No hay documentos adjuntos.</span>';
+
+    const experiencesHTML = (cand.experiences && cand.experiences.length > 0)
+      ? cand.experiences.map(e => `
+          <div style="font-size:0.8rem; padding:8px 0; border-bottom:1px solid var(--color-border);">
+            <strong style="color:var(--color-text-primary);">${e.position || 'Puesto'}</strong> en <span>${e.company || 'Empresa'}</span>
+            ${e.period ? `<span style="color:var(--color-text-tertiary); font-size:0.75rem; display:block;">⏱️ ${e.period}</span>` : ''}
+            ${e.desc ? `<p style="font-size:0.78rem; color:var(--color-text-secondary); margin:4px 0 0;">${e.desc}</p>` : ''}
+          </div>
+        `).join('')
+      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">Sin experiencia agregada.</span>';
+
+    const educationHTML = (cand.education && cand.education.length > 0)
+      ? cand.education.map(e => `
+          <div style="font-size:0.8rem; padding:8px 0; border-bottom:1px solid var(--color-border);">
+            <strong style="color:var(--color-text-primary);">${e.degree || 'Estudio'}</strong>
+            <span style="color:var(--color-text-secondary); display:block; font-size:0.78rem;">🏫 ${e.institution || 'Institución'}</span>
+          </div>
+        `).join('')
+      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">Sin educación agregada.</span>';
+
+    const customAnsHTML = (cand.customAnswers && Object.keys(cand.customAnswers).length > 0)
+      ? Object.entries(cand.customAnswers).map(([fid, val]) => {
+          const fDef = this.state.customFormFields.find(f => f.id === fid);
+          const label = fDef ? fDef.label : fid;
+          return `<div style="font-size:0.8rem;"><strong>${label}:</strong> <span style="color:var(--color-accent);">${val || 'N/R'}</span></div>`;
+        }).join('')
+      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">Sin preguntas adicionales.</span>';
+
     const bodyHTML = `
       <div style="display:flex; flex-direction:column; gap:16px;">
         <div style="display:flex; gap:16px; align-items:center; background:var(--color-bg-tertiary); padding:16px; border-radius:12px; border:1px solid var(--color-border);">
@@ -1025,7 +1065,7 @@ export class RecruitmentView extends Component {
             </div>
             <p style="font-size:0.85rem; font-weight:600; color:var(--color-accent); margin:2px 0 4px;">💼 ${cand.position || 'Sin puesto'}</p>
             <p style="font-size:0.75rem; color:var(--color-text-tertiary); margin:0;">
-              🆔 ${cand.expCode || 'EXP-RH'} · 🎂 ${cand.age ? cand.age + ' años' : ''} · 📍 ${cand.city || ''}, ${cand.country || ''}
+              🆔 ${cand.expCode || 'EXP-RH'} · 🎂 Fecha Nac: ${cand.birthDate || 'N/D'} (${cand.age ? cand.age + ' años' : ''})
             </p>
           </div>
         </div>
@@ -1056,9 +1096,15 @@ export class RecruitmentView extends Component {
               <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🆔 Datos Personales</h5>
               <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:4px;">
                 <span>🪪 <strong>Cédula:</strong> ${cand.idNumber || 'N/D'}</span>
-                <span>💍 <strong>Estado Civil:</strong> ${cand.civilStatus || 'N/D'}</span>
-                <span>🏠 <strong>Dirección:</strong> ${cand.address || ''}</span>
+                <span>🇳🇮 <strong>Nacionalidad:</strong> ${cand.nationality || 'Nicaragüense'}</span>
+                <span>📍 <strong>Ubicación:</strong> ${cand.municipality || ''}, ${cand.department || ''}, ${cand.country || ''}</span>
+                <span>🏠 <strong>Dirección:</strong> ${cand.address || 'N/D'}</span>
               </div>
+            </div>
+
+            <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🛠️ Experiencia Laboral</h5>
+              ${experiencesHTML}
             </div>
           </div>
 
@@ -1073,13 +1119,32 @@ export class RecruitmentView extends Component {
             </div>
 
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🎓 Educación</h5>
+              ${educationHTML}
+            </div>
+
+            <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
               <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">⚡ Habilidades</h5>
               <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                ${(cand.skills || []).map(s => `
+                ${(cand.skills || []).length > 0 ? cand.skills.map(s => `
                   <span style="font-size:0.72rem; background:var(--color-bg-secondary); color:var(--color-text-primary); padding:2px 8px; border-radius:4px;">${s}</span>
-                `).join('')}
+                `).join('') : '<span style="font-size:0.78rem; color:var(--color-text-tertiary);">Sin habilidades.</span>'}
               </div>
             </div>
+
+            <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">❓ Respuestas Adicionales</h5>
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                ${customAnsHTML}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
+          <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">📄 Documentación Adjunta</h5>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            ${docsHTML}
           </div>
         </div>
 

@@ -25,11 +25,12 @@ export class PublicApplyView extends Component {
       requestedDocuments: [],
       error: null,
       submitted: false,
+      isSubmitting: false,
       applicationId: null,
       selectedVacancyId: null,
 
       photoImageId: null,
-      birthDate: '',
+      docImageIds: {}, // { docId: imageId }
       computedAge: null
     };
   }
@@ -76,7 +77,12 @@ export class PublicApplyView extends Component {
       const fieldsRaw = await FirestoreService.readPath(`${this.companyId}/hr_form_fields`);
       const customFormFields = fieldsRaw ? Object.values(fieldsRaw) : [];
       const docsRaw = await FirestoreService.readPath(`${this.companyId}/hr_requested_documents`);
-      const requestedDocuments = docsRaw ? Object.values(docsRaw) : [];
+      const requestedDocuments = docsRaw ? Object.values(docsRaw) : [
+        { id: 'dni', name: 'Documento de Identidad (Cédula/DNI)', required: true },
+        { id: 'police_record', name: 'Récord Policial', required: true },
+        { id: 'cv', name: 'Curriculum Vitae (CV PDF)', required: true },
+        { id: 'diploma', name: 'Títulos o Diplomas', required: false }
+      ];
 
       this.setState({
         loading: false,
@@ -95,7 +101,7 @@ export class PublicApplyView extends Component {
   }
 
   render() {
-    const { loading, company, pageConfig, vacancies, customFormFields, requestedDocuments, error, submitted, applicationId, computedAge } = this.state;
+    const { loading, company, pageConfig, vacancies, customFormFields, requestedDocuments, error, submitted, applicationId, isSubmitting } = this.state;
 
     if (loading) {
       return `
@@ -133,7 +139,7 @@ export class PublicApplyView extends Component {
               <div style="font-size:0.8rem; color:#94a3b8;">EXPEDIENTE DE CANDIDATO:</div>
               <div style="font-family:monospace; font-size:1.2rem; font-weight:700; color:#a7f3d0;">${applicationId}</div>
             </div>
-            <button onclick="window.location.reload()" class="btn btn-primary" style="background:#6366f1; border:none; padding:12px 24px; font-weight:700; border-radius:10px;">Enviar otra solicitud</button>
+            <button onclick="window.location.reload()" class="btn btn-primary" style="background:#6366f1; border:none; padding:12px 24px; font-weight:700; border-radius:10px; cursor:pointer;">Enviar otra solicitud</button>
           </div>
         </div>
       `;
@@ -183,7 +189,7 @@ export class PublicApplyView extends Component {
                     <span style="font-size:0.75rem; color:#818cf8;">🏢 ${v.department || 'General'} · ⏱️ ${v.shift || 'Tiempo Completo'}</span>
                     <p style="font-size:0.8rem; color:#94a3b8; margin:8px 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${v.description || ''}</p>
                   </div>
-                  <button class="btn btn-primary btn-sm btn-apply-vacancy" data-title="${v.title}" style="background:#6366f1; border:none; margin-top:8px; font-weight:600;">Aplicar a esta Vacante</button>
+                  <button type="button" class="btn btn-primary btn-sm btn-apply-vacancy" data-title="${v.title}" style="background:#6366f1; border:none; margin-top:8px; font-weight:600; cursor:pointer;">Aplicar a esta Vacante</button>
                 </div>
               `).join('')}
             </div>
@@ -219,12 +225,39 @@ export class PublicApplyView extends Component {
               </div>
               <div>
                 <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Edad Calculada</label>
-                <input type="text" id="app-age-display" readonly class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#34d399; font-weight:700; padding:10px; border-radius:8px;" value="${computedAge ? computedAge + ' años' : 'Selecciona fecha'}" />
+                <input type="text" id="app-age-display" readonly class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#34d399; font-weight:700; padding:10px; border-radius:8px;" value="Selecciona fecha" />
               </div>
               <div>
                 <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Cédula / DNI <span style="color:#ef4444;">*</span></label>
                 <input type="text" id="app-id-number" required class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Número de cédula" />
               </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-top:14px;">
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Nacionalidad</label>
+                <input type="text" id="app-nationality" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Nicaragüense" value="Nicaragüense" />
+              </div>
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">País</label>
+                <input type="text" id="app-country" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Nicaragua" value="Nicaragua" />
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-top:14px;">
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Departamento / Estado</label>
+                <input type="text" id="app-department" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Ej. Managua" />
+              </div>
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Municipio / Ciudad</label>
+                <input type="text" id="app-municipality" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Ej. Managua" />
+              </div>
+            </div>
+
+            <div style="margin-top:14px;">
+              <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Dirección Exacta</label>
+              <textarea id="app-address" class="input" rows="2" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px; resize:vertical;" placeholder="Barrio, de los semáforos 2c al sur..."></textarea>
             </div>
           </div>
 
@@ -240,22 +273,101 @@ export class PublicApplyView extends Component {
                 <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Número de WhatsApp <span style="color:#ef4444;">*</span></label>
                 <input type="tel" id="app-whatsapp" required class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="+505 8888-8888" />
               </div>
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Teléfono Alternativo</label>
+                <input type="tel" id="app-phone-alt" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Convencional o celular" />
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-top:14px;">
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Contacto de Emergencia</label>
+                <input type="text" id="app-emergency-name" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Nombre de familiar" />
+              </div>
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Teléfono de Emergencia</label>
+                <input type="tel" id="app-emergency-phone" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="+505 8888-0000" />
+              </div>
             </div>
           </div>
 
           <!-- SECTION 3: Labor Aspirations -->
           <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
             <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0 0 16px;">💼 3. Puesto al que Aplica</h3>
-            <div>
-              <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Puesto / Cargo Deseado <span style="color:#ef4444;">*</span></label>
-              <input type="text" id="app-position" required class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Ej. Cocinero, Cajero, Vendedor, Mecánico..." />
+            
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Puesto / Cargo Deseado <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="app-position" required class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Ej. Cocinero, Cajero, Vendedor..." />
+              </div>
+
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Jornada Preferida</label>
+                <select id="app-shift" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;">
+                  <option value="TIEMPO_COMPLETO">Tiempo Completo</option>
+                  <option value="MEDIO_TIEMPO">Medio Tiempo</option>
+                  <option value="FINES_DE_SEMANA">Fines de Semana</option>
+                  <option value="NOCTURNO">Turno Nocturno</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:14px;">
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Pretensión Salarial (opcional)</label>
+                <input type="text" id="app-desired-salary" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Ej. C$ 12,000 / mes" />
+              </div>
+              <div>
+                <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Disponible para Iniciar</label>
+                <input type="text" id="app-start-date" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Inmediato / En 2 semanas" value="Inmediato" />
+              </div>
             </div>
           </div>
 
-          <!-- SECTION 4: Custom Builder Fields (if present) -->
+          <!-- SECTION 4: Work Experience (Dynamic List) -->
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0;">🛠️ 4. Experiencia Laboral</h3>
+              <button type="button" id="btn-add-experience" class="btn btn-secondary btn-sm" style="background:#312e81; color:#c7d2fe; border:1px solid #4338ca; font-weight:600; cursor:pointer;">+ Agregar Experiencia</button>
+            </div>
+            <div id="experience-list-container" style="display:flex; flex-direction:column; gap:12px;">
+              <p style="font-size:0.82rem; color:#94a3b8; margin:0;" id="empty-experience-msg">No has agregado experiencia previa (opcional).</p>
+            </div>
+          </div>
+
+          <!-- SECTION 5: Education & Studies (Dynamic List) -->
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0;">🎓 5. Educación y Estudios</h3>
+              <button type="button" id="btn-add-education" class="btn btn-secondary btn-sm" style="background:#312e81; color:#c7d2fe; border:1px solid #4338ca; font-weight:600; cursor:pointer;">+ Agregar Estudio</button>
+            </div>
+            <div id="education-list-container" style="display:flex; flex-direction:column; gap:12px;">
+              <p style="font-size:0.82rem; color:#94a3b8; margin:0;" id="empty-education-msg">No has agregado estudios (opcional).</p>
+            </div>
+          </div>
+
+          <!-- SECTION 6: Languages & Skills -->
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
+            <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0 0 16px;">🌐 6. Habilidades e Idiomas</h3>
+            <div>
+              <label style="font-size:0.8rem; color:#cbd5e1; display:block; margin-bottom:4px;">Habilidades Clave (separadas por comas)</label>
+              <input type="text" id="app-skills-input" class="input" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; padding:10px; border-radius:8px;" placeholder="Ej. Atención al Cliente, Trabajo en Equipo, Excel, Caja Chica" />
+            </div>
+          </div>
+
+          <!-- SECTION 7: Document Checklist Uploads -->
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
+            <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0 0 16px;">📄 7. Documentación Requerida</h3>
+            <p style="font-size:0.8rem; color:#cbd5e1; margin-bottom:16px;">Adjunta los documentos requeridos en formato de imagen o PDF.</p>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;" id="requested-docs-uploaders-grid">
+              <!-- Dynamically populated in bindEvents -->
+            </div>
+          </div>
+
+          <!-- SECTION 8: Custom Builder Fields (if present) -->
           ${customFormFields.length > 0 ? `
             <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:24px;">
-              <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0 0 16px;">❓ 4. Preguntas Adicionales</h3>
+              <h3 style="font-size:1.1rem; font-weight:700; color:#818cf8; margin:0 0 16px;">❓ 8. Preguntas Adicionales</h3>
               <div style="display:flex; flex-direction:column; gap:14px;">
                 ${customFormFields.map((f, idx) => `
                   <div>
@@ -288,8 +400,8 @@ export class PublicApplyView extends Component {
           </div>
 
           <div style="text-align:center;">
-            <button type="submit" id="btn-submit-app" style="background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:#fff; font-size:1.1rem; font-weight:800; padding:16px 40px; border-radius:12px; border:none; cursor:pointer; width:100%; max-width:400px; box-shadow:0 10px 20px rgba(99,102,241,0.4);">
-              🚀 Enviar Solicitud de Empleo
+            <button type="submit" id="btn-submit-app" ${isSubmitting ? 'disabled' : ''} style="background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:#fff; font-size:1.1rem; font-weight:800; padding:16px 40px; border-radius:12px; border:none; cursor:pointer; width:100%; max-width:400px; box-shadow:0 10px 20px rgba(99,102,241,0.4);">
+              ${isSubmitting ? '⏳ Enviando Expediente...' : '🚀 Enviar Solicitud de Empleo'}
             </button>
           </div>
 
@@ -302,31 +414,60 @@ export class PublicApplyView extends Component {
     if (!this.element) return;
 
     // Photo uploader slot
-    const slot = this.element.querySelector('#hr-photo-uploader-slot');
-    if (slot) {
-      this.uploader = new ImageUploader({
+    const photoSlot = this.element.querySelector('#hr-photo-uploader-slot');
+    if (photoSlot) {
+      this.photoUploader = new ImageUploader({
         preset: 'PROFILE',
         label: 'Fotografía Reciente (JPG, PNG, WEBP)',
         onImageUploaded: (imageId) => { this.state.photoImageId = imageId; },
         onImageRemoved: () => { this.state.photoImageId = null; }
       });
-      slot.appendChild(this.uploader.mount());
+      photoSlot.appendChild(this.photoUploader.mount());
     }
 
-    // Auto age calculation
+    // Requested docs uploaders
+    const docsGrid = this.element.querySelector('#requested-docs-uploaders-grid');
+    if (docsGrid) {
+      this.state.requestedDocuments.forEach(doc => {
+        const itemDiv = document.createElement('div');
+        itemDiv.style.cssText = 'background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px;';
+        
+        const label = document.createElement('label');
+        label.style.cssText = 'font-size:0.8rem; font-weight:600; color:#cbd5e1; display:block; margin-bottom:6px;';
+        label.innerHTML = `${doc.name} ${doc.required ? '<span style="color:#ef4444;">*</span>' : ''}`;
+        itemDiv.appendChild(label);
+
+        const uploader = new ImageUploader({
+          preset: 'DOCUMENT',
+          label: 'Adjuntar documento',
+          onImageUploaded: (imageId) => { this.state.docImageIds[doc.id] = imageId; },
+          onImageRemoved: () => { delete this.state.docImageIds[doc.id]; }
+        });
+        itemDiv.appendChild(uploader.mount());
+        docsGrid.appendChild(itemDiv);
+      });
+    }
+
+    // Plain Date of Birth handling without timezone drift
     const birthInput = this.element.querySelector('#app-birthdate');
     const ageDisplay = this.element.querySelector('#app-age-display');
     if (birthInput) {
       birthInput.addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (val) {
-          const birth = new Date(val);
-          const now = new Date();
-          let age = now.getFullYear() - birth.getFullYear();
-          const m = now.getMonth() - birth.getMonth();
-          if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-          this.state.computedAge = age;
-          if (ageDisplay) ageDisplay.value = `${age} años`;
+        const val = e.target.value; // "YYYY-MM-DD"
+        if (val && val.includes('-')) {
+          const parts = val.split('-').map(Number);
+          if (parts.length === 3) {
+            const [y, m, d] = parts;
+            const today = new Date();
+            let age = today.getFullYear() - y;
+            const currentMonth = today.getMonth() + 1;
+            const currentDay = today.getDate();
+            if (currentMonth < m || (currentMonth === m && currentDay < d)) {
+              age--;
+            }
+            this.state.computedAge = Math.max(0, age);
+            if (ageDisplay) ageDisplay.value = `${this.state.computedAge} años`;
+          }
         }
       });
     }
@@ -344,17 +485,119 @@ export class PublicApplyView extends Component {
       });
     });
 
+    // Dynamic Experience List
+    const addExpBtn = this.element.querySelector('#btn-add-experience');
+    if (addExpBtn) {
+      addExpBtn.addEventListener('click', () => this.addExperienceItem());
+    }
+
+    // Dynamic Education List
+    const addEduBtn = this.element.querySelector('#btn-add-education');
+    if (addEduBtn) {
+      addEduBtn.addEventListener('click', () => this.addEducationItem());
+    }
+
     // Form submit
     const form = this.element.querySelector('#hr-public-apply-form');
     if (form) form.addEventListener('submit', (e) => this.handleSubmit(e));
   }
 
+  addExperienceItem() {
+    const container = this.element.querySelector('#experience-list-container');
+    const emptyMsg = this.element.querySelector('#empty-experience-msg');
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    const itemId = `exp_${Date.now()}`;
+    const div = document.createElement('div');
+    div.id = itemId;
+    div.className = 'exp-item-card';
+    div.style.cssText = 'background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; position:relative;';
+
+    div.innerHTML = `
+      <button type="button" class="btn-remove-item" style="position:absolute; top:10px; right:10px; background:transparent; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">&times;</button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+        <div>
+          <label style="font-size:0.75rem; color:#cbd5e1; display:block;">Empresa / Negocio</label>
+          <input type="text" class="exp-company input" style="width:100%; background:#1e293b; border:1px solid #334155; color:#fff; padding:6px; border-radius:6px; font-size:0.8rem;" placeholder="Nombre de empresa" />
+        </div>
+        <div>
+          <label style="font-size:0.75rem; color:#cbd5e1; display:block;">Puesto / Cargo</label>
+          <input type="text" class="exp-position input" style="width:100%; background:#1e293b; border:1px solid #334155; color:#fff; padding:6px; border-radius:6px; font-size:0.8rem;" placeholder="Cargo desempeñado" />
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:0.75rem; color:#cbd5e1; display:block;">Periodo / Duración</label>
+          <input type="text" class="exp-period input" style="width:100%; background:#1e293b; border:1px solid #334155; color:#fff; padding:6px; border-radius:6px; font-size:0.8rem;" placeholder="Ej. 2022 - 2024 (2 años)" />
+        </div>
+        <div>
+          <label style="font-size:0.75rem; color:#cbd5e1; display:block;">Funciones / Responsabilidades</label>
+          <input type="text" class="exp-desc input" style="width:100%; background:#1e293b; border:1px solid #334155; color:#fff; padding:6px; border-radius:6px; font-size:0.8rem;" placeholder="Principales tareas" />
+        </div>
+      </div>
+    `;
+
+    div.querySelector('.btn-remove-item').addEventListener('click', () => {
+      div.remove();
+      if (container.querySelectorAll('.exp-item-card').length === 0 && emptyMsg) {
+        emptyMsg.style.display = 'block';
+      }
+    });
+
+    container.appendChild(div);
+  }
+
+  addEducationItem() {
+    const container = this.element.querySelector('#education-list-container');
+    const emptyMsg = this.element.querySelector('#empty-education-msg');
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    const itemId = `edu_${Date.now()}`;
+    const div = document.createElement('div');
+    div.id = itemId;
+    div.className = 'edu-item-card';
+    div.style.cssText = 'background:#0f172a; border:1px solid #334155; border-radius:10px; padding:14px; position:relative;';
+
+    div.innerHTML = `
+      <button type="button" class="btn-remove-item" style="position:absolute; top:10px; right:10px; background:transparent; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">&times;</button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:0.75rem; color:#cbd5e1; display:block;">Institución / Colegio / Universidad</label>
+          <input type="text" class="edu-inst input" style="width:100%; background:#1e293b; border:1px solid #334155; color:#fff; padding:6px; border-radius:6px; font-size:0.8rem;" placeholder="Nombre de institución" />
+        </div>
+        <div>
+          <label style="font-size:0.75rem; color:#cbd5e1; display:block;">Título / Nivel Alcanzado</label>
+          <input type="text" class="edu-degree input" style="width:100%; background:#1e293b; border:1px solid #334155; color:#fff; padding:6px; border-radius:6px; font-size:0.8rem;" placeholder="Ej. Bachiller, Licenciatura..." />
+        </div>
+      </div>
+    `;
+
+    div.querySelector('.btn-remove-item').addEventListener('click', () => {
+      div.remove();
+      if (container.querySelectorAll('.edu-item-card').length === 0 && emptyMsg) {
+        emptyMsg.style.display = 'block';
+      }
+    });
+
+    container.appendChild(div);
+  }
+
   async handleSubmit(e) {
     e.preventDefault();
+
+    if (this.state.isSubmitting) return;
 
     if (!this.state.photoImageId) {
       alert('Por favor sube una fotografía reciente antes de enviar la solicitud.');
       return;
+    }
+
+    // Validate required requested documents
+    for (const doc of this.state.requestedDocuments) {
+      if (doc.required && !this.state.docImageIds[doc.id]) {
+        alert(`Por favor adjunta el documento requerido: "${doc.name}"`);
+        return;
+      }
     }
 
     const submitBtn = this.element.querySelector('#btn-submit-app');
@@ -362,15 +605,44 @@ export class PublicApplyView extends Component {
       submitBtn.disabled = true;
       submitBtn.textContent = '⏳ Enviando Expediente...';
     }
+    this.state.isSubmitting = true;
 
+    // Gather Custom Builder Answers
     const customAns = {};
     this.element.querySelectorAll('.custom-builder-input').forEach(input => {
       const fid = input.getAttribute('data-fid');
       if (fid) customAns[fid] = input.value;
     });
 
+    // Gather Experiences
+    const experiences = [];
+    this.element.querySelectorAll('.exp-item-card').forEach(card => {
+      const company = card.querySelector('.exp-company')?.value.trim();
+      const position = card.querySelector('.exp-position')?.value.trim();
+      const period = card.querySelector('.exp-period')?.value.trim();
+      const desc = card.querySelector('.exp-desc')?.value.trim();
+      if (company || position) {
+        experiences.push({ company, position, period, desc });
+      }
+    });
+
+    // Gather Education
+    const education = [];
+    this.element.querySelectorAll('.edu-item-card').forEach(card => {
+      const inst = card.querySelector('.edu-inst')?.value.trim();
+      const degree = card.querySelector('.edu-degree')?.value.trim();
+      if (inst || degree) {
+        education.push({ institution: inst, degree });
+      }
+    });
+
+    // Skills
+    const skillsRaw = this.element.querySelector('#app-skills-input')?.value || '';
+    const skills = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
     const candidateId = `cand_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const expCode = `EXP-RH-${Math.floor(100000 + Math.random() * 900000)}`;
+    const birthDateVal = this.element.querySelector('#app-birthdate')?.value || '';
 
     const payload = {
       id: candidateId,
@@ -382,24 +654,47 @@ export class PublicApplyView extends Component {
       updatedAt: new Date().toISOString(),
 
       photoImageId: this.state.photoImageId,
+      documents: this.state.docImageIds,
       firstName: this.element.querySelector('#app-firstname')?.value.trim() || '',
       lastName: this.element.querySelector('#app-lastname')?.value.trim() || '',
       displayName: `${this.element.querySelector('#app-firstname')?.value.trim() || ''} ${this.element.querySelector('#app-lastname')?.value.trim() || ''}`,
-      birthDate: this.element.querySelector('#app-birthdate')?.value || '',
+      birthDate: birthDateVal,
       age: this.state.computedAge || 0,
       idNumber: this.element.querySelector('#app-id-number')?.value.trim() || '',
+      nationality: this.element.querySelector('#app-nationality')?.value.trim() || 'Nicaragüense',
+      country: this.element.querySelector('#app-country')?.value.trim() || 'Nicaragua',
+      department: this.element.querySelector('#app-department')?.value.trim() || '',
+      municipality: this.element.querySelector('#app-municipality')?.value.trim() || '',
+      address: this.element.querySelector('#app-address')?.value.trim() || '',
+
       email: this.element.querySelector('#app-email')?.value.trim() || '',
       whatsapp: this.element.querySelector('#app-whatsapp')?.value.trim() || '',
+      phoneAlt: this.element.querySelector('#app-phone-alt')?.value.trim() || '',
+      emergencyName: this.element.querySelector('#app-emergency-name')?.value.trim() || '',
+      emergencyPhone: this.element.querySelector('#app-emergency-phone')?.value.trim() || '',
+
       position: this.element.querySelector('#app-position')?.value.trim() || '',
+      shift: this.element.querySelector('#app-shift')?.value || 'TIEMPO_COMPLETO',
+      desiredSalary: this.element.querySelector('#app-desired-salary')?.value.trim() || '',
+      startDate: this.element.querySelector('#app-start-date')?.value.trim() || 'Inmediato',
+
+      experiences,
+      education,
+      skills,
       customAnswers: customAns
     };
 
     try {
+      // Primary candidate pool path
       await FirestoreService.writePath(`${this.companyId}/hr_candidates/${candidateId}`, payload);
-      this.setState({ submitted: true, applicationId: expCode });
+      // Dual write to central companies tree for tenant isolation safety
+      await FirestoreService.writePath(`companies/${this.companyId}/hr_candidates/${candidateId}`, payload);
+
+      this.setState({ submitted: true, applicationId: expCode, isSubmitting: false });
     } catch (err) {
       console.error('[PublicApplyView] Error submitting application:', err);
-      alert('Error al enviar solicitud. Intenta de nuevo.');
+      alert('Error al enviar solicitud. Intenta de nuevo: ' + err.message);
+      this.state.isSubmitting = false;
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = '🚀 Enviar Solicitud de Empleo';
