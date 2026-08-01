@@ -276,6 +276,9 @@ export class SettingsView extends Component {
             <button class="settings-tab-btn" data-tab="preferences">
               ⚙️ Preferencias del Dashboard
             </button>
+            <button class="settings-tab-btn" data-tab="location">
+              📍 Ubicación del Establecimiento
+            </button>
           </div>
 
           <!-- TAB CONTENT: ACCOUNT -->
@@ -601,6 +604,86 @@ export class SettingsView extends Component {
             </div>
           </div>
 
+          <!-- TAB CONTENT: LOCATION -->
+          <div class="tab-content-panel" id="panel-tab-location" style="display:none;">
+            <div class="settings-grid" style="grid-template-columns:1fr;">
+              <div class="form-card animate-fade-in">
+                <span class="card-title-badge">📍 Ubicación del Establecimiento</span>
+                <p class="text-xs text-secondary" style="margin-bottom:var(--space-4);">
+                  Configura la dirección física de tu negocio. Esta información se guardará en la nube y estará disponible en cualquier dispositivo, sesión o navegador.
+                </p>
+
+                <form id="owner-location-form" style="display:flex; flex-direction:column; gap:var(--space-4);">
+
+                  <!-- Map container -->
+                  <div style="position:relative;">
+                    <div id="owner-location-map" style="width:100%; height:280px; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-bg-tertiary); overflow:hidden;"></div>
+                    <div id="owner-location-map-placeholder" style="display:flex; align-items:center; justify-content:center; gap:8px; position:absolute; inset:0; background:var(--color-bg-tertiary); border-radius:var(--radius-md); border:1px solid var(--color-border); color:var(--color-text-secondary); font-size:0.85rem;">
+                      <span>🗺️</span> <span>El mapa aparecerá al activar la pestaña</span>
+                    </div>
+                    <button type="button" id="btn-detect-gps" class="btn btn-secondary btn-sm" style="position:absolute; top:10px; right:10px; z-index:500; display:flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+                      📡 Detectar mi ubicación GPS
+                    </button>
+                  </div>
+
+                  <!-- Coordinates (auto-filled from map) -->
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+                    <div class="form-group">
+                      <label class="form-label" for="loc-lat-input">Latitud</label>
+                      <input type="number" id="loc-lat-input" class="input input-md" step="0.000001" placeholder="12.345678" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="loc-lng-input">Longitud</label>
+                      <input type="number" id="loc-lng-input" class="input input-md" step="0.000001" placeholder="-86.123456" />
+                    </div>
+                  </div>
+
+                  <!-- Address fields -->
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+                    <div class="form-group">
+                      <label class="form-label" for="loc-country-input">País</label>
+                      <input type="text" id="loc-country-input" class="input input-md" placeholder="Nicaragua" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="loc-department-input">Departamento / Estado</label>
+                      <input type="text" id="loc-department-input" class="input input-md" placeholder="Managua" />
+                    </div>
+                  </div>
+
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+                    <div class="form-group">
+                      <label class="form-label" for="loc-municipality-input">Municipio / Ciudad</label>
+                      <input type="text" id="loc-municipality-input" class="input input-md" placeholder="Managua" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="loc-address-input">Dirección Exacta</label>
+                      <input type="text" id="loc-address-input" class="input input-md" placeholder="Calle principal, #123" />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="loc-reference-input">Punto de Referencia</label>
+                    <textarea id="loc-reference-input" class="input" style="min-height:70px; padding:10px; resize:vertical;" placeholder="Frente al parque central, 2 cuadras al norte del mercado..."></textarea>
+                  </div>
+
+                  <!-- Last saved indicator -->
+                  <div id="loc-saved-indicator" style="display:none; padding:10px var(--space-3); background:rgba(22,163,74,0.1); border:1px solid rgba(22,163,74,0.3); border-radius:var(--radius-md); font-size:0.82rem; color:#4ade80; display:flex; align-items:center; gap:8px;">
+                    ✅ <span id="loc-saved-text">Ubicación guardada</span>
+                  </div>
+
+                  <div style="display:flex; gap:var(--space-3); flex-wrap:wrap;">
+                    <button type="submit" id="btn-save-location" class="btn btn-primary btn-md" style="display:flex; align-items:center; gap:6px;">
+                      💾 Guardar Ubicación
+                    </button>
+                    <button type="button" id="btn-clear-location" class="btn btn-secondary btn-sm" style="color:#f87171; border-color:#f87171;">
+                      🗑️ Limpiar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
         </div>
       `
     });
@@ -615,6 +698,7 @@ export class SettingsView extends Component {
     // Initial load
     this.loadOwnerProfile(element);
     this.loadEmployeesList(element);
+    // Location tab is loaded lazily when the tab is clicked (see afterMount)
 
     return element;
   }
@@ -651,6 +735,9 @@ export class SettingsView extends Component {
         // Trigger dynamic queries if switching tab
         if (selectedTab === 'employees') {
           this.loadEmployeesList(root);
+        }
+        if (selectedTab === 'location') {
+          this.loadEstablishmentLocation(root);
         }
       });
     }
@@ -735,6 +822,257 @@ export class SettingsView extends Component {
         AppearanceService.applyConfig(this.readOwnerAppearanceFields(root));
       });
     });
+
+    // 11. Location Form Submission
+    const locationForm = root.querySelector('#owner-location-form');
+    if (locationForm) {
+      locationForm.addEventListener('submit', (e) => this.handleSaveLocation(e, root));
+    }
+
+    // 12. Clear location
+    const clearLocBtn = root.querySelector('#btn-clear-location');
+    if (clearLocBtn) {
+      clearLocBtn.addEventListener('click', () => {
+        ['#loc-lat-input','#loc-lng-input','#loc-country-input','#loc-department-input',
+         '#loc-municipality-input','#loc-address-input','#loc-reference-input'].forEach(sel => {
+          const el = root.querySelector(sel);
+          if (el) el.value = '';
+        });
+        const indicator = root.querySelector('#loc-saved-indicator');
+        if (indicator) indicator.style.display = 'none';
+      });
+    }
+
+    // 13. GPS Detection Button
+    const gpsBtn = root.querySelector('#btn-detect-gps');
+    if (gpsBtn) {
+      gpsBtn.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          NotificationService.warning('Tu navegador no soporta GPS.');
+          return;
+        }
+        gpsBtn.textContent = '⏳ Detectando...';
+        gpsBtn.disabled = true;
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = parseFloat(pos.coords.latitude.toFixed(6));
+            const lng = parseFloat(pos.coords.longitude.toFixed(6));
+            const latEl = root.querySelector('#loc-lat-input');
+            const lngEl = root.querySelector('#loc-lng-input');
+            if (latEl) latEl.value = lat;
+            if (lngEl) lngEl.value = lng;
+            gpsBtn.textContent = '📡 Detectar mi ubicación GPS';
+            gpsBtn.disabled = false;
+            // Move Leaflet marker if map is ready
+            if (this._locMap && this._locMarker) {
+              this._locMap.setView([lat, lng], 16);
+              this._locMarker.setLatLng([lat, lng]);
+            }
+            NotificationService.success(`Posición GPS: ${lat}, ${lng}`);
+          },
+          (err) => {
+            gpsBtn.textContent = '📡 Detectar mi ubicación GPS';
+            gpsBtn.disabled = false;
+            NotificationService.error('No se pudo obtener el GPS: ' + err.message);
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DATA ACTIONS: UBICACIÓN DEL ESTABLECIMIENTO
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Load establishment location from Firebase RTDB (/{companyId}/informacion_local/location)
+   * and populate form fields + initialize Leaflet map.
+   */
+  async loadEstablishmentLocation(root) {
+    if (!db || !this.companyId) return;
+    try {
+      const locRef = ref(db, `${this.companyId}/informacion_local/location`);
+      const snap = await get(locRef);
+      const loc = snap.exists() ? snap.val() : null;
+
+      const fill = (selector, value) => {
+        const el = root.querySelector(selector);
+        if (el && value !== undefined && value !== null) el.value = value;
+      };
+
+      if (loc) {
+        fill('#loc-lat-input', loc.latitude ?? loc.lat ?? '');
+        fill('#loc-lng-input', loc.longitude ?? loc.lng ?? '');
+        fill('#loc-country-input', loc.country ?? '');
+        fill('#loc-department-input', loc.department ?? '');
+        fill('#loc-municipality-input', loc.municipality ?? '');
+        fill('#loc-address-input', loc.address ?? '');
+        fill('#loc-reference-input', loc.reference ?? '');
+
+        // Show saved indicator
+        const indicator = root.querySelector('#loc-saved-indicator');
+        const savedText = root.querySelector('#loc-saved-text');
+        if (indicator) indicator.style.display = 'flex';
+        if (savedText && loc.updatedAt) {
+          const d = new Date(loc.updatedAt);
+          savedText.textContent = `Ubicación guardada el ${d.toLocaleDateString()} a las ${d.toLocaleTimeString()}`;
+        }
+      }
+
+      // Initialize Leaflet map
+      await this._initLocationMap(root, loc);
+    } catch (err) {
+      console.error('[SettingsView] Error loading location:', err);
+    }
+  }
+
+  /**
+   * Initialize (or refresh) the Leaflet map inside the location tab.
+   * If a location already exists, centers on it; otherwise defaults to Managua, Nicaragua.
+   */
+  async _initLocationMap(root, existingLoc) {
+    const mapEl = root.querySelector('#owner-location-map');
+    const placeholder = root.querySelector('#owner-location-map-placeholder');
+    if (!mapEl) return;
+
+    // Hide placeholder
+    if (placeholder) placeholder.style.display = 'none';
+
+    const defaultLat = existingLoc?.latitude ?? existingLoc?.lat ?? 12.1328;
+    const defaultLng = existingLoc?.longitude ?? existingLoc?.lng ?? -86.2982;
+    const defaultZoom = existingLoc ? 15 : 12;
+
+    // Load Leaflet if not already loaded
+    if (typeof window.L === 'undefined') {
+      await new Promise((resolve, reject) => {
+        if (document.getElementById('leaflet-css')) { resolve(); return; }
+        const css = document.createElement('link');
+        css.id = 'leaflet-css';
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(css);
+
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    // If map instance already exists, destroy it first
+    if (this._locMap) {
+      try { this._locMap.remove(); } catch (_) {}
+      this._locMap = null;
+      this._locMarker = null;
+    }
+
+    const L = window.L;
+    const map = L.map(mapEl).setView([defaultLat, defaultLng], defaultZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    const marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+    marker.bindPopup('📍 Arrastra el pin para ajustar la ubicación').openPopup();
+
+    // When marker is dragged, update coordinate inputs
+    marker.on('dragend', () => {
+      const pos = marker.getLatLng();
+      const latEl = root.querySelector('#loc-lat-input');
+      const lngEl = root.querySelector('#loc-lng-input');
+      if (latEl) latEl.value = parseFloat(pos.lat.toFixed(6));
+      if (lngEl) lngEl.value = parseFloat(pos.lng.toFixed(6));
+    });
+
+    // Clicking on map moves the marker
+    map.on('click', (e) => {
+      marker.setLatLng(e.latlng);
+      const latEl = root.querySelector('#loc-lat-input');
+      const lngEl = root.querySelector('#loc-lng-input');
+      if (latEl) latEl.value = parseFloat(e.latlng.lat.toFixed(6));
+      if (lngEl) lngEl.value = parseFloat(e.latlng.lng.toFixed(6));
+    });
+
+    this._locMap = map;
+    this._locMarker = marker;
+
+    // Force resize to render correctly (lazy tab rendering fix)
+    setTimeout(() => { try { map.invalidateSize(); } catch (_) {} }, 150);
+  }
+
+  /**
+   * Save establishment location to Firebase RTDB.
+   * Path: /{companyId}/informacion_local/location
+   * Also updates companies/{companyId}/location for the company registry.
+   */
+  async handleSaveLocation(e, root) {
+    e.preventDefault();
+
+    const getVal = (sel) => {
+      const el = root.querySelector(sel);
+      return el ? el.value.trim() : '';
+    };
+
+    const latRaw = getVal('#loc-lat-input');
+    const lngRaw = getVal('#loc-lng-input');
+    const lat = parseFloat(latRaw);
+    const lng = parseFloat(lngRaw);
+
+    if (!latRaw || !lngRaw || isNaN(lat) || isNaN(lng)) {
+      NotificationService.error('Ingresa o detecta las coordenadas GPS antes de guardar.');
+      return;
+    }
+
+    const saveBtn = root.querySelector('#btn-save-location');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Guardando...'; }
+
+    const locationData = {
+      latitude: lat,
+      longitude: lng,
+      address: getVal('#loc-address-input'),
+      country: getVal('#loc-country-input'),
+      department: getVal('#loc-department-input'),
+      municipality: getVal('#loc-municipality-input'),
+      reference: getVal('#loc-reference-input'),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const updates = {};
+      // Primary: company sub-tree
+      updates[`${this.companyId}/informacion_local/location`] = locationData;
+      // Secondary: company registry node (for Super Admin and multi-tenant reads)
+      updates[`companies/${this.companyId}/location`] = locationData;
+
+      await update(ref(db), updates);
+
+      // Update GlobalStore in real-time so other views pick it up
+      const { currentCompany } = GlobalStore.getState();
+      if (currentCompany) {
+        GlobalStore.set({
+          currentCompany: {
+            ...currentCompany,
+            location: locationData
+          }
+        });
+      }
+
+      // Show success indicator
+      const indicator = root.querySelector('#loc-saved-indicator');
+      const savedText = root.querySelector('#loc-saved-text');
+      if (indicator) indicator.style.display = 'flex';
+      if (savedText) savedText.textContent = 'Ubicación guardada correctamente en la nube ✅';
+
+      NotificationService.success('📍 Ubicación del establecimiento guardada en Firestore.');
+    } catch (err) {
+      console.error('[SettingsView] Error saving location:', err);
+      NotificationService.error('Error al guardar la ubicación: ' + err.message);
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Guardar Ubicación'; }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

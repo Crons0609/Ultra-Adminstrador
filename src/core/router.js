@@ -73,6 +73,13 @@ export class Router {
           this.rootElement.innerHTML = this.currentViewInstance.render();
           AnimationService.animatePageEntrance(this.rootElement);
         }
+
+        // Reset scroll position on every navigation (SPA: prevent inheriting prior page scroll)
+        try {
+          window.scrollTo(0, 0);
+          const mainContent = document.querySelector('.main-content');
+          if (mainContent) mainContent.scrollTop = 0;
+        } catch (_) {}
       }
     } catch (error) {
       console.error('Error mounting route view:', error);

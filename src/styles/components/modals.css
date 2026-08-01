@@ -4,6 +4,11 @@
  * RESPONSIVE: Bottom-sheet style on mobile <640px, centered card on larger screens.
  */
 
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior-y: none !important;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -20,6 +25,7 @@
   padding: var(--space-4);
   animation: fadeIn var(--transition-normal) forwards;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -94,6 +100,7 @@
   padding: var(--space-5);
   overflow-y: auto;
   flex: 1 1 auto;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 
