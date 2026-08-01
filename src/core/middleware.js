@@ -148,26 +148,8 @@ export function roleGuard(allowedRoles) {
       return true;
     }
 
-    // OWNER: check subscription status, but still go through module guard below
-    if (userRole === 'OWNER') {
-      if (company) {
-        const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
-        const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
-        
-        if (isFaltaPago || isExpired) {
-          console.warn(`Access Denied: Company '${company.name}' is expired or inactive.`);
-          alert(`Acceso Suspendido: La suscripción de "${company.name}" ha vencido o se encuentra inactiva. Por favor, contacte al administrador.`);
-          
-          const { AuthService } = await import('../services/auth.service.js');
-          await AuthService.logout();
-          router.navigate('/login');
-          return false;
-        }
-      }
-      // ↓ OWNER continues to module guard check below — DO NOT return true here
-    }
-
-    if (company) {
+    // Check company status / subscription
+    if (company && userRole !== 'SUPER_ADMIN') {
       const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
       const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
       
@@ -178,6 +160,18 @@ export function roleGuard(allowedRoles) {
         const { AuthService } = await import('../services/auth.service.js');
         await AuthService.logout();
         router.navigate('/login');
+        return false;
+      }
+
+      // Check if module associated with this route path is enabled for this company
+      const moduleDef = getModuleByPath(path);
+      if (moduleDef && !isModuleEnabled(company, moduleDef.id)) {
+        console.warn(`[roleGuard/moduleGuard] Module '${moduleDef.id}' is disabled for '${company.id}'.`);
+        try {
+          const { NotificationService } = await import('../services/notification.service.js');
+          NotificationService.error(`Módulo no disponible: "${moduleDef.name}" no está habilitado para este negocio.`);
+        } catch (_) {}
+        redirectUserDashboard(userRole, router);
         return false;
       }
     }
@@ -203,20 +197,6 @@ export function roleGuard(allowedRoles) {
       // Redirect to correct dashboard according to the user's role
       redirectUserDashboard(userRole, router);
       return false;
-    }
-
-    // 2b. Module guard — check if the module for this route is enabled for the company
-    if (company && userRole !== 'SUPER_ADMIN') {
-      const moduleDef = getModuleByPath(path);
-      if (moduleDef && !isModuleEnabled(company, moduleDef.id)) {
-        console.warn(`[roleGuard/moduleGuard] Module '${moduleDef.id}' is disabled for '${company.id}'.`);
-        try {
-          const { NotificationService } = await import('../services/notification.service.js');
-          NotificationService.error(`Módulo no disponible: "${moduleDef.name}" no está habilitado para este negocio.`);
-        } catch (_) {}
-        redirectUserDashboard(userRole, router);
-        return false;
-      }
     }
 
     return true;

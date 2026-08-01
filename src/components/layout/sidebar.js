@@ -93,9 +93,15 @@ export class Sidebar extends Component {
             m.allowedRoles.includes('OWNER') && isModuleEnabled(currentCompany, m.id)
           );
 
-          // Group by category and filter out empty categories
-          const categoryOrder = ['General', 'Finanzas', 'Operaciones', 'Automatización'];
-          return categoryOrder
+          // Dynamically extract unique categories in order of appearance
+          const categories = [];
+          enabledModules.forEach(m => {
+            if (m.category && !categories.includes(m.category)) {
+              categories.push(m.category);
+            }
+          });
+
+          return categories
             .map(cat => ({
               label: cat,
               items: enabledModules

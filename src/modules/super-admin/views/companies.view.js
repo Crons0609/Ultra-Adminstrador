@@ -1070,7 +1070,7 @@ export class CompaniesView extends Component {
     const modules = {};
     MODULE_REGISTRY.forEach(m => {
       const cb = this.modalInstance.$(`#edit-mod-registry-${m.id}`);
-      modules[m.id] = cb ? cb.checked : m.defaultEnabled;
+      modules[m.id] = cb ? cb.checked : (row.modules?.[m.id] !== undefined ? Boolean(row.modules[m.id]) : m.defaultEnabled);
     });
 
     try {

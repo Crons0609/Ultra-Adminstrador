@@ -56,6 +56,9 @@ class App {
             } catch (err) {
               console.warn('[App] Failed to restore company info:', err.message);
             }
+
+            // Start real-time company modules & settings listener
+            this.startCompanyRealtimeListener(userSession);
           }
           // Check GPS tracking prompt / auto-resume for employees
           GeolocationService.checkAndPromptGPS();
@@ -67,6 +70,10 @@ class App {
           if (this.notificationsUnsubscribe) {
             this.notificationsUnsubscribe();
             this.notificationsUnsubscribe = null;
+          }
+          if (this.companyUnsubscribe) {
+            this.companyUnsubscribe();
+            this.companyUnsubscribe = null;
           }
         }
         resolve();
@@ -130,6 +137,39 @@ class App {
             import('./services/notification.service.js').then(({ NotificationService }) => {
               NotificationService.show(newest.message, 'info', 5000);
             });
+          }
+        });
+      });
+    });
+  }
+
+  /**
+   * Listens for real-time changes to the current company configuration and modules in Firebase RTDB.
+   * Dynamically updates GlobalStore.set({ currentCompany }) so the Sidebar and routes update instantly.
+   */
+  startCompanyRealtimeListener(userSession) {
+    if (this.companyUnsubscribe) {
+      this.companyUnsubscribe();
+      this.companyUnsubscribe = null;
+    }
+
+    if (!userSession || !userSession.companyId || userSession.companyId === 'global') return;
+
+    import('./config/firebase.config.js').then(({ db }) => {
+      import('https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js').then(({ ref, onValue }) => {
+        if (!db) return;
+
+        const companyRef = ref(db, `companies/${userSession.companyId}`);
+        this.companyUnsubscribe = onValue(companyRef, async (snapshot) => {
+          if (!snapshot.exists()) return;
+          try {
+            const companyInfo = await FirestoreService.getCompanyInfo(userSession.companyId);
+            if (companyInfo) {
+              GlobalStore.set({ currentCompany: companyInfo });
+              console.log('[App] 🔄 Real-time company configuration & modules updated:', companyInfo.name);
+            }
+          } catch (err) {
+            console.warn('[App] Realtime company update check failed:', err.message);
           }
         });
       });

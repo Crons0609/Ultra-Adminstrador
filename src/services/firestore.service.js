@@ -559,15 +559,30 @@ export class FirestoreService {
 
     let status = 'ACTIVO';
     let config = {};
+    let modules = data.modules || {};
+
     try {
       const configSnap = await get(ref(db, `${companyId}/config`));
       if (configSnap.exists()) {
         config = configSnap.val() || {};
         status = config.status || 'ACTIVO';
+        if (config.modules) {
+          modules = { ...modules, ...config.modules };
+        }
       }
     } catch (e) {
       console.warn('Failed to fetch config:', e.message);
     }
+
+    try {
+      const companyRootSnap = await get(ref(db, `companies/${companyId}`));
+      if (companyRootSnap.exists()) {
+        const rootVal = companyRootSnap.val() || {};
+        if (rootVal.modules) {
+          modules = { ...modules, ...rootVal.modules };
+        }
+      }
+    } catch (e) {}
 
     return {
       id: companyId,
@@ -577,6 +592,7 @@ export class FirestoreService {
       address: data.direccion || '',
       email: data.correo || '',
       status,
+      modules,
       ...data,
       config,
     };
@@ -868,6 +884,8 @@ export class FirestoreService {
           } catch (e) {}
         }
 
+        const modules = info.modules || config.modules || {};
+
         return {
           id: companyId,
           name: info.name || companyId,
@@ -881,6 +899,7 @@ export class FirestoreService {
           ownerPassword,
           branches: branchCount || 1,
           users: employeeCount || 1,
+          modules,
           config: config,
           createdAt: info.createdAt,
           updatedAt: info.updatedAt

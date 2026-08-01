@@ -9,7 +9,7 @@
  *  - Background Sync → Cola de escrituras pendientes que se reenvían al reconectarse
  */
 
-const CACHE_VERSION = 'ultra-admin-v6-offline';
+const CACHE_VERSION = 'ultra-admin-v7-dynamic-modules';
 const SYNC_TAG      = 'ultra-offline-sync';
 
 // ─── Assets del App Shell (se almacenan en instalación) ──────────────────────
@@ -42,7 +42,7 @@ const BYPASS_PATTERNS = [
 // INSTALL — cache del app shell
 // ─────────────────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing — caching app shell...');
+  console.log('[SW] Installing v7 — caching app shell...');
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
       return cache.addAll(SHELL_ASSETS).catch((err) => {
@@ -57,7 +57,7 @@ self.addEventListener('install', (event) => {
 // ACTIVATE — limpiar cachés viejos
 // ─────────────────────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating — cleaning old caches...');
+  console.log('[SW] Activating v7 — cleaning old caches...');
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
@@ -86,7 +86,13 @@ self.addEventListener('fetch', (event) => {
   // Bypass total para Firebase y servicios externos críticos
   if (BYPASS_PATTERNS.some((p) => url.includes(p))) return;
 
-  // ── App shell y assets propios → Cache First con Network Update ─────────
+  // ── Código fuente en /src/ → Network First (recibe siempre actualizaciones de Render) ──
+  if (url.includes('/src/')) {
+    event.respondWith(networkFirstWithCache(req));
+    return;
+  }
+
+  // ── App shell estático (index.html, logo, css) → Cache First con revalidación ──
   if (isShellRequest(url)) {
     event.respondWith(cacheFirst(req));
     return;
