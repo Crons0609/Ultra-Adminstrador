@@ -816,19 +816,37 @@ export class SettingsView extends Component {
       return;
     }
 
-    try {
-      NotificationService.info('Procesando y optimizando foto de perfil...');
+    // Show loading state on the avatar zone
+    const clickZone = root.querySelector('#avatar-click-zone');
+    if (clickZone) clickZone.style.opacity = '0.5';
 
-      const existingImageId = root.querySelector('#owner-photo-imageId')?.value;
+    try {
+      const existingImageId = root.querySelector('#owner-photo-imageId')?.value?.trim();
       let imageId;
 
       if (existingImageId) {
-        imageId = await ImageStorageService.replaceImage(existingImageId, file, 'PROFILE');
+        NotificationService.info('🗑️ Eliminando foto anterior de Firebase...');
+        const deleted = await ImageStorageService.deleteImage(existingImageId);
+        if (deleted) {
+          NotificationService.success('🗑️ Foto anterior eliminada de Firebase correctamente.');
+        } else {
+          console.warn('[SettingsView] Old image deletion returned false — proceeding to upload anyway.');
+        }
+        NotificationService.info('⬆️ Procesando y guardando nueva foto de perfil...');
+        imageId = await ImageStorageService.uploadImage(file, 'PROFILE');
       } else {
+        NotificationService.info('⬆️ Procesando y guardando foto de perfil...');
         imageId = await ImageStorageService.uploadImage(file, 'PROFILE');
       }
 
-      // Store imageId in hidden input
+
+      // ✅ PERSIST avatarImageId to Firebase RTDB immediately (no need to wait for "Guardar Perfil")
+      const avatarUpdates = {};
+      avatarUpdates[`users/${this.uid}/avatarImageId`] = imageId;
+      avatarUpdates[`${this.companyId}/employees/${this.uid}/avatarImageId`] = imageId;
+      await update(ref(db), avatarUpdates);
+
+      // Store imageId in hidden input so handleSaveProfile also sees it
       const imageIdInput = root.querySelector('#owner-photo-imageId');
       if (imageIdInput) imageIdInput.value = imageId;
 
@@ -837,12 +855,15 @@ export class SettingsView extends Component {
       const name = root.querySelector('#owner-name-input')?.value || this.currentUser.displayName || 'U';
       this.renderAvatarPreview(objectUrl || '', name, root);
 
-      NotificationService.success('Foto de perfil optimizada y guardada correctamente.');
+      NotificationService.success('✅ Foto de perfil guardada. Se mostrará en cada sesión.');
     } catch (err) {
       console.error('[SettingsView] Error uploading photo:', err);
       NotificationService.error('Error al procesar la imagen. Intenta con otro archivo.');
+    } finally {
+      if (clickZone) clickZone.style.opacity = '1';
     }
   }
+
 
   async handleSaveProfile(e, root) {
     e.preventDefault();

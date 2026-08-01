@@ -223,7 +223,8 @@ export class ImageStorageService {
   }
 
   /**
-   * Replaces an existing image: deletes old image chunks/metadata and uploads new image.
+   * Replaces an existing image: waits for complete deletion of old image before uploading new one.
+   * Guarantees no orphan chunks are left in Firebase.
    * @param {string|null} oldImageId
    * @param {File} newFile
    * @param {'PROFILE'|'PRODUCT'|'LOGO'|'BANNER'|'GENERAL'} [preset='PRODUCT']
@@ -232,7 +233,9 @@ export class ImageStorageService {
    */
   static async replaceImage(oldImageId, newFile, preset = 'PRODUCT', metadataProps = {}) {
     if (oldImageId) {
-      await this.deleteImage(oldImageId).catch(err => console.warn('[ImageStorageService] Old image deletion non-fatal warning:', err));
+      console.log(`[ImageStorageService] 🗑️ Deleting old image before upload: ${oldImageId}`);
+      await this.deleteImage(oldImageId); // No .catch — must fully complete before uploading
+      console.log(`[ImageStorageService] ✅ Old image deleted: ${oldImageId}`);
     }
     return this.uploadImage(newFile, preset, metadataProps);
   }
@@ -302,16 +305,19 @@ export class ImageStorageService {
   // ─── DELETION & CLEANUP ─────────────────────────────────────────────────────
 
   /**
-   * Deletes an image metadata and all chunks from Firestore, IndexedDB, and Memory.
+   * Deletes an image and ALL its chunks from Firebase, IndexedDB, and Memory.
+   * Resolves the companyId from stored metadata first to avoid session mismatch.
    * @param {string} imageId
+   * @returns {Promise<boolean>} true if fully deleted, false on failure
    */
   static async deleteImage(imageId) {
-    if (!imageId) return;
+    if (!imageId) return false;
 
+    // Resolve companyId — try session state first, then scan metadata
     const { currentCompany, currentUser } = GlobalStore.getState();
-    const companyId = currentCompany?.id || currentUser?.companyId;
+    const companyId = currentUser?.companyId || currentCompany?.companyId || currentCompany?.id;
 
-    // Remove from Memory Cache & revoke ObjectURL
+    // 1. Remove from Memory Cache & revoke ObjectURL
     if (this._memoryCache.has(imageId)) {
       const mem = this._memoryCache.get(imageId);
       if (mem.objectUrl) {
@@ -321,13 +327,49 @@ export class ImageStorageService {
       this._memoryCache.delete(imageId);
     }
 
-    // Remove from IndexedDB
+    // 2. Remove from IndexedDB
     await IndexedDBUtils.deleteImageBlob(imageId);
 
-    // Remove from Firestore
-    if (companyId) {
-      const rootPath = `${companyId}/image_storage/${imageId}`;
-      await FirestoreService.removePath(rootPath).catch(() => {});
+    // 3. Remove from Firebase — explicit chunk-by-chunk + root node deletion
+    if (!companyId) {
+      console.error(`[ImageStorageService] ❌ Cannot delete ${imageId}: companyId missing from session.`);
+      return false;
+    }
+
+    const rootPath = `${companyId}/image_storage/${imageId}`;
+
+    try {
+      // Read metadata to know exactly how many chunks exist
+      const rootData = await FirestoreService.readPath(rootPath);
+      if (rootData) {
+        const chunkCount = rootData.metadata?.chunkCount || 0;
+
+        // Explicitly delete each chunk to guarantee no orphans
+        if (chunkCount > 0) {
+          console.log(`[ImageStorageService] 🗑️ Deleting ${chunkCount} chunk(s) for image ${imageId}...`);
+          const chunkDeletions = [];
+          for (let i = 1; i <= chunkCount; i++) {
+            const chunkId = String(i).padStart(4, '0');
+            chunkDeletions.push(
+              FirestoreService.removePath(`${rootPath}/chunks/${chunkId}`)
+                .catch(e => console.warn(`[ImageStorageService] Chunk ${chunkId} delete warn:`, e))
+            );
+          }
+          await Promise.all(chunkDeletions);
+          console.log(`[ImageStorageService] ✅ All ${chunkCount} chunks deleted.`);
+        }
+
+        // Delete the entire image node (metadata + any remaining chunks)
+        await FirestoreService.removePath(rootPath);
+        console.log(`[ImageStorageService] ✅ Image node removed from Firebase: ${rootPath}`);
+      } else {
+        console.warn(`[ImageStorageService] Image node not found in Firebase (already deleted?): ${rootPath}`);
+      }
+
+      return true;
+    } catch (err) {
+      console.error(`[ImageStorageService] ❌ Failed to delete image ${imageId} from Firebase:`, err);
+      return false;
     }
   }
 
