@@ -10,6 +10,7 @@ import { BarcodeRegistryService } from '../../../services/barcode-registry.servi
 import { TimeService } from '../../../services/time.service.js';
 import { ImageStorageService } from '../../../services/image-storage.service.js';
 import { ImageDisplay } from '../../../components/ui/image-display.js';
+import { ImageUploader } from '../../../components/ui/image-uploader.js';
 
 export class ProductsView extends Component {
   constructor(params = {}) {
@@ -448,7 +449,7 @@ export class ProductsView extends Component {
     }
   }
 
-  openProductModal(product = null, prefilledCode = '') {
+  async openProductModal(product = null, prefilledCode = '') {
     const isEdit = !!product;
 
     const categoriesList = this.state.categories;
@@ -598,7 +599,6 @@ export class ProductsView extends Component {
     this._pendingImageId = (product && product.imageId) ? product.imageId : null;
     const uploaderSlot = this.modalInstance.$('#prod-image-uploader-slot');
     if (uploaderSlot) {
-      const { ImageUploader } = await import('../../../components/ui/image-uploader.js');
       this._imageUploader = new ImageUploader({
         preset: 'PRODUCT',
         currentImageId: this._pendingImageId,
