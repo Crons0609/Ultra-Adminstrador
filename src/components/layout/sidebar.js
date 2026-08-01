@@ -128,6 +128,7 @@ export class Sidebar extends Component {
               { label: 'Promociones', path: '#/cashier/promotions', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>` },
               { label: 'Facturación', path: '#/cashier/invoices', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
               { label: 'Recordatorios de Pago', path: '#/owner/payment-reminders', icon: icons.reminders },
+              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: 'Calendario Laboral', path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
             ]
           }
         ]
@@ -140,7 +141,8 @@ export class Sidebar extends Component {
               ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
                 ? [{ label: 'Mis Clientes Asignados', path: '#/waiter/client-assignments', icon: icons.calendar }]
                 : [{ label: 'Mis Mesas', path: '#/waiter/tables', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>` }]
-              )
+              ),
+              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: 'Calendario Laboral', path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
             ]
           }
         ]
@@ -152,6 +154,7 @@ export class Sidebar extends Component {
             items: [
               { label: 'KDS – Comandas', path: '#/kitchen/kds', icon: icons.kds },
               { label: 'Estadísticas', path: '#/kitchen/stats', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>` },
+              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: 'Calendario Laboral', path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
             ]
           }
         ]

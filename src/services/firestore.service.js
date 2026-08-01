@@ -85,12 +85,54 @@ export class FirestoreService {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RAW PATH operations (for ImageStorageService and other low-level access)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Write data to an absolute database path (no tenant prefix added).
+   * Used by ImageStorageService to write image metadata and chunks.
+   * @param {string} path - Absolute DB path (e.g. "companyId/image_storage/imageId")
+   * @param {Object} data - Data to write/merge at this path
+   */
+  static async writePath(path, data) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const docRef = ref(db, path);
+    await set(docRef, data);
+    console.log(`[DB] ✅ writePath → ${path}`);
+  }
+
+  /**
+   * Read data at an absolute database path.
+   * @param {string} path - Absolute DB path
+   * @returns {Promise<Object|null>}
+   */
+  static async readPath(path) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const docRef = ref(db, path);
+    const snap = await get(docRef);
+    if (!snap.exists()) return null;
+    return snap.val();
+  }
+
+  /**
+   * Remove a node at an absolute database path.
+   * @param {string} path - Absolute DB path
+   */
+  static async removePath(path) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const docRef = ref(db, path);
+    await remove(docRef);
+    console.log(`[DB] ✅ removePath → ${path}`);
+  }
+
   /**
    * Get a document by ID from the tenant collection.
    * @param {string} collectionName
    * @param {string} id
    * @returns {Promise<Object|null>}
    */
+
   static async getById(collectionName, id) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
@@ -133,6 +175,20 @@ export class FirestoreService {
 
     const path = this._getTenantPath(collectionName);
     const docRef = ref(db, `${path}/${id}`);
+
+    // Cascade delete associated image from image_storage if doc has an imageId
+    try {
+      const snapshot = await get(docRef);
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        const imageId = val.imageId || val.logoImageId || val.avatarImageId;
+        if (imageId) {
+          const { ImageStorageService } = await import('./image-storage.service.js');
+          await ImageStorageService.deleteImage(imageId).catch(() => {});
+        }
+      }
+    } catch (_) {}
+
     await remove(docRef);
     console.log(`[DB] ✅ Deleted ${path}/${id}`);
   }

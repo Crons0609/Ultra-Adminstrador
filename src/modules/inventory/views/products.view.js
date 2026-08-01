@@ -8,6 +8,8 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeScannerService } from '../../../services/barcode-scanner.service.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { ImageStorageService } from '../../../services/image-storage.service.js';
+import { ImageDisplay } from '../../../components/ui/image-display.js';
 
 export class ProductsView extends Component {
   constructor(params = {}) {
@@ -32,8 +34,8 @@ export class ProductsView extends Component {
           label: 'Producto',
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
-              ${row.image 
-                ? `<img src="${row.image}" alt="" style="width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'" />` 
+              ${(row.imageId || row.image)
+                ? ImageDisplay.renderTag(row.imageId || null, 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><text y=%2220%22 font-size=%2220%22>📦</text></svg>', 'width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0;')
                 : `<div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📦</div>`
               }
               <div style="display: flex; flex-direction: column;">
@@ -538,12 +540,10 @@ export class ProductsView extends Component {
           <textarea id="prod-nutrition" class="input input-md" rows="2" style="resize:vertical;" placeholder="Ej. Calorías: 150 kcal, Sin gluten, Producto orgánico...">${isEdit ? (product.nutritionInfo || '') : ''}</textarea>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="prod-image">🖼️ URL de Imagen del Producto (opcional)</label>
-          <input type="url" id="prod-image" class="input input-md" placeholder="https://ejemplo.com/imagen.jpg" value="${isEdit ? (product.image || '') : ''}" />
-          <div id="prod-image-preview" style="margin-top: var(--space-2); display: ${isEdit && product.image ? 'flex' : 'none'}; align-items: center; gap: var(--space-3);">
-            <img id="prod-image-thumb" src="${isEdit ? (product.image || '') : ''}" alt="Vista previa" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--color-border);" />
-            <span style="font-size:0.78rem;color:var(--color-text-secondary);">Vista previa de la imagen</span>
+        <div class="form-group" id="prod-image-uploader-slot">
+          <!-- ImageUploader component will be mounted here after modal renders -->
+          <div style="border:2px dashed var(--color-border); border-radius:var(--radius-lg); background:var(--color-bg-tertiary); padding:16px; text-align:center; color:var(--color-text-secondary); font-size:0.8rem;">
+            🖼️ Cargando selector de imagen...
           </div>
         </div>
 
@@ -594,20 +594,20 @@ export class ProductsView extends Component {
       });
     }
 
-    // Live image preview
-    const imageInput = this.modalInstance.$('#prod-image');
-    if (imageInput) {
-      imageInput.addEventListener('input', () => {
-        const url = imageInput.value.trim();
-        const preview = this.modalInstance.$('#prod-image-preview');
-        const thumb = this.modalInstance.$('#prod-image-thumb');
-        if (url && preview && thumb) {
-          thumb.src = url;
-          preview.style.display = 'flex';
-        } else if (preview) {
-          preview.style.display = 'none';
-        }
+    // Mount ImageUploader into the slot
+    this._pendingImageId = (product && product.imageId) ? product.imageId : null;
+    const uploaderSlot = this.modalInstance.$('#prod-image-uploader-slot');
+    if (uploaderSlot) {
+      const { ImageUploader } = await import('../../../components/ui/image-uploader.js');
+      this._imageUploader = new ImageUploader({
+        preset: 'PRODUCT',
+        currentImageId: this._pendingImageId,
+        label: '🖼️ Imagen del Producto',
+        onImageUploaded: (imageId) => { this._pendingImageId = imageId; },
+        onImageRemoved: () => { this._pendingImageId = null; }
       });
+      uploaderSlot.innerHTML = '';
+      uploaderSlot.appendChild(this._imageUploader.mount());
     }
 
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
@@ -663,7 +663,7 @@ export class ProductsView extends Component {
       purchasePrice,
       price,
       description: (this.modalInstance.$('#prod-description')?.value.trim()) || '',
-      image: (this.modalInstance.$('#prod-image')?.value.trim()) || '',
+      imageId: this._pendingImageId || null,
       onSale: this.modalInstance.$('#prod-on-sale')?.checked || false,
       oldPrice: this.modalInstance.$('#prod-on-sale')?.checked
         ? Number(this.modalInstance.$('#prod-old-price')?.value || 0)

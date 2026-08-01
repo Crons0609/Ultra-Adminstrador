@@ -15,6 +15,7 @@ import { GeolocationService } from '../../../services/geolocation.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { ImageDisplay } from '../../../components/ui/image-display.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
@@ -45,7 +46,19 @@ export class EmployeesView extends Component {
     // Initialize DataTable
     this.table = new DataTable({
       columns: [
-        { key: 'displayName', label: 'Nombre Completo' },
+        {
+          key: 'displayName',
+          label: 'Empleado',
+          render: (val, row) => `
+            <div style="display:flex;align-items:center;gap:10px;">
+              ${ImageDisplay.renderTag(row.imageId || null, `https://ui-avatars.com/api/?name=${encodeURIComponent(val || 'E')}&background=6366f1&color=fff&size=40`, 'width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--color-border);')}
+              <div style="display:flex;flex-direction:column;">
+                <span style="font-weight:600;">${val || 'Sin nombre'}</span>
+                <span style="font-size:0.72rem;color:var(--color-text-secondary);">${row.email || ''}</span>
+              </div>
+            </div>
+          `
+        },
         { key: 'email', label: 'Correo Electrónico' },
         { 
           key: 'customRole', 

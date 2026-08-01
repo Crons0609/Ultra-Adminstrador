@@ -4,7 +4,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { AuthService } from '../../../services/auth.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
-import { StorageService } from '../../../services/storage.service.js';
+import { ImageStorageService } from '../../../services/image-storage.service.js';
 import { TimeService } from '../../../services/time.service.js';
 
 import {
@@ -289,14 +289,14 @@ export class SettingsView extends Component {
                 <form id="owner-profile-form" style="display:flex; flex-direction:column; gap: var(--space-3);">
                   <!-- Photo Upload Widget -->
                   <div style="text-align: center;">
-                    <div class="profile-avatar-container" id="avatar-click-zone">
-                      <img class="profile-avatar-img" id="owner-avatar-preview" style="display:none;" />
-                      <div class="profile-avatar-placeholder" id="owner-avatar-placeholder">U</div>
-                      <div class="profile-avatar-overlay">Cambiar<br>Foto</div>
+                    <div class="profile-avatar-container" id="avatar-click-zone" style="position:relative;width:90px;height:90px;border-radius:50%;overflow:hidden;margin:0 auto;border:3px solid var(--color-accent);cursor:pointer;">
+                      <img class="profile-avatar-img" id="owner-avatar-preview" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';document.getElementById('owner-avatar-placeholder').style.display='flex';" />
+                      <div class="profile-avatar-placeholder" id="owner-avatar-placeholder" style="width:100%;height:100%;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:2rem;">U</div>
+                      <div class="profile-avatar-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;font-weight:600;opacity:0;transition:opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0">Cambiar<br>Foto</div>
                     </div>
-                    <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" />
-                    <input type="hidden" id="owner-photo-url-input" />
-                    <p class="text-xs text-secondary">Haz clic en el círculo para subir tu foto de perfil</p>
+                    <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" />
+                    <input type="hidden" id="owner-photo-imageId" />
+                    <p class="text-xs text-secondary" style="margin-top:6px;">Haz clic para cambiar tu foto de perfil (JPG, PNG, WEBP)</p>
                   </div>
 
                   <div class="form-group">
@@ -759,15 +759,23 @@ export class SettingsView extends Component {
         const phoneInput = root.querySelector('#owner-phone-input');
         const infoInput = root.querySelector('#owner-info-input');
         const emailInput = root.querySelector('#owner-email-input');
-        const photoUrlInput = root.querySelector('#owner-photo-url-input');
+        const imageIdInput = root.querySelector('#owner-photo-imageId');
 
         if (nameInput) nameInput.value = val.displayName || this.currentUser.displayName || '';
         if (phoneInput) phoneInput.value = val.phone || val.telefono || '';
         if (infoInput) infoInput.value = val.personalInfo || '';
         if (emailInput) emailInput.value = val.email || this.currentUser.email || '';
-        if (photoUrlInput) photoUrlInput.value = val.photoURL || '';
+        if (imageIdInput && val.avatarImageId) imageIdInput.value = val.avatarImageId;
 
-        this.renderAvatarPreview(val.photoURL || '', val.displayName || this.currentUser.displayName || '', root);
+        // Resolve avatar image via ImageStorageService (cache-first)
+        let previewUrl = '';
+        if (val.avatarImageId) {
+          previewUrl = await ImageStorageService.getImageUrl(val.avatarImageId).catch(() => '') || '';
+        } else if (val.photoURL) {
+          // Legacy fallback: show old photoURL if no imageId yet
+          previewUrl = val.photoURL;
+        }
+        this.renderAvatarPreview(previewUrl, val.displayName || this.currentUser.displayName || '', root);
 
         // Load visual and general preferences
         if (val.preferences) {
@@ -801,26 +809,38 @@ export class SettingsView extends Component {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check size limit (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      NotificationService.error('La imagen excede el límite permitido de 5 MB.');
+    // Validate format via ImageStorageService
+    const val = ImageStorageService.validateFormat(file);
+    if (!val.valid) {
+      NotificationService.error(val.error);
       return;
     }
 
     try {
-      NotificationService.info('Subiendo imagen de perfil...');
-      const downloadUrl = await StorageService.uploadFile(file, 'logos');
+      NotificationService.info('Procesando y optimizando foto de perfil...');
 
-      const photoUrlInput = root.querySelector('#owner-photo-url-input');
-      if (photoUrlInput) photoUrlInput.value = downloadUrl;
+      const existingImageId = root.querySelector('#owner-photo-imageId')?.value;
+      let imageId;
 
+      if (existingImageId) {
+        imageId = await ImageStorageService.replaceImage(existingImageId, file, 'PROFILE');
+      } else {
+        imageId = await ImageStorageService.uploadImage(file, 'PROFILE');
+      }
+
+      // Store imageId in hidden input
+      const imageIdInput = root.querySelector('#owner-photo-imageId');
+      if (imageIdInput) imageIdInput.value = imageId;
+
+      // Build ObjectURL and update preview
+      const objectUrl = await ImageStorageService.getImageUrl(imageId);
       const name = root.querySelector('#owner-name-input')?.value || this.currentUser.displayName || 'U';
-      this.renderAvatarPreview(downloadUrl, name, root);
+      this.renderAvatarPreview(objectUrl || '', name, root);
 
-      NotificationService.success('Foto subida con éxito (Vista previa cargada).');
+      NotificationService.success('Foto de perfil optimizada y guardada correctamente.');
     } catch (err) {
       console.error('[SettingsView] Error uploading photo:', err);
-      NotificationService.error('Error al subir archivo de imagen.');
+      NotificationService.error('Error al procesar la imagen. Intenta con otro archivo.');
     }
   }
 
@@ -836,7 +856,7 @@ export class SettingsView extends Component {
     const displayName = root.querySelector('#owner-name-input').value.trim();
     const phone = root.querySelector('#owner-phone-input').value.trim();
     const personalInfo = root.querySelector('#owner-info-input').value.trim();
-    const photoURL = root.querySelector('#owner-photo-url-input').value.trim();
+    const avatarImageId = root.querySelector('#owner-photo-imageId')?.value?.trim() || null;
 
     try {
       const timestamp = Date.now();
@@ -845,12 +865,12 @@ export class SettingsView extends Component {
       updates[`users/${this.uid}/displayName`] = displayName;
       updates[`users/${this.uid}/phone`] = phone;
       updates[`users/${this.uid}/personalInfo`] = personalInfo;
-      updates[`users/${this.uid}/photoURL`] = photoURL;
+      if (avatarImageId) updates[`users/${this.uid}/avatarImageId`] = avatarImageId;
       updates[`users/${this.uid}/updatedAt`] = serverTimestamp();
 
       // Update in employees too
       updates[`${this.companyId}/employees/${this.uid}/displayName`] = displayName;
-      updates[`${this.companyId}/employees/${this.uid}/photoURL`] = photoURL;
+      if (avatarImageId) updates[`${this.companyId}/employees/${this.uid}/avatarImageId`] = avatarImageId;
       updates[`${this.companyId}/employees/${this.uid}/phone`] = phone;
 
       // Update current Firebase user profile
