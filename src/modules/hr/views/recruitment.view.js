@@ -95,8 +95,16 @@ export class RecruitmentView extends Component {
   }
 
   unmount() {
-    // Cancel all Firebase real-time listeners
-    this.listeners.forEach(off => off && off());
+    // Cancel all Firebase real-time listeners.
+    // listenToTenant/listenToPath return a string listenerId — NOT a function.
+    // Must use FirestoreService.unsubscribe(id) to detach them from RTDB.
+    this.listeners.forEach(id => {
+      if (typeof id === 'string') {
+        FirestoreService.unsubscribe(id);
+      } else if (typeof id === 'function') {
+        id(); // legacy fallback if any listener is an off() fn
+      }
+    });
     this.listeners = [];
     if (this.layout && typeof this.layout.unmount === 'function') {
       this.layout.unmount();
@@ -216,6 +224,9 @@ export class RecruitmentView extends Component {
   }
 
   renderActiveTabUI(element) {
+    // Guard: this.element is nulled by unmount() — if null the view has been torn down
+    if (this.element === null && !element) return;
+
     const root = element || this.element || this.layout.element;
     if (!root) return;
 
