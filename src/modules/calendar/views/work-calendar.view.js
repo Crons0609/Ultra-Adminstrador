@@ -148,6 +148,13 @@ export class WorkCalendarView extends Component {
     this.loadData();
   }
 
+  unmount() {
+    if (this.layout && typeof this.layout.unmount === 'function') {
+      this.layout.unmount();
+    }
+    super.unmount();
+  }
+
   async loadData() {
     const { currentCompany, currentUser } = GlobalStore.getState();
     const companyId = currentCompany?.id || currentUser?.companyId || this.companyId;

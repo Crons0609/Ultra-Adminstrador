@@ -98,6 +98,9 @@ export class RecruitmentView extends Component {
     // Cancel all Firebase real-time listeners
     this.listeners.forEach(off => off && off());
     this.listeners = [];
+    if (this.layout && typeof this.layout.unmount === 'function') {
+      this.layout.unmount();
+    }
     // Clear element references so orphaned callbacks cannot write to the DOM
     this.element = null;
     super.unmount();
