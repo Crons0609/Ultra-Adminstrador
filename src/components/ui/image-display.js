@@ -20,6 +20,7 @@ export class ImageDisplay extends Component {
     super(props);
     this.props = {
       imageId: null,
+      companyId: null,
       fallbackUrl: '/assets/placeholder-food.png',
       alt: 'Imagen',
       style: '',
@@ -43,7 +44,7 @@ export class ImageDisplay extends Component {
     }
 
     try {
-      const url = await ImageStorageService.getImageUrl(this.props.imageId);
+      const url = await ImageStorageService.getImageUrl(this.props.imageId, this.props.companyId);
       if (url) {
         this.setState({ src: url });
       } else {
@@ -77,9 +78,10 @@ export class ImageDisplay extends Component {
    * @param {string|null} imageId
    * @param {string} [fallbackUrl]
    * @param {string} [extraStyles]
+   * @param {string|null} [companyId]
    * @returns {string} HTML string with auto-resolving data attribute
    */
-  static renderTag(imageId, fallbackUrl = '/assets/placeholder-food.png', extraStyles = 'width:40px; height:40px; border-radius:6px; object-fit:cover;') {
+  static renderTag(imageId, fallbackUrl = '/assets/placeholder-food.png', extraStyles = 'width:40px; height:40px; border-radius:6px; object-fit:cover;', companyId = null) {
     if (!imageId) {
       return `<img src="${fallbackUrl}" style="${extraStyles}" loading="lazy" />`;
     }
@@ -90,7 +92,7 @@ export class ImageDisplay extends Component {
     setTimeout(async () => {
       const imgEl = document.getElementById(uniqueId);
       if (imgEl && imageId) {
-        const objectUrl = await ImageStorageService.getImageUrl(imageId);
+        const objectUrl = await ImageStorageService.getImageUrl(imageId, companyId);
         if (objectUrl && imgEl) imgEl.src = objectUrl;
       }
     }, 0);

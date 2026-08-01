@@ -1032,10 +1032,12 @@ export class AuthService {
           status: val.status || (val.disabled ? 'DISABLED' : 'ACTIVE'),
           phone: val.phone || val.telefono || '',
           photoURL: val.photoURL || val.foto || '',
+          avatarImageId: val.avatarImageId || null,
           createdAt: val.createdAt || val.createdAtLocal || null,
           lastLoginAt: val.lastLoginAt || val.lastLogin || null,
           storedPassword: val.storedPassword || '',
           permissions: val.permissions || {}
+
         });
       });
     }

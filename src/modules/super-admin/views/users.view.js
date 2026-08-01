@@ -5,6 +5,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { GlobalStore } from '../../../core/state.js';
+import { ImageDisplay } from '../../../components/ui/image-display.js';
 
 export class UsersView extends Component {
   constructor(params = {}) {
@@ -391,9 +392,18 @@ export class UsersView extends Component {
     }
 
     tbody.innerHTML = this.filteredUsers.map(user => {
-      const avatarHTML = user.photoURL
-        ? `<img src="${user.photoURL}" alt="" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;" />`
-        : `<div style="width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent, #8b5cf6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold;">${(user.displayName || 'U').charAt(0).toUpperCase()}</div>`;
+      // Resolve avatar: new imageId system → legacy photoURL → initials
+      const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=6366f1&color=fff&size=56`;
+      const avatarHTML = user.avatarImageId
+        ? ImageDisplay.renderTag(
+            user.avatarImageId,
+            user.photoURL || fallbackAvatar,
+            'width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--color-border);',
+            user.companyId
+          )
+        : user.photoURL
+          ? `<img src="${user.photoURL}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.onerror=null;this.src='${fallbackAvatar}'" />`
+          : `<div style="width:28px;height:28px;border-radius:50%;background:var(--color-accent,#6366f1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:bold;flex-shrink:0;">${(user.displayName || 'U').charAt(0).toUpperCase()}</div>`;
 
       const roleBadge = this.getRoleBadgeHTML(user.role);
       const statusBadge = this.getStatusBadgeHTML(user.status);

@@ -246,9 +246,10 @@ export class ImageStorageService {
    * Retrieves or rebuilds the WebP image, returning an ObjectURL for rendering.
    * Leverages Memory Cache -> IndexedDB Cache -> Firestore Download.
    * @param {string} imageId
+   * @param {string|null} [targetCompanyId] - Optional companyId override (useful for Super Admin viewing other tenants' images)
    * @returns {Promise<string|null>} ObjectURL or null
    */
-  static async getImageUrl(imageId) {
+  static async getImageUrl(imageId, targetCompanyId = null) {
     if (!imageId) return null;
 
     // 1. Check Memory Cache
@@ -268,11 +269,24 @@ export class ImageStorageService {
     // 3. Download & Rebuild from Firestore
     try {
       const { currentCompany, currentUser } = GlobalStore.getState();
-      const companyId = currentCompany?.id || currentUser?.companyId;
-      if (!companyId) return null;
+      const companyId = targetCompanyId || currentUser?.companyId || currentCompany?.companyId || currentCompany?.id;
+      
+      let rootData = null;
+      let rootPath = '';
 
-      const rootPath = `${companyId}/image_storage/${imageId}`;
-      const rootData = await FirestoreService.readPath(rootPath);
+      if (companyId) {
+        rootPath = `${companyId}/image_storage/${imageId}`;
+        rootData = await FirestoreService.readPath(rootPath);
+      }
+
+      // Fallback: if not found under target company, check current session company or global
+      if (!rootData) {
+        const fallbackCompanyId = currentUser?.companyId || currentCompany?.companyId;
+        if (fallbackCompanyId && fallbackCompanyId !== companyId) {
+          rootData = await FirestoreService.readPath(`${fallbackCompanyId}/image_storage/${imageId}`);
+        }
+      }
+
       if (!rootData || !rootData.metadata) return null;
 
       const metadata = rootData.metadata;

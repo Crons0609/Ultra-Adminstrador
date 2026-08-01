@@ -87,6 +87,8 @@ const getOwnerClientAssignmentsView = () => import('../modules/owner/views/clien
 const getOwnerMigrationView = () => import('../modules/owner/views/migration.view.js').then(m => m.MigrationView);
 const getWaiterClientAssignmentsView = () => import('../modules/waiter/views/client-assignments.view.js').then(m => m.ClientAssignmentsView);
 const getWorkCalendarView = () => import('../modules/calendar/views/work-calendar.view.js').then(m => m.WorkCalendarView);
+const getHRPublicApplyView = () => import('../modules/hr/views/public-apply.view.js').then(m => m.PublicApplyView);
+const getHRRecruitmentView = () => import('../modules/hr/views/recruitment.view.js').then(m => m.RecruitmentView);
 
 // Super Admin Module
 const getSuperAdminCompaniesView = () => import('../modules/super-admin/views/companies.view.js').then(m => m.CompaniesView);
@@ -206,6 +208,10 @@ export const ROUTES = [
 
   // Work Calendar route (all roles allowed when module is enabled)
   { path: '/calendar/work-calendar', view: lazyView(getWorkCalendarView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER, USER_ROLES.CASHIER, USER_ROLES.WAITER, USER_ROLES.KITCHEN])] },
+
+  // HR & Recruitment routes
+  { path: '/hr/apply/:companyId', view: lazyView(getHRPublicApplyView), middlewares: [] },
+  { path: '/hr/recruitment', view: lazyView(getHRRecruitmentView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
 
   // Super Admin routes
   { path: '/super-admin/companies', view: lazyView(getSuperAdminCompaniesView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
