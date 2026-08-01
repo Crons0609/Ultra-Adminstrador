@@ -9,7 +9,6 @@
   min-height: 100svh;
   background-color: var(--color-bg-primary);
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
 }
 
 .main-content {
@@ -22,7 +21,6 @@
   transition: margin-left var(--transition-normal);
   padding-top: var(--header-height);
   overflow-x: hidden;  /* Contain any child overflow */
-  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -39,7 +37,6 @@ body.sidebar-collapsed .main-content {
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 
