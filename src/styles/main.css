@@ -47,6 +47,6 @@ body, html {
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
-  overscroll-behavior-y: none;
-  overscroll-behavior-x: none;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
 }

@@ -9,6 +9,7 @@
   min-height: 100svh;
   background-color: var(--color-bg-primary);
   overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 .main-content {
@@ -21,6 +22,7 @@
   transition: margin-left var(--transition-normal);
   padding-top: var(--header-height);
   overflow-x: hidden;  /* Contain any child overflow */
+  touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
 }
 

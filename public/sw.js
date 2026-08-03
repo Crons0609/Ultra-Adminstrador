@@ -158,6 +158,44 @@ self.addEventListener('message', (event) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Stale-While-Revalidate: Devuelve instantáneamente la copia en caché si existe,
+ * mientras descarga en segundo plano la versión actualizada. Si está offline,
+ * entrega inmediatamente el recurso guardado permitiendo abrir la app sin internet.
+ */
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_VERSION);
+  const cached = await cache.match(request);
+
+  const fetchPromise = fetch(request).then((networkResponse) => {
+    if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  }).catch((err) => {
+    console.warn('[SW] Offline fetch warning for:', request.url, err.message);
+  });
+
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const networkRes = await fetchPromise;
+    if (networkRes) return networkRes;
+  } catch (_) {}
+
+  if (request.mode === 'navigate') {
+    const fallback = await caches.match('/index.html') || await caches.match('/');
+    if (fallback) return fallback;
+  }
+
+  return new Response(offlineFallbackHTML(), {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    status: 503
+  });
+}
+
+/**
  * Cache First: devuelve desde caché; si no existe, va a la red y almacena.
  */
 async function cacheFirst(request) {
