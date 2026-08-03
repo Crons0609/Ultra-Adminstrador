@@ -19,6 +19,7 @@ import { AnimationService } from './services/animation.service.js';
 import { GeolocationService } from './services/geolocation.service.js';
 import { AppearanceService } from './services/appearance.service.js';
 import { OfflineSyncService } from './services/offline-sync.service.js';
+import { LocalStorageDBService } from './services/local-storage-db.service.js';
 
 class App {
   constructor() {
@@ -80,11 +81,12 @@ class App {
       });
     });
 
-    // 5. Purge old local-DB cache keys — all data now lives in Firebase RTDB
+    // 5. Purge old local-DB cache keys — all data now lives in Firebase RTDB & IndexedDB
     this.clearLocalDbCache();
 
-    // 6. Initialize offline sync service — queues writes when offline, syncs on reconnect
-    OfflineSyncService.init();
+    // 6. Initialize IndexedDB offline database and offline sync service
+    await LocalStorageDBService.getDB();
+    await OfflineSyncService.init();
 
     // 7. Load and apply global appearance config from Firebase (colors, theme, fonts)
     await AppearanceService.loadAndApply();

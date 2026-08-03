@@ -3,37 +3,34 @@
  * @description Servicio de sincronización offline para Ultra Administrador.
  *
  * Funcionalidad:
- *  1. Escucha mensajes del Service Worker (REPLAY_WRITE, OFFLINE_SYNC_START, OFFLINE_SYNC_DONE)
- *  2. Encola escrituras a Firebase cuando no hay internet
- *  3. Reproduce las escrituras en cola cuando se restaura la conexión
- *  4. Muestra notificaciones de estado offline/online al usuario
+ *  1. Escucha mensajes del Service Worker y eventos de red (online / offline)
+ *  2. Encola escrituras a Firebase en IndexedDB + memoria cuando no hay internet
+ *  3. Sincroniza automáticamente la cola en la nube al reconectarse
+ *  4. Emite eventos de estado de red (`ua:sync-status`) para la cabecera y notificaciones UI
  */
 
 import { db } from '../config/firebase.config.js';
-import { ref, set, update, push }
+import { ref, set, update, push, remove }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { LocalStorageDBService } from './local-storage-db.service.js';
 
-// ─── Cola en memoria de escrituras pendientes ────────────────────────────────
 const pendingWrites = [];
 let isOnline = navigator.onLine;
 let syncInProgress = false;
-
-// ─── Clave de persistencia local (backup mientras SW no está activo) ─────────
 const PENDING_KEY = 'ua_offline_pending_writes';
 
-// ─────────────────────────────────────────────────────────────────────────────
 export class OfflineSyncService {
 
   /**
    * Inicializar el servicio. Llamar una vez desde app.js al arrancar.
    */
-  static init() {
-    OfflineSyncService._loadPendingFromStorage();
+  static async init() {
+    await OfflineSyncService._loadPendingFromStorage();
     OfflineSyncService._listenNetworkEvents();
     OfflineSyncService._listenServiceWorkerMessages();
+    OfflineSyncService.notifyStatus();
     console.log('[OfflineSync] ✅ Service initialized. Pending writes:', pendingWrites.length);
 
-    // Si ya estamos online y hay datos pendientes, sincronizar ahora
     if (isOnline && pendingWrites.length > 0) {
       OfflineSyncService._syncNow();
     }
@@ -43,7 +40,7 @@ export class OfflineSyncService {
    * Encolar una escritura de Firebase que se ejecutará ahora si hay internet,
    * o se guardará y reenviará automáticamente cuando se recupere la conexión.
    *
-   * @param {'set'|'update'|'push'} operation - Tipo de operación
+   * @param {'set'|'update'|'push'|'remove'} operation - Tipo de operación
    * @param {string} path - Ruta en RTDB (ej: 'companyId/orders/orderId')
    * @param {Object} data - Datos a escribir
    * @param {string} [description] - Descripción legible para notificaciones
@@ -51,12 +48,10 @@ export class OfflineSyncService {
    */
   static async write(operation, path, data, description = 'Escritura') {
     if (isOnline) {
-      // Online: ejecutar directamente
       await OfflineSyncService._executeWrite(operation, path, data);
       return;
     }
 
-    // Offline: encolar
     const entry = {
       id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
       operation,
@@ -67,9 +62,8 @@ export class OfflineSyncService {
     };
 
     pendingWrites.push(entry);
-    OfflineSyncService._savePendingToStorage();
+    await OfflineSyncService._savePendingToStorage(entry);
 
-    // También encolar en el SW para Background Sync (si está disponible)
     if (navigator.serviceWorker?.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: 'QUEUE_WRITE',
@@ -79,6 +73,7 @@ export class OfflineSyncService {
 
     console.log(`[OfflineSync] 📥 Queued offline write: ${description} @ ${path}`);
     OfflineSyncService._showOfflineToast(description);
+    OfflineSyncService.notifyStatus();
   }
 
   /**
@@ -95,18 +90,33 @@ export class OfflineSyncService {
     return !isOnline;
   }
 
+  /**
+   * Emite un evento global para actualizar la cabecera e indicadores visuales.
+   */
+  static notifyStatus() {
+    window.dispatchEvent(new CustomEvent('ua:sync-status', {
+      detail: {
+        isOnline,
+        pendingCount: pendingWrites.length,
+        syncInProgress
+      }
+    }));
+  }
+
   // ─── Privados ──────────────────────────────────────────────────────────────
 
   static _listenNetworkEvents() {
     window.addEventListener('online', () => {
       isOnline = true;
       console.log('[OfflineSync] 🌐 Online — starting sync...');
+      OfflineSyncService.notifyStatus();
       OfflineSyncService._syncNow();
     });
 
     window.addEventListener('offline', () => {
       isOnline = false;
       console.log('[OfflineSync] 📴 Offline — writes will be queued.');
+      OfflineSyncService.notifyStatus();
       OfflineSyncService._showOfflineBanner(true);
     });
   }
@@ -123,7 +133,6 @@ export class OfflineSyncService {
           break;
 
         case 'REPLAY_WRITE':
-          // El SW nos reenvía un objeto de la cola para que nosotros lo escribamos
           if (payload?.path && payload?.operation) {
             OfflineSyncService._executeWrite(payload.operation, payload.path, payload.data)
               .then(() => console.log(`[OfflineSync] ✅ Replayed: ${payload.description}`))
@@ -134,6 +143,7 @@ export class OfflineSyncService {
         case 'OFFLINE_SYNC_DONE':
           console.log(`[OfflineSync] ✅ SW sync done: ${synced}/${total}`);
           OfflineSyncService._showSyncDoneToast(synced);
+          OfflineSyncService.notifyStatus();
           break;
       }
     });
@@ -142,6 +152,7 @@ export class OfflineSyncService {
   static async _syncNow() {
     if (syncInProgress || pendingWrites.length === 0) return;
     syncInProgress = true;
+    OfflineSyncService.notifyStatus();
 
     const total  = pendingWrites.length;
     let synced   = 0;
@@ -149,7 +160,6 @@ export class OfflineSyncService {
 
     console.log(`[OfflineSync] 🔄 Syncing ${total} pending write(s)...`);
 
-    // Procesar en orden FIFO
     while (pendingWrites.length > 0) {
       const entry = pendingWrites[0];
 
@@ -157,16 +167,16 @@ export class OfflineSyncService {
         await OfflineSyncService._executeWrite(entry.operation, entry.path, entry.data);
         pendingWrites.shift();
         synced++;
+        await LocalStorageDBService.removeFromQueue(entry.id);
         OfflineSyncService._savePendingToStorage();
+        OfflineSyncService.notifyStatus();
       } catch (err) {
         failures++;
         console.warn(`[OfflineSync] ❌ Failed to sync "${entry.description}":`, err.message);
 
-        // Si el error es de red, parar y reintentar más tarde
         if (!isOnline) break;
-
-        // Si el error es de datos/permisos, descartar y continuar
         pendingWrites.shift();
+        await LocalStorageDBService.removeFromQueue(entry.id);
       }
     }
 
@@ -179,6 +189,7 @@ export class OfflineSyncService {
       OfflineSyncService._showOfflineBanner(false);
     }
 
+    OfflineSyncService.notifyStatus();
     console.log(`[OfflineSync] ✅ Sync complete: ${synced} synced, ${failures} failed.`);
   }
 
@@ -190,17 +201,21 @@ export class OfflineSyncService {
       case 'set':    return set(dbRef, data);
       case 'update': return update(dbRef, data);
       case 'push':   return push(dbRef, data);
+      case 'remove': return remove(dbRef);
       default:       throw new Error(`Unknown operation: ${operation}`);
     }
   }
 
-  static _loadPendingFromStorage() {
+  static async _loadPendingFromStorage() {
     try {
-      const raw = localStorage.getItem(PENDING_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          pendingWrites.push(...parsed);
+      const idbQueue = await LocalStorageDBService.getQueue();
+      if (idbQueue && idbQueue.length > 0) {
+        pendingWrites.push(...idbQueue);
+      } else {
+        const raw = localStorage.getItem(PENDING_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) pendingWrites.push(...parsed);
         }
       }
     } catch {
@@ -208,12 +223,13 @@ export class OfflineSyncService {
     }
   }
 
-  static _savePendingToStorage() {
+  static async _savePendingToStorage(newEntry = null) {
     try {
       localStorage.setItem(PENDING_KEY, JSON.stringify(pendingWrites));
-    } catch {
-      /* storage full — ignore */
-    }
+      if (newEntry) {
+        await LocalStorageDBService.queueWrite(newEntry);
+      }
+    } catch {}
   }
 
   // ─── UI helpers ───────────────────────────────────────────────────────────

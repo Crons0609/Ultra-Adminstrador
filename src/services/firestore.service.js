@@ -14,6 +14,8 @@
 import { db } from '../config/firebase.config.js';
 import { GlobalStore } from '../core/state.js';
 import { TimeService } from './time.service.js';
+import { LocalStorageDBService } from './local-storage-db.service.js';
+import { OfflineSyncService } from './offline-sync.service.js';
 
 import {
   ref,
@@ -48,7 +50,6 @@ export class FirestoreService {
     if (!currentUser || !currentUser.companyId) {
       throw new Error('Tenant context missing. Unable to perform Database query.');
     }
-    // E.g. "Pizza Express/orders" instead of "companies/Pizza Express/orders"
     return `${currentUser.companyId}/${collectionName}`;
   }
 
@@ -60,10 +61,12 @@ export class FirestoreService {
    * @returns {Promise<string>} The document ID
    */
   static async create(collectionName, data, customId = null) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
     const path = this._getTenantPath(collectionName);
+    const docId = customId || (db ? push(ref(db, path)).key : `${Date.now()}`);
+    const fullPath = `${path}/${docId}`;
+
     const payload = {
+      id: docId,
       ...data,
       createdAt: data.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -71,18 +74,20 @@ export class FirestoreService {
       updatedAtLocal: TimeService.timestamp()
     };
 
-    if (customId) {
-      const docRef = ref(db, `${path}/${customId}`);
+    if (navigator.onLine && db) {
+      const docRef = ref(db, fullPath);
       await set(docRef, payload);
-      console.log(`[DB] ✅ Created ${path}/${customId}`);
-      return customId;
+      console.log(`[DB] ✅ Created ${fullPath}`);
     } else {
-      const listRef = ref(db, path);
-      const newDocRef = push(listRef);
-      await set(newDocRef, payload);
-      console.log(`[DB] ✅ Created ${path}/${newDocRef.key}`);
-      return newDocRef.key;
+      await OfflineSyncService.write('set', fullPath, payload, `Crear en ${collectionName}`);
     }
+
+    // Update local cache
+    const cachedList = (await LocalStorageDBService.getCache(path)) || [];
+    const updatedList = [...cachedList.filter(item => item.id !== docId), { ...payload, id: docId }];
+    await LocalStorageDBService.setCache(path, updatedList);
+    await LocalStorageDBService.setCache(fullPath, payload);
+    return docId;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -91,15 +96,18 @@ export class FirestoreService {
 
   /**
    * Write data to an absolute database path (no tenant prefix added).
-   * Used by ImageStorageService to write image metadata and chunks.
-   * @param {string} path - Absolute DB path (e.g. "companyId/image_storage/imageId")
+   * @param {string} path - Absolute DB path
    * @param {Object} data - Data to write/merge at this path
    */
   static async writePath(path, data) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-    const docRef = ref(db, path);
-    await set(docRef, data);
-    console.log(`[DB] ✅ writePath → ${path}`);
+    if (navigator.onLine && db) {
+      const docRef = ref(db, path);
+      await set(docRef, data);
+      console.log(`[DB] ✅ writePath → ${path}`);
+    } else {
+      await OfflineSyncService.write('set', path, data, `Escritura en ${path}`);
+    }
+    await LocalStorageDBService.setCache(path, data);
   }
 
   /**
@@ -108,11 +116,20 @@ export class FirestoreService {
    * @returns {Promise<Object|null>}
    */
   static async readPath(path) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-    const docRef = ref(db, path);
-    const snap = await get(docRef);
-    if (!snap.exists()) return null;
-    return snap.val();
+    if (navigator.onLine && db) {
+      try {
+        const docRef = ref(db, path);
+        const snap = await get(docRef);
+        if (snap.exists()) {
+          const val = snap.val();
+          await LocalStorageDBService.setCache(path, val);
+          return val;
+        }
+      } catch (e) {
+        console.warn(`[DB] readPath network error for ${path}:`, e.message);
+      }
+    }
+    return LocalStorageDBService.getCache(path);
   }
 
   /**
@@ -120,10 +137,14 @@ export class FirestoreService {
    * @param {string} path - Absolute DB path
    */
   static async removePath(path) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-    const docRef = ref(db, path);
-    await remove(docRef);
-    console.log(`[DB] ✅ removePath → ${path}`);
+    if (navigator.onLine && db) {
+      const docRef = ref(db, path);
+      await remove(docRef);
+      console.log(`[DB] ✅ removePath → ${path}`);
+    } else {
+      await OfflineSyncService.write('remove', path, null, `Eliminar en ${path}`);
+    }
+    await LocalStorageDBService.setCache(path, null);
   }
 
   /**
@@ -132,20 +153,33 @@ export class FirestoreService {
    * @param {string} id
    * @returns {Promise<Object|null>}
    */
-
   static async getById(collectionName, id) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
     const path = this._getTenantPath(collectionName);
-    const docRef = ref(db, `${path}/${id}`);
-    const snap = await get(docRef);
+    const fullPath = `${path}/${id}`;
 
-    if (!snap.exists()) {
-      console.warn(`[DB] Document not found: ${path}/${id}`);
-      return null;
+    if (navigator.onLine && db) {
+      try {
+        const docRef = ref(db, fullPath);
+        const snap = await get(docRef);
+        if (snap.exists()) {
+          const doc = { id: snap.key, ...snap.val() };
+          await LocalStorageDBService.setCache(fullPath, doc);
+          return doc;
+        }
+      } catch (e) {
+        console.warn(`[DB] getById network error for ${fullPath}:`, e.message);
+      }
     }
 
-    return { id: snap.key, ...snap.val() };
+    const cached = await LocalStorageDBService.getCache(fullPath);
+    if (cached) return cached;
+
+    const colCached = await LocalStorageDBService.getCache(path);
+    if (Array.isArray(colCached)) {
+      const found = colCached.find(item => item.id === id);
+      if (found) return found;
+    }
+    return null;
   }
 
   /**
@@ -156,12 +190,25 @@ export class FirestoreService {
    * @returns {Promise<void>}
    */
   static async update(collectionName, id, data) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
     const path = this._getTenantPath(collectionName);
-    const docRef = ref(db, `${path}/${id}`);
-    await update(docRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
-    console.log(`[DB] ✅ Updated ${path}/${id}`);
+    const fullPath = `${path}/${id}`;
+    const payload = { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() };
+
+    if (navigator.onLine && db) {
+      const docRef = ref(db, fullPath);
+      await update(docRef, payload);
+      console.log(`[DB] ✅ Updated ${fullPath}`);
+    } else {
+      await OfflineSyncService.write('update', fullPath, payload, `Actualizar ${collectionName}`);
+    }
+
+    const cachedItem = (await LocalStorageDBService.getCache(fullPath)) || { id };
+    const updatedItem = { ...cachedItem, ...data, updatedAtLocal: TimeService.timestamp() };
+    await LocalStorageDBService.setCache(fullPath, updatedItem);
+
+    const cachedList = (await LocalStorageDBService.getCache(path)) || [];
+    const updatedList = cachedList.map(item => item.id === id ? { ...item, ...data } : item);
+    await LocalStorageDBService.setCache(path, updatedList);
   }
 
   /**
@@ -171,26 +218,33 @@ export class FirestoreService {
    * @returns {Promise<void>}
    */
   static async delete(collectionName, id) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
     const path = this._getTenantPath(collectionName);
-    const docRef = ref(db, `${path}/${id}`);
+    const fullPath = `${path}/${id}`;
 
-    // Cascade delete associated image from image_storage if doc has an imageId
-    try {
-      const snapshot = await get(docRef);
-      if (snapshot.exists()) {
-        const val = snapshot.val();
-        const imageId = val.imageId || val.logoImageId || val.avatarImageId;
-        if (imageId) {
-          const { ImageStorageService } = await import('./image-storage.service.js');
-          await ImageStorageService.deleteImage(imageId).catch(() => {});
+    if (navigator.onLine && db) {
+      const docRef = ref(db, fullPath);
+      try {
+        const snapshot = await get(docRef);
+        if (snapshot.exists()) {
+          const val = snapshot.val();
+          const imageId = val.imageId || val.logoImageId || val.avatarImageId;
+          if (imageId) {
+            const { ImageStorageService } = await import('./image-storage.service.js');
+            await ImageStorageService.deleteImage(imageId).catch(() => {});
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
 
-    await remove(docRef);
-    console.log(`[DB] ✅ Deleted ${path}/${id}`);
+      await remove(docRef);
+      console.log(`[DB] ✅ Deleted ${fullPath}`);
+    } else {
+      await OfflineSyncService.write('remove', fullPath, null, `Eliminar de ${collectionName}`);
+    }
+
+    const cachedList = (await LocalStorageDBService.getCache(path)) || [];
+    const updatedList = cachedList.filter(item => item.id !== id);
+    await LocalStorageDBService.setCache(path, updatedList);
+    await LocalStorageDBService.setCache(fullPath, null);
   }
 
   /**
@@ -199,12 +253,16 @@ export class FirestoreService {
    * @returns {Promise<void>}
    */
   static async deleteAll(collectionName) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
     const path = this._getTenantPath(collectionName);
-    const colRef = ref(db, path);
-    await remove(colRef);
-    console.log(`[DB] ✅ Deleted all in ${path}`);
+
+    if (navigator.onLine && db) {
+      const colRef = ref(db, path);
+      await remove(colRef);
+      console.log(`[DB] ✅ Deleted all in ${path}`);
+    } else {
+      await OfflineSyncService.write('remove', path, null, `Vaciar ${collectionName}`);
+    }
+    await LocalStorageDBService.setCache(path, []);
   }
 
   /**
@@ -216,24 +274,36 @@ export class FirestoreService {
    * @returns {Promise<Array<Object>>}
    */
   static async query(collectionName, filters = [], sortBy = null, limitCount = null) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
     const path = this._getTenantPath(collectionName);
-    const colRef = ref(db, path);
-    const snapshot = await get(colRef);
 
-    if (!snapshot.exists()) return [];
+    if (navigator.onLine && db) {
+      try {
+        const colRef = ref(db, path);
+        const snapshot = await get(colRef);
+        if (snapshot.exists()) {
+          let results = [];
+          snapshot.forEach(snap => {
+            results.push({ id: snap.key, ...snap.val() });
+          });
+          await LocalStorageDBService.setCache(path, results);
+          results = this._applyFilters(results, filters);
+          results = this._applySort(results, sortBy);
+          if (limitCount) results = results.slice(0, limitCount);
+          console.log(`[DB] ✅ Query ${path} → ${results.length} docs`);
+          return results;
+        } else {
+          await LocalStorageDBService.setCache(path, []);
+        }
+      } catch (e) {
+        console.warn(`[DB] Query network error for ${path}, using cached data:`, e.message);
+      }
+    }
 
-    let results = [];
-    snapshot.forEach(snap => {
-      results.push({ id: snap.key, ...snap.val() });
-    });
-
-    results = this._applyFilters(results, filters);
+    let cached = (await LocalStorageDBService.getCache(path)) || [];
+    let results = this._applyFilters(cached, filters);
     results = this._applySort(results, sortBy);
     if (limitCount) results = results.slice(0, limitCount);
-
-    console.log(`[DB] ✅ Query ${path} → ${results.length} docs`);
+    console.log(`[DB] 📴 Offline query ${path} → ${results.length} cached docs`);
     return results;
   }
 
@@ -261,15 +331,31 @@ export class FirestoreService {
    * @returns {Promise<void>}
    */
   static async setGlobal(collectionName, id, data, merge = true) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const fullPath = `${collectionName}/${id}`;
+    const payload = { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() };
 
-    const docRef = ref(db, `${collectionName}/${id}`);
-    if (merge) {
-      await update(docRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
+    if (navigator.onLine && db) {
+      const docRef = ref(db, fullPath);
+      if (merge) {
+        await update(docRef, payload);
+      } else {
+        await set(docRef, payload);
+      }
+      console.log(`[DB] ✅ Global set ${fullPath}`);
     } else {
-      await set(docRef, { ...data, updatedAt: serverTimestamp(), updatedAtLocal: TimeService.timestamp() });
+      await OfflineSyncService.write(merge ? 'update' : 'set', fullPath, payload, `Guardar en ${collectionName}`);
     }
-    console.log(`[DB] ✅ Global set ${collectionName}/${id}`);
+
+    const cachedItem = (await LocalStorageDBService.getCache(fullPath)) || { id };
+    const updatedItem = { ...cachedItem, ...data, updatedAtLocal: TimeService.timestamp() };
+    await LocalStorageDBService.setCache(fullPath, updatedItem);
+
+    const cachedList = (await LocalStorageDBService.getCache(collectionName)) || [];
+    const updatedList = cachedList.map(item => item.id === id ? { ...item, ...data } : item);
+    if (!cachedList.some(item => item.id === id)) {
+      updatedList.push(updatedItem);
+    }
+    await LocalStorageDBService.setCache(collectionName, updatedList);
   }
 
   /**
@@ -280,7 +366,7 @@ export class FirestoreService {
    * @param {number} [amount=1]
    */
   static async incrementPathValue(path, amount = 1) {
-    if (!db) return;
+    if (!db || !navigator.onLine) return;
     try {
       const pathRef = ref(db, path);
       const snap = await get(pathRef);
@@ -298,11 +384,29 @@ export class FirestoreService {
    * @returns {Promise<Object|null>}
    */
   static async getGlobal(collectionName, id) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const fullPath = `${collectionName}/${id}`;
+    if (navigator.onLine && db) {
+      try {
+        const docRef = ref(db, fullPath);
+        const snap = await Promise.race([
+          get(docRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snap.exists()) {
+          const val = { id: snap.key, ...snap.val() };
+          await LocalStorageDBService.setCache(fullPath, val);
+          return val;
+        }
+      } catch (e) {
+        console.warn(`[DB] getGlobal network error for ${fullPath}:`, e.message);
+      }
+    }
 
-    const docRef = ref(db, `${collectionName}/${id}`);
-    const snap = await get(docRef);
-    return snap.exists() ? { id: snap.key, ...snap.val() } : null;
+    const cachedDoc = await LocalStorageDBService.getCache(fullPath);
+    if (cachedDoc) return cachedDoc;
+
+    const cachedList = (await LocalStorageDBService.getCache(collectionName)) || [];
+    return cachedList.find(item => item.id === id) || null;
   }
 
   /**
@@ -312,19 +416,34 @@ export class FirestoreService {
    * @returns {Promise<Array<Object>>}
    */
   static async queryGlobal(collectionName, filters = []) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const path = collectionName;
+    if (navigator.onLine && db) {
+      try {
+        const colRef = ref(db, path);
+        const snapshot = await Promise.race([
+          get(colRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snapshot.exists()) {
+          let results = [];
+          snapshot.forEach(snap => {
+            results.push({ id: snap.key, ...snap.val() });
+          });
+          await LocalStorageDBService.setCache(path, results);
+          results = this._applyFilters(results, filters);
+          console.log(`[DB] ✅ queryGlobal ${path} → ${results.length} docs`);
+          return results;
+        } else {
+          await LocalStorageDBService.setCache(path, []);
+        }
+      } catch (e) {
+        console.warn(`[DB] queryGlobal network error for ${path}, using cache:`, e.message);
+      }
+    }
 
-    const colRef = ref(db, collectionName);
-    const snapshot = await get(colRef);
-
-    if (!snapshot.exists()) return [];
-
-    let results = [];
-    snapshot.forEach(snap => {
-      results.push({ id: snap.key, ...snap.val() });
-    });
-
-    results = this._applyFilters(results, filters);
+    let cached = (await LocalStorageDBService.getCache(path)) || [];
+    let results = this._applyFilters(cached, filters);
+    console.log(`[DB] 📴 Offline queryGlobal ${path} → ${results.length} cached docs`);
     return results;
   }
 
@@ -335,11 +454,18 @@ export class FirestoreService {
    * @returns {Promise<void>}
    */
   static async deleteGlobal(collectionName, id) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const fullPath = `${collectionName}/${id}`;
+    if (navigator.onLine && db) {
+      const docRef = ref(db, fullPath);
+      await remove(docRef);
+      console.log(`[DB] ✅ Global deleted ${fullPath}`);
+    } else {
+      await OfflineSyncService.write('remove', fullPath, null, `Eliminar en ${collectionName}`);
+    }
 
-    const docRef = ref(db, `${collectionName}/${id}`);
-    await remove(docRef);
-    console.log(`[DB] ✅ Global deleted ${collectionName}/${id}`);
+    const cachedList = (await LocalStorageDBService.getCache(collectionName)) || [];
+    const updatedList = cachedList.filter(item => item.id !== id);
+    await LocalStorageDBService.setCache(collectionName, updatedList);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -526,21 +652,33 @@ export class FirestoreService {
    * @returns {Promise<Array<Object>>}
    */
   static async getCompanyEmployees(companyId) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
-    const empRef = ref(db, `${companyId}/employees`);
-    const snapshot = await get(empRef);
-
-    if (!snapshot.exists()) return [];
-
-    const results = [];
-    snapshot.forEach(snap => {
-      const val = snap.val();
-      if (snap.key !== '.init') {
-        results.push({ id: snap.key, uid: snap.key, ...val });
+    const path = `${companyId}/employees`;
+    if (navigator.onLine && db) {
+      try {
+        const empRef = ref(db, path);
+        const snapshot = await Promise.race([
+          get(empRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snapshot.exists()) {
+          const results = [];
+          snapshot.forEach(snap => {
+            const val = snap.val();
+            if (snap.key !== '.init') {
+              results.push({ id: snap.key, uid: snap.key, ...val });
+            }
+          });
+          await LocalStorageDBService.setCache(path, results);
+          return results;
+        }
+      } catch (e) {
+        console.warn(`[DB] getCompanyEmployees network error for ${companyId}:`, e.message);
       }
-    });
-    return results;
+    }
+
+    const cached = (await LocalStorageDBService.getCache(path)) || [];
+    console.log(`[DB] 📴 Loaded cached company employees for ${companyId}: ${cached.length} items`);
+    return cached;
   }
 
   /**
@@ -549,53 +687,66 @@ export class FirestoreService {
    * @returns {Promise<Object|null>}
    */
   static async getCompanyInfo(companyId) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const path = `${companyId}/informacion_local`;
 
-    const infoRef = ref(db, `${companyId}/informacion_local`);
-    const snap = await get(infoRef);
-    if (!snap.exists()) return null;
+    if (navigator.onLine && db) {
+      try {
+        const infoRef = ref(db, path);
+        const snap = await Promise.race([
+          get(infoRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snap.exists()) {
+          const data = snap.val();
+          let status = 'ACTIVO';
+          let config = {};
+          let modules = data.modules || {};
 
-    const data = snap.val();
+          try {
+            const configSnap = await get(ref(db, `${companyId}/config`));
+            if (configSnap.exists()) {
+              config = configSnap.val() || {};
+              status = config.status || 'ACTIVO';
+              if (config.modules) {
+                modules = { ...modules, ...config.modules };
+              }
+            }
+          } catch (e) {}
 
-    let status = 'ACTIVO';
-    let config = {};
-    let modules = data.modules || {};
+          try {
+            const companyRootSnap = await get(ref(db, `companies/${companyId}`));
+            if (companyRootSnap.exists()) {
+              const rootVal = companyRootSnap.val() || {};
+              if (rootVal.modules) {
+                modules = { ...modules, ...rootVal.modules };
+              }
+            }
+          } catch (e) {}
 
-    try {
-      const configSnap = await get(ref(db, `${companyId}/config`));
-      if (configSnap.exists()) {
-        config = configSnap.val() || {};
-        status = config.status || 'ACTIVO';
-        if (config.modules) {
-          modules = { ...modules, ...config.modules };
+          const infoObj = {
+            id: companyId,
+            name: data.nombre || data.name || companyId,
+            ownerId: data.propietario || data.ownerId || '',
+            phone: data.telefono || '',
+            address: data.direccion || '',
+            email: data.correo || '',
+            status,
+            ...data,
+            config,
+            modules,
+          };
+
+          await LocalStorageDBService.setCache(path, infoObj);
+          return infoObj;
         }
+      } catch (e) {
+        console.warn(`[DB] getCompanyInfo network error for ${companyId}:`, e.message);
       }
-    } catch (e) {
-      console.warn('Failed to fetch config:', e.message);
     }
 
-    try {
-      const companyRootSnap = await get(ref(db, `companies/${companyId}`));
-      if (companyRootSnap.exists()) {
-        const rootVal = companyRootSnap.val() || {};
-        if (rootVal.modules) {
-          modules = { ...modules, ...rootVal.modules };
-        }
-      }
-    } catch (e) {}
-
-    return {
-      id: companyId,
-      name: data.nombre || data.name || companyId,
-      ownerId: data.propietario || data.ownerId || '',
-      phone: data.telefono || '',
-      address: data.direccion || '',
-      email: data.correo || '',
-      status,
-      ...data,
-      config,
-      modules,
-    };
+    const cached = await LocalStorageDBService.getCache(path);
+    if (cached) console.log(`[DB] 📴 Loaded cached company info for ${companyId}`);
+    return cached;
   }
 
   /**
@@ -834,83 +985,96 @@ export class FirestoreService {
    * @returns {Promise<Array<Object>>}
    */
   static async listAllCompanies() {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const path = 'companies';
+    if (navigator.onLine && db) {
+      try {
+        const companiesRef = ref(db, path);
+        const snapshot = await Promise.race([
+          get(companiesRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
 
-    const companiesRef = ref(db, 'companies');
-    const snapshot = await get(companiesRef);
+        if (snapshot.exists()) {
+          const promises = [];
+          snapshot.forEach(companySnap => {
+            const companyId = companySnap.key;
+            const info = companySnap.val() || {};
 
-    if (!snapshot.exists()) return [];
+            const p = (async () => {
+              let employeeCount = 0;
+              try {
+                const empSnap = await get(ref(db, `${companyId}/employees`));
+                if (empSnap.exists()) {
+                  employeeCount = Object.keys(empSnap.val()).filter(k => k !== '.init').length;
+                }
+              } catch (e) {}
 
-    const promises = [];
-    snapshot.forEach(companySnap => {
-      const companyId = companySnap.key;
-      const info = companySnap.val() || {};
+              let branchCount = 0;
+              try {
+                const branchSnap = await get(ref(db, `${companyId}/branches`));
+                if (branchSnap.exists()) {
+                  branchCount = Object.keys(branchSnap.val()).filter(k => k !== '.init').length;
+                }
+              } catch (e) {}
 
-      const p = (async () => {
-        let employeeCount = 0;
-        try {
-          const empSnap = await get(ref(db, `${companyId}/employees`));
-          if (empSnap.exists()) {
-            employeeCount = Object.keys(empSnap.val()).filter(k => k !== '.init').length;
-          }
-        } catch (e) {}
+              let config = {};
+              try {
+                const configSnap = await get(ref(db, `${companyId}/config`));
+                if (configSnap.exists()) {
+                  config = configSnap.val();
+                }
+              } catch (e) {}
 
-        let branchCount = 0;
-        try {
-          const branchSnap = await get(ref(db, `${companyId}/branches`));
-          if (branchSnap.exists()) {
-            branchCount = Object.keys(branchSnap.val()).filter(k => k !== '.init').length;
-          }
-        } catch (e) {}
+              let ownerEmail = info.ownerEmail || '';
+              let ownerPassword = info.ownerPassword || '';
+              if (info.ownerId) {
+                try {
+                  const userSnap = await get(ref(db, `users/${info.ownerId}`));
+                  if (userSnap.exists()) {
+                    const u = userSnap.val();
+                    if (u.email) ownerEmail = u.email;
+                    if (u.storedPassword) ownerPassword = u.storedPassword;
+                  }
+                } catch (e) {}
+              }
 
-        let config = {};
-        try {
-          const configSnap = await get(ref(db, `${companyId}/config`));
-          if (configSnap.exists()) {
-            config = configSnap.val();
-          }
-        } catch (e) {}
+              const modules = info.modules || config.modules || {};
 
-        let ownerEmail = info.ownerEmail || '';
-        let ownerPassword = info.ownerPassword || '';
-        if (info.ownerId) {
-          try {
-            const userSnap = await get(ref(db, `users/${info.ownerId}`));
-            if (userSnap.exists()) {
-              const u = userSnap.val();
-              if (u.email) ownerEmail = u.email;
-              if (u.storedPassword) ownerPassword = u.storedPassword;
-            }
-          } catch (e) {}
+              return {
+                id: companyId,
+                name: info.name || companyId,
+                businessType: info.businessType || 'Restaurante',
+                plan: info.plan || 'FREE',
+                status: info.status || 'ACTIVO',
+                deletedAt: info.deletedAt || null,
+                statusReason: info.statusReason || '',
+                ownerId: info.ownerId || '',
+                ownerEmail,
+                ownerPassword,
+                branches: branchCount || 1,
+                users: employeeCount || 1,
+                modules,
+                config: config,
+                createdAt: info.createdAt,
+                updatedAt: info.updatedAt
+              };
+            })();
+            promises.push(p);
+          });
+
+          const results = await Promise.all(promises);
+          await LocalStorageDBService.setCache(path, results);
+          console.log(`[DB] ✅ Listed ${results.length} companies`);
+          return results;
         }
+      } catch (e) {
+        console.warn(`[DB] listAllCompanies network error:`, e.message);
+      }
+    }
 
-        const modules = info.modules || config.modules || {};
-
-        return {
-          id: companyId,
-          name: info.name || companyId,
-          businessType: info.businessType || 'Restaurante',
-          plan: info.plan || 'FREE',
-          status: info.status || 'ACTIVO',
-          deletedAt: info.deletedAt || null,
-          statusReason: info.statusReason || '',
-          ownerId: info.ownerId || '',
-          ownerEmail,
-          ownerPassword,
-          branches: branchCount || 1,
-          users: employeeCount || 1,
-          modules,
-          config: config,
-          createdAt: info.createdAt,
-          updatedAt: info.updatedAt
-        };
-      })();
-      promises.push(p);
-    });
-
-    const results = await Promise.all(promises);
-    console.log(`[DB] ✅ Listed ${results.length} companies`);
-    return results;
+    const cached = (await LocalStorageDBService.getCache(path)) || [];
+    console.log(`[DB] 📴 Loaded cached companies list: ${cached.length} items`);
+    return cached;
   }
 
   /**
@@ -1085,15 +1249,24 @@ export class FirestoreService {
    * @returns {Promise<Object|null>}
    */
   static async getSaaSConfig() {
-    if (!db) return null;
-    try {
-      const configRef = ref(db, 'global/saas_config');
-      const snap = await get(configRef);
-      return snap.exists() ? snap.val() : null;
-    } catch (err) {
-      console.warn('[FirestoreService] getSaaSConfig failed:', err.message);
-      return null;
+    const path = 'global/saas_config';
+    if (navigator.onLine && db) {
+      try {
+        const configRef = ref(db, path);
+        const snap = await Promise.race([
+          get(configRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snap.exists()) {
+          const val = snap.val();
+          await LocalStorageDBService.setCache(path, val);
+          return val;
+        }
+      } catch (err) {
+        console.warn('[FirestoreService] getSaaSConfig failed:', err.message);
+      }
     }
+    return LocalStorageDBService.getCache(path);
   }
 
   /**
@@ -1110,7 +1283,9 @@ export class FirestoreService {
     const clean = Object.fromEntries(
       Object.entries(data).filter(([, v]) => v !== undefined)
     );
-    await update(configRef, { ...clean, updatedAtLocal: TimeService.timestamp() });
+    const payload = { ...clean, updatedAtLocal: TimeService.timestamp() };
+    await update(configRef, payload);
+    await LocalStorageDBService.setCache('global/saas_config', payload);
     console.log('[FirestoreService] ✅ SaaS config updated at global/saas_config');
   }
 
@@ -1129,18 +1304,18 @@ export class FirestoreService {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
     const reqsRef = ref(db, `${companyId}/service_requests`);
     const newRef = push(reqsRef);
-    await set(newRef, {
+    const reqData = {
       ...payload,
       id: newRef.key,
       createdAt: serverTimestamp(),
       status: payload.status || 'PENDIENTE'
-    });
+    };
+    await set(newRef, reqData);
     console.log(`[DB] ✅ Public service request created: ${companyId}/service_requests/${newRef.key}`);
     return newRef.key;
   }
 
   static async savePlan(planId, data) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
     await this.setGlobal('saas_plans', planId, {
       ...data,
       updatedAtLocal: TimeService.timestamp()
@@ -1175,35 +1350,47 @@ export class FirestoreService {
    * @returns {string} Listener ID for later cleanup with unsubscribe()
    */
   static listenToPath(path, callback) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const listenerId = `listener_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Immediately deliver cached data if available so views load instantly offline
+    LocalStorageDBService.getCache(path).then(cached => {
+      if (cached !== null && cached !== undefined) {
+        console.log(`[DB] 📴 Loaded initial cached data for listener: ${path}`);
+        callback(cached);
+      }
+    }).catch(() => {});
+
+    if (!db || !navigator.onLine) {
+      console.log(`[DB] 📴 Device is offline, skipping live listener registration for ${path}`);
+      return listenerId;
+    }
 
     const pathRef = ref(db, path);
-    const listenerId = `listener_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const handler = (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        // Convert object children to array with id
+        let result = data;
         if (typeof data === 'object' && !Array.isArray(data)) {
           const arr = [];
           for (const [key, val] of Object.entries(data)) {
-            if (key === '.init') continue; // skip placeholders
+            if (key === '.init') continue;
             if (typeof val === 'object' && val !== null) {
               arr.push({ id: key, ...val });
             }
           }
-          callback(arr);
-        } else {
-          callback(data);
+          result = arr;
         }
+        LocalStorageDBService.setCache(path, result);
+        callback(result);
       } else {
+        LocalStorageDBService.setCache(path, []);
         callback([]);
       }
     };
 
     onValue(pathRef, handler);
 
-    // Store for cleanup
     this._listeners.set(listenerId, { pathRef, handler });
     console.log(`[DB] 👂 Listener attached: ${path} (${listenerId})`);
     return listenerId;
@@ -1218,15 +1405,27 @@ export class FirestoreService {
    * @returns {string} Listener ID
    */
   static listenToPathRaw(path, callback) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const listenerId = `listener_raw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    LocalStorageDBService.getCache(path).then(cached => {
+      if (cached !== null && cached !== undefined) {
+        callback(cached);
+      }
+    }).catch(() => {});
+
+    if (!db || !navigator.onLine) {
+      return listenerId;
+    }
 
     const pathRef = ref(db, path);
-    const listenerId = `listener_raw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const handler = (snapshot) => {
       if (snapshot.exists()) {
-        callback(snapshot.val());
+        const val = snapshot.val();
+        LocalStorageDBService.setCache(path, val);
+        callback(val);
       } else {
+        LocalStorageDBService.setCache(path, null);
         callback(null);
       }
     };

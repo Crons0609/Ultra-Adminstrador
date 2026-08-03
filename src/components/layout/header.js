@@ -96,6 +96,12 @@ export class Header extends Component {
           <!-- Real-time Clock -->
           <div class="header-clock" id="header-clock"></div>
 
+          <!-- Offline / Cloud Sync Status Badge -->
+          <div id="header-sync-status" class="sync-status-badge" style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--color-bg-tertiary); border:1px solid var(--color-border); cursor:pointer;" title="Estado de conexión y sincronización con la nube">
+            <span id="sync-icon">🟢</span>
+            <span id="sync-text">En Línea</span>
+          </div>
+
           <!-- Theme Switcher -->
           <button class="header-action" id="theme-toggle-btn" title="Cambiar tema" aria-label="Cambiar tema">
             <svg id="icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -203,6 +209,38 @@ export class Header extends Component {
   afterMount() {
     // Check and auto-resume or prompt employee for GPS tracking
     GeolocationService.checkAndPromptGPS();
+
+    // ── Sync & Offline Status Indicator ──
+    const updateSyncBadge = (detail = {}) => {
+      const icon = this.$('#sync-icon');
+      const text = this.$('#sync-text');
+      const badge = this.$('#header-sync-status');
+      if (!icon || !text || !badge) return;
+
+      const isOnline = detail.isOnline !== undefined ? detail.isOnline : navigator.onLine;
+      const pending = detail.pendingCount || 0;
+      const syncing = detail.syncInProgress;
+
+      if (!isOnline) {
+        icon.textContent = '📴';
+        text.textContent = pending > 0 ? `Offline (${pending} pend.)` : 'Modo Offline';
+        badge.style.borderColor = 'var(--color-warning, #f59e0b)';
+        badge.style.color = 'var(--color-warning, #f59e0b)';
+      } else if (syncing || pending > 0) {
+        icon.textContent = '🔄';
+        text.textContent = `Sincronizando (${pending})`;
+        badge.style.borderColor = 'var(--color-accent, #6366f1)';
+        badge.style.color = 'var(--color-accent, #6366f1)';
+      } else {
+        icon.textContent = '🟢';
+        text.textContent = 'En Línea';
+        badge.style.borderColor = 'var(--color-border)';
+        badge.style.color = 'var(--color-text-secondary)';
+      }
+    };
+
+    window.addEventListener('ua:sync-status', (e) => updateSyncBadge(e.detail));
+    updateSyncBadge();
 
     // 1. Sidebar toggle — supports both mobile/tablet slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');

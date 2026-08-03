@@ -16,6 +16,7 @@ import { FirestoreService } from './firestore.service.js';
 import { TimeService } from './time.service.js';
 import { AppearanceService } from './appearance.service.js';
 import { SavedAccountsService } from './saved-accounts.service.js';
+import { LocalStorageDBService } from './local-storage-db.service.js';
 
 // Firebase Auth modular imports (CDN v12.16.0)
 import {
@@ -642,41 +643,59 @@ export class AuthService {
       try {
         let userProfile = null;
 
-        // 1. Try Realtime Database
-        if (db) {
+        // 1. Try Realtime Database when online
+        if (db && navigator.onLine) {
           try {
             const userRef = ref(db, `users/${firebaseUser.uid}`);
             const snap = await Promise.race([
               get(userRef),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('database-timeout')), 4000))
+              new Promise((_, reject) => setTimeout(() => reject(new Error('database-timeout')), 2500))
             ]);
             if (snap.exists()) {
               userProfile = snap.val();
+              await LocalStorageDBService.setCache(`users/${firebaseUser.uid}`, userProfile);
             }
           } catch (e) {
-            console.warn('[AuthService] RTDB session restore failed:', e.message);
+            console.warn('[AuthService] RTDB session restore network issue, using cache:', e.message);
           }
         }
 
-        // 2. SuperAdmin fallback
+        // 2. Try IndexedDB cache fallback
+        if (!userProfile) {
+          userProfile = await LocalStorageDBService.getCache(`users/${firebaseUser.uid}`);
+        }
+
+        // 3. SuperAdmin fallback
         if (!userProfile && firebaseUser.email === SUPER_ADMIN_EMAIL) {
           userProfile = { ...SUPER_ADMIN_PROFILE };
         }
 
         if (userProfile) {
           // Validar si el negocio existe y no ha sido eliminado (excepto si es SUPER_ADMIN)
-          if (userProfile.companyId && userProfile.companyId !== 'global' && db) {
-            try {
-              const companySnap = await get(ref(db, `companies/${userProfile.companyId}`));
-              if (!companySnap.exists() || (companySnap.val() && companySnap.val().status === 'ELIMINADO')) {
-                console.warn('[AuthService] Company deleted or trashed. Blocking session.');
+          if (userProfile.companyId && userProfile.companyId !== 'global') {
+            if (db && navigator.onLine) {
+              try {
+                const companySnap = await get(ref(db, `companies/${userProfile.companyId}`));
+                if (!companySnap.exists() || (companySnap.val() && companySnap.val().status === 'ELIMINADO')) {
+                  console.warn('[AuthService] Company deleted or trashed. Blocking session.');
+                  GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+                  clearTimeout(timeout);
+                  resolve(null);
+                  return;
+                }
+                await LocalStorageDBService.setCache(`companies/${userProfile.companyId}`, companySnap.val());
+              } catch (err) {
+                console.warn('[AuthService] Failed to verify company during restore:', err.message);
+              }
+            } else {
+              const cachedCompany = await LocalStorageDBService.getCache(`companies/${userProfile.companyId}`);
+              if (cachedCompany && cachedCompany.status === 'ELIMINADO') {
+                console.warn('[AuthService] Cached company is deleted. Blocking session.');
                 GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
                 clearTimeout(timeout);
                 resolve(null);
                 return;
               }
-            } catch (err) {
-              console.warn('[AuthService] Failed to verify company during restore:', err.message);
             }
           }
 
@@ -691,6 +710,8 @@ export class AuthService {
             permissions: userProfile.permissions || {}
           };
 
+          await LocalStorageDBService.setCache('user_session', userSession);
+
           GlobalStore.set({
             currentUser: userSession,
             activeRole: userSession.role,
@@ -702,6 +723,19 @@ export class AuthService {
           clearTimeout(timeout);
           resolve(userSession);
         } else {
+          // Check cached session as ultimate fallback
+          const cachedSession = await LocalStorageDBService.getCache('user_session');
+          if (cachedSession) {
+            GlobalStore.set({
+              currentUser: cachedSession,
+              activeRole: cachedSession.role,
+              isAuthenticated: true
+            });
+            clearTimeout(timeout);
+            resolve(cachedSession);
+            return;
+          }
+
           GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
           clearTimeout(timeout);
           resolve(null);
