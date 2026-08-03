@@ -44,6 +44,8 @@ body.modal-open {
   animation: slideUp var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1) forwards;
   /* Prevent shrinking below content */
   flex-shrink: 0;
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 /* ─── Size Variants ─── */

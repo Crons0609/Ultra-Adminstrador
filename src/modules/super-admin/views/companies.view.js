@@ -254,16 +254,16 @@ export class CompaniesView extends Component {
 
     let html = `
       <style>
-        .mod-registry-toggle:checked + .mod-track {
+        .mod-registry-toggle:checked ~ .mod-track {
           background-color: var(--color-accent, #6366f1) !important;
         }
-        .mod-registry-toggle:not(:checked) + .mod-track {
+        .mod-registry-toggle:not(:checked) ~ .mod-track {
           background-color: var(--color-border, #374151) !important;
         }
-        .mod-registry-toggle:checked + .mod-track .mod-thumb {
+        .mod-registry-toggle:checked ~ .mod-track .mod-thumb {
           transform: translateX(18px) !important;
         }
-        .mod-registry-toggle:not(:checked) + .mod-track .mod-thumb {
+        .mod-registry-toggle:not(:checked) ~ .mod-track .mod-thumb {
           transform: translateX(2px) !important;
         }
       </style>
@@ -282,15 +282,15 @@ export class CompaniesView extends Component {
         const on = defaults[m.id] !== undefined ? Boolean(defaults[m.id]) : m.defaultEnabled;
         const cbId = `${idPrefix}mod-registry-${m.id}`;
         html += `
-          <label for="${cbId}" style="display:flex; align-items:center; gap:12px; padding:10px var(--space-3); cursor:pointer; border-bottom:1px solid var(--color-border); user-select:none;">
-            <!-- native checkbox (source of truth) -->
-            <input type="checkbox" id="${cbId}" class="mod-registry-toggle" data-module-id="${m.id}" ${on ? 'checked' : ''} style="position:absolute; opacity:0; width:1px; height:1px; margin:-1px; cursor:pointer;" />
+          <label for="${cbId}" style="position:relative; display:flex; align-items:center; gap:12px; padding:10px var(--space-3); cursor:pointer; border-bottom:1px solid var(--color-border); user-select:none; -webkit-tap-highlight-color: transparent;">
+            <!-- native checkbox overlay for touch & click reliability on mobile -->
+            <input type="checkbox" id="${cbId}" class="mod-registry-toggle" data-module-id="${m.id}" ${on ? 'checked' : ''} style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:2; cursor:pointer; margin:0;" />
             <!-- visual toggle track -->
-            <span class="mod-track" style="display:inline-flex; align-items:center; flex-shrink:0; width:38px; height:22px; border-radius:11px; transition:background 0.22s; position:relative;">
+            <span class="mod-track" style="display:inline-flex; align-items:center; flex-shrink:0; width:38px; height:22px; border-radius:11px; transition:background 0.22s; position:relative; z-index:1;">
               <!-- thumb -->
               <span class="mod-thumb" style="display:block; width:16px; height:16px; border-radius:50%; background:#ffffff; box-shadow:0 1px 4px rgba(0,0,0,0.4); transition:transform 0.22s; position:absolute; top:3px; left:0;"></span>
             </span>
-            <div style="flex:1; min-width:0;">
+            <div style="flex:1; min-width:0; position:relative; z-index:1;">
               <div style="font-size:0.82rem; font-weight:600; color:var(--color-text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.name}</div>
               <div style="font-size:0.70rem; color:var(--color-text-secondary); margin-top:1px;">${m.description}</div>
             </div>
@@ -1070,7 +1070,7 @@ export class CompaniesView extends Component {
     const modules = {};
     MODULE_REGISTRY.forEach(m => {
       const cb = this.modalInstance.$(`#edit-mod-registry-${m.id}`);
-      modules[m.id] = cb ? cb.checked : (row.modules?.[m.id] !== undefined ? Boolean(row.modules[m.id]) : m.defaultEnabled);
+      modules[m.id] = cb ? cb.checked : m.defaultEnabled;
     });
 
     try {
