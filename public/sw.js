@@ -9,7 +9,7 @@
  *  - Background Sync → Cola de escrituras pendientes que se reenvían al reconectarse
  */
 
-const CACHE_VERSION = 'ultra-admin-v7-dynamic-modules';
+const CACHE_VERSION = 'ultra-admin-v9-offline-full';
 const SYNC_TAG      = 'ultra-offline-sync';
 
 // ─── Assets del App Shell (se almacenan en instalación) ──────────────────────
@@ -20,19 +20,20 @@ const SHELL_ASSETS = [
   '/src/app.js',
   '/src/styles/main.css',
   '/assets/logo_ultra_administrador.png',
-  '/logo_ultra_administrador.png'
+  '/logo_ultra_administrador.png',
+  'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js',
+  'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js',
+  'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js'
 ];
 
-// ─── Dominios externos que NUNCA se interceptan ───────────────────────────────
+// ─── Dominios de API que NUNCA se interceptan para evitar interferir con REST/WebSockets ───
 const BYPASS_PATTERNS = [
   'firebaseio.com',
   'firebasedatabase.app',
   'firestore.googleapis.com',
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
-  'firebase.googleapis.com',
   'accounts.google.com',
-  'gstatic.com/firebasejs',
   'localhost:9000',
   'localhost:9099',
   'localhost:8080'
@@ -42,11 +43,11 @@ const BYPASS_PATTERNS = [
 // INSTALL — cache del app shell
 // ─────────────────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v7 — caching app shell...');
+  console.log('[SW] Installing v9 — caching full app shell & Firebase JS SDK...');
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
       return cache.addAll(SHELL_ASSETS).catch((err) => {
-        console.warn('[SW] Some shell assets failed to cache:', err.message);
+        console.warn('[SW] Some shell assets failed to cache on install:', err.message);
       });
     })
   );
@@ -57,7 +58,7 @@ self.addEventListener('install', (event) => {
 // ACTIVATE — limpiar cachés viejos
 // ─────────────────────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v7 — cleaning old caches...');
+  console.log('[SW] Activating v9 — cleaning old caches...');
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
@@ -83,18 +84,33 @@ self.addEventListener('fetch', (event) => {
   // Solo interceptamos GET
   if (req.method !== 'GET') return;
 
-  // Bypass total para Firebase y servicios externos críticos
+  // Bypass total para REST endpoints / WebSockets de Firebase Auth & RTDB
   if (BYPASS_PATTERNS.some((p) => url.includes(p))) return;
 
-  // ── Código fuente en /src/ → Network First (recibe siempre actualizaciones de Render) ──
-  if (url.includes('/src/')) {
-    event.respondWith(networkFirstWithCache(req));
+  // ── CDNs, librerías de Firebase y Fuentes → Stale-While-Revalidate (devuelve caché instantáneo offline) ──
+  if (
+    url.includes('gstatic.com/firebasejs') ||
+    url.includes('cdn.tailwindcss.com') ||
+    url.includes('unpkg.com') ||
+    url.includes('cdnjs.cloudflare.com') ||
+    url.includes('jsdelivr.net') ||
+    url.includes('esm.sh') ||
+    url.includes('fonts.googleapis.com') ||
+    url.includes('fonts.gstatic.com')
+  ) {
+    event.respondWith(staleWhileRevalidate(req));
     return;
   }
 
-  // ── App shell estático (index.html, logo, css) → Cache First con revalidación ──
-  if (isShellRequest(url)) {
-    event.respondWith(cacheFirst(req));
+  // ── Navegación principal (rutas SPA / HTML) → Stale-While-Revalidate / Cache First ──
+  if (req.mode === 'navigate' || isShellRequest(url)) {
+    event.respondWith(staleWhileRevalidate(req));
+    return;
+  }
+
+  // ── Código fuente en /src/ y assets locales → Stale-While-Revalidate ──
+  if (url.includes('/src/') || url.includes('/assets/')) {
+    event.respondWith(staleWhileRevalidate(req));
     return;
   }
 
