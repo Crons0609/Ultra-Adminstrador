@@ -48,6 +48,7 @@ export class Modal extends Component {
   afterMount() {
     // Lock background scroll when modal is open
     document.body.classList.add('modal-open');
+    document.documentElement.classList.add('modal-open');
 
     const closeBtn = this.$('#modal-close-btn');
     if (closeBtn) {
@@ -81,6 +82,7 @@ export class Modal extends Component {
     const remainingModals = document.querySelectorAll('.modal-overlay');
     if (remainingModals.length === 0) {
       document.body.classList.remove('modal-open');
+      document.documentElement.classList.remove('modal-open');
     }
 
     super.unmount();

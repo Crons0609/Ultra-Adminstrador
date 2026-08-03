@@ -69,6 +69,7 @@ export class Router {
     // (modals whose unmount() was never called because the view's innerHTML was cleared)
     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
     document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
 
     // Initialize and render new View component
     try {

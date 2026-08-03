@@ -4,9 +4,12 @@
  * RESPONSIVE: Bottom-sheet style on mobile <640px, centered card on larger screens.
  */
 
+html.modal-open,
 body.modal-open {
   overflow: hidden !important;
+  overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
+  touch-action: none;
 }
 
 .modal-overlay {
@@ -25,7 +28,9 @@ body.modal-open {
   padding: var(--space-4);
   animation: fadeIn var(--transition-normal) forwards;
   overflow-y: auto;
-  overscroll-behavior-y: contain;
+  overscroll-behavior: contain !important;
+  overscroll-behavior-y: contain !important;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -46,6 +51,8 @@ body.modal-open {
   flex-shrink: 0;
   isolation: isolate;
   transform: translateZ(0);
+  overscroll-behavior: contain !important;
+  overscroll-behavior-y: contain !important;
 }
 
 /* ─── Size Variants ─── */
@@ -102,7 +109,9 @@ body.modal-open {
   padding: var(--space-5);
   overflow-y: auto;
   flex: 1 1 auto;
-  overscroll-behavior-y: contain;
+  overscroll-behavior: contain !important;
+  overscroll-behavior-y: contain !important;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
