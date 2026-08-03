@@ -10,7 +10,7 @@
  */
 
 import { db } from '../config/firebase.config.js';
-import { ref, set, update, push, remove }
+import { ref, set, update, push, remove, onValue }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { LocalStorageDBService } from './local-storage-db.service.js';
 
@@ -106,19 +106,45 @@ export class OfflineSyncService {
   // ─── Privados ──────────────────────────────────────────────────────────────
 
   static _listenNetworkEvents() {
-    window.addEventListener('online', () => {
+    const handleOnline = () => {
       isOnline = true;
       console.log('[OfflineSync] 🌐 Online — starting sync...');
       OfflineSyncService.notifyStatus();
       OfflineSyncService._syncNow();
-    });
+    };
 
-    window.addEventListener('offline', () => {
+    const handleOffline = () => {
       isOnline = false;
       console.log('[OfflineSync] 📴 Offline — writes will be queued.');
       OfflineSyncService.notifyStatus();
       OfflineSyncService._showOfflineBanner(true);
-    });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Listen to Firebase RTDB internal connection status node
+    if (db) {
+      try {
+        const connectedRef = ref(db, '.info/connected');
+        onValue(connectedRef, (snap) => {
+          const connected = snap.val() === true;
+          console.log(`[OfflineSync] 📶 RTDB .info/connected: ${connected}`);
+          if (connected) {
+            isOnline = true;
+            OfflineSyncService.notifyStatus();
+            if (pendingWrites.length > 0) {
+              OfflineSyncService._syncNow();
+            }
+          } else if (!navigator.onLine) {
+            isOnline = false;
+            OfflineSyncService.notifyStatus();
+          }
+        });
+      } catch (err) {
+        console.warn('[OfflineSync] Could not attach .info/connected listener:', err.message);
+      }
+    }
   }
 
   static _listenServiceWorkerMessages() {

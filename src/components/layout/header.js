@@ -12,6 +12,7 @@ import { BarcodeRegistryService } from '../../services/barcode-registry.service.
 import { GeolocationService } from '../../services/geolocation.service.js';
 import { NotificationService } from '../../services/notification.service.js';
 import { SavedAccountsService } from '../../services/saved-accounts.service.js';
+import { OfflineSyncService } from '../../services/offline-sync.service.js';
 
 export class Header extends Component {
   constructor(props = {}) {
@@ -217,30 +218,55 @@ export class Header extends Component {
       const badge = this.$('#header-sync-status');
       if (!icon || !text || !badge) return;
 
-      const isOnline = detail.isOnline !== undefined ? detail.isOnline : navigator.onLine;
-      const pending = detail.pendingCount || 0;
+      const isOnline = detail.isOnline !== undefined ? detail.isOnline : (!OfflineSyncService.isOffline() && navigator.onLine);
+      const pending = detail.pendingCount !== undefined ? detail.pendingCount : OfflineSyncService.getPendingCount();
       const syncing = detail.syncInProgress;
 
       if (!isOnline) {
         icon.textContent = '📴';
         text.textContent = pending > 0 ? `Offline (${pending} pend.)` : 'Modo Offline';
-        badge.style.borderColor = 'var(--color-warning, #f59e0b)';
-        badge.style.color = 'var(--color-warning, #f59e0b)';
+        badge.style.borderColor = '#ef4444';
+        badge.style.color = '#ef4444';
+        badge.style.background = 'rgba(239, 68, 68, 0.12)';
       } else if (syncing || pending > 0) {
         icon.textContent = '🔄';
         text.textContent = `Sincronizando (${pending})`;
-        badge.style.borderColor = 'var(--color-accent, #6366f1)';
-        badge.style.color = 'var(--color-accent, #6366f1)';
+        badge.style.borderColor = '#6366f1';
+        badge.style.color = '#6366f1';
+        badge.style.background = 'rgba(99, 102, 241, 0.12)';
       } else {
         icon.textContent = '🟢';
         text.textContent = 'En Línea';
-        badge.style.borderColor = 'var(--color-border)';
-        badge.style.color = 'var(--color-text-secondary)';
+        badge.style.borderColor = '#10b981';
+        badge.style.color = '#10b981';
+        badge.style.background = 'rgba(16, 185, 129, 0.12)';
       }
     };
 
-    window.addEventListener('ua:sync-status', (e) => updateSyncBadge(e.detail));
+    this._syncStatusHandler = (e) => updateSyncBadge(e.detail);
+    this._onlineHandler = () => updateSyncBadge({ isOnline: true });
+    this._offlineHandler = () => updateSyncBadge({ isOnline: false });
+
+    window.addEventListener('ua:sync-status', this._syncStatusHandler);
+    window.addEventListener('online', this._onlineHandler);
+    window.addEventListener('offline', this._offlineHandler);
+
     updateSyncBadge();
+
+    const syncBadgeEl = this.$('#header-sync-status');
+    if (syncBadgeEl) {
+      syncBadgeEl.addEventListener('click', () => {
+        const isOnline = !OfflineSyncService.isOffline() && navigator.onLine;
+        const count = OfflineSyncService.getPendingCount();
+        if (!isOnline) {
+          NotificationService.warning(`📴 Modo sin conexión. Tienes ${count} cambio(s) pendiente(s) por guardar en la nube.`);
+        } else if (count > 0) {
+          NotificationService.info(`🔄 Sincronizando ${count} cambio(s) con la nube...`);
+        } else {
+          NotificationService.success('🟢 Conectado a la nube. Todos los datos están al día.');
+        }
+      });
+    }
 
     // 1. Sidebar toggle — supports both mobile/tablet slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');
@@ -692,6 +718,9 @@ export class Header extends Component {
   }
 
   unmount() {
+    if (this._syncStatusHandler) window.removeEventListener('ua:sync-status', this._syncStatusHandler);
+    if (this._onlineHandler) window.removeEventListener('online', this._onlineHandler);
+    if (this._offlineHandler) window.removeEventListener('offline', this._offlineHandler);
     if (this._clockInterval) clearInterval(this._clockInterval);
     if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
     if (this._kbdHandler) window.removeEventListener('keydown', this._kbdHandler);
