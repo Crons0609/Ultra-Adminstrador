@@ -9,7 +9,7 @@ body.modal-open {
   overflow: hidden !important;
   overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
-  touch-action: none;
+  touch-action: pan-y !important;
 }
 
 .modal-overlay {
@@ -30,7 +30,7 @@ body.modal-open {
   overflow-y: auto;
   overscroll-behavior: contain !important;
   overscroll-behavior-y: contain !important;
-  touch-action: pan-y;
+  touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -53,6 +53,7 @@ body.modal-open {
   transform: translateZ(0);
   overscroll-behavior: contain !important;
   overscroll-behavior-y: contain !important;
+  touch-action: pan-y !important;
 }
 
 /* ─── Size Variants ─── */
@@ -111,7 +112,7 @@ body.modal-open {
   flex: 1 1 auto;
   overscroll-behavior: contain !important;
   overscroll-behavior-y: contain !important;
-  touch-action: pan-y;
+  touch-action: pan-y !important;
   -webkit-overflow-scrolling: touch;
 }
 
