@@ -215,7 +215,7 @@ export class ExpensesView extends Component {
     const date = this.modalInstance.$('#exp-date').value;
 
     try {
-      await FirestoreService.create(this.companyId, 'expenses', {
+      await FirestoreService.create('expenses', {
         concept,
         category,
         amount,

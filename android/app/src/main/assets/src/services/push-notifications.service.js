@@ -99,7 +99,7 @@ export class PushNotificationsService {
     };
 
     try {
-      await FirestoreService.setPath(`users/${userSession.uid}/devices/${deviceId}`, deviceData);
+      await FirestoreService.writePath(`users/${userSession.uid}/devices/${deviceId}`, deviceData);
       console.log('[PushNotificationsService] ✅ FCM device registered in Firestore:', deviceId);
     } catch (err) {
       console.warn('[PushNotificationsService] Could not save FCM token in Firestore:', err.message);

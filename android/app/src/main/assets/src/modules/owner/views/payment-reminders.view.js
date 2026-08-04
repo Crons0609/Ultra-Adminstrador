@@ -463,7 +463,7 @@ export class PaymentRemindersView extends Component {
       };
 
       try {
-        await FirestoreService.setGlobal(this.companyId, 'configuracion_catalogo', updated);
+        await FirestoreService.setGlobal('configuracion_catalogo', this.companyId, updated);
         NotificationService.success('Reglas de automatización guardadas.');
       } catch (e) { NotificationService.error('Error al guardar: ' + e.message); }
     });
@@ -553,7 +553,7 @@ export class PaymentRemindersView extends Component {
       };
 
       try {
-        await FirestoreService.setGlobal(this.companyId, 'configuracion_catalogo', updated);
+        await FirestoreService.setGlobal('configuracion_catalogo', this.companyId, updated);
         NotificationService.success('Plantillas de mensajes guardadas.');
       } catch (e) { NotificationService.error('Error al guardar: ' + e.message); }
     });

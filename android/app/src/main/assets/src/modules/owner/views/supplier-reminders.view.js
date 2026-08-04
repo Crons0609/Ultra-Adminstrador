@@ -508,7 +508,7 @@ export class SupplierRemindersView extends Component {
       };
 
       try {
-        await FirestoreService.setGlobal(this.companyId, 'configuracion_catalogo', updated);
+        await FirestoreService.setGlobal('configuracion_catalogo', this.companyId, updated);
         NotificationService.success('Configuración de aviso a proveedores guardada.');
       } catch (e) { NotificationService.error('Error: ' + e.message); }
     });
