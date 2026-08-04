@@ -1528,20 +1528,6 @@ export class FirestoreService {
   }
 
   /**
-   * Read data at any arbitrary RTDB path (one-time fetch, no auth required).
-   * Used for public QR token resolution and similar unauthenticated reads.
-   * @param {string} path - Absolute RTDB path
-   * @returns {Promise<Object|null>} The value at that path, or null if not found
-   */
-  static async readPath(path) {
-    if (!db) throw new Error('[FirestoreService] Database not initialized.');
-
-    const pathRef = ref(db, path);
-    const snap = await get(pathRef);
-    return snap.exists() ? snap.val() : null;
-  }
-
-  /**
    * Update data at any arbitrary RTDB path (merge, non-destructive).
    * @param {string} path
    * @param {Object} data
@@ -1636,4 +1622,36 @@ export class FirestoreService {
       updatedAtLocal: TimeService.timestamp()
     });
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ALIASES & COMPATIBILITY LAYER
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Alias for listenToTenant to support legacy view calls.
+   * @param {string} collectionName
+   * @param {Function} callback
+   */
+  static subscribeCollection(collectionName, callback) {
+    return this.listenToTenant(collectionName, callback);
+  }
+
+  /**
+   * Alias for getById to support legacy service calls.
+   */
+  static async readOne(collectionName, id) {
+    return this.getById(collectionName, id);
+  }
+
+  /**
+   * Alias for getAll to support legacy service calls.
+   */
+  static async readAll(collectionName) {
+    return this.getAll(collectionName);
+  }
 }
+
+/**
+ * Precautious lowercase export for cases where components import as 'firestoreService'
+ */
+export const firestoreService = FirestoreService;
