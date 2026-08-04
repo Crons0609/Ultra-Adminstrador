@@ -228,11 +228,13 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Global: all overflow-y scrollable containers should not propagate
-   the overscroll to the root document frame (which triggers SwipeRefreshLayout) */
+/* Global: Allow natural scroll chain propagation for better hybrid app compatibility.
+   Since SwipeRefreshLayout is disabled at the native level, we no longer need
+   to contain overscroll at the CSS level, which often causes scroll blocking on Android. */
 [class*="scroll"], .page-body, .modal-body, .modal-content,
 .table-container, .data-table-wrapper, .list-container {
-  overscroll-behavior-y: contain;
+  /* Removed overscroll-behavior-y: contain to allow natural document scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ─── Non-blocking floating indicators ─── */

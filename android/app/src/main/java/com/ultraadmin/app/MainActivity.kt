@@ -192,12 +192,13 @@ class MainActivity : AppCompatActivity() {
         swipeRefresh.setProgressBackgroundColorSchemeColor(
             ContextCompat.getColor(this, R.color.bg_surface)
         )
-        // Pull-to-refresh is permanently disabled.
-        // Swiping down inside any sub-screen (tables, lists, modals, forms)
-        // should scroll the content, NOT reload the entire SPA.
+        
+        // 🛠️ CRITICAL FIX: Completely disable SwipeRefreshLayout to prevent 
+        // accidental refreshes while scrolling in the SPA or Modals.
         swipeRefresh.isEnabled = false
+        swipeRefresh.setOnChildScrollUpCallback { _, _ -> true } 
+        
         swipeRefresh.setOnRefreshListener {
-            // Safety listener: if the layout is somehow triggered, stop the animation immediately
             swipeRefresh.isRefreshing = false
         }
     }
@@ -277,9 +278,9 @@ class MainActivity : AppCompatActivity() {
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            // Do NOT set swipeRefresh.isRefreshing = true here.
-            // This prevents a confusing spinner from appearing on every internal navigation.
+            // Ensure it stays disabled
             swipeRefresh.isEnabled = false 
+            swipeRefresh.isRefreshing = false
         }
 
         override fun onPageFinished(view: WebView?, url: String?) {

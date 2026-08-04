@@ -12,10 +12,15 @@
 html {
   /* Prevent horizontal overflow at root level */
   overflow-x: hidden;
+  overflow-y: auto;
+  height: auto;
 }
 
 body {
   overflow-x: hidden;
+  overflow-y: auto;
+  height: auto;
+  min-height: 100vh;
   -webkit-text-size-adjust: 100%; /* Prevent iOS font zoom on rotate */
 }
 
