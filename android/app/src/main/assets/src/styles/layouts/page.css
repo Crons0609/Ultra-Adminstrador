@@ -17,16 +17,15 @@
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  min-width: 0;        /* Prevent flex overflow */
-  min-height: 100svh;
+  min-width: 0;
+  height: 100svh;      /* 🛠️ FIX: Fixed height for internal scrolling */
   transition: margin-left var(--transition-normal);
-  /* Offset for fixed header, which already includes the Android status bar inset */
   padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  overflow-x: hidden;  /* Contain any child overflow */
-  touch-action: manipulation;
+  overflow-x: hidden;
+  overflow-y: auto;    /* 🛠️ FIX: Internal scroll context */
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  /* Prevent pull-to-refresh from occurring at the CSS level */
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: contain; /* 🛠️ FIX: Prevent triggering Android Pull-to-Refresh */
 }
 
 /* Sidebar in collapsed/rail mode */

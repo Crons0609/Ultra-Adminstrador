@@ -21,12 +21,23 @@ export const AnimationService = {
   initGlobalScroll() {
     if (lenisInstance) return lenisInstance;
 
+    // 📱 OPTIMIZATION: Disable Lenis smooth scroll on Android native app.
+    // Native touch scrolling in WebView is more performant and avoids conflicts
+    // with SwipeRefreshLayout and system gestures.
+    if (window.AndroidApp || /Android/i.test(navigator.userAgent)) {
+      console.log('[AnimationService] 🚀 Android detected: Using native scrolling for maximum performance.');
+
+      // Ensure smooth behavior at CSS level
+      document.documentElement.style.scrollBehavior = 'smooth';
+      return null;
+    }
+
     lenisInstance = new Lenis({
-      duration: 1.0,
+      duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 2.0,
+      touchMultiplier: 1.5,
+      infinite: false,
       prevent: (node) => {
         return (
           node.tagName === 'TEXTAREA' ||
@@ -69,13 +80,19 @@ export const AnimationService = {
   animatePageEntrance(container) {
     if (!container) return;
 
-    // Reset scroll & recalculate Lenis dimensions for newly mounted route
-    window.scrollTo(0, 0);
+    // Reset scroll position for newly mounted route.
+    // If using native scroll (Android), reset the main-content container.
+    // If using Lenis (Desktop), use its scrollTo method.
+    const mainContent = document.querySelector('.main-content');
+
     if (lenisInstance) {
       lenisInstance.scrollTo(0, { immediate: true });
       setTimeout(() => {
         lenisInstance.resize();
       }, 100);
+    } else {
+      window.scrollTo(0, 0);
+      if (mainContent) mainContent.scrollTop = 0;
     }
 
     // 1. GSAP for Hero / Page Header entry

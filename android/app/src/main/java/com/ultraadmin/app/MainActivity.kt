@@ -277,12 +277,15 @@ class MainActivity : AppCompatActivity() {
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            swipeRefresh.isRefreshing = true
+            // Do NOT set swipeRefresh.isRefreshing = true here.
+            // This prevents a confusing spinner from appearing on every internal navigation.
+            swipeRefresh.isEnabled = false 
         }
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             swipeRefresh.isRefreshing = false
+            swipeRefresh.isEnabled = false
             CookieManager.getInstance().flush()
         }
 
@@ -667,11 +670,16 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    // ── Back button navigates WebView history ────────────────────────────────
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
+            // Check if we are at a "root" hash (like #/dashboard) to avoid getting stuck in loops
+            val url = webView.url ?: ""
+            if (url.contains("#/dashboard") || url.contains("#/login") || !url.contains("#")) {
+                 super.onBackPressed()
+            } else {
+                 webView.goBack()
+            }
         } else {
             super.onBackPressed()
         }
