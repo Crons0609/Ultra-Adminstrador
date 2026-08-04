@@ -9,7 +9,7 @@
  *  - Background Sync → Cola de escrituras pendientes que se reenvían al reconectarse
  */
 
-const CACHE_VERSION = 'ultra-admin-v10-offline-full';
+const CACHE_VERSION = 'ultra-admin-v11-offline-full';
 const SYNC_TAG      = 'ultra-offline-sync';
 
 // ─── Assets del App Shell (se almacenan en instalación) ──────────────────────
