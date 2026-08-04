@@ -75,7 +75,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var webView: WebView
-    private lateinit var swipeRefresh: SwipeRefreshLayout
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private var cameraImageUri: Uri? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -146,14 +145,12 @@ class MainActivity : AppCompatActivity() {
         setupEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        swipeRefresh    = findViewById(R.id.swipe_refresh)
         webView         = findViewById(R.id.webview)
         offlineBanner   = findViewById(R.id.offline_banner)
         syncingBar      = findViewById(R.id.syncing_bar)
         offlineTitle    = findViewById(R.id.offline_title)
         offlineSubtitle = findViewById(R.id.offline_subtitle)
 
-        setupSwipeRefresh()
         setupWebView()
 
         // Handle deep links & notification intent extras
@@ -183,31 +180,16 @@ class MainActivity : AppCompatActivity() {
         window.statusBarColor = ContextCompat.getColor(this, R.color.bg_primary)
     }
 
-    // ── SwipeRefreshLayout ───────────────────────────────────────────────────
-    private fun setupSwipeRefresh() {
-        swipeRefresh.setColorSchemeColors(
-            ContextCompat.getColor(this, R.color.accent_primary),
-            ContextCompat.getColor(this, R.color.accent_secondary)
-        )
-        swipeRefresh.setProgressBackgroundColorSchemeColor(
-            ContextCompat.getColor(this, R.color.bg_surface)
-        )
-        
-        // 🛠️ CRITICAL FIX: Completely disable SwipeRefreshLayout to prevent 
-        // accidental refreshes while scrolling in the SPA or Modals.
-        swipeRefresh.isEnabled = false
-        swipeRefresh.setOnChildScrollUpCallback { _, _ -> true } 
-        
-        swipeRefresh.setOnRefreshListener {
-            swipeRefresh.isRefreshing = false
-        }
-    }
 
     // ── WebView full configuration ───────────────────────────────────────────
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         // Hardware acceleration is set at application level in Manifest
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        
+        // 🛠️ Ensure the WebView can receive focus for touch events
+        webView.isFocusable = true
+        webView.isFocusableInTouchMode = true
 
         with(webView.settings) {
             // ── Core JS + Storage ──────────────────────────────────────────
@@ -251,7 +233,6 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = UltraWebViewClient()
         webView.webChromeClient = UltraWebChromeClient()
-        swipeRefresh.isEnabled = false
 
         // ── Offline / Online connectivity monitoring ────────────────────────
         setupConnectivityMonitor()
@@ -278,15 +259,10 @@ class MainActivity : AppCompatActivity() {
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            // Ensure it stays disabled
-            swipeRefresh.isEnabled = false 
-            swipeRefresh.isRefreshing = false
         }
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            swipeRefresh.isRefreshing = false
-            swipeRefresh.isEnabled = false
             CookieManager.getInstance().flush()
         }
 
@@ -327,7 +303,6 @@ class MainActivity : AppCompatActivity() {
 
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             if (request?.isForMainFrame == true) {
-                swipeRefresh.isRefreshing = false
                 val currentUrl = view?.url ?: ""
                 if (!currentUrl.startsWith("https://appassets.androidplatform.net")) {
                     view?.loadUrl(LOCAL_URL)

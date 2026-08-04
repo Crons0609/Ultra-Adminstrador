@@ -45,9 +45,7 @@ body, html {
   margin: 0;
   padding: 0;
   width: 100%;
-  min-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto; /* 🛠️ FIX: Allow natural document scrolling */
-  touch-action: manipulation;
-  -webkit-overflow-scrolling: touch;
+  height: 100%;
+  overflow: hidden;
+  touch-action: auto;
 }

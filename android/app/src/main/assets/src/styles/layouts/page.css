@@ -6,24 +6,25 @@
 
 .app-container {
   display: flex;
-  min-height: 100svh;
+  height: 100%;
+  width: 100%;
   background-color: var(--color-bg-primary);
-  overflow-x: hidden;
-  touch-action: manipulation;
+  overflow: hidden;
 }
 
 .main-content {
-  flex-grow: 1;
+  flex: 1;
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 100svh;   /* 🛠️ FIX: Use min-height to allow document growth */
+  height: 100%;
   transition: margin-left var(--transition-normal);
   padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  overflow: visible;     /* 🛠️ FIX: Content should flow naturally into the body */
-  touch-action: auto;    /* 🛠️ FIX: Default touch behavior for scrolling */
+  overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  background-color: var(--color-bg-primary);
 }
 
 /* Sidebar in collapsed/rail mode */

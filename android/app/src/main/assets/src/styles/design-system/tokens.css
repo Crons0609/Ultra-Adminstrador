@@ -10,18 +10,18 @@
 }
 
 html {
-  /* Prevent horizontal overflow at root level */
-  overflow-x: hidden;
-  overflow-y: auto;
-  height: auto;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  position: fixed;
 }
 
 body {
-  overflow-x: hidden;
-  overflow-y: auto;
-  height: auto;
-  min-height: 100vh;
-  -webkit-text-size-adjust: 100%; /* Prevent iOS font zoom on rotate */
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* ─── Images & Media ─── */
