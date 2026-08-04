@@ -1,0 +1,125 @@
+/**
+ * @file map.css
+ * @description Stylesheet for Leaflet Map integrations, custom HTML markers, dark mode tiles and dispatcher layouts.
+ */
+
+/* Map Layout and Containers */
+#gps-map-layout {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+#gps-map-container {
+  min-height: 400px;
+  background-color: var(--color-bg-secondary);
+}
+
+/* Dark mode overrides for Leaflet elements */
+.theme-dark .leaflet-tile-container img {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
+}
+
+.theme-dark .leaflet-container {
+  background-color: var(--color-bg-primary) !important;
+}
+
+/* Leaflet Popups */
+.theme-dark .leaflet-popup-content-wrapper,
+.theme-dark .leaflet-popup-tip {
+  background: var(--color-bg-secondary) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
+}
+
+.theme-dark .leaflet-popup-close-button {
+  color: var(--color-text-secondary) !important;
+  padding: 4px 6px 0 0 !important;
+}
+
+/* Zoom controls */
+.theme-dark .leaflet-bar {
+  border: 1px solid var(--color-border) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+.theme-dark .leaflet-bar a {
+  background-color: var(--color-bg-secondary) !important;
+  color: var(--color-text-primary) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  transition: background-color 0.2s ease;
+}
+
+.theme-dark .leaflet-bar a:hover {
+  background-color: var(--color-bg-tertiary) !important;
+  color: var(--color-accent) !important;
+}
+
+.theme-dark .leaflet-bar a.leaflet-disabled {
+  background-color: var(--color-bg-primary) !important;
+  color: var(--color-text-tertiary) !important;
+}
+
+/* Custom DivIcon Marker Styling */
+.custom-map-marker {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease;
+}
+
+.custom-map-marker:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
+
+/* Pulse animation around markers */
+@keyframes marker-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Dispatcher Sidebar Elements */
+.gps-sidebar-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gps-sidebar-card:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.gps-sidebar-card.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+/* Responsive custom adjustments */
+@media (max-width: 1024px) {
+  #gps-map-layout {
+    grid-template-rows: auto 1fr;
+  }
+}

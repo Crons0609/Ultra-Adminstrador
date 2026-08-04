@@ -1,0 +1,286 @@
+/**
+ * @file pos.css
+ * @description Point of Sale (POS) interface — billing panel + catalog.
+ * RESPONSIVE: Side-by-side on desktop, tabbed/stacked on tablet+mobile.
+ */
+
+/* ─── POS Root Grid ─── */
+.pos-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.2fr) minmax(280px, 1.8fr);
+  gap: var(--space-4);
+  height: calc(100svh - 150px);
+  min-height: 520px;
+}
+
+/* ─── Left Panel: Ticket & Billing ─── */
+.pos-billing-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  height: 100%;
+  min-width: 0;
+}
+
+.pos-panel-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.pos-ticket-container {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-2) var(--space-3);
+  min-height: 0;
+}
+
+.pos-ticket-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--space-6);
+}
+
+.pos-ticket-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-2);
+}
+
+/* ─── Ticket Line Items ─── */
+.pos-ticket-item {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.2s ease;
+}
+.pos-ticket-item:hover { background: rgba(255, 255, 255, 0.01); }
+
+.pos-item-name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-item-sku {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-family: monospace;
+}
+
+.pos-item-qty-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pos-qty-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.pos-qty-btn:hover { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+
+.pos-qty-val {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pos-item-price,
+.pos-item-subtotal {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+}
+.pos-item-subtotal { font-weight: 700; color: var(--color-text-primary); }
+
+.pos-item-delete {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.pos-item-delete:hover { color: var(--color-danger); background: rgba(239, 68, 68, 0.1); }
+
+/* ─── Billing Summary Footer ─── */
+.pos-billing-summary {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.pos-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  gap: var(--space-2);
+}
+
+.pos-calc-total {
+  font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+  font-weight: 800;
+  color: #10b981;
+}
+
+.pos-payment-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.pos-payment-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  padding: var(--space-2);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+.pos-payment-btn:hover      { border-color: var(--color-accent); color: var(--color-text-primary); }
+.pos-payment-btn.active     { border-color: #10b981; background: rgba(16, 185, 129, 0.05); color: #10b981; }
+
+.pos-checkout-btn {
+  width: 100%;
+  padding: var(--space-3);
+  font-weight: 700;
+  font-size: var(--text-base);
+  min-height: 48px;
+}
+
+/* ─── Right Panel: Catalog ─── */
+.pos-catalog-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3);
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pos-catalog-toolbar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  flex-shrink: 0;
+}
+
+.pos-categories-bar {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.pos-categories-bar::-webkit-scrollbar { display: none; }
+
+.pos-category-tab {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+}
+.pos-category-tab:hover,
+.pos-category-tab.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+.pos-catalog-grid {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+/* ─── Tablet: Stack panels vertically ─── */
+@media (max-width: 1024px) {
+  .pos-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: var(--space-3);
+  }
+  .pos-billing-panel,
+  .pos-catalog-panel {
+    height: auto;
+  }
+  .pos-ticket-container {
+    max-height: 220px;
+  }
+  .pos-catalog-grid {
+    max-height: 360px;
+  }
+}
+
+/* ─── Mobile: Compact ticket items ─── */
+@media (max-width: 600px) {
+  .pos-ticket-item {
+    grid-template-columns: 1fr auto;
+    row-gap: 6px;
+    padding: 8px var(--space-3);
+  }
+  .pos-item-price { display: none; }
+  .pos-item-qty-control  { grid-row: 2; grid-column: 1; justify-content: flex-start; }
+  .pos-item-subtotal     { grid-row: 2; grid-column: 2; text-align: right; align-self: center; }
+  .pos-item-delete       { grid-row: 1; grid-column: 2; align-self: flex-start; }
+}

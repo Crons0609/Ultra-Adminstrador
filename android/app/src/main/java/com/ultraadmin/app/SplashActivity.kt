@@ -2,10 +2,11 @@ package com.ultraadmin.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -21,6 +22,13 @@ class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // ── Handle Back Press (modern way) ─────────────────────────────────
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Swallow back press during splash
+            }
+        })
 
         // ── Edge-to-edge: status bar + nav bar transparent ─────────────────
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -58,11 +66,12 @@ class SplashActivity : AppCompatActivity() {
 
     private fun launchMain() {
         startActivity(Intent(this, MainActivity::class.java))
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, android.R.anim.fade_in, android.R.anim.fade_out)
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        }
         finish()
     }
-
-    // Don't allow back-press to escape the splash
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() { /* swallow */ }
 }

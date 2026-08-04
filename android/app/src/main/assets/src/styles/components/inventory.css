@@ -1,0 +1,130 @@
+/**
+ * @file inventory.css
+ * @description Premium styles for inventory module — stock badges, search bar, stat cards, alerts.
+ */
+
+/* ─── Stock Status Badges ─── */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.stock-ok {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.stock-low {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.stock-out {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+/* ─── Inventory Search / Filter Bar ─── */
+.inv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.inv-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  position: relative;
+}
+
+.inv-search input {
+  width: 100%;
+  padding-left: 36px;
+}
+
+.inv-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.inv-filter-select {
+  flex: 0 0 auto;
+  min-width: 160px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  height: 40px;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+}
+
+/* ─── Table row highlight for out-of-stock ─── */
+tr.row-stock-out {
+  background-color: var(--color-danger-light) !important;
+}
+
+tr.row-stock-low {
+  background-color: var(--color-warning-light) !important;
+}
+
+/* ─── Empty state ─── */
+.inv-empty {
+  text-align: center;
+  padding: var(--space-10) var(--space-6);
+  color: var(--color-text-tertiary);
+}
+
+.inv-empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-3);
+  opacity: 0.4;
+}
+
+.inv-empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.inv-empty-desc {
+  font-size: 0.8rem;
+}
+
+/* ─── Alert severity badges ─── */
+.alert-critical {
+  border-left: 4px solid var(--color-danger);
+}
+
+.alert-warning {
+  border-left: 4px solid var(--color-warning);
+}
+
+/* ─── Purchase order status badges ─── */
+.purchase-pending {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.purchase-received {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.purchase-cancelled {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+}

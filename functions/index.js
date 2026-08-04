@@ -5,6 +5,8 @@ admin.initializeApp();
 // Export triggers & APIs
 exports.orderTriggers = require('./triggers/order.triggers');
 exports.inventoryTriggers = require('./triggers/inventory.triggers');
+exports.saleTriggers = require('./triggers/sale.triggers');
+exports.hrTriggers = require('./triggers/hr.triggers');
 exports.userTriggers = require('./triggers/user.triggers');
 exports.notificationsApi = require('./api/notifications.api');
 exports.reportsApi = require('./api/reports.api');

@@ -1,0 +1,215 @@
+/**
+ * @file settings-panel.css
+ * @description Layout and component styling for the Programmer Global System Settings panel.
+ */
+
+/* General Layout Split */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* Sidebar Menu */
+.settings-sidebar {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-tab-btn:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.settings-tab-btn.active {
+  background: var(--color-accent-light);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* Content Area */
+.settings-content-wrapper {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  min-height: 500px;
+}
+
+.settings-panel {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-panel.active {
+  display: flex;
+}
+
+/* Internal Cards */
+.settings-card {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Form Styles */
+.settings-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.settings-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* Color Picker & Preview Wrapper */
+.color-picker-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.color-picker-input {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.color-hex-text {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* Real-Time Preview Components */
+.theme-preview-box {
+  width: 100%;
+  height: 120px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Masked Input fields */
+.masked-input-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.masked-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.masked-toggle-btn:hover {
+  color: var(--color-text-primary);
+}
+
+/* Audit log visual diffs */
+.audit-diff-table {
+  width: 100%;
+  font-size: 0.75rem;
+  border-collapse: collapse;
+}
+
+.audit-diff-table th, .audit-diff-table td {
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.audit-diff-before {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.audit-diff-after {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: var(--space-2);
+    white-space: nowrap;
+  }
+  
+  .settings-tab-btn {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8rem;
+  }
+  
+  .settings-grid-2, .settings-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}

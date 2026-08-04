@@ -51,6 +51,16 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isSuperAdmin()
                    || (isAuthenticated() && request.auth.uid == userId);
+
+      match /devices/{deviceId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      }
+      match /notifications/{notifId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      }
+      match /preferences/{prefDoc} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+      }
     }
 
     // ── /companies/{companyId} ───────────────────────────────────────────────

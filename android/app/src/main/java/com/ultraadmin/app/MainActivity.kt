@@ -32,6 +32,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.webkit.WebViewAssetLoader
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,10 +55,23 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         // ── Change this to your Firebase Hosting URL ─────────────────────────
-        const val SAAS_URL = "https://ultra-adminstrador.onrender.com"
+        const val SAAS_URL = "https://ultra-administrador.onrender.com"
+        const val LOCAL_URL = "https://appassets.androidplatform.net/index.html"
         // ─────────────────────────────────────────────────────────────────────
 
         private const val RC_PERMISSIONS = 1001
+        private var activeInstance: MainActivity? = null
+
+        fun notifyNewFcmToken(token: String) {
+            activeInstance?.let { activity ->
+                Handler(Looper.getMainLooper()).post {
+                    activity.webView.evaluateJavascript(
+                        "if(window.__onFcmTokenReceived){ window.__onFcmTokenReceived('${token}'); }",
+                        null
+                    )
+                }
+            }
+        }
     }
 
     private lateinit var webView: WebView
@@ -67,6 +81,13 @@ class MainActivity : AppCompatActivity() {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var wasOffline = false
 
+    private val assetLoader by lazy {
+        WebViewAssetLoader.Builder()
+            .setDomain("appassets.androidplatform.net")
+            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+    }
+
     // ── Offline banner views ────────────────────────────────────────────
     private lateinit var offlineBanner: android.widget.LinearLayout
     private lateinit var syncingBar:    android.widget.LinearLayout
@@ -74,6 +95,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var offlineSubtitle: android.widget.TextView
 
     // ── Runtime permission launchers ─────────────────────────────────────────
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        Handler(Looper.getMainLooper()).post {
+            webView.evaluateJavascript(
+                "if(window.__onNotificationPermissionResult){ window.__onNotificationPermissionResult(${isGranted}); }",
+                null
+            )
+        }
+    }
+
     private val requestCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { /* handled in WebChromeClient */ }
@@ -109,6 +141,7 @@ class MainActivity : AppCompatActivity() {
     // ────────────────────────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        activeInstance = this
 
         setupEdgeToEdge()
         setContentView(R.layout.activity_main)
@@ -123,29 +156,31 @@ class MainActivity : AppCompatActivity() {
         setupSwipeRefresh()
         setupWebView()
 
-        // Handle deep links
+        // Handle deep links & notification intent extras
         handleIntent(intent)
 
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState)
         } else {
-            webView.loadUrl(SAAS_URL)
+            webView.loadUrl(LOCAL_URL)
         }
     }
 
-    // ── Edge-to-edge setup ───────────────────────────────────────────────────
+    // ── System Status & Notification Bar setup ─────────────────────────────
     private fun setupEdgeToEdge() {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
+        // Let the system decorate the window area — the WebView layout will be
+        // pushed below the status bar automatically via fitsSystemWindows="true"
+        // in activity_main.xml. This ensures header buttons are never obstructed.
+        WindowCompat.setDecorFitsSystemWindows(window, true)
 
         val controller = WindowInsetsControllerCompat(window, window.decorView)
-        controller.hide(
-            WindowInsetsCompat.Type.statusBars() or
-                    WindowInsetsCompat.Type.navigationBars()
-        )
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        // Keep the Android notification/status bar visible at all times
+        controller.show(WindowInsetsCompat.Type.statusBars())
+        // Use light icons on dark status bar backgrounds
+        controller.isAppearanceLightStatusBars = false
+
+        // Apply branded dark background color to the status bar
+        window.statusBarColor = ContextCompat.getColor(this, R.color.bg_primary)
     }
 
     // ── SwipeRefreshLayout ───────────────────────────────────────────────────
@@ -157,10 +192,13 @@ class MainActivity : AppCompatActivity() {
         swipeRefresh.setProgressBackgroundColorSchemeColor(
             ContextCompat.getColor(this, R.color.bg_surface)
         )
-        // Only allow pull-to-refresh when the WebView is scrolled fully to the top
+        // Pull-to-refresh is permanently disabled.
+        // Swiping down inside any sub-screen (tables, lists, modals, forms)
+        // should scroll the content, NOT reload the entire SPA.
         swipeRefresh.isEnabled = false
         swipeRefresh.setOnRefreshListener {
-            webView.reload()
+            // Safety listener: if the layout is somehow triggered, stop the animation immediately
+            swipeRefresh.isRefreshing = false
         }
     }
 
@@ -212,13 +250,7 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = UltraWebViewClient()
         webView.webChromeClient = UltraWebChromeClient()
-
-        // Enable pull-to-refresh only when WebView content is scrolled to the very top
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            webView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-                swipeRefresh.isEnabled = scrollY == 0
-            }
-        }
+        swipeRefresh.isEnabled = false
 
         // ── Offline / Online connectivity monitoring ────────────────────────
         setupConnectivityMonitor()
@@ -229,6 +261,19 @@ class MainActivity : AppCompatActivity() {
 
     // ── WebViewClient ────────────────────────────────────────────────────────
     inner class UltraWebViewClient : WebViewClient() {
+
+        override fun shouldInterceptRequest(
+            view: WebView?,
+            request: WebResourceRequest?
+        ): WebResourceResponse? {
+            request?.url?.let { uri ->
+                val assetResponse = assetLoader.shouldInterceptRequest(uri)
+                if (assetResponse != null) {
+                    return assetResponse
+                }
+            }
+            return super.shouldInterceptRequest(view, request)
+        }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
@@ -245,8 +290,9 @@ class MainActivity : AppCompatActivity() {
             val url = request?.url?.toString() ?: return false
 
             return when {
-                // Stay in WebView for our own domain
+                // Stay in WebView for our own domain or local assets domain
                 url.startsWith(SAAS_URL) -> false
+                url.startsWith("https://appassets.androidplatform.net") -> false
                 url.startsWith("https://ultra-administrador") -> false
 
                 // Telephone / mailto → system handler
@@ -278,7 +324,12 @@ class MainActivity : AppCompatActivity() {
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             if (request?.isForMainFrame == true) {
                 swipeRefresh.isRefreshing = false
-                showOfflinePage(view)
+                val currentUrl = view?.url ?: ""
+                if (!currentUrl.startsWith("https://appassets.androidplatform.net")) {
+                    view?.loadUrl(LOCAL_URL)
+                } else {
+                    showOfflinePage(view)
+                }
             }
         }
     }
@@ -456,16 +507,11 @@ class MainActivity : AppCompatActivity() {
                 @Suppress("DEPRECATION")
                 getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(
-                    android.os.VibrationEffect.createOneShot(
-                        ms, android.os.VibrationEffect.DEFAULT_AMPLITUDE
-                    )
+            vibrator.vibrate(
+                android.os.VibrationEffect.createOneShot(
+                    ms, android.os.VibrationEffect.DEFAULT_AMPLITUDE
                 )
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(ms)
-            }
+            )
         }
 
         @JavascriptInterface
@@ -480,6 +526,76 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun isOnline(): Boolean = checkOnline()
+
+        @JavascriptInterface
+        fun getFcmToken(): String {
+            val prefs = getSharedPreferences("ultra_prefs", Context.MODE_PRIVATE)
+            val token = prefs.getString(UltraFirebaseMessagingService.PREF_FCM_TOKEN, "") ?: ""
+            if (token.isNotBlank()) return token
+
+            // Fallback: fetch directly from FirebaseMessaging SDK asynchronously
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful && task.result != null) {
+                        val newToken = task.result
+                        prefs.edit().putString(UltraFirebaseMessagingService.PREF_FCM_TOKEN, newToken).apply()
+                        notifyNewFcmToken(newToken)
+                    }
+                }
+            return token
+        }
+
+        @JavascriptInterface
+        fun hasNotificationPermission(): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        }
+
+        @JavascriptInterface
+        fun requestNotificationPermission() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    Handler(Looper.getMainLooper()).post {
+                        webView.evaluateJavascript(
+                            "if(window.__onNotificationPermissionResult){ window.__onNotificationPermissionResult(true); }",
+                            null
+                        )
+                    }
+                }
+            } else {
+                Handler(Looper.getMainLooper()).post {
+                    webView.evaluateJavascript(
+                        "if(window.__onNotificationPermissionResult){ window.__onNotificationPermissionResult(true); }",
+                        null
+                    )
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun openRoute(route: String) {
+            val cleanRoute = route.trim().removePrefix("#").removePrefix("/")
+            if (cleanRoute.isNotBlank()) {
+                Handler(Looper.getMainLooper()).post {
+                    webView.evaluateJavascript(
+                        "window.location.hash = '#/${cleanRoute}';",
+                        null
+                    )
+                }
+            }
+        }
     }
 
     // ── Offline page ─────────────────────────────────────────────────────────
@@ -520,9 +636,25 @@ class MainActivity : AppCompatActivity() {
         view?.loadData(html, "text/html", "UTF-8")
     }
 
-    // ── Deep link handling ───────────────────────────────────────────────────
+    // ── Deep link & Notification Intent handling ─────────────────────────────
     private fun handleIntent(intent: Intent?) {
-        val data = intent?.data ?: return
+        if (intent == null) return
+
+        // 1. Check for route passed in notification intent extras
+        val route = intent.getStringExtra("route")
+        if (!route.isNullOrBlank() && ::webView.isInitialized) {
+            val cleanRoute = route.trim().removePrefix("#").removePrefix("/")
+            Handler(Looper.getMainLooper()).postDelayed({
+                webView.evaluateJavascript(
+                    "window.location.hash = '#/${cleanRoute}';",
+                    null
+                )
+            }, 500)
+            return
+        }
+
+        // 2. Standard web deep links
+        val data = intent.data ?: return
         val url = data.toString()
         if (url.isNotBlank() && ::webView.isInitialized) {
             webView.loadUrl(url)
@@ -531,6 +663,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleIntent(intent)
     }
 
@@ -552,6 +685,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        activeInstance = this
         webView.onResume()
         setupEdgeToEdge() // Re-apply after system dialogs
     }
@@ -562,6 +696,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (activeInstance == this) {
+            activeInstance = null
+        }
         // Unregister network callback to avoid memory leaks
         networkCallback?.let {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -634,29 +771,19 @@ class MainActivity : AppCompatActivity() {
 
     // ── Offline banner helpers ─────────────────────────────────────────────
 
-    /** Shows the persistent amber "📴 Sin conexión" banner at the bottom. */
     private fun showOfflineBanner() {
-        offlineTitle.text    = "Sin conexión a Internet"
-        offlineSubtitle.text = "El sistema sigue funcionando. Los datos se sincronizarán al reconectarse."
-        syncingBar.visibility   = View.GONE
         offlineBanner.visibility = View.VISIBLE
-        offlineBanner.alpha = 0f
-        offlineBanner.animate().alpha(1f).setDuration(300).start()
+        syncingBar.visibility    = View.GONE
     }
 
-    /** Replaces amber bar content with green "Sincronizando..." strip. */
     private fun showSyncingBanner() {
-        syncingBar.visibility   = View.VISIBLE
         offlineBanner.visibility = View.VISIBLE
+        syncingBar.visibility    = View.VISIBLE
     }
 
-    /** Fades and hides the entire banner. */
     private fun hideOfflineBanner() {
-        offlineBanner.animate().alpha(0f).setDuration(400).withEndAction {
-            offlineBanner.visibility = View.GONE
-            syncingBar.visibility    = View.GONE
-            offlineBanner.alpha = 1f
-        }.start()
+        offlineBanner.visibility = View.GONE
+        syncingBar.visibility    = View.GONE
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

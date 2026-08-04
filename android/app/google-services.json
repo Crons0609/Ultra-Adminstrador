@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "417717665818",
+    "firebase_url": "https://super-administrador-df803-default-rtdb.firebaseio.com",
+    "project_id": "super-administrador-df803",
+    "storage_bucket": "super-administrador-df803.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:417717665818:android:c69254d46a4611a47391a3",
+        "android_client_info": {
+          "package_name": "com.ultraadmin.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "417717665818-97hnr3t4aogj8911aeo3c09t3vsnlde8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAp-FQJg7pNK1DETYVy2pImNfiXdWoUlA4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "417717665818-97hnr3t4aogj8911aeo3c09t3vsnlde8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

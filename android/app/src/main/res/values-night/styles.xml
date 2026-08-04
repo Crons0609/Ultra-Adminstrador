@@ -22,7 +22,7 @@
 
     <style name="Theme.UltraAdmin.Fullscreen" parent="Theme.UltraAdmin">
         <item name="android:windowBackground">@color/bg_primary</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowFullscreen">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowDisablePreview">true</item>
     </style>

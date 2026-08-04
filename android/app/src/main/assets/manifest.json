@@ -1,0 +1,22 @@
+{
+  "name": "Ultra Administrador",
+  "short_name": "UltraAdmin",
+  "description": "Ultra Administrador — Plataforma SaaS desarrollada por ProLine System.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/assets/logo_ultra_administrador.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/assets/logo_ultra_administrador.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

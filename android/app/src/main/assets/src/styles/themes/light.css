@@ -1,0 +1,30 @@
+/**
+ * @file light.css
+ * @description Theme-specific overrides, body background settings, and custom light transitions.
+ */
+
+.theme-light body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.theme-light .card {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.theme-light .header {
+  background-color: var(--color-bg-primary);
+  border-bottom-color: var(--color-border);
+}
+
+.theme-light .sidebar {
+  background-color: var(--color-bg-secondary);
+  border-right-color: var(--color-border);
+}
+
+/* Light Mode specific shadows and visuals */
+.theme-light .glass {
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+}

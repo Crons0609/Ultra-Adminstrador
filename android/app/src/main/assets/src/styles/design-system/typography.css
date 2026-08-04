@@ -1,0 +1,113 @@
+/**
+ * @file typography.css
+ * @description Typography styles, font settings and text utilities for the application.
+ */
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h1 {
+  font-size: 2.25rem; /* 36px */
+  line-height: 2.5rem;
+}
+
+h2 {
+  font-size: 1.875rem; /* 30px */
+  line-height: 2.25rem;
+}
+
+h3 {
+  font-size: 1.5rem; /* 24px */
+  line-height: 2rem;
+}
+
+h4 {
+  font-size: 1.25rem; /* 20px */
+  line-height: 1.75rem;
+}
+
+h5 {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.5rem;
+}
+
+h6 {
+  font-size: 1rem; /* 16px */
+  line-height: 1.5rem;
+}
+
+/* Text Size Helper Classes */
+.text-xs {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1rem;
+}
+
+.text-sm {
+  font-size: 0.8125rem; /* 13px */
+  line-height: 1.25rem;
+}
+
+.text-base {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+}
+
+.text-lg {
+  font-size: 1rem; /* 16px */
+  line-height: 1.5rem;
+}
+
+.text-xl {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.75rem;
+}
+
+.text-2xl {
+  font-size: 1.25rem; /* 20px */
+  line-height: 1.75rem;
+}
+
+.text-3xl {
+  font-size: 1.5rem; /* 24px */
+  line-height: 2rem;
+}
+
+/* Font Weights */
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.font-extrabold { font-weight: 800; }
+
+/* Text alignments & styling */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-accent { color: var(--color-accent); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+.text-info { color: var(--color-info); }
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

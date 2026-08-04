@@ -24,10 +24,10 @@
         <item name="android:windowContentOverlay">@null</item>
     </style>
 
-    <!-- ─── Main Fullscreen Theme (WebView host) ─── -->
+    <!-- ─── Main Theme (WebView host with visible notification bar) ─── -->
     <style name="Theme.UltraAdmin.Fullscreen" parent="Theme.UltraAdmin">
         <item name="android:windowBackground">@color/bg_primary</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowFullscreen">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>

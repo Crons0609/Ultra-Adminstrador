@@ -1,0 +1,108 @@
+/**
+ * @file inputs.css
+ * @description Form inputs, selects, textareas — responsive sizes and touch-optimized.
+ * RESPONSIVE: Minimum 16px on mobile to prevent Safari auto-zoom.
+ */
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: max(16px, var(--text-sm)); /* min 16px: prevents iOS Safari zoom */
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  min-height: 40px;
+  -webkit-appearance: none; /* Normalize across iOS/Android */
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: var(--color-border-hover);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ─── Error States ─── */
+.input-error,
+.select-error,
+.textarea-error {
+  border-color: var(--color-danger);
+}
+.input-error:focus,
+.select-error:focus,
+.textarea-error:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-light);
+}
+
+/* ─── Helper Text ─── */
+.form-helper {
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+}
+.form-helper.error { color: var(--color-danger); }
+
+/* ─── Input Sizes ─── */
+.input-sm {
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  height: 32px;
+  min-height: 32px;
+}
+
+.input-md {
+  font-size: max(16px, var(--text-sm));
+  padding: var(--space-2) var(--space-3);
+  height: 40px;
+  min-height: 40px;
+}
+
+.input-lg {
+  font-size: max(16px, var(--text-base));
+  padding: var(--space-3) var(--space-4);
+  height: 48px;
+  min-height: 48px;
+}
+
+/* ─── Textarea ─── */
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+  height: auto;
+}
+
+/* ─── Mobile: Full-size touch targets ─── */
+@media (max-width: 768px) {
+  .input-sm {
+    /* On mobile, sm inputs still get a usable tap target */
+    min-height: 36px;
+  }
+}
