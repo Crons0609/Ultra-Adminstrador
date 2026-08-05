@@ -16,6 +16,7 @@ import { GlobalStore } from '../core/state.js';
 import { TimeService } from './time.service.js';
 import { LocalStorageDBService } from './local-storage-db.service.js';
 import { OfflineSyncService } from './offline-sync.service.js';
+import { NotificationService } from './notification.service.js';
 
 import {
   ref,
@@ -300,6 +301,10 @@ export class FirestoreService {
     }
 
     let cached = (await LocalStorageDBService.getCache(path)) || [];
+    if (!navigator.onLine && (!cached || (Array.isArray(cached) && cached.length === 0))) {
+      console.warn(`[DB] Offline, no cached data for: ${path}`);
+    }
+
     let results = this._applyFilters(cached, filters);
     results = this._applySort(results, sortBy);
     if (limitCount) results = results.slice(0, limitCount);

@@ -41,6 +41,7 @@ class App {
     // 3. Initialize IndexedDB offline database and offline sync service FIRST so offline sessions can be loaded
     await LocalStorageDBService.getDB();
     await OfflineSyncService.init();
+    await SavedAccountsService.sync();
 
     // 4. Show loading indicator while Firebase or IndexedDB resolves session
     this.showLoadingScreen();
@@ -113,7 +114,68 @@ class App {
     AnimationService.initGlobalScroll();
     this.router = new Router(ROUTES, 'app');
 
+    // 10. Final check for offline readiness
+    this.checkOfflineReadiness();
+    window.addEventListener('online', () => {
+      const warning = document.getElementById('offline-ready-warning');
+      if (warning) warning.remove();
+    });
+
     console.log(`[App] ✅ ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);
+  }
+
+  /**
+   * Checks if the app has enough cached data to operate offline.
+   * Displays a persistent warning if critical data is missing while disconnected.
+   */
+  async checkOfflineReadiness() {
+    if (navigator.onLine) return;
+
+    const state = GlobalStore.getState();
+    const hasSession = !!state.currentUser;
+    const hasCompany = !!state.currentCompany;
+
+    // Check if there are saved accounts that could allow an offline login
+    let hasSavedAccounts = false;
+    try {
+      const { SavedAccountsService } = await import('./services/saved-accounts.service.js');
+      hasSavedAccounts = SavedAccountsService.getAll().length > 0;
+    } catch (e) {}
+
+    // If we are offline and:
+    // 1. Missing an active session AND missing saved accounts to start one
+    // 2. OR having a session but missing company metadata
+    if ((!hasSession && !hasSavedAccounts) || (hasSession && !hasCompany)) {
+      console.warn('[App] ⚠️ Offline readiness check failed: missing critical data.');
+
+      const overlay = document.createElement('div');
+      overlay.id = 'offline-ready-warning';
+      overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(10, 10, 11, 0.98);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 10000; padding: 32px; text-align: center;
+        color: #fff; font-family: 'Inter', sans-serif;
+      `;
+      overlay.innerHTML = `
+        <div style="font-size: 80px; margin-bottom: 24px; filter: drop-shadow(0 0 20px rgba(124,58,237,0.3));">📡</div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 16px; color: #fff; letter-spacing: -0.02em;">Requiere Conexión</h2>
+        <p style="font-size: 1rem; color: #94a3b8; max-width: 340px; line-height: 1.6; margin-bottom: 40px;">
+          Para usar el modo offline, primero debes iniciar sesión con internet para sincronizar tus datos.
+        </p>
+        <button onclick="location.reload()" style="
+          background: #7c3aed; color: #fff; border: none;
+          padding: 16px 48px; border-radius: 14px; font-weight: 700;
+          cursor: pointer; font-size: 1.1rem; box-shadow: 0 10px 25px -5px rgba(124,58,237,0.4);
+          transition: transform 0.2s;
+        " onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'">
+          Reintentar Conexión
+        </button>
+        <p style="margin-top: 24px; font-size: 0.75rem; color: rgba(255,255,255,0.3);">Ultra Administrador — ProLine System</p>
+      `;
+      document.body.appendChild(overlay);
+    }
   }
 
   /**

@@ -761,9 +761,9 @@ export class LoginView extends Component {
           ? '📱 ¿Deseas guardar los datos de este inicio de sesión en la aplicación para cambiar rápidamente entre tus perfiles?'
           : '🌐 ¿Deseas guardar la contraseña para cambiar automáticamente a esta cuenta desde el menú de usuario?';
         const savePassword = confirm(promptMsg);
-        SavedAccountsService.save(user, savePassword ? password : null, companyName);
+        await SavedAccountsService.save(user, savePassword ? password : null, companyName);
       } else {
-        SavedAccountsService.save(user, password, companyName);
+        await SavedAccountsService.save(user, password, companyName);
       }
 
       NotificationService.success(`Bienvenido, ${user.displayName}`);

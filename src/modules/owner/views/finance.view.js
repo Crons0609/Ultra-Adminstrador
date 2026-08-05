@@ -43,15 +43,7 @@ export class FinanceView extends Component {
     this.layout = new PageLayout({
       title: 'Control Financiero',
       subtitle: 'Administración de ingresos, egresos y utilidad neta en tiempo real.',
-      actionHTML: `
-        <button class="btn btn-danger btn-sm" id="btn-purge-sales" style="display:flex;align-items:center;gap:6px;">
-          ⚠️ Purgar Ventas del Día
-        </button>
-        <span class="badge" id="fin-sync-badge" style="font-size: 0.75rem; padding: 4px 10px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 4px;">
-          <span style="width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
-          Sincronizado con Firebase
-        </span>
-      `,
+      actionHTML: ``,
       contentHTML: `
         <!-- Financial KPI cards -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-4);">
@@ -153,10 +145,6 @@ export class FinanceView extends Component {
       this.recalculate(element);
     });
 
-    // Bind purge button
-    element.querySelector('#btn-purge-sales')?.addEventListener('click', () => {
-      this.confirmAndPurgeDailySales();
-    });
 
     this.subscribeToFinancialData(element);
     return element;

@@ -70,9 +70,8 @@ export class ManagerDashboardView extends Component {
       title: `Bienvenido, ${currentUser.displayName?.split(' ')[0] || 'Usuario'}`,
       subtitle: `Resumen del rendimiento de ${companyDisplayName} en tiempo real.${subscriptionNotice}`,
       actionHTML: `
-        <span class="header-status-chip" id="db-mode-chip">
+        <span class="header-status-chip" id="db-mode-chip" title="Tiempo Real">
           <span class="status-dot status-dot-success" id="db-status-dot"></span>
-          <span id="db-status-text">Tiempo Real</span>
         </span>
       `,
       contentHTML: `

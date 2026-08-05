@@ -130,12 +130,21 @@ export class AuthService {
         companyId: userProfile.companyId,
         branchId: userProfile.branchId || 'main',
         permissions: userProfile.permissions || {},
+        phone: userProfile.phone || userProfile.telefono || '',
+        personalInfo: userProfile.personalInfo || '',
+        avatarImageId: userProfile.avatarImageId || '',
+        photoURL: userProfile.photoURL || '',
+        preferences: userProfile.preferences || {},
         expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
       };
 
       await LocalStorageDBService.setCache('user_session', userSession);
       await LocalStorageDBService.setUserSession(userSession);
-      await LocalStorageDBService.setCache(`users/${firebaseUser.uid}`, userProfile);
+      await LocalStorageDBService.setCache(`user_session_${firebaseUser.uid}`, userSession);
+      await LocalStorageDBService.setCache(`users/${firebaseUser.uid}`, {
+        ...userProfile,
+        ...userSession
+      });
 
       GlobalStore.set({
         currentUser: userSession,
@@ -669,16 +678,18 @@ export class AuthService {
       const cachedSession = await LocalStorageDBService.getCache('user_session');
       if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
         console.log('[AuthService] 📴 Offline session restored from cache for:', cachedSession.email);
+        const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+        const fullSession = { ...cachedProfile, ...cachedSession };
         GlobalStore.set({
-          currentUser: cachedSession,
-          activeRole: cachedSession.role,
+          currentUser: fullSession,
+          activeRole: fullSession.role,
           isAuthenticated: true
         });
         const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
         if (cachedCompany) {
           GlobalStore.set({ currentCompany: cachedCompany });
         }
-        resolve(cachedSession);
+        resolve(fullSession);
       } else {
         resolve(null);
       }
@@ -686,10 +697,12 @@ export class AuthService {
 
     if (!auth) {
       clearTimeout(timeout);
-      LocalStorageDBService.getCache('user_session').then(cachedSession => {
+      LocalStorageDBService.getCache('user_session').then(async (cachedSession) => {
         if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
-          GlobalStore.set({ currentUser: cachedSession, activeRole: cachedSession.role, isAuthenticated: true });
-          resolve(cachedSession);
+          const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+          const fullSession = { ...cachedProfile, ...cachedSession };
+          GlobalStore.set({ currentUser: fullSession, activeRole: fullSession.role, isAuthenticated: true });
+          resolve(fullSession);
         } else {
           resolve(null);
         }
@@ -704,9 +717,11 @@ export class AuthService {
           const cachedSession = await LocalStorageDBService.getCache('user_session');
           if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
             console.log('[AuthService] 📴 Offline session restored for:', cachedSession.email);
+            const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+            const fullSession = { ...cachedProfile, ...cachedSession };
             GlobalStore.set({
-              currentUser: cachedSession,
-              activeRole: cachedSession.role,
+              currentUser: fullSession,
+              activeRole: fullSession.role,
               isAuthenticated: true
             });
             const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
@@ -714,7 +729,7 @@ export class AuthService {
               GlobalStore.set({ currentCompany: cachedCompany });
             }
             clearTimeout(timeout);
-            resolve(cachedSession);
+            resolve(fullSession);
             return;
           }
         }

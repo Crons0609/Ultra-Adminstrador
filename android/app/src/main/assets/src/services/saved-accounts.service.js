@@ -2,30 +2,14 @@
  * @file saved-accounts.service.js
  * @description Servicio de cuentas guardadas para cambio rápido de perfil.
  *
- * Almacena en localStorage una lista de cuentas previamente iniciadas sesión.
- * Los datos guardados NO incluyen contraseñas en texto plano; solo email, nombre,
- * inicial y companyId para mostrar el perfil. La contraseña se puede guardar de
- * forma OPCIONAL y cifrada (XOR simple) para el inicio rápido en la APK.
- *
- * Estructura de cada cuenta guardada:
- * {
- *   uid:          string,
- *   email:        string,
- *   displayName:  string,
- *   role:         string,
- *   companyName:  string,
- *   initial:      string,
- *   savedAt:      number,
- *   _enc?:        string   // contraseña cifrada (solo APK, opcional)
- * }
+ * Migrado de localStorage a IndexedDB para mayor confiabilidad en APKs Android.
  */
 
-const STORAGE_KEY = 'ua_saved_accounts';
-const MAX_ACCOUNTS = 5;
+import { LocalStorageDBService } from './local-storage-db.service.js';
 
-// Cifrado XOR trivial — solo ofusca, no es seguridad real.
-// Suficiente para que la contraseña no sea texto plano en localStorage.
+const MAX_ACCOUNTS = 5;
 const XOR_KEY = 'UA2025ULTRA';
+
 function xorEncode(str) {
   return btoa(
     str.split('').map((c, i) =>
@@ -33,6 +17,7 @@ function xorEncode(str) {
     ).join('')
   );
 }
+
 function xorDecode(enc) {
   try {
     const raw = atob(enc);
@@ -45,47 +30,33 @@ function xorDecode(enc) {
 }
 
 export class SavedAccountsService {
+  static _cached = [];
 
-  // ─── Read ────────────────────────────────────────────────────────────────
+  /**
+   * Syncs internal cache with IndexedDB.
+   */
+  static async sync() {
+    this._cached = await LocalStorageDBService.getSavedAccounts();
+    this._cached.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    return this._cached;
+  }
 
-  /** Returns all saved accounts sorted by most recently used. */
   static getAll() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed)
-        ? parsed.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))
-        : [];
-    } catch {
-      return [];
-    }
+    return [...this._cached].sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
   }
 
-  /** Returns the saved account for a given email, or null. */
   static getByEmail(email) {
-    return SavedAccountsService.getAll().find(a => a.email === email) || null;
+    return this._cached.find(a => a.email === email) || null;
   }
 
-  /** Returns the decoded password for an account (APK quick-login only). */
   static getPassword(email) {
-    const acc = SavedAccountsService.getByEmail(email);
+    const acc = this.getByEmail(email);
     if (!acc?._enc) return null;
     return xorDecode(acc._enc);
   }
 
-  // ─── Write ───────────────────────────────────────────────────────────────
-
-  /**
-   * Save or update an account entry.
-   * @param {Object} userSession  - From GlobalStore / AuthService
-   * @param {string} [password]   - Plain password (will be encoded). Optional.
-   * @param {string} [companyName]- Company display name.
-   */
-  static save(userSession, password = null, companyName = '') {
+  static async save(userSession, password = null, companyName = '') {
     if (!userSession?.email) return;
-
-    const accounts = SavedAccountsService.getAll().filter(a => a.email !== userSession.email);
 
     const entry = {
       uid:         userSession.uid || '',
@@ -97,44 +68,23 @@ export class SavedAccountsService {
       savedAt:     Date.now(),
     };
 
-    if (password) {
-      entry._enc = xorEncode(password);
-    }
+    if (password) entry._enc = xorEncode(password);
 
-    // Put the new/updated entry first
-    accounts.unshift(entry);
+    await LocalStorageDBService.setSavedAccount(entry);
+    await this.sync();
 
-    // Keep only MAX_ACCOUNTS
-    const trimmed = accounts.slice(0, MAX_ACCOUNTS);
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-    } catch {
-      /* storage full */
+    // Cleanup logic for MAX_ACCOUNTS
+    if (this._cached.length > MAX_ACCOUNTS) {
+      const toRemove = this._cached.slice(MAX_ACCOUNTS);
+      for (const old of toRemove) {
+        await LocalStorageDBService.removeSavedAccount(old.email);
+      }
+      await this.sync();
     }
   }
 
-  /**
-   * Update the savedAt timestamp (touch) for an email — marks it as most recent.
-   */
-  static touch(email) {
-    const accounts = SavedAccountsService.getAll();
-    const idx = accounts.findIndex(a => a.email === email);
-    if (idx !== -1) {
-      accounts[idx].savedAt = Date.now();
-      accounts.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts)); } catch {}
-    }
-  }
-
-  /** Remove a single saved account by email. */
-  static remove(email) {
-    const filtered = SavedAccountsService.getAll().filter(a => a.email !== email);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered)); } catch {}
-  }
-
-  /** Remove ALL saved accounts. */
-  static clearAll() {
-    localStorage.removeItem(STORAGE_KEY);
+  static async remove(email) {
+    await LocalStorageDBService.removeSavedAccount(email);
+    await this.sync();
   }
 }

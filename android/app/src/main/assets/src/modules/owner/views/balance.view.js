@@ -17,9 +17,8 @@ export class BalanceView extends Component {
       title: 'Balance General',
       subtitle: 'Estado financiero integral del negocio — ingresos, egresos y posición neta.',
       actionHTML: `
-        <span class="header-status-chip">
+        <span class="header-status-chip" title="Tiempo Real">
           <span class="status-dot status-dot-success"></span>
-          Tiempo Real
         </span>
       `,
       contentHTML: `

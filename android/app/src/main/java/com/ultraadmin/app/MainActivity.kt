@@ -87,12 +87,6 @@ class MainActivity : AppCompatActivity() {
             .build()
     }
 
-    // ── Offline banner views ────────────────────────────────────────────
-    private lateinit var offlineBanner: android.widget.LinearLayout
-    private lateinit var syncingBar:    android.widget.LinearLayout
-    private lateinit var offlineTitle:  android.widget.TextView
-    private lateinit var offlineSubtitle: android.widget.TextView
-
     // ── Runtime permission launchers ─────────────────────────────────────────
     private val requestNotificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -146,10 +140,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView         = findViewById(R.id.webview)
-        offlineBanner   = findViewById(R.id.offline_banner)
-        syncingBar      = findViewById(R.id.syncing_bar)
-        offlineTitle    = findViewById(R.id.offline_title)
-        offlineSubtitle = findViewById(R.id.offline_subtitle)
 
         setupWebView()
 
@@ -719,11 +709,6 @@ class MainActivity : AppCompatActivity() {
                           }
                         })()""", null
                     )
-
-                    showSyncingBanner()          // green "Sincronizando..." bar
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        hideOfflineBanner()      // hide everything after 4 s
-                    }, 4000)
                 }
             }
 
@@ -734,7 +719,6 @@ class MainActivity : AppCompatActivity() {
                     webView.evaluateJavascript(
                         "window.dispatchEvent(new Event('offline'));", null
                     )
-                    showOfflineBanner()          // persistent amber banner
                 }
             }
         }
@@ -745,29 +729,11 @@ class MainActivity : AppCompatActivity() {
         cm.registerNetworkCallback(request, callback)
         networkCallback = callback
 
-        // If already offline at launch, show the banner immediately
+        // If already offline at launch, set cache mode
         wasOffline = !checkOnline()
         if (wasOffline) {
             webView.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
-            Handler(Looper.getMainLooper()).post { showOfflineBanner() }
         }
-    }
-
-    // ── Offline banner helpers ─────────────────────────────────────────────
-
-    private fun showOfflineBanner() {
-        offlineBanner.visibility = View.VISIBLE
-        syncingBar.visibility    = View.GONE
-    }
-
-    private fun showSyncingBanner() {
-        offlineBanner.visibility = View.VISIBLE
-        syncingBar.visibility    = View.VISIBLE
-    }
-
-    private fun hideOfflineBanner() {
-        offlineBanner.visibility = View.GONE
-        syncingBar.visibility    = View.GONE
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

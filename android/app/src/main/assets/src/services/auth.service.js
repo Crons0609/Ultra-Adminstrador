@@ -130,12 +130,21 @@ export class AuthService {
         companyId: userProfile.companyId,
         branchId: userProfile.branchId || 'main',
         permissions: userProfile.permissions || {},
+        phone: userProfile.phone || userProfile.telefono || '',
+        personalInfo: userProfile.personalInfo || '',
+        avatarImageId: userProfile.avatarImageId || '',
+        photoURL: userProfile.photoURL || '',
+        preferences: userProfile.preferences || {},
         expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
       };
 
       await LocalStorageDBService.setCache('user_session', userSession);
       await LocalStorageDBService.setUserSession(userSession);
-      await LocalStorageDBService.setCache(`users/${firebaseUser.uid}`, userProfile);
+      await LocalStorageDBService.setCache(`user_session_${firebaseUser.uid}`, userSession);
+      await LocalStorageDBService.setCache(`users/${firebaseUser.uid}`, {
+        ...userProfile,
+        ...userSession
+      });
 
       GlobalStore.set({
         currentUser: userSession,
@@ -172,7 +181,7 @@ export class AuthService {
 
       // Auto-save this account to the profile switcher (no password stored here)
       const companyName = GlobalStore.getState()?.currentCompany?.name || '';
-      SavedAccountsService.save(userSession, null, companyName);
+      await SavedAccountsService.save(userSession, null, companyName);
 
       console.log('[AuthService] ✅ Login exitoso:', email, '| Rol:', userSession.role);
       return userSession;
@@ -660,6 +669,10 @@ export class AuthService {
     const resolve = (session) => {
       if (resolved) return;
       resolved = true;
+      if (session) {
+        // Mirror in global cache for other services
+        LocalStorageDBService.setCache('user_session', session).catch(() => {});
+      }
       onUserReady(session);
     };
 
@@ -668,28 +681,35 @@ export class AuthService {
       console.warn('[AuthService] ⚠️ Auth state timeout — checking cached session for offline access.');
       const cachedSession = await LocalStorageDBService.getCache('user_session');
       if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
-        console.log('[AuthService] 📴 Offline session restored from cache for:', cachedSession.email);
+        console.log('[AuthService] 📴 Offline session restored from IndexedDB for:', cachedSession.email);
+        const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+        const fullSession = { ...cachedProfile, ...cachedSession };
         GlobalStore.set({
-          currentUser: cachedSession,
-          activeRole: cachedSession.role,
+          currentUser: fullSession,
+          activeRole: fullSession.role,
           isAuthenticated: true
         });
-        const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
-        if (cachedCompany) {
-          GlobalStore.set({ currentCompany: cachedCompany });
+
+        if (cachedSession.companyId && cachedSession.companyId !== 'global') {
+          const cachedCompany = await LocalStorageDBService.getCache(`${cachedSession.companyId}/informacion_local`);
+          if (cachedCompany) {
+            GlobalStore.set({ currentCompany: cachedCompany });
+          }
         }
-        resolve(cachedSession);
+        resolve(fullSession);
       } else {
         resolve(null);
       }
-    }, 3000);
+    }, 2500);
 
     if (!auth) {
       clearTimeout(timeout);
-      LocalStorageDBService.getCache('user_session').then(cachedSession => {
+      LocalStorageDBService.getCache('user_session').then(async (cachedSession) => {
         if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
-          GlobalStore.set({ currentUser: cachedSession, activeRole: cachedSession.role, isAuthenticated: true });
-          resolve(cachedSession);
+          const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+          const fullSession = { ...cachedProfile, ...cachedSession };
+          GlobalStore.set({ currentUser: fullSession, activeRole: fullSession.role, isAuthenticated: true });
+          resolve(fullSession);
         } else {
           resolve(null);
         }
@@ -701,17 +721,26 @@ export class AuthService {
       if (!firebaseUser) {
         // If offline, attempt to restore session from IndexedDB cache before defaulting to unauthenticated
         if (!navigator.onLine) {
-          const cachedSession = await LocalStorageDBService.getCache('user_session');
+          let cachedSession = await LocalStorageDBService.getCache('user_session');
+          if (!cachedSession) {
+            cachedSession = await LocalStorageDBService.getLastUserSession();
+          }
+
           if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
             console.log('[AuthService] 📴 Offline session restored for:', cachedSession.email);
+            const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+            const fullSession = { ...cachedProfile, ...cachedSession };
             GlobalStore.set({
-              currentUser: cachedSession,
-              activeRole: cachedSession.role,
+              currentUser: fullSession,
+              activeRole: fullSession.role,
               isAuthenticated: true
             });
-            const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
-            if (cachedCompany) {
-              GlobalStore.set({ currentCompany: cachedCompany });
+
+            if (cachedSession.companyId && cachedSession.companyId !== 'global') {
+              const cachedCompany = await LocalStorageDBService.getCache(`${cachedSession.companyId}/informacion_local`);
+              if (cachedCompany) {
+                GlobalStore.set({ currentCompany: cachedCompany });
+              }
             }
             clearTimeout(timeout);
             resolve(cachedSession);
@@ -768,12 +797,13 @@ export class AuthService {
                   resolve(null);
                   return;
                 }
-                await LocalStorageDBService.setCache(`companies/${userProfile.companyId}`, companySnap.val());
+                // Cache company metadata for offline use
+                await LocalStorageDBService.setCache(`${userProfile.companyId}/informacion_local`, companySnap.val());
               } catch (err) {
                 console.warn('[AuthService] Failed to verify company during restore:', err.message);
               }
             } else {
-              const cachedCompany = await LocalStorageDBService.getCache(`companies/${userProfile.companyId}`);
+              const cachedCompany = await LocalStorageDBService.getCache(`${userProfile.companyId}/informacion_local`);
               if (cachedCompany && cachedCompany.status === 'ELIMINADO') {
                 console.warn('[AuthService] Cached company is deleted. Blocking session.');
                 GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
@@ -797,6 +827,7 @@ export class AuthService {
           };
 
           await LocalStorageDBService.setCache('user_session', userSession);
+          await LocalStorageDBService.setUserSession(userSession);
 
           GlobalStore.set({
             currentUser: userSession,
@@ -810,13 +841,24 @@ export class AuthService {
           resolve(userSession);
         } else {
           // Check cached session as ultimate fallback
-          const cachedSession = await LocalStorageDBService.getCache('user_session');
+          let cachedSession = await LocalStorageDBService.getCache('user_session');
+          if (!cachedSession) {
+            cachedSession = await LocalStorageDBService.getLastUserSession();
+          }
+
           if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
             GlobalStore.set({
               currentUser: cachedSession,
               activeRole: cachedSession.role,
               isAuthenticated: true
             });
+
+            if (cachedSession.companyId && cachedSession.companyId !== 'global') {
+              const cachedCompany = await LocalStorageDBService.getCache(`${cachedSession.companyId}/informacion_local`);
+              if (cachedCompany) {
+                GlobalStore.set({ currentCompany: cachedCompany });
+              }
+            }
             clearTimeout(timeout);
             resolve(cachedSession);
             return;
@@ -829,7 +871,11 @@ export class AuthService {
 
       } catch (e) {
         console.warn('[AuthService] Session restore error:', e.message);
-        const cachedSession = await LocalStorageDBService.getCache('user_session');
+        let cachedSession = await LocalStorageDBService.getCache('user_session');
+        if (!cachedSession) {
+          cachedSession = await LocalStorageDBService.getLastUserSession();
+        }
+
         if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
           GlobalStore.set({ currentUser: cachedSession, activeRole: cachedSession.role, isAuthenticated: true });
           clearTimeout(timeout);
@@ -842,6 +888,7 @@ export class AuthService {
         resolve(null);
       }
     });
+  }
   }
 
   /**

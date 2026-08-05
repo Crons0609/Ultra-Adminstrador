@@ -133,6 +133,48 @@ export class LocalStorageDBService {
   }
 
   /**
+   * Comprueba si se han reunido suficientes datos cacheados para trabajar offline.
+   * @param {string} [companyId]
+   * @returns {Promise<boolean>}
+   */
+  static async hasSufficientCache(companyId) {
+    if (!companyId) return false;
+    try {
+      const db = await this.getDB();
+      if (!db) return false;
+
+      const lastSync = await this.getCache(`${companyId}/full_prefetch`);
+      if (lastSync) return true;
+
+      return new Promise((resolve) => {
+        const tx = db.transaction(CACHE_STORE, 'readonly');
+        const store = tx.objectStore(CACHE_STORE);
+        const req = store.openCursor();
+        let count = 0;
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            const key = cursor.key;
+            if (typeof key === 'string' && (key.startsWith(`${companyId}/`) || cursor.value?.companyId === companyId)) {
+              count++;
+            }
+            if (count >= 2) {
+              resolve(true);
+              return;
+            }
+            cursor.continue();
+          } else {
+            resolve(count >= 2);
+          }
+        };
+        req.onerror = () => resolve(false);
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Limpia toda la caché de datos de una empresa específica.
    * @param {string} companyId
    */

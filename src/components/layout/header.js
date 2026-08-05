@@ -100,9 +100,8 @@ export class Header extends Component {
           <div class="header-clock" id="header-clock"></div>
 
           <!-- Offline / Cloud Sync Status Badge -->
-          <div id="header-sync-status" class="sync-status-badge" style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--color-bg-tertiary); border:1px solid var(--color-border); cursor:pointer;" title="Estado de conexión y sincronización con la nube">
-            <span id="sync-icon">🟢</span>
-            <span id="sync-text">En Línea</span>
+          <div id="header-sync-status" class="header-status-chip" title="Estado de conexión y sincronización con la nube">
+            <span id="sync-dot" class="status-dot"></span>
           </div>
 
           <!-- Notification Bell Button -->
@@ -120,19 +119,6 @@ export class Header extends Component {
             ">0</span>
           </button>
 
-          <!-- Theme Switcher -->
-          <button class="header-action" id="theme-toggle-btn" title="Cambiar tema" aria-label="Cambiar tema">
-            <svg id="icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-            <svg id="icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="display:none">
-              <circle cx="12" cy="12" r="5"/>
-              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-            </svg>
-          </button>
 
           <!-- Global Barcode Scanner Toggle -->
           <button class="scanner-toggle-btn" id="global-scanner-toggle-btn" title="Activar Escáner Global (Ctrl+B)">
@@ -230,33 +216,26 @@ export class Header extends Component {
 
     // ── Sync & Offline Status Indicator ──
     const updateSyncBadge = (detail = {}) => {
-      const icon = this.$('#sync-icon');
-      const text = this.$('#sync-text');
+      const dot = this.$('#sync-dot');
       const badge = this.$('#header-sync-status');
-      if (!icon || !text || !badge) return;
+      if (!dot || !badge) return;
 
       const isOnline = detail.isOnline !== undefined ? detail.isOnline : (!OfflineSyncService.isOffline() && navigator.onLine);
       const pending = detail.pendingCount !== undefined ? detail.pendingCount : OfflineSyncService.getPendingCount();
       const syncing = detail.syncInProgress;
 
+      // Clean up previous classes
+      dot.classList.remove('status-dot-success', 'status-dot-danger', 'status-dot-syncing');
+
       if (!isOnline) {
-        icon.textContent = '📴';
-        text.textContent = pending > 0 ? `Offline (${pending} pend.)` : 'Modo Offline';
-        badge.style.borderColor = '#ef4444';
-        badge.style.color = '#ef4444';
-        badge.style.background = 'rgba(239, 68, 68, 0.12)';
+        dot.classList.add('status-dot-danger'); // Red
+        badge.title = pending > 0 ? `Modo Offline (${pending} pend.)` : 'Modo Offline';
       } else if (syncing || pending > 0) {
-        icon.textContent = '🔄';
-        text.textContent = `Sincronizando (${pending})`;
-        badge.style.borderColor = '#6366f1';
-        badge.style.color = '#6366f1';
-        badge.style.background = 'rgba(99, 102, 241, 0.12)';
+        dot.classList.add('status-dot-syncing'); // Blue
+        badge.title = `Sincronizando datos (${pending} restantes)`;
       } else {
-        icon.textContent = '🟢';
-        text.textContent = 'En Línea';
-        badge.style.borderColor = '#10b981';
-        badge.style.color = '#10b981';
-        badge.style.background = 'rgba(16, 185, 129, 0.12)';
+        dot.classList.add('status-dot-success'); // Green
+        badge.title = 'En Línea - Datos sincronizados';
       }
     };
 
@@ -269,6 +248,31 @@ export class Header extends Component {
     window.addEventListener('offline', this._offlineHandler);
 
     updateSyncBadge();
+
+    const syncBadge = this.$('#header-sync-status');
+    if (syncBadge) {
+      syncBadge.addEventListener('click', async () => {
+        if (!navigator.onLine || OfflineSyncService.isOffline()) {
+          const { currentUser } = GlobalStore.getState();
+          const companyId = currentUser?.companyId;
+          const { LocalStorageDBService } = await import('../../services/local-storage-db.service.js');
+          const hasEnough = companyId ? await LocalStorageDBService.hasSufficientCache(companyId) : false;
+
+          if (!hasEnough) {
+            NotificationService.warn('⚠️ Se necesita conexión a internet. No hay suficientes datos guardados localmente para funcionar offline.', 6000);
+          } else {
+            const pending = OfflineSyncService.getPendingCount();
+            if (pending > 0) {
+              NotificationService.info(`Modo Offline: ${pending} cambio(s) pendiente(s) de sincronización.`);
+            } else {
+              NotificationService.info('Modo Offline: Datos guardados localmente listos.');
+            }
+          }
+        } else {
+          NotificationService.success('🟢 En línea — Todos los datos están sincronizados.');
+        }
+      });
+    }
 
     // ── Notification Center Bell & Unread Count Badge ──
     const notifBtn = this.$('#header-notif-btn');
@@ -353,31 +357,7 @@ export class Header extends Component {
     };
     document.addEventListener('click', this._sidebarNavHandler);
 
-    // 2. Theme switcher
-    const themeBtn = this.$('#theme-toggle-btn');
-    const iconDark = this.$('#icon-dark');
-    const iconLight = this.$('#icon-light');
-    const updateThemeIcon = () => {
-      const isDark = document.body.classList.contains('theme-dark');
-      if (iconDark) iconDark.style.display = isDark ? 'block' : 'none';
-      if (iconLight) iconLight.style.display = isDark ? 'none' : 'block';
-    };
-    updateThemeIcon();
-    if (themeBtn) {
-      themeBtn.addEventListener('click', () => {
-        const body = document.body;
-        if (body.classList.contains('theme-dark')) {
-          body.classList.replace('theme-dark', 'theme-light');
-          localStorage.setItem('theme', 'theme-light');
-        } else {
-          body.classList.replace('theme-light', 'theme-dark');
-          localStorage.setItem('theme', 'theme-dark');
-        }
-        updateThemeIcon();
-      });
-    }
 
-    // 3. Real-time clock
     const clockEl = this.$('#header-clock');
     const updateClock = () => {
       if (clockEl) {

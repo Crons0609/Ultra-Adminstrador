@@ -16,6 +16,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { WhatsAppService } from '../../../services/whatsapp.service.js';
 import { TelegramService } from '../../../services/telegram.service.js';
+import { ComprobanteService } from '../../../services/comprobante.service.js';
 
 export class POSView extends Component {
   constructor(params = {}) {
@@ -50,6 +51,11 @@ export class POSView extends Component {
       subtitle: this.isBar 
         ? 'Procesa cobros de barras, VIPs y registros de covers/entradas.'
         : 'Procesa cobros de mesas, órdenes separadas y ventas directas.',
+      actionHTML: `
+        <button id="btn-reopen-last-receipt" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+          🧾 Último Comprobante
+        </button>
+      `,
       contentHTML: `
         <style>
           .pos-grid {
@@ -547,6 +553,18 @@ export class POSView extends Component {
     // Quick Cover Sale click handler
     root.querySelector('#pos-btn-cover')?.addEventListener('click', () => {
       this.registerQuickCover();
+    });
+
+    // Reopen last generated receipt handler
+    root.querySelector('#btn-reopen-last-receipt')?.addEventListener('click', () => {
+      if (this.lastComprobante) {
+        ComprobanteService.showReceiptModal({
+          comprobante: this.lastComprobante,
+          isEditable: true
+        });
+      } else {
+        NotificationService.info('Aún no se ha generado ningún comprobante en esta sesión.');
+      }
     });
   }
 
@@ -1153,8 +1171,12 @@ export class POSView extends Component {
     }
 
     try {
-      // 1. Save sale order in Firebase RTDB
+      // 1. Generate unique & immutable receipt number
+      const numeroComprobante = ComprobanteService.generateNumeroComprobante();
+
+      // 2. Save sale order in Firebase RTDB
       const salePayload = {
+        numeroComprobante, // 🔒 Inmutable
         items: this.state.cart,
         subtotal,
         tax,
@@ -1168,16 +1190,21 @@ export class POSView extends Component {
         createdAtLocal: TimeService.timestamp()
       };
 
-      await FirestoreService.create('ventas', salePayload);
+      const saleRef = await FirestoreService.create('ventas', salePayload);
+      salePayload.ventaId = saleRef ? (saleRef.key || saleRef.id) : `venta_${Date.now()}`;
 
-      // 2. Decrement product stock levels + check low stock alerts
+      // 3. Create & store payment receipt in database
+      const comprobante = await ComprobanteService.createComprobante(this.companyId, salePayload);
+      this.lastComprobante = comprobante;
+
+      // 4. Decrement product stock levels + check low stock alerts
       for (const item of this.state.cart) {
         const prod = this.state.products.find(p => p.id === item.productId);
         if (prod) {
           const newStock = Math.max(0, Number(prod.stock || 0) - Number(item.qty));
           await FirestoreService.update('productos', item.productId, { stock: newStock });
 
-          // 🔔 WhatsApp: alert if stock drops below threshold after sale
+          // 🔔 WhatsApp / Telegram stock alerts
           const threshold = Number(prod.lowStockThreshold || prod.minStock || 5);
           if (newStock <= threshold && this.companyId) {
             WhatsAppService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => {});
@@ -1186,7 +1213,7 @@ export class POSView extends Component {
         }
       }
 
-      // 🔔 WhatsApp: send order confirmation to client if phone is on record
+      // 🔔 WhatsApp & Telegram order confirmations
       const clientPhone = this.state.selectedClientPhone || null;
       if (clientPhone && this.companyId) {
         WhatsAppService.sendOrderConfirmation(this.companyId, clientPhone, {
@@ -1196,7 +1223,6 @@ export class POSView extends Component {
         }).catch(() => {});
       }
 
-      // 🔔 Telegram: send order confirmation if client has telegramChatId on record
       const clientChatId = this.state.selectedClientTelegramChatId || null;
       if (clientChatId && this.companyId) {
         TelegramService.sendOrderConfirmation(this.companyId, clientChatId, {
@@ -1206,15 +1232,13 @@ export class POSView extends Component {
         }).catch(() => {});
       }
 
-      // 3. If a table order was loaded, update the order status and table node
+      // 5. If a table order was loaded, update the order status and table node
       const loadedOrderId = this.state.loadedOrderId;
       const loadedTableId = this.state.loadedTableId;
 
       if (loadedOrderId && loadedTableId) {
-        // Complete the order
         await FirestoreService.update('orders', loadedOrderId, { status: 'COMPLETED', completedAt: Date.now() });
 
-        // Retrieve remaining active orders for this table
         const remaining = this.state.orders.filter(o => 
           o.tableId === loadedTableId && 
           o.id !== loadedOrderId && 
@@ -1223,7 +1247,6 @@ export class POSView extends Component {
         );
 
         if (remaining.length === 0) {
-          // Free table completely
           await FirestoreService.update('tables', loadedTableId, {
             status: 'FREE',
             activeOrderId: null,
@@ -1233,7 +1256,6 @@ export class POSView extends Component {
           });
           NotificationService.success('Venta completada. Mesa liberada.');
         } else {
-          // Table remains occupied with remaining orders
           const newTableTotal = remaining.reduce((sum, o) => sum + Number(o.total || 0), 0);
           const remainingIds = remaining.map(o => o.id);
 
@@ -1245,10 +1267,10 @@ export class POSView extends Component {
           NotificationService.success('Venta completada. Cuenta de comensal liquidada.');
         }
       } else {
-        NotificationService.success('Venta directa completada exitosamente.');
+        NotificationService.success(`Venta completada — Comprobante Nº ${numeroComprobante}`);
       }
 
-      // Reset loaded states
+      // Reset loaded states & clear cart
       this.state.loadedTableId = '';
       this.state.loadedOrderId = '';
       const tableSelector = this.layout.$('#pos-table-selector');
@@ -1257,6 +1279,12 @@ export class POSView extends Component {
       if (clientGroup) clientGroup.style.display = 'none';
 
       this.clearCart();
+
+      // 6. Display Receipt Preview & Print Modal (Cashier decides to print or close/edit)
+      ComprobanteService.showReceiptModal({
+        comprobante,
+        isEditable: true
+      });
     } catch (err) {
       console.error('[POSView] Error processing checkout:', err);
       alert(`Error al registrar la venta: ${err.message}`);

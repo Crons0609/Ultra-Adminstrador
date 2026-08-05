@@ -656,9 +656,14 @@ export class SettingsView extends Component {
                       <input type="text" id="loc-municipality-input" class="input input-md" placeholder="Managua" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="loc-address-input">Dirección Exacta</label>
-                      <input type="text" id="loc-address-input" class="input input-md" placeholder="Calle principal, #123" />
+                      <label class="form-label" for="loc-zip-input">Código Postal</label>
+                      <input type="text" id="loc-zip-input" class="input input-md" placeholder="Ej. 11001" />
                     </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="loc-address-input">Dirección Exacta</label>
+                    <input type="text" id="loc-address-input" class="input input-md" placeholder="Calle principal, #123" />
                   </div>
 
                   <div class="form-group">
@@ -901,22 +906,46 @@ export class SettingsView extends Component {
         if (el && value !== undefined && value !== null) el.value = value;
       };
 
-      if (loc) {
-        fill('#loc-lat-input', loc.latitude ?? loc.lat ?? '');
-        fill('#loc-lng-input', loc.longitude ?? loc.lng ?? '');
-        fill('#loc-country-input', loc.country ?? '');
-        fill('#loc-department-input', loc.department ?? '');
-        fill('#loc-municipality-input', loc.municipality ?? '');
-        fill('#loc-address-input', loc.address ?? '');
-        fill('#loc-reference-input', loc.reference ?? '');
+      // Also try flat fields from informacion_local (written by firestore.service.js)
+      let flatSnap = null;
+      try {
+        const flatRef = ref(db, `${this.companyId}/informacion_local`);
+        flatSnap = await get(flatRef);
+      } catch (_) {}
+      const flat = (flatSnap && flatSnap.exists()) ? flatSnap.val() : {};
+
+      // Merge: /location sub-node takes priority over flat fields
+      const merged = {
+        latitude:     loc?.latitude     ?? loc?.lat ?? '',
+        longitude:    loc?.longitude    ?? loc?.lng ?? '',
+        country:      loc?.country      ?? flat.pais        ?? '',
+        department:   loc?.department   ?? loc?.state ?? flat.estado       ?? '',
+        municipality: loc?.municipality ?? loc?.city  ?? flat.municipio    ?? '',
+        postalCode:   loc?.postalCode   ?? loc?.zip   ?? flat.codigoPostal ?? '',
+        address:      loc?.address      ?? flat.direccion   ?? '',
+        reference:    loc?.reference    ?? '',
+        updatedAt:    loc?.updatedAt    ?? ''
+      };
+
+      if (merged.latitude || merged.country || merged.municipality) {
+        fill('#loc-lat-input',          merged.latitude);
+        fill('#loc-lng-input',          merged.longitude);
+        fill('#loc-country-input',      merged.country);
+        fill('#loc-department-input',   merged.department);
+        fill('#loc-municipality-input', merged.municipality);
+        fill('#loc-zip-input',          merged.postalCode);
+        fill('#loc-address-input',      merged.address);
+        fill('#loc-reference-input',    merged.reference);
 
         // Show saved indicator
         const indicator = root.querySelector('#loc-saved-indicator');
         const savedText = root.querySelector('#loc-saved-text');
         if (indicator) indicator.style.display = 'flex';
-        if (savedText && loc.updatedAt) {
-          const d = new Date(loc.updatedAt);
+        if (savedText && merged.updatedAt) {
+          const d = new Date(merged.updatedAt);
           savedText.textContent = `Ubicación guardada el ${d.toLocaleDateString()} a las ${d.toLocaleTimeString()}`;
+        } else if (savedText && (merged.country || merged.municipality)) {
+          savedText.textContent = 'Datos de ubicación cargados desde la nube ✅';
         }
       }
 
@@ -1018,11 +1047,18 @@ export class SettingsView extends Component {
 
     const latRaw = getVal('#loc-lat-input');
     const lngRaw = getVal('#loc-lng-input');
-    const lat = parseFloat(latRaw);
-    const lng = parseFloat(lngRaw);
+    const lat = (latRaw && !isNaN(parseFloat(latRaw))) ? parseFloat(latRaw) : null;
+    const lng = (lngRaw && !isNaN(parseFloat(lngRaw))) ? parseFloat(lngRaw) : null;
 
-    if (!latRaw || !lngRaw || isNaN(lat) || isNaN(lng)) {
-      NotificationService.error('Ingresa o detecta las coordenadas GPS antes de guardar.');
+    const country = getVal('#loc-country-input');
+    const department = getVal('#loc-department-input');
+    const municipality = getVal('#loc-municipality-input');
+    const postalCode = getVal('#loc-postalcode-input') || getVal('#loc-zip-input');
+    const address = getVal('#loc-address-input');
+    const reference = getVal('#loc-reference-input');
+
+    if (!department && !municipality && !address && !country && lat === null) {
+      NotificationService.error('Ingresa al menos el departamento, municipio, dirección o coordenadas GPS.');
       return;
     }
 
@@ -1032,30 +1068,64 @@ export class SettingsView extends Component {
     const locationData = {
       latitude: lat,
       longitude: lng,
-      address: getVal('#loc-address-input'),
-      country: getVal('#loc-country-input'),
-      department: getVal('#loc-department-input'),
-      municipality: getVal('#loc-municipality-input'),
-      reference: getVal('#loc-reference-input'),
+      country,
+      department,
+      municipality,
+      postalCode,
+      address,
+      reference,
       updatedAt: new Date().toISOString()
     };
 
     try {
       const updates = {};
-      // Primary: company sub-tree
+      // 1. Primary: location sub-node (new canonical format)
       updates[`${this.companyId}/informacion_local/location`] = locationData;
-      // Secondary: company registry node (for Super Admin and multi-tenant reads)
-      updates[`companies/${this.companyId}/location`] = locationData;
+      // 2. Sync flat fields in informacion_local (used by firestore.service.js & Super-Admin)
+      updates[`${this.companyId}/informacion_local/pais`]          = country;
+      updates[`${this.companyId}/informacion_local/estado`]         = department;
+      updates[`${this.companyId}/informacion_local/municipio`]      = municipality;
+      updates[`${this.companyId}/informacion_local/codigoPostal`]   = postalCode;
+      updates[`${this.companyId}/informacion_local/direccion`]      = address;
+      // 3. Secondary: company registry node (for Super Admin and multi-tenant reads)
+      updates[`companies/${this.companyId}/location`]               = locationData;
+      updates[`companies/${this.companyId}/country`]                = country;
+      updates[`companies/${this.companyId}/city`]                   = municipality;
+      updates[`companies/${this.companyId}/state`]                  = department;
+      updates[`companies/${this.companyId}/postalCode`]             = postalCode;
 
-      await update(ref(db), updates);
+      // 4. Sync main branch address info
+      updates[`${this.companyId}/branches/main/country`]    = country;
+      updates[`${this.companyId}/branches/main/state`]      = department;
+      updates[`${this.companyId}/branches/main/city`]       = municipality;
+      updates[`${this.companyId}/branches/main/postalCode`] = postalCode;
+      updates[`${this.companyId}/branches/main/address`]    = address;
 
-      // Update GlobalStore in real-time so other views pick it up
+      // Save to local cache first for immediate offline availability
+      await LocalStorageDBService.setCache(`${this.companyId}/informacion_local/location`, locationData);
+
+      if (db && navigator.onLine) {
+        try {
+          await update(ref(db), updates);
+        } catch (netErr) {
+          console.warn('[SettingsView] Online location update failed, queuing offline:', netErr.message);
+          await OfflineSyncService.write('update', `${this.companyId}/informacion_local/location`, locationData, 'Guardar Ubicación');
+        }
+      } else {
+        await OfflineSyncService.write('update', `${this.companyId}/informacion_local/location`, locationData, 'Guardar Ubicación');
+      }
+
+      // Update GlobalStore in real-time
       const { currentCompany } = GlobalStore.getState();
       if (currentCompany) {
         GlobalStore.set({
           currentCompany: {
             ...currentCompany,
-            location: locationData
+            location: locationData,
+            country,
+            state: department,
+            city: municipality,
+            postalCode
           }
         });
       }
@@ -1064,9 +1134,9 @@ export class SettingsView extends Component {
       const indicator = root.querySelector('#loc-saved-indicator');
       const savedText = root.querySelector('#loc-saved-text');
       if (indicator) indicator.style.display = 'flex';
-      if (savedText) savedText.textContent = 'Ubicación guardada correctamente en la nube ✅';
+      if (savedText) savedText.textContent = 'Ubicación guardada correctamente ✅';
 
-      NotificationService.success('📍 Ubicación del establecimiento guardada en Firestore.');
+      NotificationService.success('📍 Ubicación del establecimiento guardada.');
     } catch (err) {
       console.error('[SettingsView] Error saving location:', err);
       NotificationService.error('Error al guardar la ubicación: ' + err.message);
@@ -1083,14 +1153,36 @@ export class SettingsView extends Component {
    * Load owner profile from Firebase RTDB and current session
    */
   async loadOwnerProfile(root) {
-    if (!db || !this.uid) return;
+    if (!this.uid) return;
 
     try {
-      const userRef = ref(db, `users/${this.uid}`);
-      const snap = await get(userRef);
+      let val = null;
 
-      if (snap.exists()) {
-        const val = snap.val() || {};
+      if (db && navigator.onLine) {
+        try {
+          const userRef = ref(db, `users/${this.uid}`);
+          const snap = await get(userRef);
+          if (snap.exists()) {
+            val = snap.val() || {};
+            await LocalStorageDBService.setCache(`users/${this.uid}`, val);
+          }
+        } catch (e) {
+          console.warn('[SettingsView] RTDB user read failed, falling back to cache:', e.message);
+        }
+      }
+
+      if (!val) {
+        val = await LocalStorageDBService.getCache(`users/${this.uid}`);
+      }
+
+      if (!val) {
+        const { currentUser } = GlobalStore.getState();
+        if (currentUser && currentUser.uid === this.uid) {
+          val = currentUser;
+        }
+      }
+
+      if (val) {
         this.state.ownerProfile = val;
 
         const nameInput = root.querySelector('#owner-name-input');
@@ -1110,7 +1202,6 @@ export class SettingsView extends Component {
         if (val.avatarImageId) {
           previewUrl = await ImageStorageService.getImageUrl(val.avatarImageId).catch(() => '') || '';
         } else if (val.photoURL) {
-          // Legacy fallback: show old photoURL if no imageId yet
           previewUrl = val.photoURL;
         }
         this.renderAvatarPreview(previewUrl, val.displayName || this.currentUser.displayName || '', root);
@@ -1124,7 +1215,6 @@ export class SettingsView extends Component {
       }
     } catch (err) {
       console.error('[SettingsView] Error loading owner profile:', err);
-      NotificationService.error('Error al cargar datos del perfil.');
     }
   }
 
@@ -1218,7 +1308,6 @@ export class SettingsView extends Component {
     const avatarImageId = root.querySelector('#owner-photo-imageId')?.value?.trim() || null;
 
     try {
-      const timestamp = Date.now();
       const updates = {};
       
       updates[`users/${this.uid}/displayName`] = displayName;
@@ -1228,37 +1317,67 @@ export class SettingsView extends Component {
       updates[`users/${this.uid}/updatedAt`] = serverTimestamp();
 
       // Update in employees too
-      updates[`${this.companyId}/employees/${this.uid}/displayName`] = displayName;
-      if (avatarImageId) updates[`${this.companyId}/employees/${this.uid}/avatarImageId`] = avatarImageId;
-      updates[`${this.companyId}/employees/${this.uid}/phone`] = phone;
-
-      // Update current Firebase user profile
-      const firebaseUser = auth.currentUser;
-      if (firebaseUser) {
-        await updateProfile(firebaseUser, { displayName, photoURL });
+      if (this.companyId) {
+        updates[`${this.companyId}/employees/${this.uid}/displayName`] = displayName;
+        if (avatarImageId) updates[`${this.companyId}/employees/${this.uid}/avatarImageId`] = avatarImageId;
+        updates[`${this.companyId}/employees/${this.uid}/phone`] = phone;
       }
 
-      await update(ref(db), updates);
+      // Update current Firebase user profile if online
+      const firebaseUser = auth?.currentUser;
+      if (firebaseUser && navigator.onLine) {
+        try {
+          await updateProfile(firebaseUser, { displayName });
+        } catch (_) {}
+      }
+
+      // 1. Update IndexedDB cache for current user session immediately
+      const profileUpdates = {
+        displayName,
+        phone,
+        personalInfo,
+        ...(avatarImageId ? { avatarImageId } : {})
+      };
+      const existing = (await LocalStorageDBService.getCache(`users/${this.uid}`)) || {};
+      const updatedUser = { ...existing, ...profileUpdates };
+      await LocalStorageDBService.setCache(`users/${this.uid}`, updatedUser);
+
+      // 2. Update active session in GlobalStore & LocalStorageDBService
+      const { currentUser } = GlobalStore.getState();
+      if (currentUser && currentUser.uid === this.uid) {
+        const newSession = { ...currentUser, ...updatedUser };
+        GlobalStore.set({ currentUser: newSession });
+        await LocalStorageDBService.setCache('user_session', newSession);
+        await LocalStorageDBService.setUserSession(newSession);
+      }
+
+      // 3. Write to RTDB or queue for offline sync
+      if (db && navigator.onLine) {
+        try {
+          await update(ref(db), updates);
+        } catch (netErr) {
+          console.warn('[SettingsView] Online profile update failed, queuing offline:', netErr.message);
+          await OfflineSyncService.write('update', `users/${this.uid}`, profileUpdates, 'Actualizar Perfil');
+        }
+      } else {
+        await OfflineSyncService.write('update', `users/${this.uid}`, profileUpdates, 'Actualizar Perfil');
+      }
 
       // Audit Log
       await FirestoreService.logAudit({
         action: 'OWNER_UPDATE_PROFILE',
         companyId: this.companyId,
-        description: `El dueño actualizó sus datos personales de cuenta.`
-      });
+        description: `El usuario actualizó sus datos personales de cuenta.`
+      }).catch(() => {});
 
-      // Update GlobalStore
-      const updatedUser = { ...this.currentUser, displayName };
-      GlobalStore.set({ currentUser: updatedUser });
-
-      NotificationService.success('Datos personales actualizados correctamente.');
+      NotificationService.success('✅ Perfil de usuario guardado localmente y sincronizado.');
     } catch (err) {
-      console.error('[SettingsView] Error updating profile details:', err);
-      NotificationService.error(`Error al guardar perfil: ${err.message || err}`);
+      console.error('[SettingsView] Error saving profile:', err);
+      NotificationService.error('Error al guardar perfil: ' + err.message);
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Guardar Perfil';
+        saveBtn.textContent = '💾 Guardar Perfil';
       }
     }
   }

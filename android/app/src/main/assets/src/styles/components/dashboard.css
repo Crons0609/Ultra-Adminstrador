@@ -8,15 +8,13 @@
 .header-status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--color-text-secondary);
   background: var(--color-bg-secondary);
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-dot {
@@ -27,6 +25,8 @@
 }
 .status-dot-success { background-color: var(--color-success); box-shadow: 0 0 0 2px var(--color-success-light); }
 .status-dot-warning { background-color: var(--color-warning); box-shadow: 0 0 0 2px var(--color-warning-light); animation: pulse-dot 2s infinite; }
+.status-dot-danger  { background-color: var(--color-danger);  box-shadow: 0 0 0 2px var(--color-danger-light);  animation: pulse-dot 2s infinite; }
+.status-dot-syncing { background-color: var(--color-info);    box-shadow: 0 0 0 2px var(--color-info-light);    animation: pulse-dot 1.5s infinite; }
 
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }

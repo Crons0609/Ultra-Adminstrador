@@ -79,7 +79,11 @@ export class PushNotificationsService {
   static async registerDevice(token, userSession) {
     if (!token || !userSession?.uid) return;
 
-    const deviceId = this.getOrCreateDeviceId();
+    // Skip cloud registration if offline to avoid useless errors
+    if (!navigator.onLine) {
+      console.log('[PushNotificationsService] 📴 Offline: skipping cloud token registration.');
+      return;
+    }
     const isAndroid = !!window.AndroidApp?.isAndroidApp();
     const appVersion = window.AndroidApp?.getAppVersion?.() || '1.0.0';
 

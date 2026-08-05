@@ -16,6 +16,7 @@ import { GlobalStore } from '../core/state.js';
 import { TimeService } from './time.service.js';
 import { LocalStorageDBService } from './local-storage-db.service.js';
 import { OfflineSyncService } from './offline-sync.service.js';
+import { NotificationService } from './notification.service.js';
 
 import {
   ref,
@@ -300,6 +301,14 @@ export class FirestoreService {
     }
 
     let cached = (await LocalStorageDBService.getCache(path)) || [];
+    if (!navigator.onLine && (!cached || (Array.isArray(cached) && cached.length === 0))) {
+      const now = Date.now();
+      if (now - (FirestoreService._lastOfflineNoticeTime || 0) > 10000) {
+        FirestoreService._lastOfflineNoticeTime = now;
+        NotificationService.warn('⚠️ Se necesita conexión a internet. No hay datos guardados localmente para esta sección.', 6000);
+      }
+    }
+
     let results = this._applyFilters(cached, filters);
     results = this._applySort(results, sortBy);
     if (limitCount) results = results.slice(0, limitCount);
@@ -551,6 +560,14 @@ export class FirestoreService {
       city: companyData.city || '',
       postalCode: companyData.postalCode || '',
       address: companyData.address || '',
+      location: {
+        country: companyData.country || 'Nicaragua',
+        department: companyData.state || '',
+        municipality: companyData.city || '',
+        postalCode: companyData.postalCode || '',
+        address: companyData.address || '',
+        updatedAt: now
+      },
       subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
       ownerId: companyData.ownerId || '',
       ownerEmail: companyData.ownerEmail || '',
@@ -1072,6 +1089,11 @@ export class FirestoreService {
                 businessType: info.businessType || 'Restaurante',
                 plan: info.plan || 'FREE',
                 status: info.status || 'ACTIVO',
+                country: info.country || info.location?.country || 'Nicaragua',
+                state: info.state || info.estado || info.location?.department || info.location?.state || '',
+                city: info.city || info.municipio || info.location?.municipality || info.location?.city || '',
+                postalCode: info.postalCode || info.codigoPostal || info.location?.postalCode || info.location?.zip || '',
+                address: info.address || info.direccion || info.location?.address || '',
                 deletedAt: info.deletedAt || null,
                 statusReason: info.statusReason || '',
                 ownerId: info.ownerId || '',
@@ -1142,22 +1164,32 @@ export class FirestoreService {
     }
     if (data.country !== undefined) {
       updates[`${companyId}/informacion_local/pais`] = data.country;
+      updates[`${companyId}/informacion_local/location/country`] = data.country;
+      updates[`companies/${companyId}/location/country`] = data.country;
       updates[`${companyId}/branches/main/country`] = data.country;
     }
     if (data.state !== undefined) {
       updates[`${companyId}/informacion_local/estado`] = data.state;
+      updates[`${companyId}/informacion_local/location/department`] = data.state;
+      updates[`companies/${companyId}/location/department`] = data.state;
       updates[`${companyId}/branches/main/state`] = data.state;
     }
     if (data.city !== undefined) {
       updates[`${companyId}/informacion_local/municipio`] = data.city;
+      updates[`${companyId}/informacion_local/location/municipality`] = data.city;
+      updates[`companies/${companyId}/location/municipality`] = data.city;
       updates[`${companyId}/branches/main/city`] = data.city;
     }
     if (data.postalCode !== undefined) {
       updates[`${companyId}/informacion_local/codigoPostal`] = data.postalCode;
+      updates[`${companyId}/informacion_local/location/postalCode`] = data.postalCode;
+      updates[`companies/${companyId}/location/postalCode`] = data.postalCode;
       updates[`${companyId}/branches/main/postalCode`] = data.postalCode;
     }
     if (data.address !== undefined) {
       updates[`${companyId}/informacion_local/direccion`] = data.address;
+      updates[`${companyId}/informacion_local/location/address`] = data.address;
+      updates[`companies/${companyId}/location/address`] = data.address;
       updates[`${companyId}/branches/main/address`] = data.address;
     }
     if (data.businessType !== undefined) {

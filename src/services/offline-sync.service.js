@@ -15,6 +15,7 @@ import { ref, set, update, push, remove, onValue }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { LocalStorageDBService } from './local-storage-db.service.js';
 import { ConflictResolverService } from './conflict-resolver.service.js';
+import { NotificationService } from './notification.service.js';
 
 const pendingWrites = [];
 let isOnline = navigator.onLine;
@@ -35,6 +36,8 @@ export class OfflineSyncService {
 
     if (isOnline && pendingWrites.length > 0) {
       OfflineSyncService._syncNow();
+    } else if (!isOnline) {
+      OfflineSyncService.checkOfflineDataSufficiency();
     }
   }
 
@@ -93,7 +96,6 @@ export class OfflineSyncService {
     }
 
     console.log(`[OfflineSync] 📥 Queued offline write: ${description} @ ${path}`);
-    OfflineSyncService._showOfflineToast(description);
     OfflineSyncService.notifyStatus();
   }
 
@@ -124,6 +126,25 @@ export class OfflineSyncService {
     }));
   }
 
+  /**
+   * Verifica si hay suficientes datos cacheados para trabajar offline.
+   * Si no los hay, dispara una notificación advirtiendo que necesita conexión a internet.
+   */
+  static async checkOfflineDataSufficiency() {
+    if (isOnline) return true;
+    try {
+      const { GlobalStore } = await import('../core/state.js');
+      const { currentUser } = GlobalStore.getState();
+      const companyId = currentUser?.companyId;
+      if (!companyId || companyId === 'global') return true;
+      const hasEnough = await LocalStorageDBService.hasSufficientCache(companyId);
+      // No mostrar notificación — el punto rojo en el header es suficiente indicador
+      return hasEnough;
+    } catch {
+      return true;
+    }
+  }
+
   // ─── Privados ──────────────────────────────────────────────────────────────
 
   static _listenNetworkEvents() {
@@ -137,9 +158,8 @@ export class OfflineSyncService {
     const handleOffline = () => {
       isOnline = false;
       console.log('[OfflineSync] 📴 Offline — writes will be queued.');
-      // Status is communicated via the header badge through notifyStatus();
-      // no overlay banner is shown to avoid blocking UI interactions.
       OfflineSyncService.notifyStatus();
+      OfflineSyncService.checkOfflineDataSufficiency();
     };
 
     window.addEventListener('online', handleOnline);
@@ -308,21 +328,7 @@ export class OfflineSyncService {
 
   // ─── UI helpers ───────────────────────────────────────────────────────────
 
-  static _showOfflineToast(description) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-      position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%);
-      background: rgba(245,158,11,0.95); color: #000;
-      padding: 10px 18px; border-radius: 24px; font-size: 13px;
-      font-weight: 600; z-index: 99999; pointer-events: none;
-      backdrop-filter: blur(8px); white-space: nowrap;
-      animation: ua-slide-up 0.3s ease;
-    `;
-    toast.textContent = `📥 Guardado offline: ${description}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
-  }
-
+  /** Breve toast verde cuando se sincronizan datos al reconectarse. */
   static _showSyncDoneToast(count) {
     const toast = document.createElement('div');
     toast.style.cssText = `
@@ -338,11 +344,9 @@ export class OfflineSyncService {
     setTimeout(() => toast.remove(), 5000);
   }
 
-  static _showOfflineBanner(show) {
-    const BANNER_ID = 'ua-offline-banner';
-    const banner = document.getElementById(BANNER_ID);
-    if (banner) {
-      banner.remove();
-    }
+  /** Elimina el banner offline si existiera de sesiones previas. */
+  static _showOfflineBanner(_show) {
+    const banner = document.getElementById('ua-offline-banner');
+    if (banner) banner.remove();
   }
 }
