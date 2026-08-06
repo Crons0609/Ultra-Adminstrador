@@ -361,10 +361,13 @@ export class Sidebar extends Component {
         }
       });
     };
+    if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
     window.addEventListener('hashchange', this._hashHandler);
 
     // Subscribe to GlobalStore changes so sidebar re-renders when company
     // info or role changes (e.g. after async session/company restore).
+    if (this._unsubCompany) this._unsubCompany();
+    if (this._unsubRole) this._unsubRole();
     this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
     this._unsubRole   = GlobalStore.subscribe('activeRole',     () => this.update());
 

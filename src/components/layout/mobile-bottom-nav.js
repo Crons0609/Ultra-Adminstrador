@@ -451,11 +451,22 @@ export class MobileBottomNav extends Component {
     const root = this.element;
     const nav = this.$('#mobile-bottom-nav');
 
-    // 1. Load user's personalized tab config from RTDB
+    // Clean up previous listeners and subscriptions before re-mounting
+    if (this._unsubStore) this._unsubStore();
+    if (this._unsubCompany) this._unsubCompany();
+    if (this._unsubNavConfig) this._unsubNavConfig();
+    if (this._focusCleanup) this._focusCleanup();
+    if (this._popstateHandler) window.removeEventListener('popstate', this._popstateHandler);
+    if (window.visualViewport && this._viewportHandler) {
+      window.visualViewport.removeEventListener('resize', this._viewportHandler);
+    }
+
+    // 1. Load user's personalized tab config from RTDB once
     const { currentUser } = GlobalStore.getState();
-    if (currentUser?.uid) {
+    if (currentUser?.uid && !this._hasLoadedNavConfig) {
+      this._hasLoadedNavConfig = true;
       MobileNavConfigService.load(currentUser.uid).then(tabs => {
-        if (JSON.stringify(tabs) !== JSON.stringify(this.state.activeTabs)) {
+        if (Array.isArray(tabs) && JSON.stringify(tabs) !== JSON.stringify(this.state.activeTabs)) {
           this.setState({ activeTabs: tabs });
         }
       });
@@ -570,7 +581,7 @@ export class MobileBottomNav extends Component {
 
     // 7. Subscribe to mobileNavConfig changes from GlobalStore
     this._unsubNavConfig = GlobalStore.subscribe('mobileNavConfig', (tabs) => {
-      if (Array.isArray(tabs)) {
+      if (Array.isArray(tabs) && JSON.stringify(tabs) !== JSON.stringify(this.state.activeTabs)) {
         this.setState({ activeTabs: tabs });
       }
     });
