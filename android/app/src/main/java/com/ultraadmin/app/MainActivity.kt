@@ -161,6 +161,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ── System Status & Notification Bar setup ─────────────────────────────
+    @Suppress("DEPRECATION")
     private fun setupEdgeToEdge() {
         // 🛠️ Truly Edge-to-Edge: content draws behind system bars.
         // The web app uses env(safe-area-inset-top) to handle the padding.
@@ -186,6 +187,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    @Suppress("DEPRECATION")
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         // Hardware acceleration is set at application level in Manifest
@@ -318,6 +320,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ── WebChromeClient ──────────────────────────────────────────────────────
+    @Suppress("DEPRECATION")
     inner class UltraWebChromeClient : WebChromeClient() {
 
         private var customView: View? = null
