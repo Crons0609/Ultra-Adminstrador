@@ -277,7 +277,7 @@ class MainActivity : AppCompatActivity() {
             return when {
                 // Stay in WebView for our own domain or local assets domain
                 url.startsWith(SAAS_URL) -> false
-                url.startsWith("https://appassets.androidplatform.net/assets/") -> false
+                url.startsWith("https://appassets.androidplatform.net") -> false
                 url.startsWith("https://ultra-administrador") -> false
 
                 // Telephone / mailto → system handler

@@ -399,6 +399,15 @@ export class LoginView extends Component {
       { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', delay: 0.8 }
     );
 
+    // ── Login Form Submission ───────────────────────────────────────────────
+    const loginForm = this.$('#login-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.handleLogin();
+      });
+    }
+
     // ── Password Visibility Toggles ─────────────────────────────────────────
     const loginPassInput = this.$('#login-password');
     const toggleLoginPass = this.$('#btn-toggle-password');
@@ -693,7 +702,9 @@ export class LoginView extends Component {
       const user = await AuthService.login(email, password);
       this.clearLockoutState(email);
 
-      // Prompt to save account credentials for fast switching
+      // 🛠️ CRITICAL FIX: Add a small delay and use window.location.replace
+      // to ensure the WebView doesn't treat the SPA navigation as an external request.
+      submitBtn.textContent = 'Verificando sesión...';
       const isApk = !!(window.AndroidApp && typeof window.AndroidApp.isAndroidApp === 'function' && window.AndroidApp.isAndroidApp());
       const existing = SavedAccountsService.getByEmail(email);
       const companyName = GlobalStore.getState()?.currentCompany?.name || '';
