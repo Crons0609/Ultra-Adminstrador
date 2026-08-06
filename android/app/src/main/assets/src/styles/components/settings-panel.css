@@ -20,6 +20,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: sticky;
+  top: var(--space-4);
 }
 
 .settings-tab-btn {
@@ -37,6 +39,7 @@
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .settings-tab-btn:hover {
@@ -58,16 +61,43 @@
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   min-height: 500px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .settings-panel {
   display: none;
   flex-direction: column;
   gap: var(--space-5);
+  overflow-x: hidden;
+  max-width: 100%;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .settings-panel.active {
   display: flex;
+}
+
+/* All form elements inside panels stay within bounds */
+.settings-panel input,
+.settings-panel select,
+.settings-panel textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* All child divs and paragraphs also stay within bounds */
+.settings-panel p,
+.settings-panel h3,
+.settings-panel h4 {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Internal Cards */
@@ -191,25 +221,122 @@
   color: #10b981;
 }
 
-/* Mobile responsive adjustments */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MOBILE RESPONSIVE — Tablet (≤ 768px)                                       */
+/* ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
+
+  /* Layout: columna única */
   .settings-layout {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
-  
+
+  /* Sidebar: scroll horizontal tipo chips compactos */
   .settings-sidebar {
     flex-direction: row;
     overflow-x: auto;
-    padding: var(--space-2);
+    overflow-y: hidden;
+    padding: var(--space-2) var(--space-2);
+    gap: 6px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     white-space: nowrap;
+    position: static; /* Quitar sticky en móvil */
+    border-radius: var(--radius-md);
   }
-  
+
+  .settings-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Botones: chips de píldora */
   .settings-tab-btn {
-    padding: var(--space-2) var(--space-3);
-    font-size: 0.8rem;
+    flex-shrink: 0;
+    width: auto;
+    padding: 7px 14px;
+    font-size: 0.78rem;
+    gap: 5px;
+    border-radius: 20px;
+    scroll-snap-align: start;
+    text-align: center;
+    justify-content: center;
   }
-  
-  .settings-grid-2, .settings-grid-3 {
+
+  /* Content: padding reducido + overflow controlado */
+  .settings-content-wrapper {
+    padding: var(--space-3);
+    min-height: unset;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Panel sin overflow horizontal */
+  .settings-panel {
+    overflow-x: hidden;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Grillas: forzar columna única */
+  .settings-grid-2,
+  .settings-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  /* Cards: padding reducido */
+  .settings-card {
+    padding: var(--space-3);
+  }
+
+  /* Color picker: wrap en móvil */
+  .color-picker-group {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Theme preview: altura reducida */
+  .theme-preview-box {
+    height: 80px;
+  }
+
+  /* Audit table: scroll horizontal */
+  .audit-diff-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MOBILE RESPONSIVE — Teléfono pequeño (≤ 480px)                             */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  .settings-tab-btn {
+    padding: 6px 10px;
+    font-size: 0.73rem;
+    gap: 4px;
+  }
+
+  .settings-content-wrapper {
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+  }
+
+  .settings-sidebar {
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-1);
+  }
+
+  .settings-card {
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  .settings-card-title {
+    font-size: 0.85rem;
   }
 }

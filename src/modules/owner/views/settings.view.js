@@ -263,6 +263,73 @@ export class SettingsView extends Component {
             50% { transform: scale(1.05); opacity: 1; }
             100% { transform: scale(0.95); opacity: 0.5; }
           }
+
+          /* ── Owner Settings: Mobile Responsive ── */
+          @media (max-width: 768px) {
+            /* Grilla de tarjetas: columna única */
+            .settings-grid {
+              grid-template-columns: 1fr !important;
+            }
+            /* Tabs horizontales: scroll suave tipo chips */
+            .settings-tabs {
+              overflow-x: auto !important;
+              overflow-y: hidden !important;
+              scroll-snap-type: x mandatory;
+              -webkit-overflow-scrolling: touch;
+              scrollbar-width: none !important;
+              padding-bottom: 4px !important;
+              gap: 4px !important;
+            }
+            .settings-tabs::-webkit-scrollbar { display: none !important; }
+            .settings-tab-btn {
+              flex-shrink: 0 !important;
+              scroll-snap-align: start;
+              padding: 8px 14px !important;
+              font-size: 0.8rem !important;
+              white-space: nowrap !important;
+            }
+            /* Cards: padding reducido */
+            .form-card {
+              padding: var(--space-3) !important;
+            }
+            /* Controles de empleados: apilar verticalmente */
+            .d-flex.justify-content-between.align-items-center {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+              gap: var(--space-3) !important;
+            }
+            .d-flex.gap-2.flex-wrap {
+              width: 100% !important;
+            }
+            /* Search box: ancho completo */
+            .search-wrapper {
+              min-width: unset !important;
+              width: 100% !important;
+            }
+            /* Tabla de empleados: scroll horizontal */
+            .emp-table {
+              display: block;
+              overflow-x: auto;
+              -webkit-overflow-scrolling: touch;
+            }
+            /* Grid de theme preview */
+            .owner-theme-preset-card {
+              padding: 8px 6px !important;
+            }
+          }
+          @media (max-width: 480px) {
+            .settings-tab-btn {
+              padding: 6px 10px !important;
+              font-size: 0.75rem !important;
+            }
+            .form-card {
+              padding: var(--space-2) !important;
+              border-radius: var(--radius-md) !important;
+            }
+            .settings-tabs {
+              margin-bottom: var(--space-4) !important;
+            }
+          }
         </style>
 
         <div style="display: flex; flex-direction: column; gap: var(--space-4);">

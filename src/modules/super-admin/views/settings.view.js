@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file settings.view.js
  * @description Global System Configuration View for Programmers (SUPER_ADMIN).
  *
@@ -60,6 +60,50 @@ export class SettingsView extends Component {
       title: 'Configuración del Sistema',
       subtitle: 'Administración central del SaaS: identidad visual, comportamiento global, copias de seguridad y mantenimiento.',
       contentHTML: `
+        <style>
+          /* Programmer Settings: Mobile Responsive */
+          @media (max-width: 768px) {
+            .settings-layout { grid-template-columns: 1fr !important; gap: var(--space-3) !important; }
+            .settings-sidebar {
+              flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important;
+              padding: var(--space-2) !important; gap: 6px !important; white-space: nowrap !important;
+              scrollbar-width: none !important; position: static !important;
+              border-bottom: 1px solid var(--color-border); border-radius: var(--radius-md) !important;
+            }
+            .settings-sidebar::-webkit-scrollbar { display: none !important; }
+            .settings-tab-btn {
+              flex-shrink: 0 !important; width: auto !important; padding: 7px 12px !important;
+              font-size: 0.76rem !important; gap: 4px !important; border-radius: 20px !important;
+              justify-content: center !important; text-align: center !important;
+            }
+            .settings-content-wrapper {
+              padding: var(--space-3) !important; min-height: unset !important;
+              overflow-x: hidden !important; max-width: 100% !important; box-sizing: border-box !important;
+            }
+            .settings-panel {
+              overflow-x: hidden !important; max-width: 100% !important;
+              min-width: 0 !important; word-break: break-word !important; overflow-wrap: break-word !important;
+            }
+            .settings-panel p, .settings-panel h3, .settings-panel h4, .settings-panel label {
+              max-width: 100% !important; overflow-wrap: break-word !important; word-break: break-word !important;
+            }
+            .settings-panel input, .settings-panel select, .settings-panel textarea {
+              max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; min-width: 0 !important;
+            }
+            .settings-card {
+              padding: var(--space-3) !important; overflow-x: hidden !important;
+              max-width: 100% !important; box-sizing: border-box !important;
+            }
+            .settings-grid-2, .settings-grid-3 { grid-template-columns: 1fr !important; }
+            #global-settings-form { gap: var(--space-4) !important; }
+          }
+          @media (max-width: 480px) {
+            .settings-tab-btn { padding: 6px 9px !important; font-size: 0.71rem !important; }
+            .settings-content-wrapper { padding: var(--space-2) !important; border-radius: var(--radius-md) !important; }
+            .settings-card { padding: var(--space-2) !important; }
+          }
+        </style>
+
         <div class="settings-layout">
 
           <!-- Left Tabs Sidebar -->
@@ -436,236 +480,266 @@ export class SettingsView extends Component {
               </div>
 
               <!-- ══════════════════════════════════════════════════════════ -->
-              <!-- 6. AVANZADO Y MONITOREO                                   -->
-              <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- ═══════════════════════════════════════════════════════════ -->
+              <!-- 6. AVANZADO Y MONITOREO                                    -->
+              <!-- ═══════════════════════════════════════════════════════════ -->
               <div class="settings-panel" id="tab-avanzado">
-                <h3 class="text-lg font-bold">⚡ Avanzado y Monitoreo</h3>
-                <p class="text-xs text-secondary">Registrar administradores, keep-alive para Render y reinicio de producción.</p>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: start;">
-                  <!-- Create SuperAdmin -->
-                  <div class="settings-card">
-                    <div class="settings-card-title" style="color: var(--color-accent);">🔑 Crear Administrador del Sistema</div>
-                    <p class="text-xs text-secondary">Registra una nueva cuenta de Programador con acceso total al panel de control global.</p>
-                    <div class="form-group mb-2">
-                      <label class="form-label" for="sa-name">Nombre Completo</label>
-                      <input type="text" id="sa-name" class="input input-md" placeholder="Ej. Administrador Principal" />
-                    </div>
-                    <div class="form-group mb-2">
-                      <label class="form-label" for="sa-email">Correo Electrónico</label>
-                      <input type="email" id="sa-email" class="input input-md" placeholder="ejemplo@correo.com" />
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="sa-password">Contraseña (mín. 6 caracteres)</label>
-                      <input type="password" id="sa-password" class="input input-md" placeholder="••••••" minlength="6" />
-                    </div>
-                    <button type="button" id="btn-create-sa-action" class="btn btn-primary btn-sm" style="width: 100%;">
-                      ⚡ Registrar Administrador
-                    </button>
-                  </div>
-
-                  <!-- Cron Job / Keep Alive -->
-                  <div class="settings-card">
-                    <div class="settings-card-title">Uptime Cron Job / Keep Alive (Render)</div>
-                    <label class="switch-container">
-                      <input type="checkbox" id="cron-enabled-toggle" class="switch-input" />
-                      <div>
-                        <strong style="font-size:0.85rem; display:block;">Activar monitoreo keep alive</strong>
-                      </div>
-                    </label>
-                    <div class="form-group" style="margin-top: 8px;">
-                      <label class="form-label" for="cron-endpoint-input">API interna del cron job</label>
-                      <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="url" id="cron-endpoint-input" class="input input-md" readonly style="flex:1; font-size: 0.72rem;" />
-                        <button type="button" id="btn-copy-cron-url" class="btn btn-secondary btn-xs">Copiar</button>
-                        <button type="button" id="btn-test-cron-url" class="btn btn-secondary btn-xs">Probar</button>
-                      </div>
-                    </div>
-                    <div class="settings-grid-2">
-                      <div class="form-group">
-                        <label class="form-label" for="cron-provider-input">Proveedor</label>
-                        <select id="cron-provider-input" class="input input-md">
-                          <option value="cron-job.org">cron-job.org</option>
-                          <option value="uptimerobot">UptimeRobot</option>
-                          <option value="render-cron">Render Cron Job</option>
-                          <option value="otro">Otro</option>
-                        </select>
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label" for="cron-interval-input">Intervalo (Minutos)</label>
-                        <input type="number" id="cron-interval-input" class="input input-md" value="10" min="5" max="60" />
-                      </div>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label" for="cron-external-url-input">URL del proveedor externo (opcional)</label>
-                      <input type="url" id="cron-external-url-input" class="input input-md" placeholder="https://cron-job.org/…" />
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label" for="cron-token-input">Token opcional</label>
-                      <input type="text" id="cron-token-input" class="input input-md" placeholder="Solo si configuras CRON_JOB_TOKEN" />
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                      <span id="cron-last-run" class="text-xs text-secondary" style="font-family: monospace;">Última prueba: sin ejecutar</span>
-                      <button type="button" id="btn-save-cron-settings" class="btn btn-secondary btn-xs">Guardar Cron</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Production Reset -->
-                <div class="settings-card" style="border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.03); margin-top: 10px;">
-                  <h3 class="text-md font-semibold" style="color: #ef4444; display: flex; align-items: center; gap: 8px; margin: 0 0 8px 0;">
-                    <span>💥 Reinicio para Producción</span>
-                    <span style="font-size: 0.65rem; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); font-weight: 600;">EXCLUSIVO PROGRAMADOR</span>
+                <!-- Header -->
+                <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:var(--space-4);border-bottom:1px solid var(--color-border);">
+                  <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+                    <span style="width:34px;height:34px;background:rgba(124,117,255,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;">⚡</span>
+                    Avanzado y Monitoreo
                   </h3>
-                  <p class="text-xs text-secondary" style="margin: 0 0 10px 0;">Limpia Firebase eliminando todos los datos de prueba (negocios, productos, pedidos, usuarios de prueba) para iniciar producción.</p>
-                  <button type="button" id="btn-execute-purge" class="btn btn-danger btn-md" style="background: #dc2626; border-color: #dc2626; font-weight: 600;">
-                    🔥 Iniciar Asistente de Reinicio de Base de Datos
-                  </button>
+                  <p style="margin:0;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.5;">Crea cuentas de administrador, configura el keep-alive del servidor y ejecuta el reinicio de base de datos antes de salir a producción.</p>
+                </div>
+
+                <!-- Crear Admin -->
+                <div class="settings-card">
+                  <div class="settings-card-title" style="color:var(--color-accent);">🔑 Crear Cuenta de Administrador</div>
+                  <p style="font-size:0.8rem;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">Registra una nueva cuenta con rol de <strong style="color:var(--color-text-primary);">Programador</strong>. Tendrá acceso total al panel de control global del SaaS.</p>
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="sa-name">Nombre Completo</label>
+                      <input type="text" id="sa-name" class="input input-md" placeholder="Ej: Carlos Administrador" autocomplete="off" />
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="sa-email">Correo Electrónico</label>
+                      <input type="email" id="sa-email" class="input input-md" placeholder="admin@empresa.com" autocomplete="off" />
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="sa-password">Contraseña <span style="font-size:0.75rem;color:var(--color-text-tertiary);font-weight:400;">(mínimo 6 caracteres)</span></label>
+                      <input type="password" id="sa-password" class="input input-md" placeholder="••••••••" minlength="6" autocomplete="new-password" />
+                    </div>
+                    <button type="button" id="btn-create-sa-action" class="btn btn-primary btn-sm" style="width:100%;margin-top:4px;">⚡ Registrar Administrador</button>
+                  </div>
+                </div>
+
+                <!-- Keep-Alive / Cron Job -->
+                <div class="settings-card">
+                  <div class="settings-card-title">🕐 Keep-Alive del Servidor (Cron Job)</div>
+                  <p style="font-size:0.8rem;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">Evita que el servidor en Render se quede inactivo. El sistema enviará una solicitud periódica a tu API para mantenerla siempre activa.</p>
+
+                  <label class="switch-container" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--color-bg-primary);border-radius:var(--radius-md);border:1px solid var(--color-border);cursor:pointer;">
+                    <input type="checkbox" id="cron-enabled-toggle" class="switch-input" />
+                    <div style="flex:1;">
+                      <strong style="font-size:0.85rem;display:block;color:var(--color-text-primary);">Activar monitoreo keep-alive</strong>
+                      <span style="font-size:0.75rem;color:var(--color-text-tertiary);">Se enviará un ping al servidor cada cierto tiempo</span>
+                    </div>
+                  </label>
+
+                  <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+                    <label class="form-label" for="cron-endpoint-input">URL interna de tu API <span style="font-size:0.72rem;color:var(--color-text-tertiary);font-weight:400;">— generada automáticamente</span></label>
+                    <input type="url" id="cron-endpoint-input" class="input input-md" readonly style="font-size:0.78rem;font-family:monospace;color:var(--color-text-secondary);" />
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                      <button type="button" id="btn-copy-cron-url" class="btn btn-secondary btn-xs" style="flex:1;">📋 Copiar URL</button>
+                      <button type="button" id="btn-test-cron-url" class="btn btn-secondary btn-xs" style="flex:1;">🔁 Probar Ahora</button>
+                    </div>
+                  </div>
+
+                  <div class="settings-grid-2" style="margin-top:12px;">
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="cron-provider-input">Proveedor del cron</label>
+                      <select id="cron-provider-input" class="input input-md">
+                        <option value="cron-job.org">cron-job.org</option>
+                        <option value="uptimerobot">UptimeRobot</option>
+                        <option value="render-cron">Render Cron Job</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="cron-interval-input">Intervalo <span style="font-size:0.72rem;color:var(--color-text-tertiary);">(minutos)</span></label>
+                      <input type="number" id="cron-interval-input" class="input input-md" value="10" min="5" max="60" />
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+                    <label class="form-label" for="cron-external-url-input">URL del proveedor externo <span style="font-size:0.72rem;color:var(--color-text-tertiary);font-weight:400;">— opcional</span></label>
+                    <input type="url" id="cron-external-url-input" class="input input-md" placeholder="https://cron-job.org/tu-endpoint" />
+                  </div>
+
+                  <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+                    <label class="form-label" for="cron-token-input">Token de seguridad <span style="font-size:0.72rem;color:var(--color-text-tertiary);font-weight:400;">— opcional</span></label>
+                    <input type="text" id="cron-token-input" class="input input-md" placeholder="Solo si configuraste CRON_JOB_TOKEN en el servidor" />
+                  </div>
+
+                  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);">
+                    <span id="cron-last-run" style="font-size:0.75rem;color:var(--color-text-tertiary);font-family:monospace;">🕐 Sin ejecutar todavía</span>
+                    <button type="button" id="btn-save-cron-settings" class="btn btn-secondary btn-sm">💾 Guardar Configuración Cron</button>
+                  </div>
+                </div>
+
+                <!-- Reinicio Producción -->
+                <div class="settings-card" style="border:1px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.03);">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <span style="font-size:1rem;">💥</span>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#ef4444;flex:1;">Reinicio para Producción</h3>
+                    <span style="font-size:0.65rem;padding:3px 8px;border-radius:12px;background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);font-weight:700;white-space:nowrap;">SOLO PROGRAMADOR</span>
+                  </div>
+                  <p style="font-size:0.8rem;color:var(--color-text-secondary);margin:8px 0 12px 0;line-height:1.5;">Elimina <strong style="color:#f87171;">todos los datos de prueba</strong> de Firebase (negocios, productos, pedidos, usuarios) antes de salir a producción real. Esta acción es <strong style="color:#f87171;">irreversible</strong>.</p>
+                  <button type="button" id="btn-execute-purge" class="btn btn-danger btn-md" style="width:100%;background:#dc2626;border-color:#dc2626;font-weight:700;">🔥 Iniciar Asistente de Reinicio de Base de Datos</button>
                 </div>
               </div>
 
-              <!-- ══════════════════════════════════════════════════════════ -->
-              <!-- 7. BARRA DE NAVEGACIÓN MÓVIL                              -->
-              <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- ═══════════════════════════════════════════════════════════ -->
+              <!-- 7. BARRA DE NAVEGACIÓN MÓVIL                               -->
+              <!-- ═══════════════════════════════════════════════════════════ -->
               <div class="settings-panel" id="tab-mobile-nav">
-                <h3 class="text-lg font-bold">📱 Personalizar Barra Móvil</h3>
-                <p class="text-xs text-secondary mb-4">Configura los 5 botones principales y su orden para la versión móvil (Android WebView).</p>
 
-                <div class="settings-card" style="max-width:680px;">
-                  <!-- LIVE PREVIEW -->
-                  <div style="margin-bottom:20px;">
-                    <p style="font-size:0.78rem; font-weight:600; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;">Vista Previa</p>
-                    <div id="sa-mnc-preview" style="display:flex; align-items:center; justify-content:space-around; background:rgba(18,20,29,0.9); border:1px solid var(--color-border); border-radius:14px; padding:10px 8px; gap:4px;"></div>
+                <!-- Header -->
+                <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:var(--space-4);border-bottom:1px solid var(--color-border);">
+                  <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+                    <span style="width:34px;height:34px;background:rgba(59,130,246,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;">📱</span>
+                    Barra de Navegación Móvil
+                  </h3>
+                  <p style="margin:0;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.5;">Personaliza los <strong style="color:var(--color-text-primary);">5 botones</strong> que aparecen en la barra inferior de la app Android. Define qué módulos se muestran y en qué orden.</p>
+                </div>
+
+                <div class="settings-card">
+                  <!-- Vista Previa -->
+                  <div style="margin-bottom:16px;">
+                    <p style="font-size:0.75rem;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.07em;margin:0 0 8px 0;">👁️ Vista previa en tiempo real</p>
+                    <div id="sa-mnc-preview" style="display:flex;align-items:center;justify-content:space-around;background:rgba(10,12,20,0.95);border:1px solid var(--color-border);border-radius:14px;padding:10px 8px;gap:4px;min-height:60px;"></div>
+                    <p style="font-size:0.72rem;color:var(--color-text-tertiary);margin:5px 0 0 0;text-align:center;">Así se verá la barra en el teléfono de los usuarios</p>
                   </div>
 
-                  <!-- SELECTED TABS -->
-                  <div style="margin-bottom:20px;">
-                    <p style="font-size:0.78rem; font-weight:600; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;">🔢 Orden actual <span id="sa-mnc-count" style="color:var(--color-accent); font-size:0.72rem;">(0/5)</span></p>
-                    <div id="sa-mnc-selected-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+                  <div style="height:1px;background:var(--color-border);margin-bottom:16px;"></div>
+
+                  <!-- Orden actual -->
+                  <div style="margin-bottom:16px;">
+                    <p style="font-size:0.75rem;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.07em;margin:0 0 6px 0;">
+                      🔢 Orden actual <span id="sa-mnc-count" style="color:var(--color-accent);font-weight:700;font-size:0.78rem;">(0/5)</span>
+                    </p>
+                    <p style="font-size:0.78rem;color:var(--color-text-secondary);margin:0 0 10px 0;">Los botones se muestran en este orden en el teléfono. Puedes reordenarlos.</p>
+                    <div id="sa-mnc-selected-list" style="display:flex;flex-direction:column;gap:8px;min-height:40px;"></div>
                   </div>
 
-                  <!-- CATALOG -->
-                  <div style="margin-bottom:24px;">
-                    <p style="font-size:0.78rem; font-weight:600; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;">📋 Botones disponibles</p>
-                    <div id="sa-mnc-catalog" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:8px;"></div>
+                  <div style="height:1px;background:var(--color-border);margin-bottom:16px;"></div>
+
+                  <!-- Catálogo -->
+                  <div style="margin-bottom:16px;">
+                    <p style="font-size:0.75rem;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.07em;margin:0 0 6px 0;">📋 Botones disponibles para agregar</p>
+                    <p style="font-size:0.78rem;color:var(--color-text-secondary);margin:0 0 10px 0;">Toca un botón para agregarlo a la barra. Máximo 5 seleccionados.</p>
+                    <div id="sa-mnc-catalog" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;"></div>
                   </div>
 
-                  <!-- ACTIONS -->
-                  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button type="button" id="btn-sa-save-mobile-nav" class="btn btn-primary btn-md">💾 Guardar Configuración Móvil</button>
-                    <button type="button" id="btn-sa-reset-mobile-nav" class="btn btn-secondary btn-sm" style="color:var(--color-text-tertiary);">↩️ Restaurar predeterminados</button>
+                  <!-- Acciones -->
+                  <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--color-border);">
+                    <button type="button" id="btn-sa-save-mobile-nav" class="btn btn-primary btn-md" style="width:100%;">💾 Guardar Configuración de Barra Móvil</button>
+                    <button type="button" id="btn-sa-reset-mobile-nav" class="btn btn-secondary btn-sm" style="width:100%;color:var(--color-text-tertiary);">↩️ Restaurar botones predeterminados</button>
                   </div>
                 </div>
               </div>
 
-              <!-- ══════════════════════════════════════════════════════════ -->
-              <!-- 8. MENSAJES Y ACTUALIZACIONES DE APK                      -->
-              <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- ═══════════════════════════════════════════════════════════ -->
+              <!-- 8. MENSAJES Y ACTUALIZACIONES DE APK                       -->
+              <!-- ═══════════════════════════════════════════════════════════ -->
               <div class="settings-panel" id="tab-broadcasts">
-                <h3 class="text-lg font-bold" style="color: #10b981;">📢 Mensajes Personalizados y Distribución de APK Android</h3>
-                <p class="text-xs text-secondary mb-4">Envía avisos masivos o mensajes directos a cada dueño de negocio registrado (OWNER), notifica nuevas versiones de la aplicación APK Android y comparte enlaces de descarga directos.</p>
 
-                <!-- FORM CARD -->
-                <div class="card p-5 mb-5" style="border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.02);">
-                  <h4 class="text-md font-bold mb-3" style="color: #10b981; display:flex; align-items:center; gap:8px;">
-                    <span>🚀 Redactar Comunicado o Enviar Actualización de APK</span>
-                  </h4>
+                <!-- Header -->
+                <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:var(--space-4);border-bottom:1px solid rgba(16,185,129,0.25);overflow-x:hidden;max-width:100%;box-sizing:border-box;">
+                  <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+                    <span style="width:34px;height:34px;background:rgba(16,185,129,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;">📢</span>
+                    <span style="color:#10b981;">Mensajes y Distribución de APK</span>
+                  </h3>
+                  <p style="margin:0;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.5;">Envía notificaciones personalizadas a los dueños de negocio. Anuncia nuevas versiones de la app Android, avisos generales o mensajes directos a un negocio específico.</p>
+                </div>
 
-                  <div id="bcast-form-wrapper" style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Formulario -->
+                <div class="settings-card" style="border:1px solid rgba(16,185,129,0.25);background:rgba(16,185,129,0.02);">
+                  <div class="settings-card-title" style="color:#10b981;">🚀 Redactar y Enviar Comunicado</div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
-                      <div class="form-group mb-0">
-                        <label class="form-label" for="bcast-target-scope">🎯 Destinatarios</label>
-                        <select id="bcast-target-scope" class="input input-md">
-                          <option value="ALL_OWNERS">🌐 Todos los Dueños de Negocio (OWNER)</option>
-                          <option value="SPECIFIC_COMPANY">🏪 Dueño de Negocio Específico</option>
-                          <option value="ALL_USERS">👥 Todos los Usuarios Registrados</option>
-                        </select>
+                  <div id="bcast-form-wrapper" style="display:flex;flex-direction:column;gap:14px;min-width:0;overflow-x:hidden;">
+
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="bcast-target-scope">🎯 ¿A quién enviarás el mensaje?</label>
+                      <select id="bcast-target-scope" class="input input-md">
+                        <option value="ALL_OWNERS">🌐 Todos los Dueños de Negocio</option>
+                        <option value="SPECIFIC_COMPANY">🏪 Un Dueño Específico</option>
+                        <option value="ALL_USERS">👥 Todos los Usuarios del Sistema</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group" id="bcast-company-select-group" style="display:none;margin:0;">
+                      <label class="form-label" for="bcast-company-id">🏪 Selecciona el negocio destinatario</label>
+                      <select id="bcast-company-id" class="input input-md">
+                        <option value="">Cargando negocios registrados...</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="bcast-type">🏷️ ¿Qué tipo de comunicado es?</label>
+                      <select id="bcast-type" class="input input-md">
+                        <option value="APK_UPDATE">📲 Actualización de App Android (APK)</option>
+                        <option value="ANNOUNCEMENT">📢 Aviso General / Comunicado Oficial</option>
+                        <option value="DIRECT_MESSAGE">✉️ Mensaje Personalizado Directo</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="bcast-title">📌 Título de la notificación</label>
+                      <input type="text" id="bcast-title" class="input input-md" placeholder="Ej: Nueva versión disponible — Ultra Admin v2.5.0" />
+                    </div>
+
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label" for="bcast-body">📝 Contenido del mensaje</label>
+                      <textarea id="bcast-body" class="input" style="height:90px;padding:10px;resize:vertical;" placeholder="Escribe el mensaje, las novedades de la actualización o el aviso que verán los dueños de negocio..."></textarea>
+                    </div>
+
+                    <!-- Campos APK -->
+                    <div id="bcast-apk-fields-group" style="display:flex;flex-direction:column;gap:12px;overflow-x:hidden;padding:14px;background:rgba(16,185,129,0.06);border:1px dashed rgba(16,185,129,0.3);border-radius:10px;">
+                      <p style="margin:0;font-size:0.78rem;font-weight:700;color:#10b981;">📱 Información del archivo APK Android</p>
+
+                      <div class="settings-grid-2">
+                        <div class="form-group" style="margin:0;">
+                          <label class="form-label" for="bcast-apk-version">Versión del APK <span style="font-size:0.72rem;color:var(--color-text-tertiary);font-weight:400;">— opcional</span></label>
+                          <input type="text" id="bcast-apk-version" class="input input-md" placeholder="Ej: v2.5.0" />
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                          <label class="form-label" for="bcast-action-label">Texto del botón de descarga</label>
+                          <input type="text" id="bcast-action-label" class="input input-md" value="📥 Descargar Actualización APK" placeholder="Ej: Descargar APK v2.5.0" />
+                        </div>
                       </div>
 
-                      <div class="form-group mb-0" id="bcast-company-select-group" style="display: none;">
-                        <label class="form-label" for="bcast-company-id">🏪 Seleccionar Negocio / Dueño</label>
-                        <select id="bcast-company-id" class="input input-md">
-                          <option value="">Cargando empresas...</option>
-                        </select>
-                      </div>
-
-                      <div class="form-group mb-0">
-                        <label class="form-label" for="bcast-type">🏷️ Tipo de Notificación</label>
-                        <select id="bcast-type" class="input input-md">
-                          <option value="APK_UPDATE">📲 Actualización de Aplicación Android (APK)</option>
-                          <option value="ANNOUNCEMENT">📢 Comunicado Oficial / Aviso General</option>
-                          <option value="DIRECT_MESSAGE">✉️ Mensaje Personalizado Directo</option>
-                        </select>
+                      <div class="form-group" style="margin:0;">
+                        <label class="form-label" for="bcast-apk-url">🔗 Enlace de descarga del APK (.apk)</label>
+                        <input type="url" id="bcast-apk-url" class="input input-md" placeholder="https://mi-servidor.com/UltraAdmin-v2.5.0.apk" />
+                        <p style="margin:4px 0 0 0;font-size:0.72rem;color:var(--color-text-tertiary);">El usuario verá un botón que abre este enlace para descargar el archivo directamente.</p>
                       </div>
                     </div>
 
-                    <div class="form-group mb-0">
-                      <label class="form-label" for="bcast-title">📌 Título del Mensaje / Notificación</label>
-                      <input type="text" id="bcast-title" class="input input-md" placeholder="ej. 📲 Nueva Versión Disponible: Ultra Administrador v2.5.0" />
-                    </div>
-
-                    <div class="form-group mb-0">
-                      <label class="form-label" for="bcast-body">📝 Mensaje / Novedades para los Dueños</label>
-                      <textarea id="bcast-body" class="input" style="height: 90px; padding: 10px;" placeholder="Escribe el mensaje o las novedades de la actualización para los dueños..."></textarea>
-                    </div>
-
-                    <!-- APK FIELDS CONTAINER -->
-                    <div id="bcast-apk-fields-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 14px; background: rgba(16,185,129,0.06); border: 1px dashed rgba(16,185,129,0.3); border-radius: 10px;">
-                      <div class="form-group mb-0">
-                        <label class="form-label" for="bcast-apk-version">🏷️ Versión del APK (opcional)</label>
-                        <input type="text" id="bcast-apk-version" class="input input-md" placeholder="ej. v2.5.0" />
-                      </div>
-
-                      <div class="form-group mb-0">
-                        <label class="form-label" for="bcast-action-label">🔘 Texto del Botón de Descarga</label>
-                        <input type="text" id="bcast-action-label" class="input input-md" placeholder="ej. 📥 Descargar APK v2.5.0" value="📥 Descargar Actualización APK" />
-                      </div>
-
-                      <div class="form-group mb-0" style="grid-column: 1 / -1;">
-                        <label class="form-label" for="bcast-apk-url">🔗 Enlace de Descarga de APK Android (.apk URL)</label>
-                        <input type="url" id="bcast-apk-url" class="input input-md" placeholder="https://mi-servidor.com/descargas/UltraAdmin-v2.5.0.apk" />
-                      </div>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
-                      <button type="button" id="btn-submit-broadcast" class="btn btn-primary btn-md" style="background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight:700;">
-                        🚀 Enviar Notificación / Actualización APK
-                      </button>
-                    </div>
+                    <button type="button" id="btn-submit-broadcast" class="btn btn-primary btn-md" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);border:none;font-weight:700;font-size:0.9rem;">🚀 Enviar Notificación</button>
                   </div>
                 </div>
 
-                <!-- HISTORY TABLE CARD -->
-                <div class="card p-5">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h4 class="text-md font-bold">📜 Historial de Comunicados y Actualizaciones Enviadas</h4>
-                    <button type="button" id="btn-refresh-broadcast-history" class="btn btn-secondary btn-sm">🔄 Actualizar Historial</button>
+                <!-- Historial -->
+                <div class="settings-card">
+                  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                    <div class="settings-card-title" style="margin:0;border:none;padding:0;">📜 Historial de Envíos</div>
+                    <button type="button" id="btn-refresh-broadcast-history" class="btn btn-secondary btn-sm">🔄 Actualizar</button>
                   </div>
-
-                  <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem;">
+                  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;min-width:500px;">
                       <thead>
-                        <tr style="border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary);">
-                          <th style="padding: 10px 12px;">Fecha / Hora</th>
-                          <th style="padding: 10px 12px;">Tipo</th>
-                          <th style="padding: 10px 12px;">Título</th>
-                          <th style="padding: 10px 12px;">Alcance / Destino</th>
-                          <th style="padding: 10px 12px;">Notificados</th>
-                          <th style="padding: 10px 12px;">Versión / APK Link</th>
+                        <tr style="border-bottom:2px solid var(--color-border);">
+                          <th style="padding:8px 10px;color:var(--color-text-secondary);font-weight:600;text-align:left;">Fecha</th>
+                          <th style="padding:8px 10px;color:var(--color-text-secondary);font-weight:600;text-align:left;">Tipo</th>
+                          <th style="padding:8px 10px;color:var(--color-text-secondary);font-weight:600;text-align:left;">Título</th>
+                          <th style="padding:8px 10px;color:var(--color-text-secondary);font-weight:600;text-align:left;">Destino</th>
+                          <th style="padding:8px 10px;color:var(--color-text-secondary);font-weight:600;text-align:left;">Enviados</th>
+                          <th style="padding:8px 10px;color:var(--color-text-secondary);font-weight:600;text-align:left;">APK / Link</th>
                         </tr>
                       </thead>
                       <tbody id="broadcast-history-table-body">
                         <tr>
-                          <td colspan="6" style="padding: 24px; text-align: center; color: var(--color-text-tertiary);">
-                            Cargando historial de envíos...
-                          </td>
+                          <td colspan="6" style="padding:24px;text-align:center;color:var(--color-text-tertiary);font-size:0.82rem;">⏳ Cargando historial de envíos...</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
               </div>
+
 
               <!-- Form Actions Bar -->
               <div id="settings-actions-bar" style="display: flex; justify-content: flex-end; gap: var(--space-3); border-top: 1px solid rgba(255,255,255,0.06); padding-top: var(--space-4);">
