@@ -162,13 +162,27 @@ class MainActivity : AppCompatActivity() {
 
     // ── System Status & Notification Bar setup ─────────────────────────────
     private fun setupEdgeToEdge() {
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        // 🛠️ Truly Edge-to-Edge: content draws behind system bars.
+        // The web app uses env(safe-area-inset-top) to handle the padding.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val controller = WindowInsetsControllerCompat(window, window.decorView)
-        controller.show(WindowInsetsCompat.Type.statusBars())
+        
+        // Ensure system bars are visible but transparent
+        controller.show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+        
+        // Use light icons for dark background (isAppearanceLight = false)
         controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
 
-        window.statusBarColor = ContextCompat.getColor(this, R.color.bg_primary)
+        // Make bars transparent
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
     }
 
 

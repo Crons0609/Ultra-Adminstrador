@@ -165,27 +165,26 @@ export class LoginView extends Component {
           </div>
 
           <!-- Business Owner Request Panel Toggle Link -->
-          <div style="text-align: center; margin-top: var(--space-4);">
+          <div style="text-align: center; margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid rgba(255,255,255,0.06);">
+            <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 8px;">¿Eres dueño de un negocio y quieres unirte?</p>
             <button
               id="btn-toggle-owner-request"
               style="
-                background: none;
-                border: none;
-                color: var(--color-accent, #8b5cf6);
-                font-size: 0.82rem;
-                font-weight: 600;
+                background: var(--color-accent-light);
+                border: 1px solid var(--color-accent);
+                color: var(--color-accent);
+                font-size: 0.85rem;
+                font-weight: 700;
                 cursor: pointer;
-                opacity: 0.9;
-                letter-spacing: 0.02em;
                 transition: all 0.2s;
-                padding: 6px 12px;
-                border-radius: var(--radius-md);
+                padding: 10px 20px;
+                border-radius: var(--radius-lg);
+                width: 100%;
               "
-              onmouseover="this.style.opacity='1'; this.style.background='rgba(139,92,246,0.1)'"
-              onmouseout="this.style.opacity='0.9'; this.style.background='none'"
-              title="Solicitar registro para tu negocio"
+              onmouseover="this.style.background='var(--color-accent)'; this.style.color='white'"
+              onmouseout="this.style.background='var(--color-accent-light)'; this.style.color='var(--color-accent)'"
             >
-              🏢 ¿Quieres registrar tu negocio? Solicitar Cuenta
+              🚀 Registrar mi Negocio
             </button>
           </div>
 

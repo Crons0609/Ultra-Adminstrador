@@ -1220,6 +1220,108 @@ export class AuthService {
   }
 
   /**
+   * Submits a request for a new business owner account.
+   * This is a public operation, saved to /business_requests/{id}.
+   * @param {Object} payload - { bizName, ownerName, email, phone }
+   */
+  static async submitBusinessJoinRequest(payload) {
+    if (!db) throw new Error('Base de datos no inicializada.');
+    const requestId = push(ref(db, 'business_requests')).key;
+    await set(ref(db, `business_requests/${requestId}`), {
+      ...payload,
+      id: requestId,
+      status: 'PENDING',
+      requestedAt: serverTimestamp()
+    });
+    return requestId;
+  }
+
+  /**
+   * Fetches all pending business join requests.
+   * Exclusive for Programmer / Super Admin role.
+   */
+  static async getPendingBusinessRequests() {
+    if (!db) throw new Error('Base de datos no inicializada.');
+    const snap = await get(ref(db, 'business_requests'));
+    if (!snap.exists()) return [];
+
+    const requests = [];
+    snap.forEach(child => {
+      const val = child.val();
+      if (val.status === 'PENDING') {
+        requests.push(val);
+      }
+    });
+    return requests.sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
+  }
+
+  /**
+   * Approves a business join request.
+   * Creates the user account and company branch.
+   */
+  static async approveBusinessJoinRequest(requestId, approvalData) {
+    if (!db) throw new Error('Base de datos no inicializada.');
+
+    const requestSnap = await get(ref(db, `business_requests/${requestId}`));
+    if (!requestSnap.exists()) throw new Error('La solicitud ya no existe.');
+
+    const req = requestSnap.val();
+
+    // 1. Create the business (uses existing logic from FirestoreService)
+    const companyId = FirestoreService.sanitiseKey(req.bizName);
+
+    // Check if companyId already exists to avoid collisions
+    const check = await get(ref(db, `companies/${companyId}`));
+    if (check.exists()) throw new Error(`El identificador de negocio "${companyId}" ya está en uso. Cambia el nombre del negocio.`);
+
+    // Password for the new owner (default or random)
+    const initialPassword = approvalData.password || Math.random().toString(36).slice(-8);
+
+    // 2. Full registration workflow
+    await FirestoreService.createCompanyBranch(companyId, {
+      name: req.bizName,
+      businessType: approvalData.businessType || 'Restaurante',
+      plan: approvalData.plan || 'BASIC',
+      status: 'ACTIVO',
+      ownerEmail: req.email,
+      ownerPassword: initialPassword
+    }, { modules: approvalData.modules || {} });
+
+    // 3. Create Owner account
+    const ownerUid = await AuthService.createUser(req.email, initialPassword, {
+      displayName: req.ownerName,
+      role: 'OWNER',
+      companyId: companyId,
+      branchId: 'main'
+    });
+
+    // 4. Link ownerId
+    await FirestoreService.updateCompanyInfo(companyId, { ownerId: ownerUid });
+
+    // 5. Mark request as APPROVED
+    await update(ref(db, `business_requests/${requestId}`), {
+      status: 'APPROVED',
+      approvedAt: serverTimestamp(),
+      companyId: companyId,
+      ownerUid: ownerUid
+    });
+
+    return { companyId, ownerUid, initialPassword };
+  }
+
+  /**
+   * Rejects a business join request.
+   */
+  static async rejectBusinessJoinRequest(requestId, reason = '') {
+    if (!db) throw new Error('Base de datos no inicializada.');
+    await update(ref(db, `business_requests/${requestId}`), {
+      status: 'REJECTED',
+      rejectedAt: serverTimestamp(),
+      rejectReason: reason
+    });
+  }
+
+  /**
    * Updates any user profile from Programmer Dashboard with audit logging.
    */
   static async adminUpdateUserProfile(targetUid, payload) {
