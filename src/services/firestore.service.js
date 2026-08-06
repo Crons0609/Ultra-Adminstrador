@@ -1234,6 +1234,7 @@ export class FirestoreService {
     const trashId = `${companyId}_${localNow.epochMs}`;
     const updates = {};
 
+    // ── Step 1: Backup registry metadata ──────────────────────────────────────
     updates[`deleted_companies/${trashId}`] = {
       companyId,
       registry: registryData || null,
@@ -1241,10 +1242,73 @@ export class FirestoreService {
       deletedAt: serverTimestamp(),
       deletedAtLocal: localNow
     };
+
+    // ── Step 2: Scan /users to find all accounts belonging to this company ────
+    // Index their emails so the same address can be re-used after re-registration
+    try {
+      const usersSnap = await get(ref(db, 'users'));
+      if (usersSnap.exists()) {
+        usersSnap.forEach(snap => {
+          const u = snap.val() || {};
+          const uid = snap.key;
+          const userCompanyId = u.companyId || '';
+          if (userCompanyId === companyId) {
+            const rawEmail = (u.email || '').toLowerCase().trim();
+            if (rawEmail) {
+              // Safe key: Firebase keys can't contain "." — replace with ","
+              const emailKey = rawEmail.replace(/\./g, ',');
+              // Save index so createUser can re-link the Auth account later
+              updates[`deleted_users_by_email/${emailKey}`] = {
+                uid,
+                email: rawEmail,
+                companyId,
+                deletedAt: serverTimestamp(),
+                deletedAtLocal: localNow
+              };
+            }
+            // Erase the global user profile
+            updates[`users/${uid}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[FirestoreService] ⚠️ Could not scan /users during company deletion:', e.message);
+    }
+
+    // ── Step 3: Clean up any pending_owner_requests tied to this company ──────
+    try {
+      const reqSnap = await get(ref(db, 'pending_owner_requests'));
+      if (reqSnap.exists()) {
+        reqSnap.forEach(snap => {
+          const req = snap.val() || {};
+          // Match by companyId mirror field or by ownerEmail stored in the registry
+          const reqCompanyName = (req.companyName || '').toLowerCase().replace(/\s+/g, '_');
+          const ownerEmail = (req.email || '').toLowerCase().trim();
+          const registryOwnerEmail = (registryData?.ownerEmail || '').toLowerCase().trim();
+          if (
+            reqCompanyName === companyId.toLowerCase() ||
+            (registryOwnerEmail && ownerEmail === registryOwnerEmail)
+          ) {
+            updates[`pending_owner_requests/${snap.key}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[FirestoreService] ⚠️ Could not clean pending_owner_requests during company deletion:', e.message);
+    }
+
+    // ── Step 4: Delete company nodes (registry + tenant branch) ───────────────
     updates[`companies/${companyId}`] = null;
-    updates[companyId] = null; // This deletes the entire tenant branch on the server-side efficiently
+    updates[companyId] = null; // Deletes entire tenant branch server-side efficiently
 
     await update(ref(db), updates);
+
+    // ── Step 5: Clear local cache entries for this company ────────────────────
+    try {
+      await LocalStorageDBService.setCache(`companies/${companyId}`, null);
+      await LocalStorageDBService.setCache(companyId, null);
+    } catch (_) {}
+
     await this.logAudit({
       action: 'COMPANY_PERMANENT_DELETE',
       companyId,

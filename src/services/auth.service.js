@@ -571,11 +571,77 @@ export class AuthService {
     } catch (authErr) {
       console.error('[AuthService] ❌ User creation failed:', authErr);
 
-      // Translate Firebase Auth error codes to Spanish
       const code = authErr.code || '';
-      if (code === 'auth/email-already-in-use') {
-        throw new Error(`El correo "${email}" ya está registrado en el sistema. Usa otro correo o recupera la contraseña.`);
+
+      // ── Special case: email-already-in-use ────────────────────────────────
+      // The Firebase Auth account already exists (was previously created but the
+      // RTDB profile was deleted). Check the deleted_users_by_email index to try
+      // to re-link the existing Auth UID to the new company without throwing.
+      if (code === 'auth/email-already-in-use' && db) {
+        console.log('[AuthService] 🔄 email-already-in-use: buscando UID en índice deleted_users_by_email...');
+        try {
+          const emailKey = cleanEmail.replace(/\./g, ',');
+          const indexSnap = await get(ref(db, `deleted_users_by_email/${emailKey}`));
+
+          if (indexSnap.exists()) {
+            const indexed = indexSnap.val();
+            const orphanUid = indexed.uid;
+            console.log(`[AuthService] ✅ UID encontrado en índice: ${orphanUid}. Re-vinculando a nueva empresa...`);
+
+            const newCompanyId = profileData.companyId;
+            const profilePayload = {
+              uid: orphanUid,
+              email: cleanEmail,
+              displayName: profileData.displayName || cleanEmail,
+              role: profileData.role,
+              customRole: profileData.customRole || '',
+              companyId: newCompanyId || 'global',
+              branchId: profileData.branchId || 'main',
+              permissions: profileData.permissions || {},
+              storedPassword: password,
+              createdAt: Date.now(),
+              createdAtLocal: TimeService.timestamp(),
+              updatedAt: Date.now(),
+              updatedAtLocal: TimeService.timestamp()
+            };
+
+            // Re-escribir /users/{uid} con el nuevo perfil de empresa
+            await set(ref(db, `users/${orphanUid}`), profilePayload);
+
+            // Dual-write: registrar en la nueva empresa como empleado
+            if (newCompanyId && newCompanyId !== 'global') {
+              await FirestoreService.addEmployeeToCompany(newCompanyId, orphanUid, {
+                displayName: profileData.displayName || cleanEmail,
+                email: cleanEmail,
+                role: profileData.role,
+                customRole: profileData.customRole || '',
+                branchId: profileData.branchId || 'main',
+                permissions: profileData.permissions || {}
+              });
+
+              if (profileData.role === 'OWNER' || profileData.role === 'MANAGER') {
+                await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: orphanUid }).catch(() => {});
+              }
+            }
+
+            // Limpiar el índice ya que fue consumido exitosamente
+            await set(ref(db, `deleted_users_by_email/${emailKey}`), null).catch(() => {});
+
+            console.log(`[AuthService] ✅ Re-vinculación exitosa: ${cleanEmail} (UID: ${orphanUid}) → ${newCompanyId}`);
+            return orphanUid;
+
+          } else {
+            console.warn('[AuthService] ⚠️ No se encontró UID en el índice deleted_users_by_email. El correo sigue activo en otra cuenta.');
+            throw new Error(`El correo "${email}" ya está registrado y activo en el sistema. Si pertenece a una empresa eliminada, espera a que el proceso de limpieza termine o contacta al soporte.`);
+          }
+        } catch (relinkErr) {
+          if (relinkErr.message && relinkErr.message.includes('ya está registrado')) throw relinkErr;
+          console.warn('[AuthService] ⚠️ Error durante re-vinculación por email-already-in-use:', relinkErr.message);
+          throw new Error(`El correo "${email}" ya existe en Firebase Auth. Intenta de nuevo o contacta al soporte técnico.`);
+        }
       }
+
+      // Translate remaining Firebase Auth error codes to Spanish
       if (code === 'auth/invalid-email') {
         throw new Error('El formato del correo electrónico no es válido.');
       }
@@ -1400,20 +1466,57 @@ export class AuthService {
 
   /**
    * Admin method to permanently delete a user account.
+   * After deletion the email is indexed so it can be re-registered freely.
    */
   static async adminDeleteUserAccount(targetUid, targetEmail, companyId) {
     if (!db) throw new Error('Base de datos no inicializada.');
 
     const currentUser = GlobalStore.getState().currentUser || {};
     const timestamp = Date.now();
+    const cleanEmail = (targetEmail || '').toLowerCase().trim();
     const updates = {};
 
+    // ── 1. Index deleted email so createUser can re-link the Firebase Auth account ──
+    if (cleanEmail) {
+      const emailKey = cleanEmail.replace(/\./g, ',');
+      updates[`deleted_users_by_email/${emailKey}`] = {
+        uid: targetUid,
+        email: cleanEmail,
+        companyId: companyId || 'global',
+        deletedAt: timestamp,
+        deletedAtLocal: new Date().toISOString()
+      };
+    }
+
+    // ── 2. Remove global user profile and company employee record ──────────────
     updates[`users/${targetUid}`] = null;
     if (companyId && companyId !== 'global') {
       updates[`${companyId}/employees/${targetUid}`] = null;
     }
 
+    // ── 3. Clean up any pending_owner_requests linked to this email ───────────
+    try {
+      const reqSnap = await get(ref(db, 'pending_owner_requests'));
+      if (reqSnap.exists()) {
+        reqSnap.forEach(snap => {
+          const req = snap.val() || {};
+          const reqEmail = (req.email || '').toLowerCase().trim();
+          if (reqEmail === cleanEmail) {
+            updates[`pending_owner_requests/${snap.key}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[AuthService] ⚠️ Could not clean pending_owner_requests for deleted user:', e.message);
+    }
+
     await update(ref(db), updates);
+
+    // ── 4. Clear local saved-account cache for this email ─────────────────────
+    try {
+      const { SavedAccountsService } = await import('./saved-accounts.service.js');
+      SavedAccountsService.remove(cleanEmail);
+    } catch (_) {}
 
     try {
       const auditRef = push(ref(db, 'audit_logs'));
@@ -1422,10 +1525,10 @@ export class AuthService {
         programmerEmail: currentUser.email || 'superadmin@ultraadmin.com',
         programmerUid: currentUser.uid || 'system',
         targetUid,
-        targetEmail,
+        targetEmail: cleanEmail,
         timestamp,
         isoDate: new Date().toISOString(),
-        details: `Cuenta de usuario ${targetEmail} (${targetUid}) eliminada por el programador.`
+        details: `Cuenta de usuario ${cleanEmail} (${targetUid}) eliminada por el programador. Email liberado para re-registro.`
       });
     } catch (e) {
       console.warn('[AuthService] Audit log write failed:', e);
@@ -1434,5 +1537,3 @@ export class AuthService {
     return true;
   }
 }
-
-
