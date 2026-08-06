@@ -1,0 +1,1194 @@
+haz un plan de implementacion 
+
+
+============================================================
+ULTRA ADMINISTRADOR — MIGRACIÓN INTELIGENTE DE DATOS DESDE PDF
+============================================================
+
+Necesito implementar de manera profesional y completa el módulo:
+
+"Migración de Datos"
+
+dentro del Dashboard del DUEÑO DE LOCAL de mi SaaS:
+
+ULTRA ADMINISTRADOR.
+
+IMPORTANTE:
+
+NO quiero simplemente permitir que el usuario almacene un PDF.
+
+Quiero que el sistema pueda LEER, INTERPRETAR, VALIDAR y MIGRAR la información contenida dentro del PDF hacia los módulos y colecciones correspondientes de Ultra Administrador.
+
+El objetivo es que un dueño de negocio que anteriormente llevaba su información en documentos PDF pueda subir esos documentos y evitar tener que introducir manualmente todos los datos nuevamente.
+
+============================================================
+1. OBJETIVO
+============================================================
+
+El dueño de un negocio debe poder:
+
+1. Abrir:
+
+Dashboard del Dueño
+→ Migración de Datos
+
+2. Seleccionar un PDF.
+
+3. Subirlo.
+
+4. El sistema debe analizar el contenido.
+
+5. Identificar automáticamente el tipo de información.
+
+6. Extraer los datos.
+
+7. Mostrar una vista previa.
+
+8. Permitir corregir asignaciones si es necesario.
+
+9. Validar los datos.
+
+10. Mostrar qué información será importada.
+
+11. Solicitar confirmación.
+
+12. Migrar la información a Firestore.
+
+13. Guardar cada registro en el módulo correspondiente.
+
+14. Mostrar un informe final.
+
+============================================================
+2. EJEMPLO REAL
+============================================================
+
+Uno de los documentos que necesito poder importar puede tener una estructura similar a:
+
+"Resumen de inventario"
+
+Columnas:
+
+Creado
+Nombre
+Categoría
+Cant.
+Costo unitario
+Precio unitario
+Costo inventario
+Precio inventario
+
+Ejemplo:
+
+Creado:
+30/03/2025
+
+Nombre:
+Ab sankey clásico
+
+Categoría:
+Abanicos
+
+Cantidad:
+16
+
+Costo unitario:
+C$1,792
+
+Precio unitario:
+C$2,500
+
+Costo inventario:
+C$28,672
+
+Precio inventario:
+C$40,000
+
+El sistema debe reconocer que este documento corresponde al módulo:
+
+INVENTARIO
+
+y convertir cada fila en un producto/registro de inventario compatible con la estructura existente de Ultra Administrador.
+
+============================================================
+3. NO CREAR UN SISTEMA AISLADO
+============================================================
+
+MUY IMPORTANTE.
+
+No crear una base de datos paralela para la migración.
+
+Los datos migrados deben terminar utilizando exactamente la misma arquitectura de datos que utiliza actualmente Ultra Administrador.
+
+Por ejemplo:
+
+PDF
+↓
+Procesador de migración
+↓
+Validación
+↓
+Mapeo
+↓
+Repositorio existente
+↓
+Firestore
+↓
+Módulo correspondiente
+
+Si ya existe:
+
+inventoryService
+productService
+customerService
+employeeService
+etc.
+
+REUTILIZARLOS cuando sea apropiado.
+
+No duplicar servicios existentes.
+
+============================================================
+4. RESPETAR LA JERARQUÍA MULTIEMPRESA
+============================================================
+
+ESTO ES CRÍTICO.
+
+Ultra Administrador es MULTIEMPRESA.
+
+Nunca se debe importar información al lugar incorrecto.
+
+Toda migración debe estar vinculada correctamente a:
+
+- usuario autenticado
+- propietario
+- empresa
+- sucursal/localización
+- negocio actual
+
+La estructura debe respetar exactamente la jerarquía existente en Firestore.
+
+Ejemplo conceptual:
+
+Empresa
+    ↓
+Sucursal
+    ↓
+Inventario
+    ↓
+Producto
+
+Si actualmente el proyecto utiliza otra estructura, utilizar la estructura REAL existente.
+
+NO inventar una nueva jerarquía.
+
+============================================================
+5. AISLAMIENTO DE DATOS
+============================================================
+
+Si el propietario A importa:
+
+"Ab sankey clásico"
+
+el producto debe pertenecer exclusivamente a:
+
+Propietario A
+→ Empresa A
+→ Sucursal correspondiente
+→ Inventario
+
+Nunca debe aparecer en:
+
+Empresa B
+Empresa C
+otro propietario
+otra sucursal no seleccionada
+
+Respetar las reglas de seguridad existentes.
+
+============================================================
+6. INTERFAZ DE MIGRACIÓN
+============================================================
+
+Crear un flujo por etapas:
+
+PASO 1
+Seleccionar archivo
+
+PASO 2
+Analizar documento
+
+PASO 3
+Detectar información
+
+PASO 4
+Asignar datos
+
+PASO 5
+Vista previa
+
+PASO 6
+Validación
+
+PASO 7
+Confirmar importación
+
+PASO 8
+Resultado
+
+============================================================
+7. TIPOS DE ARCHIVO
+============================================================
+
+Preparar el sistema para trabajar inicialmente con:
+
+PDF
+
+pero diseñar la arquitectura para poder agregar posteriormente:
+
+Excel
+XLSX
+CSV
+ODS
+
+No implementar funcionalidades innecesarias si no son necesarias ahora.
+
+El primer objetivo es PDF.
+
+============================================================
+8. DETECCIÓN AUTOMÁTICA
+============================================================
+
+El sistema debe intentar identificar qué tipo de información contiene el documento.
+
+Ejemplos:
+
+"Resumen de inventario"
+→ INVENTARIO
+
+"Lista de clientes"
+→ CLIENTES
+
+"Listado de empleados"
+→ EMPLEADOS
+
+"Facturas"
+→ FACTURACIÓN
+
+"Productos"
+→ INVENTARIO
+
+"Proveedores"
+→ PROVEEDORES
+
+"Ventas"
+→ VENTAS
+
+"Gastos"
+→ GASTOS
+
+"Cuentas por cobrar"
+→ CUENTAS POR COBRAR
+
+etc.
+
+No depender únicamente del nombre del PDF.
+
+Analizar también:
+
+- título
+- encabezados
+- columnas
+- contenido
+- estructura de tablas
+
+============================================================
+9. MOTOR DE MAPEO
+============================================================
+
+Crear un sistema de mapeo.
+
+Ejemplo:
+
+PDF:
+
+Nombre
+Categoría
+Cant.
+Costo unitario
+Precio unitario
+
+↓
+
+Ultra Administrador:
+
+name
+categoryId/category
+quantity
+cost
+salePrice
+
+Pero antes de guardar:
+
+Determinar cómo están definidos REALMENTE esos campos en el proyecto.
+
+NO inventar nombres de campos si ya existe una estructura.
+
+============================================================
+10. CATEGORÍAS
+============================================================
+
+En el ejemplo:
+
+Categoría:
+
+Abanicos
+
+Si "Abanicos" ya existe:
+
+→ utilizar la categoría existente.
+
+Si NO existe:
+
+mostrar durante la vista previa:
+
+"Categoría 'Abanicos' no existe."
+
+Opciones:
+
+[Crear categoría]
+[Asignar categoría existente]
+[Omitir]
+
+NO crear categorías duplicadas.
+
+============================================================
+11. PRODUCTOS DUPLICADOS
+============================================================
+
+Antes de insertar un producto:
+
+buscar si ya existe.
+
+Por ejemplo:
+
+"Ab sankey clásico"
+
+Si ya existe:
+
+mostrar:
+
+Producto posiblemente duplicado.
+
+Opciones:
+
+- Actualizar existente
+- Crear como nuevo
+- Omitir
+- Revisar
+
+NO duplicar automáticamente.
+
+============================================================
+12. SKU
+============================================================
+
+Si el PDF no tiene SKU:
+
+NO inventar un SKU que pueda colisionar con otro producto.
+
+Determinar si el sistema actual tiene generación automática de SKU.
+
+Si existe:
+
+utilizar el generador existente.
+
+Si no existe:
+
+permitir dejarlo vacío cuando la estructura actual lo permita.
+
+============================================================
+13. COSTOS Y PRECIOS
+============================================================
+
+Interpretar correctamente:
+
+C$1,792
+C$2,500
+C$28,672
+C$40,000
+
+No almacenar los símbolos monetarios dentro del valor numérico.
+
+Ejemplo:
+
+"C$1,792"
+
+debe convertirse a un número equivalente:
+
+1792
+
+"C$2,500"
+
+→ 2500
+
+"C$28,672"
+
+→ 28672
+
+"C$40,000"
+
+→ 40000
+
+IMPORTANTE:
+
+No asumir que todos los negocios utilizan Córdobas.
+
+El sistema debe respetar la moneda configurada para la empresa.
+
+============================================================
+14. CANTIDADES
+============================================================
+
+Interpretar correctamente:
+
+16
+
+como:
+
+quantity = 16
+
+No convertirlo en texto.
+
+Si aparece:
+
+16 unidades
+
+debe ser capaz de limpiar la unidad cuando sea posible.
+
+============================================================
+15. FECHAS
+============================================================
+
+Ejemplo:
+
+30/03/2025
+
+debe interpretarse correctamente como:
+
+30 de marzo de 2025.
+
+No confundir:
+
+DD/MM/YYYY
+
+con:
+
+MM/DD/YYYY
+
+Utilizar la configuración regional de la empresa cuando corresponda.
+
+============================================================
+16. VISTA PREVIA
+============================================================
+
+ANTES de escribir en Firestore mostrar una tabla.
+
+Ejemplo:
+
+┌──────────────────────────────────────────────┐
+│ PREVISUALIZACIÓN DE MIGRACIÓN               │
+├──────────────────────────────────────────────┤
+│ Módulo detectado: INVENTARIO                 │
+│ Registros encontrados: 1                    │
+├──────────────────────────────────────────────┤
+│ Producto              Cant.    Costo   Venta │
+│ Ab sankey clásico     16       1792    2500  │
+└──────────────────────────────────────────────┘
+
+Mostrar también:
+
+✓ Registros válidos
+⚠ Registros con advertencias
+✕ Registros con errores
+⚠ Posibles duplicados
+
+============================================================
+17. MAPEO MANUAL
+============================================================
+
+Si la detección automática no es perfecta:
+
+permitir al usuario corregir el mapeo.
+
+Ejemplo:
+
+Columna PDF:
+
+"Nombre"
+
+Asignar a:
+
+[Nombre del producto ▼]
+
+Columna PDF:
+
+"Categoría"
+
+Asignar a:
+
+[Categoría ▼]
+
+Columna PDF:
+
+"Cant."
+
+Asignar a:
+
+[Cantidad ▼]
+
+Columna PDF:
+
+"Costo unitario"
+
+Asignar a:
+
+[Costo unitario ▼]
+
+Columna PDF:
+
+"Precio unitario"
+
+Asignar a:
+
+[Precio de venta ▼]
+
+Esto debe ser editable antes de importar.
+
+============================================================
+18. SISTEMA DE CONFIANZA
+============================================================
+
+Si es posible, mostrar:
+
+Coincidencia alta ✓
+Coincidencia media ⚠
+Coincidencia baja ⚠
+
+Ejemplo:
+
+Nombre → Nombre del producto
+✓ 98%
+
+Cant. → Cantidad
+✓ 96%
+
+Costo unitario → Costo
+✓ 94%
+
+Si existe baja confianza:
+
+pedir confirmación al usuario.
+
+============================================================
+19. VALIDACIÓN
+============================================================
+
+Antes de guardar:
+
+Validar:
+
+- campos obligatorios
+- tipos de datos
+- cantidades
+- precios
+- fechas
+- categorías
+- empresa
+- sucursal
+- duplicados
+- permisos
+- referencias
+- moneda
+
+Nunca importar datos inválidos silenciosamente.
+
+============================================================
+20. ERRORES POR FILA
+============================================================
+
+Si existen 100 registros y 3 tienen errores:
+
+NO cancelar necesariamente los otros 97.
+
+Mostrar:
+
+97 válidos
+3 con errores
+
+Ejemplo:
+
+Fila 45:
+✕ Falta nombre
+
+Fila 72:
+✕ Precio inválido
+
+Fila 83:
+⚠ Categoría no encontrada
+
+Permitir corregir o excluir esas filas.
+
+============================================================
+21. CONFIRMACIÓN
+============================================================
+
+Antes de guardar:
+
+mostrar:
+
+"Estás a punto de importar:
+
+97 productos
+
+Empresa:
+Ultra Pizza
+
+Sucursal:
+Sucursal Principal
+
+¿Deseas continuar?"
+
+Botones:
+
+[Cancelar]
+
+[Confirmar importación]
+
+============================================================
+22. IMPORTACIÓN SEGURA
+============================================================
+
+No realizar una escritura descontrolada.
+
+Utilizar la estrategia más segura compatible con la arquitectura actual.
+
+Si es necesario:
+
+- procesamiento por lotes
+- operaciones batch
+- paginación
+- límites
+- reintentos controlados
+
+Evitar bloquear la interfaz.
+
+============================================================
+23. BARRA DE PROGRESO
+============================================================
+
+Durante la importación:
+
+Importando datos...
+
+████████████░░░░░░
+
+72 de 100
+
+72%
+
+No congelar la aplicación.
+
+============================================================
+24. RESULTADO FINAL
+============================================================
+
+Al terminar:
+
+MIGRACIÓN COMPLETADA
+
+✓ 97 registros importados
+
+⚠ 2 registros actualizados
+
+⚠ 1 registro omitido
+
+✕ 0 errores
+
+Mostrar botón:
+
+[Ver datos importados]
+
+y:
+
+[Ver informe]
+
+============================================================
+25. HISTORIAL DE MIGRACIONES
+============================================================
+
+Crear historial de migraciones.
+
+Mostrar:
+
+Fecha
+Usuario
+Empresa
+Sucursal
+Archivo
+Tipo detectado
+Registros encontrados
+Importados
+Actualizados
+Omitidos
+Errores
+Estado
+
+Ejemplo:
+
+30/03/2025
+christian
+Ultra Pizza
+Principal
+inventario-2025.pdf
+Inventario
+100 registros
+97 importados
+2 actualizados
+1 omitido
+Completado
+
+============================================================
+26. AUDITORÍA
+============================================================
+
+Registrar quién realizó la migración.
+
+Guardar información suficiente para auditoría:
+
+- usuario
+- fecha
+- empresa
+- sucursal
+- archivo
+- módulo
+- cantidad
+- resultado
+
+Utilizar el sistema de auditoría existente si ya existe.
+
+NO crear otro sistema de auditoría innecesario.
+
+============================================================
+27. ARCHIVO ORIGINAL
+============================================================
+
+El sistema puede registrar información sobre el archivo original:
+
+- nombre
+- tipo
+- tamaño
+- fecha de importación
+- usuario
+
+NO es obligatorio guardar indefinidamente el PDF si eso genera costos innecesarios.
+
+Separar:
+
+ARCHIVO ORIGINAL
+
+de:
+
+DATOS MIGRADOS
+
+Los datos extraídos son los que deben quedar integrados al sistema.
+
+============================================================
+28. SEGURIDAD
+============================================================
+
+MUY IMPORTANTE:
+
+El archivo pertenece exclusivamente al usuario/empresa que lo está importando.
+
+Validar:
+
+- autenticación
+- propietario
+- empresa
+- sucursal
+- permisos
+
+No permitir que un usuario importe datos a otra empresa.
+
+No permitir que un empleado ejecute migraciones si el permiso no lo permite.
+
+Inicialmente:
+
+Migración de Datos
+
+debe estar disponible para el DUEÑO según el sistema de permisos actual.
+
+============================================================
+29. FIRESTORE
+============================================================
+
+Antes de escribir:
+
+analizar cómo están estructuradas actualmente las colecciones.
+
+NO asumir:
+
+companies
+products
+inventory
+
+si esos nombres no coinciden con el proyecto.
+
+Utilizar las colecciones y repositorios reales.
+
+Mantener:
+
+- IDs
+- referencias
+- timestamps
+- companyId
+- branchId
+- ownerId
+- relaciones existentes
+
+según la estructura actual.
+
+============================================================
+30. NO ROMPER FUNCIONALIDADES
+============================================================
+
+NO modificar innecesariamente:
+
+- Dashboard
+- Inventario
+- Clientes
+- Empleados
+- Ventas
+- Facturación
+- Finanzas
+- Firebase Authentication
+- Firestore
+- roles
+- permisos
+
+La migración debe integrarse al sistema actual.
+
+============================================================
+31. MIGRACIÓN INTELIGENTE
+============================================================
+
+La arquitectura debe quedar preparada para que posteriormente podamos importar documentos de:
+
+Inventario
+Clientes
+Empleados
+Proveedores
+Ventas
+Gastos
+Facturas
+Cuentas por cobrar
+Cuentas por pagar
+Activos
+
+pero NO implementar módulos ficticios.
+
+Primero hacer funcionar correctamente PDF → INVENTARIO.
+
+Luego reutilizar la arquitectura para los demás.
+
+============================================================
+32. CASO DE PRUEBA OBLIGATORIO
+============================================================
+
+Usar como caso de prueba una estructura equivalente a:
+
+Resumen de inventario
+
+Creado:
+30/03/2025
+
+Nombre:
+Ab sankey clásico
+
+Categoría:
+Abanicos
+
+Cantidad:
+16
+
+Costo unitario:
+C$1,792
+
+Precio unitario:
+C$2,500
+
+Costo inventario:
+C$28,672
+
+Precio inventario:
+C$40,000
+
+Resultado esperado:
+
+Inventario
+↓
+Producto:
+Ab sankey clásico
+↓
+Categoría:
+Abanicos
+↓
+Cantidad:
+16
+↓
+Costo:
+1792
+↓
+Precio:
+2500
+↓
+Fecha:
+30/03/2025
+
+y que el registro aparezca posteriormente en el módulo Inventario de la empresa correspondiente.
+
+============================================================
+33. ARQUITECTURA
+============================================================
+
+Antes de programar:
+
+analiza la arquitectura actual.
+
+Identifica:
+
+- framework
+- router
+- servicios
+- repositorios
+- Firebase
+- Firestore
+- modelos
+- hooks
+- componentes
+- sistema de permisos
+- estructura multiempresa
+
+No crear una arquitectura paralela si ya existe una.
+
+Crear solamente las piezas que hagan falta.
+
+Ejemplo conceptual:
+
+DataMigrationPage
+MigrationUploader
+PDFParser
+DocumentAnalyzer
+ColumnMapper
+MigrationPreview
+MigrationValidator
+MigrationExecutor
+MigrationHistory
+
+Pero adapta los nombres y arquitectura al proyecto real.
+
+============================================================
+34. IMPORTANTE SOBRE PDF
+============================================================
+
+El PDF puede ser:
+
+- texto seleccionable
+- tabla
+- PDF generado por software
+- PDF escaneado como imagen
+
+Primero detectar qué tipo de PDF es.
+
+Para PDF con texto/tablas:
+
+extraer texto y estructura.
+
+Para PDF escaneado:
+
+dejar preparada la arquitectura para OCR.
+
+NO implementar OCR externo de pago si no es necesario.
+
+Si el proyecto puede funcionar sin OCR para PDFs digitales, priorizar esa opción.
+
+============================================================
+35. NO CONFIAR CIEGAMENTE EN LA IA
+============================================================
+
+La IA puede ayudar a interpretar columnas, pero NO debe ser la única capa de seguridad.
+
+El flujo debe ser:
+
+Extracción
+↓
+Mapeo
+↓
+Validación determinista
+↓
+Vista previa
+↓
+Confirmación
+↓
+Firestore
+
+Nunca:
+
+PDF
+↓
+IA
+↓
+Firestore automáticamente
+
+============================================================
+36. RESPONSIVE
+============================================================
+
+La función debe funcionar en:
+
+- PC
+- tablet
+- teléfono
+- Android WebView
+
+En teléfono:
+
+permitir:
+
+Seleccionar PDF
+↓
+Analizar
+↓
+Vista previa
+↓
+Revisar
+↓
+Importar
+
+sin romper el scroll ni la navegación móvil.
+
+============================================================
+37. PRUEBAS OBLIGATORIAS
+============================================================
+
+Probar:
+
+1. PDF válido.
+2. PDF vacío.
+3. PDF incorrecto.
+4. PDF con columnas desconocidas.
+5. PDF con productos duplicados.
+6. PDF con categorías existentes.
+7. PDF con categorías inexistentes.
+8. PDF con precios en C$.
+9. PDF con números inválidos.
+10. PDF con fechas inválidas.
+11. PDF con muchas filas.
+12. Cancelar durante la importación.
+13. Error durante Firestore.
+14. Reintentar migración.
+15. Usuario sin permisos.
+16. Empresa incorrecta.
+17. Sucursal incorrecta.
+18. Dos empresas con productos con el mismo nombre.
+19. Importar dos veces el mismo PDF.
+20. Comprobar que no se dupliquen datos accidentalmente.
+
+============================================================
+38. CRITERIO DE ÉXITO
+============================================================
+
+El dueño debe poder hacer:
+
+Dashboard
+↓
+Migración de Datos
+↓
+Subir PDF
+↓
+Analizar
+↓
+Sistema detecta INVENTARIO
+↓
+Extrae filas
+↓
+Mapea columnas
+↓
+Muestra vista previa
+↓
+Usuario confirma
+↓
+Validación
+↓
+Firestore
+↓
+Inventario
+↓
+Productos visibles en el módulo Inventario
+
+SIN tener que introducir manualmente los productos uno por uno.
+
+============================================================
+39. INFORME FINAL
+============================================================
+
+Al terminar, entregar:
+
+1. Archivos creados.
+2. Archivos modificados.
+3. Servicios reutilizados.
+4. Estructura de datos utilizada.
+5. Cómo se detecta el tipo de documento.
+6. Cómo se extraen tablas.
+7. Cómo se realiza el mapeo.
+8. Cómo se validan datos.
+9. Cómo se detectan duplicados.
+10. Cómo se respeta empresa/sucursal/propietario.
+11. Cómo se realiza la escritura en Firestore.
+12. Cómo funciona el historial.
+13. Pruebas realizadas.
+14. Errores encontrados.
+15. Correcciones realizadas.
+
+NO des por terminada la tarea solamente porque el PDF pueda subirse.
+
+La tarea termina cuando:
+
+PDF
+→ datos extraídos
+→ datos revisados
+→ datos validados
+→ datos guardados
+→ datos aparecen correctamente en el módulo correspondiente.
+
+============================================================
+REGLA PRINCIPAL
+============================================================
+
+RESPETAR COMPLETAMENTE LA JERARQUÍA EXISTENTE DE ULTRA ADMINISTRADOR.
+
+NO inventar una nueva estructura de empresas.
+
+NO crear una base de datos paralela.
+
+NO duplicar servicios.
+
+NO romper módulos existentes.
+
+NO modificar Firebase innecesariamente.
+
+NO importar directamente sin vista previa.
+
+NO guardar datos sin validar.
+
+El objetivo es convertir "Migración de Datos" en una herramienta profesional para trasladar información histórica de los negocios hacia Ultra Administrador.

@@ -345,8 +345,8 @@ export class AuthService {
    * @returns {Promise<string>} The new user's UID
    */
   static async createUser(email, password, profileData) {
-    const cleanEmail = (email || '').toLowerCase()
-      .trim()
+    const rawLowerEmail = (email || '').toLowerCase().trim();
+    const cleanEmail = rawLowerEmail
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/ñ/g, 'n');
@@ -358,10 +358,6 @@ export class AuthService {
     }
 
     // ── Check if the email already exists in /users and belongs to a deleted company ──
-    // NOTE: We do NOT use queryGlobal+filters here because _applyFilters uses strict ===
-    // equality (case-sensitive), which misses emails stored with different casing (e.g.
-    // "Angy@ghost.com" vs "angy@ghost.com"). Instead we filter manually with toLowerCase().
-
     if (db) {
       try {
         console.log('[AuthService] 🔍 Verificando si el correo ya existe en /users...', cleanEmail);
@@ -370,7 +366,9 @@ export class AuthService {
         if (usersSnap.exists()) {
           usersSnap.forEach(snap => {
             const val = snap.val();
-            if ((val?.email || '').toLowerCase().trim() === cleanEmail) {
+            const valEmail = (val?.email || '').toLowerCase().trim();
+            const normValEmail = valEmail.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n');
+            if (valEmail === cleanEmail || valEmail === rawLowerEmail || normValEmail === cleanEmail) {
               existingUser = { id: snap.key, ...val };
             }
           });
@@ -381,29 +379,32 @@ export class AuthService {
           const orphanUid = existingUser.id || existingUser.uid;
           console.log(`[AuthService] 📋 Perfil existente encontrado. UID: ${orphanUid}, companyId: ${oldCompanyId}`);
 
-          // ── Scenario A: company was deleted entirely ──
-          let companyExists = false;
+          // ── Scenario A: company was deleted or sent to trash ──
+          let companyIsActive = false;
           let employeeStillRegistered = false;
 
           if (oldCompanyId && oldCompanyId !== 'global') {
             const companySnap = await get(ref(db, `companies/${oldCompanyId}`));
-            companyExists = companySnap.exists();
-            console.log(`[AuthService] 🏢 ¿companies/${oldCompanyId} existe?`, companyExists);
+            if (companySnap.exists()) {
+              const compData = companySnap.val() || {};
+              const status = (compData.status || compData.config?.status || '').toUpperCase();
+              if (status !== 'ELIMINADO') {
+                companyIsActive = true;
+              }
+            }
 
-            if (companyExists) {
-              // ── Scenario B: company exists but check if employee still belongs to it ──
+            if (companyIsActive) {
               const empSnap = await get(ref(db, `${oldCompanyId}/employees/${orphanUid}`));
               employeeStillRegistered = empSnap.exists();
-              console.log(`[AuthService] 👤 ¿Empleado aún registrado en ${oldCompanyId}/employees/${orphanUid}?`, employeeStillRegistered);
             }
           } else if (oldCompanyId === 'global') {
-            companyExists = true;
+            companyIsActive = true;
             employeeStillRegistered = true;
           }
 
-          // Re-link if: (A) company deleted, OR (B) employee was individually removed from the company
-          const shouldRelink = !companyExists || !employeeStillRegistered;
-          console.log(`[AuthService] 🔄 ¿Re-vincular usuario?`, shouldRelink, '| companyExists:', companyExists, '| employeeStillRegistered:', employeeStillRegistered);
+          // Re-link if: company is deleted/in trash, OR employee was removed from company
+          const shouldRelink = !companyIsActive || !employeeStillRegistered;
+          console.log(`[AuthService] 🔄 ¿Re-vincular usuario?`, shouldRelink, '| companyIsActive:', companyIsActive, '| employeeStillRegistered:', employeeStillRegistered);
 
           if (shouldRelink) {
             const profilePayload = {
@@ -414,6 +415,8 @@ export class AuthService {
               customRole: profileData.customRole || '',
               companyId: profileData.companyId || 'global',
               branchId: profileData.branchId || 'main',
+              permissions: profileData.permissions || {},
+              storedPassword: password,
               createdAt: existingUser.createdAt || Date.now(),
               createdAtLocal: existingUser.createdAtLocal || TimeService.timestamp(),
               updatedAt: Date.now(),
@@ -431,22 +434,33 @@ export class AuthService {
                 email: cleanEmail,
                 role: profileData.role,
                 customRole: profileData.customRole || '',
-                branchId: profileData.branchId || 'main'
+                branchId: profileData.branchId || 'main',
+                permissions: profileData.permissions || {}
               });
               if (profileData.role === 'OWNER' || profileData.role === 'MANAGER') {
-                await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: orphanUid });
+                await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: orphanUid }).catch(() => {});
               }
             }
+
+            // Limpiar índices de eliminación
+            const emailKey1 = cleanEmail.replace(/\./g, ',');
+            const emailKey2 = rawLowerEmail.replace(/\./g, ',');
+            await set(ref(db, `deleted_users_by_email/${emailKey1}`), null).catch(() => {});
+            await set(ref(db, `deleted_users_by_email/${emailKey2}`), null).catch(() => {});
 
             console.log(`[AuthService] ✅ Usuario re-vinculado: ${cleanEmail} (UID: ${orphanUid}) → empresa ${newCompanyId}`);
             return orphanUid;
           } else {
             console.log(`[AuthService] ⛔ El correo ${cleanEmail} sigue activo en la empresa ${oldCompanyId}. No se puede re-vincular.`);
+            throw new Error(`El correo "${email}" ya está registrado y activo en el sistema.`);
           }
         } else {
           console.log(`[AuthService] ℹ️ No se encontró perfil en /users para: ${cleanEmail}. Proceder con creación normal.`);
         }
       } catch (orphanErr) {
+        if (orphanErr.message && orphanErr.message.includes('ya está registrado y activo')) {
+          throw orphanErr;
+        }
         console.warn('[AuthService] ⚠️ Error en verificación de usuarios huérfanos:', orphanErr.message, orphanErr);
       }
     }
@@ -578,16 +592,69 @@ export class AuthService {
       // RTDB profile was deleted). Check the deleted_users_by_email index to try
       // to re-link the existing Auth UID to the new company without throwing.
       if (code === 'auth/email-already-in-use' && db) {
-        console.log('[AuthService] 🔄 email-already-in-use: buscando UID en índice deleted_users_by_email...');
+        console.log('[AuthService] 🔄 email-already-in-use: buscando UID para re-vincular cuenta...');
         try {
-          const emailKey = cleanEmail.replace(/\./g, ',');
-          const indexSnap = await get(ref(db, `deleted_users_by_email/${emailKey}`));
+          const emailKeyClean = cleanEmail.replace(/\./g, ',');
+          const emailKeyRaw = rawLowerEmail.replace(/\./g, ',');
+          let orphanUid = null;
 
-          if (indexSnap.exists()) {
-            const indexed = indexSnap.val();
-            const orphanUid = indexed.uid;
-            console.log(`[AuthService] ✅ UID encontrado en índice: ${orphanUid}. Re-vinculando a nueva empresa...`);
+          // 1. Consultar índice deleted_users_by_email (con key limpia y raw)
+          const indexSnapClean = await get(ref(db, `deleted_users_by_email/${emailKeyClean}`));
+          if (indexSnapClean.exists()) {
+            orphanUid = indexSnapClean.val()?.uid;
+          } else {
+            const indexSnapRaw = await get(ref(db, `deleted_users_by_email/${emailKeyRaw}`));
+            if (indexSnapRaw.exists()) {
+              orphanUid = indexSnapRaw.val()?.uid;
+            }
+          }
 
+          // 2. Si no está en el índice, buscar en /users (case-insensitive)
+          if (!orphanUid) {
+            const usersSnap = await get(ref(db, 'users'));
+            if (usersSnap.exists()) {
+              usersSnap.forEach(snap => {
+                const val = snap.val();
+                const valEmail = (val?.email || '').toLowerCase().trim();
+                const normValEmail = valEmail.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n');
+                if (valEmail === cleanEmail || valEmail === rawLowerEmail || normValEmail === cleanEmail) {
+                  orphanUid = snap.key;
+                }
+              });
+            }
+          }
+
+          // 3. Si no está en /users, buscar en deleted_companies
+          if (!orphanUid) {
+            const deletedCompSnap = await get(ref(db, 'deleted_companies'));
+            if (deletedCompSnap.exists()) {
+              deletedCompSnap.forEach(snap => {
+                const dc = snap.val() || {};
+                const reg = dc.registry || {};
+                if (reg.ownerEmail && (reg.ownerEmail.toLowerCase().trim() === cleanEmail || reg.ownerEmail.toLowerCase().trim() === rawLowerEmail) && reg.ownerId) {
+                  orphanUid = reg.ownerId;
+                }
+              });
+            }
+          }
+
+          // 4. Si aún no se encuentra, intentar sign-in en secondaryAuth con la contraseña recibida
+          if (!orphanUid && secondaryAuth) {
+            try {
+              const { signInWithEmailAndPassword } = await import(
+                'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js'
+              );
+              const cred = await signInWithEmailAndPassword(secondaryAuth, cleanEmail, password).catch(() => null);
+              if (cred && cred.user) {
+                orphanUid = cred.user.uid;
+                console.log('[AuthService] ✅ UID obtenido vía signInWithEmailAndPassword:', orphanUid);
+              }
+            } catch (signInErr) {
+              console.warn('[AuthService] ⚠️ Falló signIn en relink:', signInErr.message);
+            }
+          }
+
+          if (orphanUid) {
             const newCompanyId = profileData.companyId;
             const profilePayload = {
               uid: orphanUid,
@@ -624,20 +691,21 @@ export class AuthService {
               }
             }
 
-            // Limpiar el índice ya que fue consumido exitosamente
-            await set(ref(db, `deleted_users_by_email/${emailKey}`), null).catch(() => {});
+            // Limpiar los índices ya que fueron consumidos exitosamente
+            await set(ref(db, `deleted_users_by_email/${emailKeyClean}`), null).catch(() => {});
+            await set(ref(db, `deleted_users_by_email/${emailKeyRaw}`), null).catch(() => {});
 
-            console.log(`[AuthService] ✅ Re-vinculación exitosa: ${cleanEmail} (UID: ${orphanUid}) → ${newCompanyId}`);
+            console.log(`[AuthService] ✅ Re-vinculación exitosa por email-already-in-use: ${cleanEmail} (UID: ${orphanUid}) → ${newCompanyId}`);
             return orphanUid;
 
           } else {
-            console.warn('[AuthService] ⚠️ No se encontró UID en el índice deleted_users_by_email. El correo sigue activo en otra cuenta.');
-            throw new Error(`El correo "${email}" ya está registrado y activo en el sistema. Si pertenece a una empresa eliminada, espera a que el proceso de limpieza termine o contacta al soporte.`);
+            console.warn('[AuthService] ⚠️ No se encontró UID en los índices ni por Auth.');
+            throw new Error(`El correo "${email}" ya existía en Firebase Auth. Si pertenece a una empresa eliminada, por favor intenta de nuevo.`);
           }
         } catch (relinkErr) {
-          if (relinkErr.message && relinkErr.message.includes('ya está registrado')) throw relinkErr;
+          if (relinkErr.message && (relinkErr.message.includes('ya está registrado') || relinkErr.message.includes('Firebase Auth'))) throw relinkErr;
           console.warn('[AuthService] ⚠️ Error durante re-vinculación por email-already-in-use:', relinkErr.message);
-          throw new Error(`El correo "${email}" ya existe en Firebase Auth. Intenta de nuevo o contacta al soporte técnico.`);
+          throw relinkErr;
         }
       }
 
@@ -1478,14 +1546,18 @@ export class AuthService {
 
     // ── 1. Index deleted email so createUser can re-link the Firebase Auth account ──
     if (cleanEmail) {
-      const emailKey = cleanEmail.replace(/\./g, ',');
-      updates[`deleted_users_by_email/${emailKey}`] = {
+      const rawEmail = (targetEmail || '').toLowerCase().trim();
+      const emailKey1 = rawEmail.replace(/\./g, ',');
+      const emailKey2 = cleanEmail.replace(/\./g, ',');
+      const record = {
         uid: targetUid,
-        email: cleanEmail,
+        email: rawEmail,
         companyId: companyId || 'global',
         deletedAt: timestamp,
         deletedAtLocal: new Date().toISOString()
       };
+      updates[`deleted_users_by_email/${emailKey1}`] = record;
+      updates[`deleted_users_by_email/${emailKey2}`] = record;
     }
 
     // ── 2. Remove global user profile and company employee record ──────────────

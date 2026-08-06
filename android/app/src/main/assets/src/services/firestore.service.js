@@ -11,7 +11,7 @@
  * Uses Firebase Realtime Database CDN v12.16.0.
  */
 
-import { db } from '../config/firebase.config.js';
+import { db, auth } from '../config/firebase.config.js';
 import { GlobalStore } from '../core/state.js';
 import { TimeService } from './time.service.js';
 import { LocalStorageDBService } from './local-storage-db.service.js';
@@ -646,9 +646,38 @@ export class FirestoreService {
   static async removeEmployeeFromCompany(companyId, uid) {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    const empRef = ref(db, `${companyId}/employees/${uid}`);
-    await remove(empRef);
-    console.log(`[DB] ✅ Employee removed: /${companyId}/employees/${uid}`);
+    const localNow = TimeService.timestamp();
+    const updates = {};
+
+    updates[`${companyId}/employees/${uid}`] = null;
+
+    try {
+      const userSnap = await get(ref(db, `users/${uid}`));
+      if (userSnap.exists()) {
+        const u = userSnap.val() || {};
+        const rawEmail = (u.email || '').toLowerCase().trim();
+        if (rawEmail) {
+          const cleanEmail = rawEmail.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n');
+          const emailKey1 = rawEmail.replace(/\./g, ',');
+          const emailKey2 = cleanEmail.replace(/\./g, ',');
+          const record = {
+            uid,
+            email: rawEmail,
+            companyId,
+            deletedAt: serverTimestamp(),
+            deletedAtLocal: localNow
+          };
+          updates[`deleted_users_by_email/${emailKey1}`] = record;
+          updates[`deleted_users_by_email/${emailKey2}`] = record;
+        }
+        updates[`users/${uid}`] = null;
+      }
+    } catch (e) {
+      console.warn('[FirestoreService] ⚠️ Could not clear user profile during removeEmployeeFromCompany:', e.message);
+    }
+
+    await update(ref(db), updates);
+    console.log(`[DB] ✅ Employee removed and email freed: /${companyId}/employees/${uid}`);
   }
 
   /**
@@ -1226,25 +1255,14 @@ export class FirestoreService {
   static async permanentlyDeleteCompany(companyId, reason = '') {
     if (!db) throw new Error('[FirestoreService] Database not initialized.');
 
-    // We do NOT fetch the entire company data branch (products, sales, orders, logs) into the client,
-    // as it can be extremely large and freeze the browser thread.
-    // Instead, we only fetch and backup the registry metadata (SaaS settings).
+    console.log(`[FirestoreService] 🧹 Iniciando eliminación DE RAÍZ de la empresa: ${companyId}`);
+
     const registryData = await this.getGlobal('companies', companyId);
-    const localNow = TimeService.timestamp();
-    const trashId = `${companyId}_${localNow.epochMs}`;
     const updates = {};
+    const emailsToClean = new Set();
+    const accountsToDeleteAuth = [];
 
-    // ── Step 1: Backup registry metadata ──────────────────────────────────────
-    updates[`deleted_companies/${trashId}`] = {
-      companyId,
-      registry: registryData || null,
-      reason,
-      deletedAt: serverTimestamp(),
-      deletedAtLocal: localNow
-    };
-
-    // ── Step 2: Scan /users to find all accounts belonging to this company ────
-    // Index their emails so the same address can be re-used after re-registration
+    // ── Step 1: Scan /users & company registry to find all accounts ─────────
     try {
       const usersSnap = await get(ref(db, 'users'));
       if (usersSnap.exists()) {
@@ -1255,25 +1273,56 @@ export class FirestoreService {
           if (userCompanyId === companyId) {
             const rawEmail = (u.email || '').toLowerCase().trim();
             if (rawEmail) {
-              // Safe key: Firebase keys can't contain "." — replace with ","
-              const emailKey = rawEmail.replace(/\./g, ',');
-              // Save index so createUser can re-link the Auth account later
-              updates[`deleted_users_by_email/${emailKey}`] = {
-                uid,
-                email: rawEmail,
-                companyId,
-                deletedAt: serverTimestamp(),
-                deletedAtLocal: localNow
-              };
+              emailsToClean.add(rawEmail);
+              const cleanEmail = rawEmail.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n');
+              emailsToClean.add(cleanEmail);
+              if (u.storedPassword) {
+                accountsToDeleteAuth.push({ uid, email: rawEmail, password: u.storedPassword });
+              }
             }
-            // Erase the global user profile
+            // Erase global user profile
             updates[`users/${uid}`] = null;
           }
         });
       }
+
+      // Ensure registry owner email & ID are included
+      if (registryData?.ownerEmail) {
+        const rawOwnerEmail = registryData.ownerEmail.toLowerCase().trim();
+        emailsToClean.add(rawOwnerEmail);
+        const cleanOwnerEmail = rawOwnerEmail.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n');
+        emailsToClean.add(cleanOwnerEmail);
+        if (registryData.ownerId) {
+          updates[`users/${registryData.ownerId}`] = null;
+        }
+      }
     } catch (e) {
-      console.warn('[FirestoreService] ⚠️ Could not scan /users during company deletion:', e.message);
+      console.warn('[FirestoreService] ⚠️ Error escaneando usuarios durante eliminación:', e.message);
     }
+
+    // ── Step 2: Clear deleted_users_by_email index entries for all company emails ──
+    try {
+      const delSnap = await get(ref(db, 'deleted_users_by_email'));
+      if (delSnap.exists()) {
+        delSnap.forEach(snap => {
+          const key = snap.key;
+          const record = snap.val() || {};
+          const emailInRecord = (record.email || '').toLowerCase().trim();
+          const recordCompId = record.companyId || '';
+          if (recordCompId === companyId || emailsToClean.has(emailInRecord)) {
+            updates[`deleted_users_by_email/${key}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[FirestoreService] ⚠️ Error limpiando deleted_users_by_email:', e.message);
+    }
+
+    // Direct key cleanup from emailsToClean
+    emailsToClean.forEach(em => {
+      const key = em.replace(/\./g, ',');
+      updates[`deleted_users_by_email/${key}`] = null;
+    });
 
     // ── Step 3: Clean up any pending_owner_requests tied to this company ──────
     try {
@@ -1281,40 +1330,103 @@ export class FirestoreService {
       if (reqSnap.exists()) {
         reqSnap.forEach(snap => {
           const req = snap.val() || {};
-          // Match by companyId mirror field or by ownerEmail stored in the registry
           const reqCompanyName = (req.companyName || '').toLowerCase().replace(/\s+/g, '_');
           const ownerEmail = (req.email || '').toLowerCase().trim();
-          const registryOwnerEmail = (registryData?.ownerEmail || '').toLowerCase().trim();
           if (
             reqCompanyName === companyId.toLowerCase() ||
-            (registryOwnerEmail && ownerEmail === registryOwnerEmail)
+            emailsToClean.has(ownerEmail)
           ) {
             updates[`pending_owner_requests/${snap.key}`] = null;
           }
         });
       }
     } catch (e) {
-      console.warn('[FirestoreService] ⚠️ Could not clean pending_owner_requests during company deletion:', e.message);
+      console.warn('[FirestoreService] ⚠️ Error limpiando pending_owner_requests:', e.message);
     }
 
-    // ── Step 4: Delete company nodes (registry + tenant branch) ───────────────
+    // ── Step 4: Delete deleted_companies backups for this company ────────────
+    try {
+      const delCompSnap = await get(ref(db, 'deleted_companies'));
+      if (delCompSnap.exists()) {
+        delCompSnap.forEach(snap => {
+          const dc = snap.val() || {};
+          if (dc.companyId === companyId) {
+            updates[`deleted_companies/${snap.key}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[FirestoreService] ⚠️ Error limpiando deleted_companies:', e.message);
+    }
+
+    // ── Step 5: Delete primary company nodes in RTDB ─────────────────────────
     updates[`companies/${companyId}`] = null;
-    updates[companyId] = null; // Deletes entire tenant branch server-side efficiently
+    updates[companyId] = null; // Deletes entire tenant branch (products, sales, orders, image_storage, etc.)
+    updates[`business_settings/${companyId}`] = null;
 
+    // Apply all RTDB deletions atomically
     await update(ref(db), updates);
+    console.log(`[FirestoreService] ✅ Nodos de RTDB eliminados de raíz para: ${companyId}`);
 
-    // ── Step 5: Clear local cache entries for this company ────────────────────
+    // ── Step 6: Delete Firebase Auth user accounts via Secondary App ──────────
+    if (accountsToDeleteAuth.length > 0) {
+      try {
+        const { initializeApp, deleteApp } = await import(
+          'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js'
+        );
+        const { getAuth, signInWithEmailAndPassword, deleteUser } = await import(
+          'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js'
+        );
+
+        const mainApp = auth?.app;
+        if (mainApp) {
+          for (const item of accountsToDeleteAuth) {
+            const secAppName = `sec-del-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+            let secApp = null;
+            try {
+              secApp = initializeApp(mainApp.options, secAppName);
+              const secAuth = getAuth(secApp);
+              const cred = await signInWithEmailAndPassword(secAuth, item.email, item.password).catch(() => null);
+              if (cred && cred.user) {
+                await deleteUser(cred.user);
+                console.log(`[FirestoreService] 🔥 Firebase Auth cuenta eliminada definitivamente: ${item.email} (UID: ${item.uid})`);
+              }
+            } catch (authDelErr) {
+              console.warn(`[FirestoreService] ⚠️ No se pudo eliminar Firebase Auth para ${item.email}:`, authDelErr.message);
+            } finally {
+              if (secApp) {
+                await deleteApp(secApp).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch (authModuleErr) {
+        console.warn('[FirestoreService] ⚠️ Error al cargar módulos de Auth para eliminación:', authModuleErr.message);
+      }
+    }
+
+    // ── Step 7: Clear local storage caches & saved account credentials ───────
     try {
       await LocalStorageDBService.setCache(`companies/${companyId}`, null);
       await LocalStorageDBService.setCache(companyId, null);
+      await LocalStorageDBService.setCache(`business_settings/${companyId}`, null);
+    } catch (_) {}
+
+    try {
+      const { SavedAccountsService } = await import('./saved-accounts.service.js');
+      emailsToClean.forEach(email => {
+        SavedAccountsService.remove(email);
+      });
     } catch (_) {}
 
     await this.logAudit({
       action: 'COMPANY_PERMANENT_DELETE',
       companyId,
-      description: `Empresa eliminada definitivamente. Motivo: ${reason || 'No especificado'}`,
-      metadata: { trashId, reason }
+      description: `Empresa eliminada DE RAÍZ de Firebase. Motivo: ${reason || 'No especificado'}`,
+      metadata: { reason }
     });
+
+    console.log(`[FirestoreService] 🎉 Empresa ${companyId} eliminada de raíz exitosamente.`);
   }
 
   static async logAudit({ action, companyId = 'global', description = '', metadata = {} }) {
