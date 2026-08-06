@@ -83,12 +83,22 @@
 }
 
 /* All form elements inside panels stay within bounds */
-.settings-panel input,
+.settings-panel input:not([type="checkbox"]):not([type="radio"]),
 .settings-panel select,
 .settings-panel textarea {
   max-width: 100%;
+  width: 100%;
   box-sizing: border-box;
   min-width: 0;
+}
+
+.settings-panel input[type="checkbox"].switch-input,
+.switch-input {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
 }
 
 /* All child divs and paragraphs also stay within bounds */

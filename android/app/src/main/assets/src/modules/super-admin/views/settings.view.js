@@ -88,8 +88,11 @@ export class SettingsView extends Component {
             .settings-panel p, .settings-panel h3, .settings-panel h4, .settings-panel label {
               max-width: 100% !important; overflow-wrap: break-word !important; word-break: break-word !important;
             }
-            .settings-panel input, .settings-panel select, .settings-panel textarea {
+            .settings-panel input:not([type="checkbox"]):not([type="radio"]), .settings-panel select, .settings-panel textarea {
               max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; min-width: 0 !important;
+            }
+            .settings-panel input[type="checkbox"].switch-input, .switch-input {
+              width: 36px !important; min-width: 36px !important; max-width: 36px !important; height: 20px !important; flex-shrink: 0 !important;
             }
             .settings-card {
               padding: var(--space-3) !important; overflow-x: hidden !important;
