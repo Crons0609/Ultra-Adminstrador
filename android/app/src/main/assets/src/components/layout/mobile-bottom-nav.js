@@ -522,27 +522,29 @@ export class MobileBottomNav extends Component {
     }
 
     // 3. Mobile Web Keyboard & Input Focus Detection
-    const handleInputFocus = (e) => {
-      const tag = e.target?.tagName?.toLowerCase();
-      if (['input', 'textarea', 'select'].includes(tag) && e.target.type !== 'checkbox' && e.target.type !== 'radio') {
+    if (!this._focusCleanup) {
+      const handleInputFocus = (e) => {
+        const tag = e.target?.tagName?.toLowerCase();
+        if (['input', 'textarea', 'select'].includes(tag) && e.target.type !== 'checkbox' && e.target.type !== 'radio') {
+          const currentNav = this.$('#mobile-bottom-nav');
+          if (currentNav) currentNav.classList.add('mbn-hidden');
+        }
+      };
+
+      const handleInputBlur = () => {
         const currentNav = this.$('#mobile-bottom-nav');
-        if (currentNav) currentNav.classList.add('mbn-hidden');
-      }
-    };
+        if (currentNav) currentNav.classList.remove('mbn-hidden');
+      };
 
-    const handleInputBlur = () => {
-      const currentNav = this.$('#mobile-bottom-nav');
-      if (currentNav) currentNav.classList.remove('mbn-hidden');
-    };
+      document.addEventListener('focusin', handleInputFocus);
+      document.addEventListener('focusout', handleInputBlur);
+      this._focusCleanup = () => {
+        document.removeEventListener('focusin', handleInputFocus);
+        document.removeEventListener('focusout', handleInputBlur);
+      };
+    }
 
-    document.addEventListener('focusin', handleInputFocus);
-    document.addEventListener('focusout', handleInputBlur);
-    this._focusCleanup = () => {
-      document.removeEventListener('focusin', handleInputFocus);
-      document.removeEventListener('focusout', handleInputBlur);
-    };
-
-    if (window.visualViewport) {
+    if (window.visualViewport && !this._viewportHandler) {
       this._viewportHandler = () => {
         const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
         const currentNav = this.$('#mobile-bottom-nav');
@@ -554,17 +556,23 @@ export class MobileBottomNav extends Component {
     }
 
     // 4. Back Button Intercept for Mobile Web & Android
-    this._popstateHandler = () => {
-      if (this.state.activeSheet) {
-        this.closeSheet();
-      }
-    };
-    window.addEventListener('popstate', this._popstateHandler);
+    if (!this._popstateHandler) {
+      this._popstateHandler = () => {
+        if (this.state.activeSheet) {
+          this.closeSheet();
+        }
+      };
+      window.addEventListener('popstate', this._popstateHandler);
+    }
 
     // 5. Listen to Real-Time Notifications
     this.startNotificationsRealtimeListener();
 
-    // 6. Subscribe to GlobalStore state changes
+    // 6. Subscribe to GlobalStore state changes. Clean up previous subscriptions if they exist.
+    if (this._unsubStore) this._unsubStore();
+    if (this._unsubCompany) this._unsubCompany();
+    if (this._unsubNavConfig) this._unsubNavConfig();
+
     this._unsubStore = GlobalStore.subscribe('activeRole', () => this.update());
     this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
 

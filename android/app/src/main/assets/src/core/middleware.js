@@ -35,7 +35,7 @@ export function moduleGuard(moduleId) {
     if (!authenticated) return false;
 
     const state = GlobalStore.getState();
-    const userRole = state.activeRole || state.currentUser?.role;
+    const userRole = (state.activeRole || state.currentUser?.role || '').toUpperCase().trim();
 
     // Super Admin bypasses all module restrictions
     if (userRole === 'SUPER_ADMIN') return true;
@@ -70,7 +70,7 @@ export function autoModuleGuard() {
     if (!authenticated) return false;
 
     const state = GlobalStore.getState();
-    const userRole = state.activeRole || state.currentUser?.role;
+    const userRole = (state.activeRole || state.currentUser?.role || '').toUpperCase().trim();
     if (userRole === 'SUPER_ADMIN') return true;
 
     const company = state.currentCompany;
@@ -107,12 +107,17 @@ export function roleGuard(allowedRoles) {
 
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
-    const userRole = state.activeRole || currentUser.role;
+    const userRole = (state.activeRole || currentUser.role || '').toUpperCase().trim();
     const company = state.currentCompany;
     const path = route.path || '';
 
+    // SUPER_ADMIN bypasses ALL guards — full access always
+    if (userRole === 'SUPER_ADMIN') {
+      return true;
+    }
+
     // Business type category guards validation
-    if (company && userRole !== 'SUPER_ADMIN') {
+    if (company) {
       const bType = company.businessType || company.rubro || company.type || company.category || company.name || '';
       const category = getBusinessCategory(bType);
       const guards = getModuleGuards(bType);
@@ -209,39 +214,50 @@ export function roleGuard(allowedRoles) {
  * @param {Router} router 
  */
 export function redirectUserDashboard(role, router) {
+  const currentHash = window.location.hash || '#/';
+  let targetPath = '';
+
   switch (role) {
     case 'SUPER_ADMIN':
-      router.navigate('/super-admin/companies');
+      targetPath = '/super-admin/companies';
       break;
     case 'OWNER':
-      router.navigate('/owner/finance');
+      targetPath = '/owner/finance';
       break;
     case 'MANAGER':
-      router.navigate('/manager/dashboard');
+      targetPath = '/manager/dashboard';
       break;
     case 'CASHIER':
-      router.navigate('/cashier/pos');
+      targetPath = '/cashier/pos';
       break;
     case 'WAITER':
       try {
         const companyObj = GlobalStore.getState().currentCompany;
         const categoryObj = getBusinessCategory(companyObj?.businessType || '');
         if (categoryObj === 'GASTRONOMIA' || categoryObj === 'BAR_DISCOTECA') {
-          router.navigate('/waiter/tables');
+          targetPath = '/waiter/tables';
         } else {
-          router.navigate('/waiter/client-assignments');
+          targetPath = '/waiter/client-assignments';
         }
       } catch (err) {
-        router.navigate('/waiter/tables');
+        targetPath = '/waiter/tables';
       }
       break;
     case 'KITCHEN':
-      router.navigate('/kitchen/kds');
+      targetPath = '/kitchen/kds';
       break;
     case 'CUSTOMER':
-      router.navigate('/customer/menu');
+      targetPath = '/customer/menu';
       break;
     default:
-      router.navigate('/login');
+      targetPath = '/login';
   }
+
+  // Prevent infinite redirection loops if we are already at the target path
+  if (currentHash === `#${targetPath}` || (currentHash === '#/' && targetPath === '/')) {
+    console.warn(`[middleware] Already at ${targetPath}, stopping redirection loop.`);
+    return;
+  }
+
+  router.navigate(targetPath);
 }

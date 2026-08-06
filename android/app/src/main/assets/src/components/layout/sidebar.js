@@ -346,32 +346,39 @@ export class Sidebar extends Component {
     });
 
     // Re-render active state & auto-expand parent group on hash change
-    this._hashHandler = () => {
-      const items = this.element?.querySelectorAll('.sidebar-item');
-      const hash = window.location.hash;
-      items?.forEach(el => {
-        const href = el.getAttribute('href');
-        const isActive = hash === href || (href && hash.startsWith(href + '/'));
-        if (isActive) {
-          el.classList.add('active');
-          const group = el.closest('.sidebar-group');
-          if (group) group.classList.add('is-open');
-        } else {
-          el.classList.remove('active');
-        }
-      });
-    };
-    window.addEventListener('hashchange', this._hashHandler);
+    if (!this._hashHandler) {
+      this._hashHandler = () => {
+        const items = this.element?.querySelectorAll('.sidebar-item');
+        const hash = window.location.hash;
+        items?.forEach(el => {
+          const href = el.getAttribute('href');
+          const isActive = hash === href || (href && hash.startsWith(href + '/'));
+          if (isActive) {
+            el.classList.add('active');
+            const group = el.closest('.sidebar-group');
+            if (group) group.classList.add('is-open');
+          } else {
+            el.classList.remove('active');
+          }
+        });
+      };
+      window.addEventListener('hashchange', this._hashHandler);
+    }
 
     // Subscribe to GlobalStore changes so sidebar re-renders when company
-    // info or role changes (e.g. after async session/company restore).
+    // info or role changes. Clean up previous subscriptions if they exist.
+    if (this._unsubCompany) this._unsubCompany();
+    if (this._unsubRole)    this._unsubRole();
+
     this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
     this._unsubRole   = GlobalStore.subscribe('activeRole',     () => this.update());
 
     // Support tickets realtime badge count listener
     const { currentUser, activeRole } = GlobalStore.getState();
     const role = activeRole || (currentUser ? currentUser.role : '');
+
     if (role === 'SUPER_ADMIN' && db) {
+      if (this._unsubTickets) this._unsubTickets();
       this._unsubTickets = onValue(ref(db, 'support_tickets'), (snapshot) => {
         let pendingCount = 0;
         if (snapshot.exists()) {
