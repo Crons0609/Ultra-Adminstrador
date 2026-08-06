@@ -1,8 +1,9 @@
 /**
  * @file migration.service.js
- * @description Advanced multi-format Data Migration & Export Engine.
- * Supports importing & exporting data from Excel (.xlsx, .xls, .csv), Word (.docx), PDF (.pdf), JSON (.json), and Text (.txt).
- * Handles smart column mapping, schema validation, batch DB persistence, and downloadable sample templates.
+ * @description Intelligent Data Migration & Export Engine.
+ * Supports importing & exporting data from PDF, Excel, Word, JSON, CSV, and Text.
+ * Features positional PDF table extraction, auto-type detection, money/date normalization,
+ * duplicate checking, batch Firestore persistence with progress callback, and audit history.
  */
 
 import { FirestoreService } from './firestore.service.js';
@@ -12,21 +13,25 @@ import { TimeService } from './time.service.js';
 export class MigrationService {
 
   /**
-   * Entity Schemas definitions and smart column recognition aliases (Spanish & English)
+   * Entity Schemas definitions aligned with real Ultra Administrador data structures.
    */
   static ENTITY_SCHEMAS = {
     products: {
       label: 'Productos / Inventario',
       icon: '📦',
-      collection: 'products',
-      required: ['name', 'price'],
+      collection: 'productos', // Collection used by ProductsView & FirestoreService tenant ops
+      required: ['name'],
       fields: [
-        { key: 'name', label: 'Nombre del Producto', aliases: ['nombre', 'producto', 'item', 'descripcion', 'description', 'title'] },
-        { key: 'price', label: 'Precio ($)', aliases: ['precio', 'price', 'val', 'valor', 'monto', 'costo_venta', 'unit_price'] },
-        { key: 'category', label: 'Categoría', aliases: ['categoria', 'category', 'rubro', 'tipo', 'linea', 'grupo'] },
-        { key: 'stock', label: 'Stock / Cantidad', aliases: ['stock', 'cantidad', 'qty', 'existencias', 'inventario', 'count'] },
-        { key: 'code', label: 'Código / Barcode / SKU', aliases: ['codigo', 'code', 'sku', 'barcode', 'id', 'referencia'] },
-        { key: 'description', label: 'Detalles / Notas', aliases: ['detalles', 'notas', 'especificacion', 'observaciones'] }
+        { key: 'name', label: 'Nombre del Producto', aliases: ['nombre', 'producto', 'item', 'descripcion', 'description', 'title', 'name', 'articulo'] },
+        { key: 'purchasePrice', label: 'Costo Unitario ($)', aliases: ['costo', 'costo unitario', 'purchase price', 'costo_unitario', 'costo unit', 'p. compra', 'compra', 'purchaseprice'] },
+        { key: 'price', label: 'Precio de Venta ($)', aliases: ['precio', 'precio unitario', 'price', 'precio_unitario', 'precio unit', 'p. venta', 'venta', 'unit price'] },
+        { key: 'stock', label: 'Cantidad / Stock', aliases: ['stock', 'cant.', 'cantidad', 'qty', 'existencias', 'inventario', 'count', 'cant'] },
+        { key: 'category', label: 'Categoría', aliases: ['categoria', 'category', 'rubro', 'tipo', 'linea', 'grupo', 'seccion'] },
+        { key: 'sku', label: 'SKU / Barcode / Código', aliases: ['codigo', 'code', 'sku', 'barcode', 'id', 'referencia', 'cod'] },
+        { key: 'unit', label: 'Unidad de Medida', aliases: ['unidad', 'unit', 'medida', 'presentacion', 'um'] },
+        { key: 'minStock', label: 'Stock Mínimo', aliases: ['min stock', 'minimo', 'min_stock', 'stock minimo'] },
+        { key: 'description', label: 'Detalles / Notas', aliases: ['detalles', 'notas', 'especificacion', 'observaciones', 'nota'] },
+        { key: 'createdAtLocal', label: 'Fecha de Registro', aliases: ['creado', 'fecha', 'date', 'created_at', 'fechacreacion'] }
       ]
     },
     clients: {
@@ -111,19 +116,248 @@ export class MigrationService {
   };
 
   /**
+   * Clean monetary strings to numeric values.
+   * e.g., "C$1,792" -> 1792, "$2,500.50" -> 2500.50, "C$ 40,000" -> 40000
+   * @param {string|number} rawValue
+   * @returns {number}
+   */
+  static parseMoney(rawValue) {
+    if (typeof rawValue === 'number') return isNaN(rawValue) ? 0 : rawValue;
+    if (!rawValue) return 0;
+    const str = String(rawValue).trim();
+    const cleanStr = str.replace(/[^0-9.,-]/g, '').trim();
+    if (!cleanStr) return 0;
+
+    let formatted = cleanStr;
+    if (formatted.includes(',') && formatted.includes('.')) {
+      if (formatted.lastIndexOf('.') > formatted.lastIndexOf(',')) {
+        formatted = formatted.replace(/,/g, '');
+      } else {
+        formatted = formatted.replace(/\./g, '').replace(',', '.');
+      }
+    } else if (formatted.includes(',')) {
+      const parts = formatted.split(',');
+      if (parts[parts.length - 1].length === 2) {
+        formatted = formatted.replace(',', '.');
+      } else {
+        formatted = formatted.replace(/,/g, '');
+      }
+    }
+
+    const num = parseFloat(formatted);
+    return isNaN(num) ? 0 : num;
+  }
+
+  /**
+   * Clean date strings into standard DD/MM/YYYY or YYYY-MM-DD string
+   * @param {string} rawValue
+   * @returns {string}
+   */
+  static parseDate(rawValue) {
+    if (!rawValue) return TimeService ? TimeService.timestamp().split('T')[0] : new Date().toISOString().split('T')[0];
+    const str = String(rawValue).trim();
+
+    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (dmyMatch) {
+      const day = dmyMatch[1].padStart(2, '0');
+      const month = dmyMatch[2].padStart(2, '0');
+      let year = dmyMatch[3];
+      if (year.length === 2) year = '20' + year;
+      return `${day}/${month}/${year}`;
+    }
+
+    const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (ymdMatch) {
+      const year = ymdMatch[1];
+      const month = ymdMatch[2].padStart(2, '0');
+      const day = ymdMatch[3].padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+
+    return str;
+  }
+
+  /**
+   * Positional PDF table & text extraction engine using pdfjsLib.
+   * Reconstructs physical table rows by clustering items with similar Y coordinates.
+   * @param {File} file 
+   * @returns {Promise<{ filename: string, fileType: string, rows: Array<Object>, headers: Array<string>, rawText: string, extractionMode: string }>}
+   */
+  static async parsePDFWithTableDetection(file) {
+    if (!window.pdfjsLib) {
+      throw new Error('El lector de PDF (PDF.js) no está disponible en la aplicación.');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    let fullText = '';
+    const allPageRows = [];
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const items = textContent.items || [];
+
+      if (items.length === 0) continue;
+
+      const lineGroups = [];
+      items.forEach(item => {
+        const textStr = (item.str || '').trim();
+        if (!textStr) return;
+        const transform = item.transform;
+        const x = transform ? transform[4] : 0;
+        const y = transform ? Math.round(transform[5]) : 0;
+
+        let group = lineGroups.find(g => Math.abs(g.y - y) <= 4);
+        if (!group) {
+          group = { y, items: [] };
+          lineGroups.push(group);
+        }
+        group.items.push({ x, str: textStr });
+      });
+
+      lineGroups.sort((a, b) => b.y - a.y);
+
+      lineGroups.forEach(group => {
+        group.items.sort((a, b) => a.x - b.x);
+        const lineText = group.items.map(it => it.str).join('   ');
+        fullText += lineText + '\n';
+        allPageRows.push(group.items.map(it => it.str));
+      });
+    }
+
+    let headers = [];
+    let rows = [];
+    let extractionMode = 'table';
+
+    if (allPageRows.length > 0) {
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(allPageRows.length, 10); i++) {
+        const line = allPageRows[i];
+        if (line.length >= 2) {
+          headerIdx = i;
+          break;
+        }
+      }
+
+      if (headerIdx !== -1) {
+        headers = allPageRows[headerIdx].map(h => h.trim());
+        for (let i = headerIdx + 1; i < allPageRows.length; i++) {
+          const line = allPageRows[i];
+          if (line.length === 0) continue;
+
+          const rowObj = {};
+          if (line.length === headers.length) {
+            headers.forEach((h, idx) => {
+              rowObj[h || `Col_${idx + 1}`] = line[idx];
+            });
+          } else {
+            headers.forEach((h, idx) => {
+              rowObj[h || `Col_${idx + 1}`] = line[idx] !== undefined ? line[idx] : '';
+            });
+            if (line.length > headers.length) {
+              rowObj['extra'] = line.slice(headers.length).join(' ');
+            }
+          }
+          rows.push(rowObj);
+        }
+      }
+    }
+
+    if (rows.length === 0 && fullText.trim()) {
+      extractionMode = 'text_fallback';
+      const textParsed = this.parseCSVText(fullText);
+      headers = textParsed.headers;
+      rows = textParsed.rows;
+    }
+
+    return {
+      filename: file.name,
+      fileType: 'PDF',
+      rows,
+      headers,
+      rawText: fullText,
+      extractionMode
+    };
+  }
+
+  /**
+   * Smart Document Type Detector.
+   * Analyzes text title, column headers, and content to identify target schema entity.
+   * @param {string} rawText 
+   * @param {Array<string>} headers 
+   * @returns {{ entity: string, confidence: number, label: string, reason: string }}
+   */
+  static detectDocumentType(rawText = '', headers = []) {
+    const textSample = (rawText + ' ' + headers.join(' ')).toLowerCase();
+
+    const scores = {
+      products: 0,
+      clients: 0,
+      suppliers: 0,
+      expenses: 0,
+      accounts_receivable: 0,
+      accounts_payable: 0,
+      employees: 0
+    };
+
+    if (/inventario|producto|productos|stock|costo unitario|precio unitario|cant|abanicos|item|sku|articulo/i.test(textSample)) scores.products += 40;
+    if (/resumen de inventario|lista de productos|catalogo de productos/i.test(textSample)) scores.products += 40;
+
+    if (/cliente|clientes|deudor|cupo|limite de credito|contacto/i.test(textSample)) scores.clients += 40;
+    if (/proveedor|proveedores|insumos|ruc|nif|acreedor/i.test(textSample)) scores.suppliers += 40;
+    if (/gasto|gastos|egreso|egresos|factura servicio|comprobante/i.test(textSample)) scores.expenses += 40;
+    if (/cuenta por cobrar|cuentas por cobrar|deuda cliente|saldo a favor/i.test(textSample)) scores.accounts_receivable += 45;
+    if (/cuenta por pagar|cuentas por pagar|deuda proveedor/i.test(textSample)) scores.accounts_payable += 45;
+    if (/empleado|empleados|personal|nomina|salario|puesto/i.test(textSample)) scores.employees += 40;
+
+    headers.forEach(h => {
+      const normH = h.toLowerCase();
+      if (['nombre', 'categoría', 'categoria', 'cant.', 'cantidad', 'costo unitario', 'precio unitario', 'stock', 'costo inventario'].includes(normH)) {
+        scores.products += 15;
+      }
+    });
+
+    let bestEntity = 'products';
+    let maxScore = 0;
+
+    Object.entries(scores).forEach(([entity, score]) => {
+      if (score > maxScore) {
+        maxScore = score;
+        bestEntity = entity;
+      }
+    });
+
+    const confidence = Math.min(99, Math.max(60, maxScore));
+    const schema = this.ENTITY_SCHEMAS[bestEntity];
+
+    return {
+      entity: bestEntity,
+      confidence: maxScore > 0 ? confidence : 75,
+      label: schema ? schema.label : 'Productos / Inventario',
+      reason: maxScore > 0 
+        ? `Coincidencia detectada por palabras clave y encabezados (${maxScore}% confianza)`
+        : 'Selección predeterminada para Inventario'
+    };
+  }
+
+  /**
    * Parse uploaded file buffer or string into structured JSON rows
    * @param {File} file 
-   * @returns {Promise<{ filename: string, fileType: string, rows: Array<Object>, headers: Array<string> }>}
+   * @returns {Promise<{ filename: string, fileType: string, rows: Array<Object>, headers: Array<string>, rawText?: string }>}
    */
   static async parseFile(file) {
     const filename = file.name;
     const ext = filename.split('.').pop().toLowerCase();
-    let rows = [];
-    let headers = [];
 
     try {
-      if (['xlsx', 'xls', 'csv'].includes(ext)) {
+      if (ext === 'pdf') {
+        return await this.parsePDFWithTableDetection(file);
+      } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
         const data = await file.arrayBuffer();
+        let rows = [];
+        let headers = [];
         if (window.XLSX) {
           const workbook = window.XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
@@ -133,56 +367,33 @@ export class MigrationService {
             headers = Object.keys(rows[0]);
           }
         } else {
-          // Fallback to text reading if CSV or SheetJS isn't available
           const text = await file.text();
           const parsed = this.parseCSVText(text);
           rows = parsed.rows;
           headers = parsed.headers;
         }
+        return { filename, fileType: ext.toUpperCase(), rows, headers };
       } else if (ext === 'json') {
         const text = await file.text();
         const json = JSON.parse(text);
-        rows = Array.isArray(json) ? json : [json];
-        if (rows.length > 0 && typeof rows[0] === 'object') {
-          headers = Object.keys(rows[0]);
-        }
+        const rows = Array.isArray(json) ? json : [json];
+        const headers = rows.length > 0 && typeof rows[0] === 'object' ? Object.keys(rows[0]) : [];
+        return { filename, fileType: 'JSON', rows, headers };
       } else if (ext === 'docx') {
         const arrayBuffer = await file.arrayBuffer();
         if (window.mammoth) {
           const result = await window.mammoth.extractRawText({ arrayBuffer });
           const text = result.value || '';
           const parsed = this.parseCSVText(text);
-          rows = parsed.rows;
-          headers = parsed.headers;
+          return { filename, fileType: 'DOCX', rows: parsed.rows, headers: parsed.headers };
         } else {
           throw new Error('El lector de Word (Mammoth) no está disponible en este momento.');
         }
-      } else if (ext === 'pdf') {
-        if (!window.pdfjsLib) {
-          throw new Error('El lector de PDF (PDF.js) no está disponible en este momento.');
-        }
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items.map(item => item.str).join(' ');
-          fullText += pageText + '\n';
-        }
-        const parsed = this.parseCSVText(fullText);
-        rows = parsed.rows;
-        headers = parsed.headers;
       } else {
-        // Default text parser (.txt, log, etc.)
         const text = await file.text();
         const parsed = this.parseCSVText(text);
-        rows = parsed.rows;
-        headers = parsed.headers;
+        return { filename, fileType: ext.toUpperCase(), rows: parsed.rows, headers: parsed.headers };
       }
-
-      return { filename, fileType: ext.toUpperCase(), rows, headers };
-
     } catch (e) {
       console.error('[MigrationService] File parse error:', e);
       throw new Error(`Error al procesar el archivo "${filename}": ${e.message}`);
@@ -198,7 +409,6 @@ export class MigrationService {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (!lines.length) return { headers: [], rows: [] };
 
-    // Auto detect delimiter from first line
     const firstLine = lines[0];
     let delimiter = ',';
     if (firstLine.includes('\t')) delimiter = '\t';
@@ -215,7 +425,7 @@ export class MigrationService {
       if (values.length === 0 || (values.length === 1 && !values[0])) continue;
       const rowObj = {};
       headers.forEach((header, index) => {
-        rowObj[header || `col_${index}`] = values[index] !== undefined ? values[index] : '';
+        rowObj[header || `Col_${index + 1}`] = values[index] !== undefined ? values[index] : '';
       });
       rows.push(rowObj);
     }
@@ -224,56 +434,70 @@ export class MigrationService {
   }
 
   /**
-   * Auto detect target schema field mappings for source headers
+   * Auto detect target schema field mappings for source headers with confidence scoring
    * @param {Array<string>} sourceHeaders 
    * @param {string} entityKey 
-   * @returns {Object} Key-value pair mapping target field -> source header
+   * @returns {Object} { mapping: Object, confidenceScores: Object }
    */
   static autoDetectColumnMapping(sourceHeaders, entityKey) {
     const schema = this.ENTITY_SCHEMAS[entityKey];
-    if (!schema) return {};
+    if (!schema) return { mapping: {}, confidenceScores: {} };
 
     const mapping = {};
+    const confidenceScores = {};
 
     schema.fields.forEach(field => {
       const fieldKey = field.key;
       const normalize = str => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-      // Try exact match or alias match
-      const matchedHeader = sourceHeaders.find(header => {
+      let matchedHeader = '';
+      let score = 0;
+
+      sourceHeaders.forEach(header => {
         const normHeader = normalize(header);
-        if (normHeader === normalize(fieldKey) || normHeader === normalize(field.label)) return true;
-        return field.aliases.some(alias => normalize(alias) === normHeader);
+        if (normHeader === normalize(fieldKey) || normHeader === normalize(field.label)) {
+          matchedHeader = header;
+          score = 98;
+        } else if (field.aliases.some(alias => normalize(alias) === normHeader)) {
+          if (score < 95) {
+            matchedHeader = header;
+            score = 94;
+          }
+        } else if (normHeader.includes(normalize(fieldKey)) || field.aliases.some(alias => normHeader.includes(normalize(alias)))) {
+          if (score < 80) {
+            matchedHeader = header;
+            score = 75;
+          }
+        }
       });
 
-      if (matchedHeader) {
-        mapping[fieldKey] = matchedHeader;
-      } else {
-        mapping[fieldKey] = ''; // Unmapped by default
-      }
+      mapping[fieldKey] = matchedHeader;
+      confidenceScores[fieldKey] = score > 0 ? score : 0;
     });
 
-    return mapping;
+    return { mapping, confidenceScores };
   }
 
   /**
-   * Validate raw rows against schema and column mapping, converting types and reporting errors
+   * Validate raw rows against schema and column mapping, converting types and reporting errors/warnings
    * @param {Array<Object>} rawRows 
    * @param {Object} mapping - Maps fieldKey -> headerName
    * @param {string} entityKey 
-   * @returns {{ validRows: Array<Object>, warnings: Array<string>, totalParsed: number }}
+   * @returns {{ validRows: Array<Object>, invalidRows: Array<Object>, warnings: Array<string>, totalParsed: number }}
    */
   static validateAndTransform(rawRows, mapping, entityKey) {
     const schema = this.ENTITY_SCHEMAS[entityKey];
     if (!schema) throw new Error('Entidad de destino no válida.');
 
     const validRows = [];
+    const invalidRows = [];
     const warnings = [];
 
     rawRows.forEach((row, idx) => {
       const rowNum = idx + 1;
-      const transformed = {};
+      const transformed = { _rawIndex: idx, _rowNum: rowNum };
       let hasRequired = true;
+      const rowErrors = [];
 
       schema.fields.forEach(field => {
         const sourceHeader = mapping[field.key];
@@ -282,88 +506,202 @@ export class MigrationService {
         if (val === undefined || val === null) val = '';
         val = String(val).trim();
 
-        // Cleaning rules
-        if (field.key === 'price' || field.key === 'amount' || field.key === 'creditLimit' || field.key === 'salary') {
-          const num = parseFloat(val.replace(/[^0-9.-]+/g, ''));
+        if (field.key === 'purchasePrice' || field.key === 'price' || field.key === 'amount' || field.key === 'creditLimit') {
+          transformed[field.key] = this.parseMoney(val);
+        } else if (field.key === 'stock' || field.key === 'minStock') {
+          const num = parseInt(val.replace(/[^0-9-]/g, ''), 10);
           transformed[field.key] = isNaN(num) ? 0 : num;
-        } else if (field.key === 'stock') {
-          const num = parseInt(val.replace(/[^0-9-]+/g, ''), 10);
-          transformed[field.key] = isNaN(num) ? 0 : num;
+        } else if (field.key === 'createdAtLocal' || field.key === 'date' || field.key === 'dueDate') {
+          transformed[field.key] = this.parseDate(val);
         } else {
           transformed[field.key] = val;
         }
       });
 
-      // Check required fields
       schema.required.forEach(reqKey => {
         if (!transformed[reqKey] && transformed[reqKey] !== 0) {
           hasRequired = false;
+          rowErrors.push(`Falta el campo obligatorio "${reqKey}"`);
           warnings.push(`Fila ${rowNum}: Falta el campo obligatorio "${reqKey}". Omitiendo esta fila.`);
         }
       });
 
       if (hasRequired) {
-        // Set standard fallback properties
         if (entityKey === 'products') {
           transformed.category = transformed.category || 'General';
+          transformed.unit = transformed.unit || 'uds';
+          transformed.sku = transformed.sku || '';
+          transformed.barcode = transformed.sku || '';
           transformed.isAvailable = true;
+          transformed._duplicateKey = (transformed.name || '').toLowerCase().trim();
         } else if (entityKey === 'employees') {
           transformed.role = (transformed.role || 'MANAGER').toUpperCase();
           transformed.active = true;
         } else if (entityKey === 'expenses') {
           transformed.category = transformed.category || 'General';
           transformed.paymentMethod = transformed.paymentMethod || 'Efectivo';
-          transformed.date = transformed.date || TimeService.timestamp().split('T')[0];
         }
         validRows.push(transformed);
+      } else {
+        transformed._errors = rowErrors;
+        invalidRows.push(transformed);
       }
     });
 
-    return { validRows, warnings, totalParsed: rawRows.length };
+    return { validRows, invalidRows, warnings, totalParsed: rawRows.length };
   }
 
   /**
-   * Execute migration insertion into Firebase RTDB
+   * Check valid rows against existing DB products to flag potential duplicates.
+   * @param {Array<Object>} validRows 
+   * @param {Array<Object>} existingItems 
+   * @returns {{ rowsWithDuplicateStatus: Array<Object>, duplicateCount: number }}
+   */
+  static checkDuplicates(validRows = [], existingItems = []) {
+    const existingMap = new Map();
+    existingItems.forEach(item => {
+      if (item.name) {
+        existingMap.set(item.name.toLowerCase().trim(), item);
+      }
+      if (item.sku) {
+        existingMap.set(item.sku.toLowerCase().trim(), item);
+      }
+    });
+
+    let duplicateCount = 0;
+    const rowsWithDuplicateStatus = validRows.map(row => {
+      const match = existingMap.get(row._duplicateKey) || (row.sku ? existingMap.get(row.sku.toLowerCase().trim()) : null);
+      if (match) {
+        duplicateCount++;
+        return { ...row, _isDuplicate: true, _existingItem: match, _userDecision: 'update' };
+      }
+      return { ...row, _isDuplicate: false, _userDecision: 'create' };
+    });
+
+    return { rowsWithDuplicateStatus, duplicateCount };
+  }
+
+  /**
+   * Execute migration batch insertion into Firestore RTDB.
+   * Processes records in batches with async progress reporting.
    * @param {string} entityKey 
    * @param {Array<Object>} records 
    * @param {'append'|'overwrite'} mode 
-   * @returns {Promise<{ successCount: number, total: number }>}
+   * @param {Function} [onProgress] Callback (current, total, statusText)
+   * @returns {Promise<{ successCount: number, updatedCount: number, skippedCount: number, total: number }>}
    */
-  static async executeMigration(entityKey, records, mode = 'append') {
+  static async executeMigrationBatch(entityKey, records, mode = 'append', onProgress = null) {
     const schema = this.ENTITY_SCHEMAS[entityKey];
     if (!schema) throw new Error('Entidad inválida.');
 
     const collectionName = schema.collection;
 
     if (mode === 'overwrite') {
-      console.log(`[Migration] Overwriting collection ${collectionName}...`);
+      if (onProgress) onProgress(0, records.length, 'Limpiando colección existente...');
       await FirestoreService.deleteAll(collectionName);
     }
 
     let successCount = 0;
-    for (const record of records) {
-      await FirestoreService.create(collectionName, record);
-      successCount++;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    const total = records.length;
+    const BATCH_SIZE = 10;
+
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      const batch = records.slice(i, i + BATCH_SIZE);
+
+      for (const record of batch) {
+        const decision = record._userDecision || 'create';
+
+        if (decision === 'skip') {
+          skippedCount++;
+          continue;
+        }
+
+        const payload = { ...record };
+        delete payload._rawIndex;
+        delete payload._rowNum;
+        delete payload._duplicateKey;
+        delete payload._isDuplicate;
+        delete payload._existingItem;
+        delete payload._userDecision;
+
+        payload.createdAt = payload.createdAt || Date.now();
+        payload.createdAtLocal = payload.createdAtLocal || TimeService.timestamp();
+        payload.updatedAt = Date.now();
+        payload.updatedAtLocal = TimeService.timestamp();
+
+        if (record._isDuplicate && decision === 'update' && record._existingItem && record._existingItem.id) {
+          await FirestoreService.update(collectionName, record._existingItem.id, payload);
+          updatedCount++;
+        } else {
+          await FirestoreService.create(collectionName, payload);
+          successCount++;
+        }
+      }
+
+      const currentDone = Math.min(i + BATCH_SIZE, total);
+      if (onProgress) {
+        onProgress(currentDone, total, `Guardando registros ${currentDone} de ${total}...`);
+      }
+
+      await new Promise(r => setTimeout(r, 40));
     }
 
-    // Write audit log entry
     try {
       const { currentUser } = GlobalStore.getState();
-      if (currentUser && currentUser.companyId) {
-        await FirestoreService.create('audit_logs', {
-          action: 'DATA_MIGRATION',
-          entity: entityKey,
-          mode: mode,
-          count: successCount,
-          timestamp: TimeService.timestamp(),
-          user: currentUser.email || currentUser.displayName || 'Owner'
-        });
-      }
+      const userEmail = currentUser ? (currentUser.email || currentUser.displayName || 'Owner') : 'Owner';
+      const companyId = currentUser ? currentUser.companyId : '';
+
+      await FirestoreService.create('migration_history', {
+        entityKey,
+        entityLabel: schema.label,
+        mode,
+        totalRecords: total,
+        successCount,
+        updatedCount,
+        skippedCount,
+        userEmail,
+        companyId,
+        timestamp: Date.now(),
+        timestampLocal: TimeService.timestamp()
+      });
+
+      await FirestoreService.create('audit_logs', {
+        action: 'DATA_MIGRATION',
+        entity: entityKey,
+        mode,
+        count: successCount + updatedCount,
+        timestamp: TimeService.timestamp(),
+        user: userEmail
+      });
     } catch (e) {
-      console.warn('[Migration] Could not log audit entry:', e.message);
+      console.warn('[MigrationService] Audit log write warning:', e.message);
     }
 
-    return { successCount, total: records.length };
+    return { successCount, updatedCount, skippedCount, total };
+  }
+
+  /**
+   * Legacy wrapper method for backward compatibility
+   */
+  static async executeMigration(entityKey, records, mode = 'append') {
+    return await this.executeMigrationBatch(entityKey, records, mode);
+  }
+
+  /**
+   * Retrieve migration history entries for the current company tenant.
+   * @returns {Promise<Array<Object>>}
+   */
+  static async getMigrationHistory() {
+    try {
+      const records = await FirestoreService.query('migration_history', [], { field: 'timestamp', direction: 'desc' }, 30);
+      return records || [];
+    } catch (e) {
+      console.warn('[MigrationService] History query error:', e.message);
+      return [];
+    }
   }
 
   /**
@@ -377,12 +715,12 @@ export class MigrationService {
 
     const sampleRows = {
       products: [
-        { name: 'Hamburguesa Especial', price: 150.00, category: 'Comida', stock: 50, code: 'PROD-001', description: 'Carne 100% de res con queso cheddar' },
-        { name: 'Refresco 500ml', price: 35.00, category: 'Bebidas', stock: 100, code: 'PROD-002', description: 'Lata fría' }
+        { name: 'Ab sankey clásico', purchasePrice: 1792.00, price: 2500.00, stock: 16, category: 'Abanicos', sku: 'PROD-001', unit: 'uds', createdAtLocal: '30/03/2025' },
+        { name: 'Hamburguesa Especial', purchasePrice: 90.00, price: 150.00, stock: 50, category: 'Comida', sku: 'PROD-002', unit: 'uds', createdAtLocal: '30/03/2025' },
+        { name: 'Refresco 500ml', purchasePrice: 20.00, price: 35.00, stock: 100, category: 'Bebidas', sku: 'PROD-003', unit: 'uds', createdAtLocal: '30/03/2025' }
       ],
       clients: [
-        { name: 'Juan Pérez', phone: '+505 8888 9999', email: 'juan@ejemplo.com', address: 'Managua, Nicaragua', creditLimit: 2000, notes: 'Cliente frecuente' },
-        { name: 'Comercial S.A.', phone: '+505 2222 3333', email: 'contacto@comercial.com', address: 'León, Nicaragua', creditLimit: 5000, notes: 'Empresa' }
+        { name: 'Juan Pérez', phone: '+505 8888 9999', email: 'juan@ejemplo.com', address: 'Managua, Nicaragua', creditLimit: 2000, notes: 'Cliente frecuente' }
       ],
       suppliers: [
         { name: 'Distribuidora Central', phone: '+505 2277 8888', email: 'ventas@distribuidora.com', category: 'Insumos', address: 'Managua', taxId: 'J031000000001' }
