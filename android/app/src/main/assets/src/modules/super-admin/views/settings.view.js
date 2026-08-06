@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file settings.view.js
  * @description Global System Configuration View for Programmers (SUPER_ADMIN).
  *
@@ -19,6 +19,7 @@ import { AppearanceService, THEMES } from '../../../services/appearance.service.
 import { GlobalStore } from '../../../core/state.js';
 import { TimeService } from '../../../services/time.service.js';
 import { PushNotificationsCenterService } from '../../../services/push-notifications-center.service.js';
+import { MobileNavConfigService, NAV_TAB_CATALOG, DEFAULT_NAV_TABS } from '../../../services/mobile-nav-config.service.js';
 
 // Build the theme grid HTML from the THEMES dictionary
 function buildThemeGrid() {
@@ -784,10 +785,14 @@ export class SettingsView extends Component {
         if (panel) panel.classList.add('active');
         // Hide save bar on advanced and broadcast tabs
         if (actionsBar) {
-          actionsBar.style.display = ['tab-avanzado', 'tab-broadcasts'].includes(btn.dataset.tab) ? 'none' : 'flex';
+          actionsBar.style.display = ['tab-avanzado', 'tab-broadcasts', 'tab-mobile-nav'].includes(btn.dataset.tab) ? 'none' : 'flex';
         }
         if (btn.dataset.tab === 'tab-broadcasts') {
           this.loadBroadcastHistory(root);
+        }
+        // Reload mobile nav preview + catalog when switching to that tab
+        if (btn.dataset.tab === 'tab-mobile-nav') {
+          this.loadMobileNavConfig(root);
         }
       });
     });
@@ -1470,15 +1475,26 @@ export class SettingsView extends Component {
 
   async loadMobileNavConfig(root) {
     if (!root) return;
+    const defaultTabs = DEFAULT_NAV_TABS || ['home', 'actions', 'create', 'notifications', 'more'];
+    
+    // Always render UI immediately with current state or default tabs
+    const initialTabs = (this.mobileNavSelectedTabs && this.mobileNavSelectedTabs.length > 0)
+      ? this.mobileNavSelectedTabs
+      : [...defaultTabs];
+    
+    this.renderMobileNavUI(root, initialTabs);
+
     const { currentUser } = GlobalStore.getState();
-    const uid = currentUser?.uid;
+    const uid = currentUser?.uid || AuthService.getCurrentUser()?.uid;
     if (!uid) return;
+
     try {
       const tabs = await MobileNavConfigService.load(uid);
-      this.renderMobileNavUI(root, tabs);
+      if (Array.isArray(tabs) && tabs.length > 0) {
+        this.renderMobileNavUI(root, tabs);
+      }
     } catch (err) {
       console.error('[SuperAdminSettings] Error loading mobile nav config:', err);
-      this.renderMobileNavUI(root, [...DEFAULT_NAV_TABS]);
     }
   }
 
