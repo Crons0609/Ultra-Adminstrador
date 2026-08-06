@@ -165,26 +165,27 @@ export class LoginView extends Component {
           </div>
 
           <!-- Business Owner Request Panel Toggle Link -->
-          <div style="text-align: center; margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid rgba(255,255,255,0.06);">
-            <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 8px;">¿Eres dueño de un negocio y quieres unirte?</p>
+          <div style="text-align: center; margin-top: var(--space-4);">
             <button
               id="btn-toggle-owner-request"
               style="
-                background: var(--color-accent-light);
-                border: 1px solid var(--color-accent);
-                color: var(--color-accent);
-                font-size: 0.85rem;
-                font-weight: 700;
+                background: none;
+                border: none;
+                color: var(--color-accent, #8b5cf6);
+                font-size: 0.82rem;
+                font-weight: 600;
                 cursor: pointer;
+                opacity: 0.9;
+                letter-spacing: 0.02em;
                 transition: all 0.2s;
-                padding: 10px 20px;
-                border-radius: var(--radius-lg);
-                width: 100%;
+                padding: 6px 12px;
+                border-radius: var(--radius-md);
               "
-              onmouseover="this.style.background='var(--color-accent)'; this.style.color='white'"
-              onmouseout="this.style.background='var(--color-accent-light)'; this.style.color='var(--color-accent)'"
+              onmouseover="this.style.opacity='1'; this.style.background='rgba(139,92,246,0.1)'"
+              onmouseout="this.style.opacity='0.9'; this.style.background='none'"
+              title="Solicitar registro para tu negocio"
             >
-              🚀 Registrar mi Negocio
+              🏢 ¿Quieres registrar tu negocio? Solicitar Cuenta
             </button>
           </div>
 
@@ -399,12 +400,23 @@ export class LoginView extends Component {
       { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', delay: 0.8 }
     );
 
-    // ── Login Form Submission ───────────────────────────────────────────────
-    const loginForm = this.$('#login-form');
+    // ── Login Form Submission ────────────────────────────────────────────────
+    const loginForm  = this.$('#login-form');
+    const emailInput = this.$('#login-email');
+
     if (loginForm) {
       loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await this.handleLogin();
+      });
+    }
+
+    if (emailInput) {
+      emailInput.addEventListener('input', () => {
+        this.checkLockoutStatus(emailInput.value.trim());
+      });
+      emailInput.addEventListener('blur', () => {
+        this.checkLockoutStatus(emailInput.value.trim());
       });
     }
 
@@ -702,9 +714,7 @@ export class LoginView extends Component {
       const user = await AuthService.login(email, password);
       this.clearLockoutState(email);
 
-      // 🛠️ CRITICAL FIX: Add a small delay and use window.location.replace
-      // to ensure the WebView doesn't treat the SPA navigation as an external request.
-      submitBtn.textContent = 'Verificando sesión...';
+      // Prompt to save account credentials for fast switching
       const isApk = !!(window.AndroidApp && typeof window.AndroidApp.isAndroidApp === 'function' && window.AndroidApp.isAndroidApp());
       const existing = SavedAccountsService.getByEmail(email);
       const companyName = GlobalStore.getState()?.currentCompany?.name || '';

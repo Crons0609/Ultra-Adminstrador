@@ -8,6 +8,27 @@ import { getBusinessCategory, getModuleGuards } from '../config/business-types.c
 import { getModuleByPath, isModuleEnabled } from '../config/modules.config.js';
 
 /**
+ * Helper to check if a given role or email corresponds to a Programmer/SuperAdmin user.
+ * Normalizes all valid programmer role aliases (SUPER_ADMIN, SUPERADMIN, PROGRAMMER, PROGRAMADOR, DEV, DEVELOPER).
+ * @param {string} role 
+ * @param {string} [email]
+ * @returns {boolean}
+ */
+export function isProgrammerRole(role, email = '') {
+  const norm = (role || '').toUpperCase().trim();
+  const mail = (email || '').toLowerCase().trim();
+  return (
+    norm === 'SUPER_ADMIN' ||
+    norm === 'SUPERADMIN' ||
+    norm === 'PROGRAMMER' ||
+    norm === 'PROGRAMADOR' ||
+    norm === 'DEV' ||
+    norm === 'DEVELOPER' ||
+    mail === 'superadmin@ultraadmin.com'
+  );
+}
+
+/**
  * Authentication Middleware: Verify user is logged in.
  * @param {Object} route 
  * @param {Router} router 
@@ -37,10 +58,9 @@ export function moduleGuard(moduleId) {
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
     const rawRole = state.activeRole || currentUser.role || '';
-    const userRole = rawRole.toUpperCase().trim();
 
-    // Super Admin bypasses all module restrictions
-    if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN' || (currentUser.email || '').toLowerCase() === 'superadmin@ultraadmin.com') {
+    // Super Admin / Programmer bypasses all module restrictions
+    if (isProgrammerRole(rawRole, currentUser.email)) {
       return true;
     }
 
@@ -49,13 +69,12 @@ export function moduleGuard(moduleId) {
 
     if (!isModuleEnabled(company, moduleId)) {
       console.warn(`[moduleGuard] Access Denied: Module '${moduleId}' is disabled for company '${company.id}'.`);
-      // Show notification if service is available
       try {
         const { NotificationService } = await import('../services/notification.service.js');
         NotificationService.error(`Módulo no disponible: Este módulo no ha sido contratado para "${company.name}".`);
       } catch (_) {}
 
-      redirectUserDashboard(userRole, router);
+      redirectUserDashboard(rawRole, router);
       return false;
     }
 
@@ -76,9 +95,8 @@ export function autoModuleGuard() {
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
     const rawRole = state.activeRole || currentUser.role || '';
-    const userRole = rawRole.toUpperCase().trim();
 
-    if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN' || (currentUser.email || '').toLowerCase() === 'superadmin@ultraadmin.com') {
+    if (isProgrammerRole(rawRole, currentUser.email)) {
       return true;
     }
 
@@ -95,7 +113,7 @@ export function autoModuleGuard() {
         const { NotificationService } = await import('../services/notification.service.js');
         NotificationService.error(`Módulo no disponible: "${moduleDef.name}" no está habilitado para este negocio.`);
       } catch (_) {}
-      redirectUserDashboard(userRole, router);
+      redirectUserDashboard(rawRole, router);
       return false;
     }
 
@@ -117,15 +135,13 @@ export function roleGuard(allowedRoles) {
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
     const rawRole = state.activeRole || currentUser.role || '';
-    const userRole = rawRole.toUpperCase().trim();
+    const userRole = (rawRole || '').toUpperCase().trim();
     const company = state.currentCompany;
     const path = route.path || '';
 
-    const isSuperAdmin = userRole === 'SUPER_ADMIN' ||
-                         userRole === 'SUPERADMIN' ||
-                         (currentUser.email || '').toLowerCase() === 'superadmin@ultraadmin.com';
+    const isSuperAdmin = isProgrammerRole(userRole, currentUser.email);
 
-    // SUPER_ADMIN bypasses ALL guards — full access always
+    // SUPER_ADMIN / PROGRAMMER bypasses ALL guards — full access always
     if (isSuperAdmin) {
       return true;
     }
@@ -224,13 +240,15 @@ export function roleGuard(allowedRoles) {
  * @param {Router} router 
  */
 export function redirectUserDashboard(role, router) {
-  const normRole = (role || '').toUpperCase().trim();
+  const state = GlobalStore.getState();
+  const currentUser = state.currentUser || {};
+  const normRole = (role || currentUser.role || '').toUpperCase().trim();
   const rawHash = (window.location.hash || '').slice(1) || '/';
   const currentHashPath = rawHash.split('?')[0] || '/';
 
   let targetPath = '/login';
 
-  if (normRole === 'SUPER_ADMIN' || normRole === 'SUPERADMIN') {
+  if (isProgrammerRole(normRole, currentUser.email)) {
     targetPath = '/super-admin/companies';
   } else if (normRole === 'OWNER') {
     targetPath = '/owner/finance';
@@ -240,7 +258,7 @@ export function redirectUserDashboard(role, router) {
     targetPath = '/cashier/pos';
   } else if (normRole === 'WAITER') {
     try {
-      const companyObj = GlobalStore.getState().currentCompany;
+      const companyObj = state.currentCompany;
       const categoryObj = getBusinessCategory(companyObj?.businessType || '');
       targetPath = (categoryObj === 'GASTRONOMIA' || categoryObj === 'BAR_DISCOTECA')
         ? '/waiter/tables'
@@ -257,12 +275,12 @@ export function redirectUserDashboard(role, router) {
   // Prevent infinite redirect loops if targetPath matches current route
   if (currentHashPath === targetPath || currentHashPath.startsWith(targetPath)) {
     if (targetPath !== '/login') {
-      console.warn(`[redirectUserDashboard] Prevented infinite redirect loop for '${normRole}' at '${currentHashPath}'. Redirecting to /login`);
-      router.navigate('/login');
+      console.warn(`[redirectUserDashboard] Prevented infinite redirect loop for '${normRole}' at '${currentHashPath}'.`);
+    } else {
+      console.warn(`[redirectUserDashboard] Prevented infinite redirect loop at /login.`);
     }
     return;
   }
 
   router.navigate(targetPath);
 }
-

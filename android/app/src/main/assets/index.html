@@ -9,9 +9,9 @@
   <title>Ultra Administrador — ProLine System</title>
   
   <!-- Favicon & PWA Manifest -->
-  <link rel="icon" href="assets/logo_ultra_administrador.png" type="image/png">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="assets/logo_ultra_administrador.png">
+  <link rel="icon" href="/assets/logo_ultra_administrador.png" type="image/png">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/assets/logo_ultra_administrador.png">
   
   <!-- Typography (Google Fonts) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -87,7 +87,7 @@
   </script>
   
   <!-- CSS Stylesheet Entrypoint -->
-  <link rel="stylesheet" href="src/styles/main.css">
+  <link rel="stylesheet" href="/src/styles/main.css">
 </head>
 <body class="theme-dark">
   <!-- Application Root -->
@@ -103,7 +103,7 @@
     color: #f8fafc;
     font-family: 'Inter', sans-serif;
   ">
-    <img src="assets/logo_ultra_administrador.png"
+    <img src="/assets/logo_ultra_administrador.png" 
          alt="Ultra Administrador" 
          onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src='assets/logo_ultra_administrador.png';}else if(this.dataset.tried==='1'){this.dataset.tried='2';this.src='logo_ultra_administrador.png';}else if(this.dataset.tried==='2'){this.dataset.tried='3';this.src='./assets/logo_ultra_administrador.png';}" 
          style="width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(139,92,246,0.35)); margin-bottom: 8px;" />
@@ -122,6 +122,6 @@
   </div>
 
   <!-- Application Bootstrap -->
-  <script type="module" src="src/app.js"></script>
+  <script type="module" src="/src/app.js"></script>
 </body>
 </html>

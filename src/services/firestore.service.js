@@ -1807,4 +1807,56 @@ export class FirestoreService {
       await OfflineSyncService.write('update', fullPath, payload, 'Actualizar estado de solicitud');
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROGRAMMER / SUPER_ADMIN PREFERENCES
+  // Stored at: users/{uid}/preferences
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * One-time fetch of programmer appearance preferences.
+   * Path: users/{uid}/preferences
+   * @param {string} uid
+   * @returns {Promise<Object|null>}
+   */
+  static async getProgrammerPreferences(uid) {
+    if (!uid) return null;
+    const path = `users/${uid}/preferences`;
+
+    // Try cache first for instant load
+    try {
+      const cached = await LocalStorageDBService.getCache(path);
+      if (cached) return cached;
+    } catch (_) {}
+
+    if (!db || !navigator.onLine) return null;
+
+    try {
+      const snap = await get(ref(db, path));
+      if (snap.exists()) {
+        const val = snap.val();
+        await LocalStorageDBService.setCache(path, val);
+        return val;
+      }
+    } catch (err) {
+      console.warn('[FirestoreService] getProgrammerPreferences error:', err.message);
+    }
+    return null;
+  }
+
+  /**
+   * Real-time listener for programmer appearance preferences.
+   * Path: users/{uid}/preferences
+   * @param {string} uid
+   * @param {Function} callback - Called with (config: Object|null) on each change
+   * @returns {string} listenerId — pass to FirestoreService.unsubscribe() to clean up
+   */
+  static subscribeProgrammerPreferences(uid, callback) {
+    if (!uid || typeof callback !== 'function') return null;
+    const path = `users/${uid}/preferences`;
+    return this.listenToPathRaw(path, (val) => {
+      callback(val || null);
+    });
+  }
 }
+

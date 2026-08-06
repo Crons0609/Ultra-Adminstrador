@@ -571,11 +571,77 @@ export class AuthService {
     } catch (authErr) {
       console.error('[AuthService] ❌ User creation failed:', authErr);
 
-      // Translate Firebase Auth error codes to Spanish
       const code = authErr.code || '';
-      if (code === 'auth/email-already-in-use') {
-        throw new Error(`El correo "${email}" ya está registrado en el sistema. Usa otro correo o recupera la contraseña.`);
+
+      // ── Special case: email-already-in-use ────────────────────────────────
+      // The Firebase Auth account already exists (was previously created but the
+      // RTDB profile was deleted). Check the deleted_users_by_email index to try
+      // to re-link the existing Auth UID to the new company without throwing.
+      if (code === 'auth/email-already-in-use' && db) {
+        console.log('[AuthService] 🔄 email-already-in-use: buscando UID en índice deleted_users_by_email...');
+        try {
+          const emailKey = cleanEmail.replace(/\./g, ',');
+          const indexSnap = await get(ref(db, `deleted_users_by_email/${emailKey}`));
+
+          if (indexSnap.exists()) {
+            const indexed = indexSnap.val();
+            const orphanUid = indexed.uid;
+            console.log(`[AuthService] ✅ UID encontrado en índice: ${orphanUid}. Re-vinculando a nueva empresa...`);
+
+            const newCompanyId = profileData.companyId;
+            const profilePayload = {
+              uid: orphanUid,
+              email: cleanEmail,
+              displayName: profileData.displayName || cleanEmail,
+              role: profileData.role,
+              customRole: profileData.customRole || '',
+              companyId: newCompanyId || 'global',
+              branchId: profileData.branchId || 'main',
+              permissions: profileData.permissions || {},
+              storedPassword: password,
+              createdAt: Date.now(),
+              createdAtLocal: TimeService.timestamp(),
+              updatedAt: Date.now(),
+              updatedAtLocal: TimeService.timestamp()
+            };
+
+            // Re-escribir /users/{uid} con el nuevo perfil de empresa
+            await set(ref(db, `users/${orphanUid}`), profilePayload);
+
+            // Dual-write: registrar en la nueva empresa como empleado
+            if (newCompanyId && newCompanyId !== 'global') {
+              await FirestoreService.addEmployeeToCompany(newCompanyId, orphanUid, {
+                displayName: profileData.displayName || cleanEmail,
+                email: cleanEmail,
+                role: profileData.role,
+                customRole: profileData.customRole || '',
+                branchId: profileData.branchId || 'main',
+                permissions: profileData.permissions || {}
+              });
+
+              if (profileData.role === 'OWNER' || profileData.role === 'MANAGER') {
+                await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: orphanUid }).catch(() => {});
+              }
+            }
+
+            // Limpiar el índice ya que fue consumido exitosamente
+            await set(ref(db, `deleted_users_by_email/${emailKey}`), null).catch(() => {});
+
+            console.log(`[AuthService] ✅ Re-vinculación exitosa: ${cleanEmail} (UID: ${orphanUid}) → ${newCompanyId}`);
+            return orphanUid;
+
+          } else {
+            console.warn('[AuthService] ⚠️ No se encontró UID en el índice deleted_users_by_email. El correo sigue activo en otra cuenta.');
+            throw new Error(`El correo "${email}" ya está registrado y activo en el sistema. Si pertenece a una empresa eliminada, espera a que el proceso de limpieza termine o contacta al soporte.`);
+          }
+        } catch (relinkErr) {
+          if (relinkErr.message && relinkErr.message.includes('ya está registrado')) throw relinkErr;
+          console.warn('[AuthService] ⚠️ Error durante re-vinculación por email-already-in-use:', relinkErr.message);
+          throw new Error(`El correo "${email}" ya existe en Firebase Auth. Intenta de nuevo o contacta al soporte técnico.`);
+        }
       }
+
+      // Translate remaining Firebase Auth error codes to Spanish
       if (code === 'auth/invalid-email') {
         throw new Error('El formato del correo electrónico no es válido.');
       }
@@ -669,10 +735,6 @@ export class AuthService {
     const resolve = (session) => {
       if (resolved) return;
       resolved = true;
-      if (session) {
-        // Mirror in global cache for other services
-        LocalStorageDBService.setCache('user_session', session).catch(() => {});
-      }
       onUserReady(session);
     };
 
@@ -681,7 +743,7 @@ export class AuthService {
       console.warn('[AuthService] ⚠️ Auth state timeout — checking cached session for offline access.');
       const cachedSession = await LocalStorageDBService.getCache('user_session');
       if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
-        console.log('[AuthService] 📴 Offline session restored from IndexedDB for:', cachedSession.email);
+        console.log('[AuthService] 📴 Offline session restored from cache for:', cachedSession.email);
         const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
         const fullSession = { ...cachedProfile, ...cachedSession };
         GlobalStore.set({
@@ -689,18 +751,15 @@ export class AuthService {
           activeRole: fullSession.role,
           isAuthenticated: true
         });
-
-        if (cachedSession.companyId && cachedSession.companyId !== 'global') {
-          const cachedCompany = await LocalStorageDBService.getCache(`${cachedSession.companyId}/informacion_local`);
-          if (cachedCompany) {
-            GlobalStore.set({ currentCompany: cachedCompany });
-          }
+        const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
+        if (cachedCompany) {
+          GlobalStore.set({ currentCompany: cachedCompany });
         }
         resolve(fullSession);
       } else {
         resolve(null);
       }
-    }, 2500);
+    }, 3000);
 
     if (!auth) {
       clearTimeout(timeout);
@@ -721,11 +780,7 @@ export class AuthService {
       if (!firebaseUser) {
         // If offline, attempt to restore session from IndexedDB cache before defaulting to unauthenticated
         if (!navigator.onLine) {
-          let cachedSession = await LocalStorageDBService.getCache('user_session');
-          if (!cachedSession) {
-            cachedSession = await LocalStorageDBService.getLastUserSession();
-          }
-
+          const cachedSession = await LocalStorageDBService.getCache('user_session');
           if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
             console.log('[AuthService] 📴 Offline session restored for:', cachedSession.email);
             const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
@@ -735,15 +790,12 @@ export class AuthService {
               activeRole: fullSession.role,
               isAuthenticated: true
             });
-
-            if (cachedSession.companyId && cachedSession.companyId !== 'global') {
-              const cachedCompany = await LocalStorageDBService.getCache(`${cachedSession.companyId}/informacion_local`);
-              if (cachedCompany) {
-                GlobalStore.set({ currentCompany: cachedCompany });
-              }
+            const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
+            if (cachedCompany) {
+              GlobalStore.set({ currentCompany: cachedCompany });
             }
             clearTimeout(timeout);
-            resolve(cachedSession);
+            resolve(fullSession);
             return;
           }
         }
@@ -797,13 +849,12 @@ export class AuthService {
                   resolve(null);
                   return;
                 }
-                // Cache company metadata for offline use
-                await LocalStorageDBService.setCache(`${userProfile.companyId}/informacion_local`, companySnap.val());
+                await LocalStorageDBService.setCache(`companies/${userProfile.companyId}`, companySnap.val());
               } catch (err) {
                 console.warn('[AuthService] Failed to verify company during restore:', err.message);
               }
             } else {
-              const cachedCompany = await LocalStorageDBService.getCache(`${userProfile.companyId}/informacion_local`);
+              const cachedCompany = await LocalStorageDBService.getCache(`companies/${userProfile.companyId}`);
               if (cachedCompany && cachedCompany.status === 'ELIMINADO') {
                 console.warn('[AuthService] Cached company is deleted. Blocking session.');
                 GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
@@ -827,7 +878,6 @@ export class AuthService {
           };
 
           await LocalStorageDBService.setCache('user_session', userSession);
-          await LocalStorageDBService.setUserSession(userSession);
 
           GlobalStore.set({
             currentUser: userSession,
@@ -841,24 +891,13 @@ export class AuthService {
           resolve(userSession);
         } else {
           // Check cached session as ultimate fallback
-          let cachedSession = await LocalStorageDBService.getCache('user_session');
-          if (!cachedSession) {
-            cachedSession = await LocalStorageDBService.getLastUserSession();
-          }
-
+          const cachedSession = await LocalStorageDBService.getCache('user_session');
           if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
             GlobalStore.set({
               currentUser: cachedSession,
               activeRole: cachedSession.role,
               isAuthenticated: true
             });
-
-            if (cachedSession.companyId && cachedSession.companyId !== 'global') {
-              const cachedCompany = await LocalStorageDBService.getCache(`${cachedSession.companyId}/informacion_local`);
-              if (cachedCompany) {
-                GlobalStore.set({ currentCompany: cachedCompany });
-              }
-            }
             clearTimeout(timeout);
             resolve(cachedSession);
             return;
@@ -871,11 +910,7 @@ export class AuthService {
 
       } catch (e) {
         console.warn('[AuthService] Session restore error:', e.message);
-        let cachedSession = await LocalStorageDBService.getCache('user_session');
-        if (!cachedSession) {
-          cachedSession = await LocalStorageDBService.getLastUserSession();
-        }
-
+        const cachedSession = await LocalStorageDBService.getCache('user_session');
         if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
           GlobalStore.set({ currentUser: cachedSession, activeRole: cachedSession.role, isAuthenticated: true });
           clearTimeout(timeout);
@@ -1220,108 +1255,6 @@ export class AuthService {
   }
 
   /**
-   * Submits a request for a new business owner account.
-   * This is a public operation, saved to /business_requests/{id}.
-   * @param {Object} payload - { bizName, ownerName, email, phone }
-   */
-  static async submitBusinessJoinRequest(payload) {
-    if (!db) throw new Error('Base de datos no inicializada.');
-    const requestId = push(ref(db, 'business_requests')).key;
-    await set(ref(db, `business_requests/${requestId}`), {
-      ...payload,
-      id: requestId,
-      status: 'PENDING',
-      requestedAt: serverTimestamp()
-    });
-    return requestId;
-  }
-
-  /**
-   * Fetches all pending business join requests.
-   * Exclusive for Programmer / Super Admin role.
-   */
-  static async getPendingBusinessRequests() {
-    if (!db) throw new Error('Base de datos no inicializada.');
-    const snap = await get(ref(db, 'business_requests'));
-    if (!snap.exists()) return [];
-
-    const requests = [];
-    snap.forEach(child => {
-      const val = child.val();
-      if (val.status === 'PENDING') {
-        requests.push(val);
-      }
-    });
-    return requests.sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
-  }
-
-  /**
-   * Approves a business join request.
-   * Creates the user account and company branch.
-   */
-  static async approveBusinessJoinRequest(requestId, approvalData) {
-    if (!db) throw new Error('Base de datos no inicializada.');
-
-    const requestSnap = await get(ref(db, `business_requests/${requestId}`));
-    if (!requestSnap.exists()) throw new Error('La solicitud ya no existe.');
-
-    const req = requestSnap.val();
-
-    // 1. Create the business (uses existing logic from FirestoreService)
-    const companyId = FirestoreService.sanitiseKey(req.bizName);
-
-    // Check if companyId already exists to avoid collisions
-    const check = await get(ref(db, `companies/${companyId}`));
-    if (check.exists()) throw new Error(`El identificador de negocio "${companyId}" ya está en uso. Cambia el nombre del negocio.`);
-
-    // Password for the new owner (default or random)
-    const initialPassword = approvalData.password || Math.random().toString(36).slice(-8);
-
-    // 2. Full registration workflow
-    await FirestoreService.createCompanyBranch(companyId, {
-      name: req.bizName,
-      businessType: approvalData.businessType || 'Restaurante',
-      plan: approvalData.plan || 'BASIC',
-      status: 'ACTIVO',
-      ownerEmail: req.email,
-      ownerPassword: initialPassword
-    }, { modules: approvalData.modules || {} });
-
-    // 3. Create Owner account
-    const ownerUid = await AuthService.createUser(req.email, initialPassword, {
-      displayName: req.ownerName,
-      role: 'OWNER',
-      companyId: companyId,
-      branchId: 'main'
-    });
-
-    // 4. Link ownerId
-    await FirestoreService.updateCompanyInfo(companyId, { ownerId: ownerUid });
-
-    // 5. Mark request as APPROVED
-    await update(ref(db, `business_requests/${requestId}`), {
-      status: 'APPROVED',
-      approvedAt: serverTimestamp(),
-      companyId: companyId,
-      ownerUid: ownerUid
-    });
-
-    return { companyId, ownerUid, initialPassword };
-  }
-
-  /**
-   * Rejects a business join request.
-   */
-  static async rejectBusinessJoinRequest(requestId, reason = '') {
-    if (!db) throw new Error('Base de datos no inicializada.');
-    await update(ref(db, `business_requests/${requestId}`), {
-      status: 'REJECTED',
-      rejectedAt: serverTimestamp(),
-      rejectReason: reason
-    });
-  }
-
-  /**
    * Updates any user profile from Programmer Dashboard with audit logging.
    */
   static async adminUpdateUserProfile(targetUid, payload) {
@@ -1533,20 +1466,57 @@ export class AuthService {
 
   /**
    * Admin method to permanently delete a user account.
+   * After deletion the email is indexed so it can be re-registered freely.
    */
   static async adminDeleteUserAccount(targetUid, targetEmail, companyId) {
     if (!db) throw new Error('Base de datos no inicializada.');
 
     const currentUser = GlobalStore.getState().currentUser || {};
     const timestamp = Date.now();
+    const cleanEmail = (targetEmail || '').toLowerCase().trim();
     const updates = {};
 
+    // ── 1. Index deleted email so createUser can re-link the Firebase Auth account ──
+    if (cleanEmail) {
+      const emailKey = cleanEmail.replace(/\./g, ',');
+      updates[`deleted_users_by_email/${emailKey}`] = {
+        uid: targetUid,
+        email: cleanEmail,
+        companyId: companyId || 'global',
+        deletedAt: timestamp,
+        deletedAtLocal: new Date().toISOString()
+      };
+    }
+
+    // ── 2. Remove global user profile and company employee record ──────────────
     updates[`users/${targetUid}`] = null;
     if (companyId && companyId !== 'global') {
       updates[`${companyId}/employees/${targetUid}`] = null;
     }
 
+    // ── 3. Clean up any pending_owner_requests linked to this email ───────────
+    try {
+      const reqSnap = await get(ref(db, 'pending_owner_requests'));
+      if (reqSnap.exists()) {
+        reqSnap.forEach(snap => {
+          const req = snap.val() || {};
+          const reqEmail = (req.email || '').toLowerCase().trim();
+          if (reqEmail === cleanEmail) {
+            updates[`pending_owner_requests/${snap.key}`] = null;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[AuthService] ⚠️ Could not clean pending_owner_requests for deleted user:', e.message);
+    }
+
     await update(ref(db), updates);
+
+    // ── 4. Clear local saved-account cache for this email ─────────────────────
+    try {
+      const { SavedAccountsService } = await import('./saved-accounts.service.js');
+      SavedAccountsService.remove(cleanEmail);
+    } catch (_) {}
 
     try {
       const auditRef = push(ref(db, 'audit_logs'));
@@ -1555,10 +1525,10 @@ export class AuthService {
         programmerEmail: currentUser.email || 'superadmin@ultraadmin.com',
         programmerUid: currentUser.uid || 'system',
         targetUid,
-        targetEmail,
+        targetEmail: cleanEmail,
         timestamp,
         isoDate: new Date().toISOString(),
-        details: `Cuenta de usuario ${targetEmail} (${targetUid}) eliminada por el programador.`
+        details: `Cuenta de usuario ${cleanEmail} (${targetUid}) eliminada por el programador. Email liberado para re-registro.`
       });
     } catch (e) {
       console.warn('[AuthService] Audit log write failed:', e);
@@ -1567,5 +1537,3 @@ export class AuthService {
     return true;
   }
 }
-
-

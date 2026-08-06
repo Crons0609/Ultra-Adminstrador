@@ -9,6 +9,7 @@ import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
 import { MODULE_REGISTRY, isModuleEnabled } from '../../config/modules.config.js';
+import { isProgrammerRole } from '../../core/middleware.js';
 import { db } from '../../config/firebase.config.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 
@@ -211,7 +212,9 @@ export class Sidebar extends Component {
 
   render() {
     const { currentUser, activeRole, currentCompany } = GlobalStore.getState();
-    const role = activeRole || (currentUser ? currentUser.role : '');
+    const rawRole = activeRole || (currentUser ? currentUser.role : '');
+    // Normalize programmer role aliases to SUPER_ADMIN for menu/label/color lookups
+    const role = isProgrammerRole(rawRole, currentUser?.email) ? 'SUPER_ADMIN' : rawRole;
     const menuConfig = this.getMenuConfig(role);
     const currentHash = window.location.hash;
 
@@ -346,39 +349,35 @@ export class Sidebar extends Component {
     });
 
     // Re-render active state & auto-expand parent group on hash change
-    if (!this._hashHandler) {
-      this._hashHandler = () => {
-        const items = this.element?.querySelectorAll('.sidebar-item');
-        const hash = window.location.hash;
-        items?.forEach(el => {
-          const href = el.getAttribute('href');
-          const isActive = hash === href || (href && hash.startsWith(href + '/'));
-          if (isActive) {
-            el.classList.add('active');
-            const group = el.closest('.sidebar-group');
-            if (group) group.classList.add('is-open');
-          } else {
-            el.classList.remove('active');
-          }
-        });
-      };
-      window.addEventListener('hashchange', this._hashHandler);
-    }
+    this._hashHandler = () => {
+      const items = this.element?.querySelectorAll('.sidebar-item');
+      const hash = window.location.hash;
+      items?.forEach(el => {
+        const href = el.getAttribute('href');
+        const isActive = hash === href || (href && hash.startsWith(href + '/'));
+        if (isActive) {
+          el.classList.add('active');
+          const group = el.closest('.sidebar-group');
+          if (group) group.classList.add('is-open');
+        } else {
+          el.classList.remove('active');
+        }
+      });
+    };
+    if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
+    window.addEventListener('hashchange', this._hashHandler);
 
     // Subscribe to GlobalStore changes so sidebar re-renders when company
-    // info or role changes. Clean up previous subscriptions if they exist.
+    // info or role changes (e.g. after async session/company restore).
     if (this._unsubCompany) this._unsubCompany();
-    if (this._unsubRole)    this._unsubRole();
-
+    if (this._unsubRole) this._unsubRole();
     this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
     this._unsubRole   = GlobalStore.subscribe('activeRole',     () => this.update());
 
     // Support tickets realtime badge count listener
     const { currentUser, activeRole } = GlobalStore.getState();
-    const role = activeRole || (currentUser ? currentUser.role : '');
-
-    if (role === 'SUPER_ADMIN' && db) {
-      if (this._unsubTickets) this._unsubTickets();
+    const rawRole = activeRole || (currentUser ? currentUser.role : '');
+    if (isProgrammerRole(rawRole, currentUser?.email) && db) {
       this._unsubTickets = onValue(ref(db, 'support_tickets'), (snapshot) => {
         let pendingCount = 0;
         if (snapshot.exists()) {

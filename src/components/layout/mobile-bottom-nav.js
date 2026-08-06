@@ -341,6 +341,7 @@ export class MobileBottomNav extends Component {
             <span class="mbn-action-title">${act.title}</span>
             <span class="mbn-action-sub">${act.sub}</span>
           </div>
+          <span class="mbn-action-arrow">›</span>
         </a>
       `).join('');
 
@@ -372,6 +373,7 @@ export class MobileBottomNav extends Component {
             <span class="mbn-action-title">${opt.title}</span>
             <span class="mbn-action-sub">${opt.sub}</span>
           </div>
+          <span class="mbn-action-arrow">›</span>
         </a>
       `).join('');
 
@@ -430,6 +432,7 @@ export class MobileBottomNav extends Component {
             <span class="mbn-action-title">${m.name}</span>
             <span class="mbn-action-sub">${m.description}</span>
           </div>
+          <span class="mbn-action-arrow">›</span>
         </a>
       `).join('');
 

@@ -43,13 +43,10 @@ class App {
 
     // 4. Initialize IndexedDB offline database and offline sync service FIRST so offline sessions can be loaded
     try {
-      await Promise.race([
-        LocalStorageDBService.getDB(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('DB Timeout')), 3000))
-      ]);
+      await LocalStorageDBService.getDB();
       await OfflineSyncService.init();
     } catch (dbErr) {
-      console.warn('[App] Offline DB initialization error/timeout:', dbErr);
+      console.warn('[App] Offline DB initialization warning:', dbErr);
     }
 
     // 5. Wait for Firebase Auth or IndexedDB to determine current session state with a strict 3.5s timeout.

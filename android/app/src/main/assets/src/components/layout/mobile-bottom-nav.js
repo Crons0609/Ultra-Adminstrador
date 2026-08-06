@@ -19,7 +19,9 @@ export class MobileBottomNav extends Component {
     this.state = {
       activeSheet: null, // null | 'actions' | 'create' | 'notifications' | 'more'
       unreadNotificationsCount: 0,
-      notifications: [],
+      notifications: [
+        { id: '1', icon: '📢', title: 'Sistema Actualizado', message: 'Ultra Administrador versión móvil activa.', time: 'Hace 5 min' }
+      ],
       activeTabs: [...DEFAULT_NAV_TABS] // Ordered list of up to 5 tab IDs
     };
   }
@@ -339,6 +341,7 @@ export class MobileBottomNav extends Component {
             <span class="mbn-action-title">${act.title}</span>
             <span class="mbn-action-sub">${act.sub}</span>
           </div>
+          <span class="mbn-action-arrow">›</span>
         </a>
       `).join('');
 
@@ -370,6 +373,7 @@ export class MobileBottomNav extends Component {
             <span class="mbn-action-title">${opt.title}</span>
             <span class="mbn-action-sub">${opt.sub}</span>
           </div>
+          <span class="mbn-action-arrow">›</span>
         </a>
       `).join('');
 
@@ -428,6 +432,7 @@ export class MobileBottomNav extends Component {
             <span class="mbn-action-title">${m.name}</span>
             <span class="mbn-action-sub">${m.description}</span>
           </div>
+          <span class="mbn-action-arrow">›</span>
         </a>
       `).join('');
 
@@ -451,11 +456,22 @@ export class MobileBottomNav extends Component {
     const root = this.element;
     const nav = this.$('#mobile-bottom-nav');
 
-    // 1. Load user's personalized tab config from RTDB
+    // Clean up previous listeners and subscriptions before re-mounting
+    if (this._unsubStore) this._unsubStore();
+    if (this._unsubCompany) this._unsubCompany();
+    if (this._unsubNavConfig) this._unsubNavConfig();
+    if (this._focusCleanup) this._focusCleanup();
+    if (this._popstateHandler) window.removeEventListener('popstate', this._popstateHandler);
+    if (window.visualViewport && this._viewportHandler) {
+      window.visualViewport.removeEventListener('resize', this._viewportHandler);
+    }
+
+    // 1. Load user's personalized tab config from RTDB once
     const { currentUser } = GlobalStore.getState();
-    if (currentUser?.uid) {
+    if (currentUser?.uid && !this._hasLoadedNavConfig) {
+      this._hasLoadedNavConfig = true;
       MobileNavConfigService.load(currentUser.uid).then(tabs => {
-        if (JSON.stringify(tabs) !== JSON.stringify(this.state.activeTabs)) {
+        if (Array.isArray(tabs) && JSON.stringify(tabs) !== JSON.stringify(this.state.activeTabs)) {
           this.setState({ activeTabs: tabs });
         }
       });
@@ -522,29 +538,27 @@ export class MobileBottomNav extends Component {
     }
 
     // 3. Mobile Web Keyboard & Input Focus Detection
-    if (!this._focusCleanup) {
-      const handleInputFocus = (e) => {
-        const tag = e.target?.tagName?.toLowerCase();
-        if (['input', 'textarea', 'select'].includes(tag) && e.target.type !== 'checkbox' && e.target.type !== 'radio') {
-          const currentNav = this.$('#mobile-bottom-nav');
-          if (currentNav) currentNav.classList.add('mbn-hidden');
-        }
-      };
-
-      const handleInputBlur = () => {
+    const handleInputFocus = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (['input', 'textarea', 'select'].includes(tag) && e.target.type !== 'checkbox' && e.target.type !== 'radio') {
         const currentNav = this.$('#mobile-bottom-nav');
-        if (currentNav) currentNav.classList.remove('mbn-hidden');
-      };
+        if (currentNav) currentNav.classList.add('mbn-hidden');
+      }
+    };
 
-      document.addEventListener('focusin', handleInputFocus);
-      document.addEventListener('focusout', handleInputBlur);
-      this._focusCleanup = () => {
-        document.removeEventListener('focusin', handleInputFocus);
-        document.removeEventListener('focusout', handleInputBlur);
-      };
-    }
+    const handleInputBlur = () => {
+      const currentNav = this.$('#mobile-bottom-nav');
+      if (currentNav) currentNav.classList.remove('mbn-hidden');
+    };
 
-    if (window.visualViewport && !this._viewportHandler) {
+    document.addEventListener('focusin', handleInputFocus);
+    document.addEventListener('focusout', handleInputBlur);
+    this._focusCleanup = () => {
+      document.removeEventListener('focusin', handleInputFocus);
+      document.removeEventListener('focusout', handleInputBlur);
+    };
+
+    if (window.visualViewport) {
       this._viewportHandler = () => {
         const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
         const currentNav = this.$('#mobile-bottom-nav');
@@ -556,29 +570,23 @@ export class MobileBottomNav extends Component {
     }
 
     // 4. Back Button Intercept for Mobile Web & Android
-    if (!this._popstateHandler) {
-      this._popstateHandler = () => {
-        if (this.state.activeSheet) {
-          this.closeSheet();
-        }
-      };
-      window.addEventListener('popstate', this._popstateHandler);
-    }
+    this._popstateHandler = () => {
+      if (this.state.activeSheet) {
+        this.closeSheet();
+      }
+    };
+    window.addEventListener('popstate', this._popstateHandler);
 
     // 5. Listen to Real-Time Notifications
     this.startNotificationsRealtimeListener();
 
-    // 6. Subscribe to GlobalStore state changes. Clean up previous subscriptions if they exist.
-    if (this._unsubStore) this._unsubStore();
-    if (this._unsubCompany) this._unsubCompany();
-    if (this._unsubNavConfig) this._unsubNavConfig();
-
+    // 6. Subscribe to GlobalStore state changes
     this._unsubStore = GlobalStore.subscribe('activeRole', () => this.update());
     this._unsubCompany = GlobalStore.subscribe('currentCompany', () => this.update());
 
     // 7. Subscribe to mobileNavConfig changes from GlobalStore
     this._unsubNavConfig = GlobalStore.subscribe('mobileNavConfig', (tabs) => {
-      if (Array.isArray(tabs)) {
+      if (Array.isArray(tabs) && JSON.stringify(tabs) !== JSON.stringify(this.state.activeTabs)) {
         this.setState({ activeTabs: tabs });
       }
     });
@@ -637,43 +645,48 @@ export class MobileBottomNav extends Component {
   /** Real-time listener for support & system notifications */
   startNotificationsRealtimeListener() {
     const { currentUser, currentCompany } = GlobalStore.getState();
-    if (!currentUser) return;
+    if (!currentUser || !currentCompany?.id || !db) return;
 
-    const sampleNotifs = [
-      { id: '1', icon: '📢', title: 'Sistema Actualizado', message: 'Ultra Administrador versión móvil activa.', time: 'Hace 5 min' }
-    ];
+    if (this._unsubRealtimeNotifs) {
+      this._unsubRealtimeNotifs();
+      this._unsubRealtimeNotifs = null;
+    }
 
-    if (currentCompany?.id && db) {
-      const ticketsRef = ref(db, `support_tickets`);
-      onValue(ticketsRef, (snap) => {
-        let count = 0;
-        const list = [...sampleNotifs];
-        if (snap.exists()) {
-          const tickets = snap.val();
-          Object.values(tickets).forEach(t => {
-            if (t.status === 'Pendiente') {
-              count++;
-              list.unshift({
-                id: t.id || String(Math.random()),
-                icon: '📩',
-                title: `Solicitud: ${t.userName || 'Cliente'}`,
-                message: t.message || 'Solicitud de soporte pendiente',
-                time: 'Hoy'
-              });
-            }
-          });
-        }
+    const defaultNotif = { id: '1', icon: '📢', title: 'Sistema Actualizado', message: 'Ultra Administrador versión móvil activa.', time: 'Hace 5 min' };
+    const ticketsRef = ref(db, `support_tickets`);
+    
+    this._unsubRealtimeNotifs = onValue(ticketsRef, (snap) => {
+      let count = 0;
+      const list = [defaultNotif];
+      if (snap.exists()) {
+        const tickets = snap.val();
+        Object.values(tickets).forEach(t => {
+          if (t.status === 'Pendiente') {
+            count++;
+            list.unshift({
+              id: t.id || String(Math.random()),
+              icon: '📩',
+              title: `Solicitud: ${t.userName || 'Cliente'}`,
+              message: t.message || 'Solicitud de soporte pendiente',
+              time: 'Hoy'
+            });
+          }
+        });
+      }
+      if (this.state.unreadNotificationsCount !== count || this.state.notifications.length !== list.length) {
         this.setState({
           unreadNotificationsCount: count,
           notifications: list
         });
-      });
-    } else {
-      this.setState({ notifications: sampleNotifs, unreadNotificationsCount: 0 });
-    }
+      }
+    });
   }
 
   unmount() {
+    if (this._unsubRealtimeNotifs) {
+      this._unsubRealtimeNotifs();
+      this._unsubRealtimeNotifs = null;
+    }
     if (this._focusCleanup) this._focusCleanup();
     if (window.visualViewport && this._viewportHandler) {
       window.visualViewport.removeEventListener('resize', this._viewportHandler);

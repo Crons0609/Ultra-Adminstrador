@@ -12,6 +12,7 @@
 
 import { FirestoreService } from './firestore.service.js';
 import { GlobalStore } from '../core/state.js';
+import { isProgrammerRole } from '../core/middleware.js';
 
 // ─── 22 Predefined theme presets ──────────────────────────────────────────────
 export const THEMES = {
@@ -551,7 +552,8 @@ export class AppearanceService {
       AppearanceService.stopThemeListener();
 
       const { currentUser, activeRole } = GlobalStore.getState();
-      const isProgrammer = currentUser?.role === 'SUPER_ADMIN' || activeRole === 'SUPER_ADMIN';
+      const role = activeRole || currentUser?.role || '';
+      const isProgrammer = isProgrammerRole(role, currentUser?.email);
 
       if (targetCompanyId) {
         // Public tenant view
@@ -571,16 +573,24 @@ export class AppearanceService {
       if (isProgrammer && currentUser?.uid) {
         // Programmer individual preferences
         const uid = currentUser.uid;
-        const config = await FirestoreService.getProgrammerPreferences(uid);
-        AppearanceService.applyConfig(config || { theme: 'dark' });
+        try {
+          const config = await FirestoreService.getProgrammerPreferences(uid);
+          AppearanceService.applyConfig(config || { theme: 'dark' });
 
-        AppearanceService._activeUnsubscribe = FirestoreService.subscribeProgrammerPreferences(
-          uid,
-          (liveConfig) => {
-            AppearanceService.applyConfig(liveConfig || { theme: 'dark' });
+          const unsubId = FirestoreService.subscribeProgrammerPreferences(
+            uid,
+            (liveConfig) => {
+              AppearanceService.applyConfig(liveConfig || { theme: 'dark' });
+            }
+          );
+          if (unsubId) {
+            AppearanceService._activeUnsubscribe = () => FirestoreService.unsubscribe(unsubId);
           }
-        );
-        console.log(`[AppearanceService] 🎨 Listening to programmer_preferences [${uid}] for Programmer.`);
+        } catch (prefErr) {
+          console.warn('[AppearanceService] Could not load programmer preferences, using default dark theme:', prefErr.message);
+          AppearanceService.applyThemePreset('dark');
+        }
+        console.log(`[AppearanceService] 🎨 Programmer theme loaded for [${uid}].`);
         return;
       }
 

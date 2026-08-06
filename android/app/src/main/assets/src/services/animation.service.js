@@ -21,15 +21,21 @@ export const AnimationService = {
   initGlobalScroll() {
     if (lenisInstance) return lenisInstance;
 
+    // Detect mobile touch devices — bypass Lenis touch hijacking so native OS touch scroll works 100%
+    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+    if (isTouchDevice) {
+      console.log('[AnimationService] 📱 Mobile/Touch device detected — using native OS momentum scrolling.');
+      return null;
+    }
+
     lenisInstance = new Lenis({
       duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
       wheelMultiplier: 1.0,
-      touchMultiplier: 0,
-      syncTouch: false,
       smoothTouch: false,
-      prevent: () => true // Allow native scroll on all nodes
+      touchMultiplier: 1.0
     });
 
     function raf(time) {

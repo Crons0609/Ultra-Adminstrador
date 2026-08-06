@@ -9,6 +9,7 @@ import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
 import { MODULE_REGISTRY, isModuleEnabled } from '../../config/modules.config.js';
+import { isProgrammerRole } from '../../core/middleware.js';
 import { db } from '../../config/firebase.config.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 
@@ -211,7 +212,9 @@ export class Sidebar extends Component {
 
   render() {
     const { currentUser, activeRole, currentCompany } = GlobalStore.getState();
-    const role = activeRole || (currentUser ? currentUser.role : '');
+    const rawRole = activeRole || (currentUser ? currentUser.role : '');
+    // Normalize programmer role aliases to SUPER_ADMIN for menu/label/color lookups
+    const role = isProgrammerRole(rawRole, currentUser?.email) ? 'SUPER_ADMIN' : rawRole;
     const menuConfig = this.getMenuConfig(role);
     const currentHash = window.location.hash;
 
@@ -373,8 +376,8 @@ export class Sidebar extends Component {
 
     // Support tickets realtime badge count listener
     const { currentUser, activeRole } = GlobalStore.getState();
-    const role = activeRole || (currentUser ? currentUser.role : '');
-    if (role === 'SUPER_ADMIN' && db) {
+    const rawRole = activeRole || (currentUser ? currentUser.role : '');
+    if (isProgrammerRole(rawRole, currentUser?.email) && db) {
       this._unsubTickets = onValue(ref(db, 'support_tickets'), (snapshot) => {
         let pendingCount = 0;
         if (snapshot.exists()) {

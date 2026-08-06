@@ -15,6 +15,7 @@ import { SavedAccountsService } from '../../services/saved-accounts.service.js';
 import { OfflineSyncService } from '../../services/offline-sync.service.js';
 import { NotificationCenter } from '../notifications/notification-center.js';
 import { PushNotificationsCenterService } from '../../services/push-notifications-center.service.js';
+import { isProgrammerRole } from '../../core/middleware.js';
 
 export class Header extends Component {
   constructor(props = {}) {
@@ -120,8 +121,8 @@ export class Header extends Component {
           </button>
 
 
-          <!-- Global Barcode Scanner Toggle (hidden for SUPER_ADMIN) -->
-          ${currentUser?.role !== 'SUPER_ADMIN' ? `
+          <!-- Global Barcode Scanner Toggle (hidden for SUPER_ADMIN/Programmer) -->
+          ${!isProgrammerRole(currentUser?.role, currentUser?.email) ? `
             <button class="scanner-toggle-btn" id="global-scanner-toggle-btn" title="Activar Escáner Global (Ctrl+B)">
               <div class="scanner-toggle-dot"></div>
               <span>📊 Escáner</span>
@@ -300,7 +301,7 @@ export class Header extends Component {
     }
 
     // ── Super-Admin: sync pending owner requests → notifications ──
-    if (currentUser?.role === 'SUPER_ADMIN' && currentUser?.uid) {
+    if (isProgrammerRole(currentUser?.role, currentUser?.email) && currentUser?.uid) {
       this._syncOwnerRequests(currentUser.uid);
     }
     // 1. Sidebar toggle — supports both mobile/tablet slide-in and desktop rail collapse

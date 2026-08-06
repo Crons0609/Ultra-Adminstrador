@@ -39,13 +39,13 @@ export class Store {
    * @param {any} value 
    */
   notify(key, value) {
-    // Specific key observers — use a copy to prevent infinite loops if a listener adds a new listener
+    // Specific key observers
     if (this.listeners[key]) {
-      [...this.listeners[key]].forEach(callback => callback(value, this.state));
+      this.listeners[key].forEach(callback => callback(value, this.state));
     }
     // Global observers
     if (this.listeners['*']) {
-      [...this.listeners['*']].forEach(callback => callback(key, value, this.state));
+      this.listeners['*'].forEach(callback => callback(key, value, this.state));
     }
   }
 
