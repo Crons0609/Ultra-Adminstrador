@@ -7,6 +7,7 @@
 
 import { Component } from '../../../core/component.js';
 import { AuthService } from '../../../services/auth.service.js';
+import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { ErrorHandler } from '../../../core/error-handler.js';
 import { GlobalStore } from '../../../core/state.js';
@@ -15,18 +16,13 @@ import { isValidEmail } from '../../../utils/validators.js';
 import { APP_CONFIG } from '../../../config/app.config.js';
 import { AnimationService } from '../../../services/animation.service.js';
 import { SavedAccountsService } from '../../../services/saved-accounts.service.js';
+import { getBusinessTypeOptions } from '../../../config/business-types.config.js';
 import gsap from 'gsap';
-
-// ─── Developer Registration Secret Key ───────────────────────────────────────
-// Change this to any secret code only you know.
-// Anyone who doesn't have this key cannot register a new SuperAdmin from login.
-const DEV_SECRET_KEY = 'ultra-dev-2025';
-// ─────────────────────────────────────────────────────────────────────────────
 
 export class LoginView extends Component {
   constructor(params = {}) {
     super(params);
-    this.state = { loading: false, errors: {}, showDevPanel: false, devRegistering: false };
+    this.state = { loading: false, errors: {}, showOwnerRequestPanel: false, ownerRequesting: false };
   }
 
   render() {
@@ -168,31 +164,33 @@ export class LoginView extends Component {
             </form>
           </div>
 
-          <!-- Developer Panel Toggle Link -->
+          <!-- Business Owner Request Panel Toggle Link -->
           <div style="text-align: center; margin-top: var(--space-4);">
             <button
-              id="btn-toggle-dev-panel"
+              id="btn-toggle-owner-request"
               style="
                 background: none;
                 border: none;
-                color: var(--color-text-tertiary);
-                font-size: 0.7rem;
+                color: var(--color-accent, #8b5cf6);
+                font-size: 0.82rem;
+                font-weight: 600;
                 cursor: pointer;
-                opacity: 0.4;
-                letter-spacing: 0.05em;
-                transition: opacity 0.2s;
-                padding: 4px 8px;
+                opacity: 0.9;
+                letter-spacing: 0.02em;
+                transition: all 0.2s;
+                padding: 6px 12px;
+                border-radius: var(--radius-md);
               "
-              onmouseover="this.style.opacity='1'"
-              onmouseout="this.style.opacity='0.4'"
-              title="Acceso para desarrolladores del sistema"
+              onmouseover="this.style.opacity='1'; this.style.background='rgba(139,92,246,0.1)'"
+              onmouseout="this.style.opacity='0.9'; this.style.background='none'"
+              title="Solicitar registro para tu negocio"
             >
-              ⌨️ Acceso Programador
+              🏢 ¿Quieres registrar tu negocio? Solicitar Cuenta
             </button>
           </div>
 
-          <!-- Developer Registration Panel (hidden by default) -->
-          <div id="dev-registration-panel" style="
+          <!-- Business Owner Request Panel (hidden by default) -->
+          <div id="owner-request-panel" style="
             display: none;
             margin-top: var(--space-4);
             animation: slideDown 0.3s ease forwards;
@@ -204,83 +202,118 @@ export class LoginView extends Component {
             ">
               <!-- Header -->
               <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4);">
-                <span style="font-size: 1.2rem;">🔐</span>
+                <span style="font-size: 1.4rem;">🏢</span>
                 <div>
                   <h3 style="margin: 0; font-size: 0.95rem; color: var(--color-accent); font-weight: 700;">
-                    Registro de Programador
+                    Solicitud de Nuevo Dueño de Negocio
                   </h3>
-                  <p style="margin: 0; font-size: 0.7rem; color: var(--color-text-tertiary);">
-                    Acceso restringido al equipo de desarrollo
+                  <p style="margin: 0; font-size: 0.72rem; color: var(--color-text-tertiary);">
+                    Un programador revisará y aprobará tu registro para activar tu acceso
                   </p>
                 </div>
               </div>
 
-              <form id="dev-register-form" novalidate>
-                <!-- Secret Key -->
-                <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="dev-secret" style="font-size: 0.75rem;">
-                    🗝️ Clave Secreta de Acceso
-                  </label>
-                  <input
-                    type="password"
-                    id="dev-secret"
-                    class="input input-md"
-                    placeholder="Clave de programador"
-                    autocomplete="off"
-                    style="font-family: monospace; letter-spacing: 0.1em;"
-                  />
-                  <p class="form-helper error" id="dev-secret-error" style="display: none; font-size: 0.7rem;">
-                    Clave incorrecta. Acceso denegado.
-                  </p>
-                </div>
+              <!-- Success Alert (hidden by default) -->
+              <div id="owner-req-success-alert" style="display: none; margin-bottom: var(--space-4); background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); border-radius: var(--radius-md); padding: var(--space-3); color: #22c55e; font-size: 0.82rem; text-align: center;">
+                ✅ <strong>¡Solicitud Enviada con Éxito!</strong><br/>
+                Un programador revisará tus datos y activará tu cuenta pronto.
+              </div>
 
-                <!-- Name -->
+              <form id="owner-request-form" novalidate>
+                <!-- Owner Name -->
                 <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="dev-name" style="font-size: 0.75rem;">
-                    Nombre Completo
+                  <label class="form-label" for="req-owner-name" style="font-size: 0.75rem;">
+                    👤 Nombre Completo del Propietario
                   </label>
                   <input
                     type="text"
-                    id="dev-name"
+                    id="req-owner-name"
                     class="input input-md"
-                    placeholder="Ej. Desarrollador Principal"
-                    autocomplete="off"
+                    placeholder="Ej. Juan Pérez"
+                    required
                   />
+                  <p class="form-helper error" id="req-owner-name-error" style="display: none; font-size: 0.7rem;"></p>
+                </div>
+
+                <!-- Company Name -->
+                <div class="form-group" style="margin-bottom: var(--space-3);">
+                  <label class="form-label" for="req-company-name" style="font-size: 0.75rem;">
+                    🏪 Nombre de la Empresa / Negocio
+                  </label>
+                  <input
+                    type="text"
+                    id="req-company-name"
+                    class="input input-md"
+                    placeholder="Ej. RestoBar El Portal"
+                    required
+                  />
+                  <p class="form-helper error" id="req-company-name-error" style="display: none; font-size: 0.7rem;"></p>
+                </div>
+
+                <!-- Business Type -->
+                <div class="form-group" style="margin-bottom: var(--space-3);">
+                  <label class="form-label" for="req-business-type" style="font-size: 0.75rem;">
+                    📌 Tipo de Negocio
+                  </label>
+                  <select
+                    id="req-business-type"
+                    class="input input-md"
+                    style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);"
+                  >
+                    ${getBusinessTypeOptions()}
+                  </select>
                 </div>
 
                 <!-- Email -->
                 <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="dev-email" style="font-size: 0.75rem;">
-                    Correo Electrónico
+                  <label class="form-label" for="req-email" style="font-size: 0.75rem;">
+                    📧 Correo Electrónico
                   </label>
                   <input
                     type="email"
-                    id="dev-email"
+                    id="req-email"
                     class="input input-md"
-                    placeholder="dev@tudominio.com"
-                    autocomplete="off"
+                    placeholder="propietario@empresa.com"
+                    autocomplete="username"
+                    required
                   />
-                  <p class="form-helper error" id="dev-email-error" style="display: none; font-size: 0.7rem;"></p>
+                  <p class="form-helper error" id="req-email-error" style="display: none; font-size: 0.7rem;"></p>
+                </div>
+
+                <!-- Phone -->
+                <div class="form-group" style="margin-bottom: var(--space-3);">
+                  <label class="form-label" for="req-phone" style="font-size: 0.75rem;">
+                    📞 Teléfono de Contacto
+                  </label>
+                  <input
+                    type="tel"
+                    id="req-phone"
+                    class="input input-md"
+                    placeholder="Ej. +505 8888 8888"
+                    required
+                  />
+                  <p class="form-helper error" id="req-phone-error" style="display: none; font-size: 0.7rem;"></p>
                 </div>
 
                 <!-- Password -->
                 <div class="form-group" style="margin-bottom: var(--space-4);">
-                  <label class="form-label" for="dev-password" style="font-size: 0.75rem;">
-                    Contraseña (mín. 8 caracteres)
+                  <label class="form-label" for="req-password" style="font-size: 0.75rem;">
+                    🔑 Contraseña Deseada (mín. 6 caracteres)
                   </label>
                   <div style="position: relative; display: flex; align-items: center;">
                     <input
                       type="password"
-                      id="dev-password"
+                      id="req-password"
                       class="input input-md"
                       placeholder="••••••••"
-                      minlength="8"
+                      minlength="6"
                       autocomplete="new-password"
+                      required
                       style="padding-right: 40px; width: 100%;"
                     />
                     <button
                       type="button"
-                      id="btn-toggle-dev-password"
+                      id="btn-toggle-req-password"
                       style="
                         position: absolute;
                         right: 8px;
@@ -296,30 +329,18 @@ export class LoginView extends Component {
                       👁️
                     </button>
                   </div>
-                  <p class="form-helper error" id="dev-password-error" style="display: none; font-size: 0.7rem;"></p>
+                  <p class="form-helper error" id="req-password-error" style="display: none; font-size: 0.7rem;"></p>
                 </div>
 
                 <button
                   type="submit"
-                  id="btn-dev-register"
+                  id="btn-submit-owner-req"
                   class="btn btn-primary btn-md"
                   style="width: 100%; background: linear-gradient(135deg, #7c3aed, #8b5cf6);"
                 >
-                  ⚡ Crear Cuenta SuperAdmin
+                  📩 Enviar Solicitud a Programador
                 </button>
               </form>
-
-              <!-- Unlock tool for testing -->
-              <div style="border-top: 1px dashed rgba(139,92,246,0.3); margin-top: 14px; padding-top: 10px; text-align: center;">
-                <button
-                  type="button"
-                  id="btn-dev-unlock-account"
-                  class="btn btn-secondary btn-sm"
-                  style="font-size: 0.7rem; padding: 3px 8px; opacity: 0.8;"
-                >
-                  🔓 Desbloquear Intentos de Cuenta
-                </button>
-              </div>
             </div>
           </div>
 
@@ -391,114 +412,37 @@ export class LoginView extends Component {
       });
     }
 
-    const devPassInput = this.$('#dev-password');
-    const toggleDevPass = this.$('#btn-toggle-dev-password');
-    if (devPassInput && toggleDevPass) {
-      toggleDevPass.addEventListener('click', () => {
-        const isPassword = devPassInput.type === 'password';
-        devPassInput.type = isPassword ? 'text' : 'password';
-        toggleDevPass.textContent = isPassword ? '🙈' : '👁️';
-        toggleDevPass.title = isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    const reqPassInput = this.$('#req-password');
+    const toggleReqPass = this.$('#btn-toggle-req-password');
+    if (reqPassInput && toggleReqPass) {
+      toggleReqPass.addEventListener('click', () => {
+        const isPassword = reqPassInput.type === 'password';
+        reqPassInput.type = isPassword ? 'text' : 'password';
+        toggleReqPass.textContent = isPassword ? '🙈' : '👁️';
+        toggleReqPass.title = isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña';
       });
     }
 
-    // ── Email Lockout Monitoring & URL Pre-fill ─────────────────────────────
-    const emailInput = this.$('#login-email');
-    const passInput  = this.$('#login-password');
+    // ── Business Owner Request Panel Toggle ──────────────────────────────────
+    const toggleOwnerReqBtn = this.$('#btn-toggle-owner-request');
+    const ownerReqPanel     = this.$('#owner-request-panel');
 
-    // Pre-fill email from URL if present (e.g., #/login?email=foo@bar.com)
-    const hashQuery = window.location.hash.split('?')[1] || '';
-    const urlParams = new URLSearchParams(hashQuery);
-    const prefilledEmail = urlParams.get('email');
-    if (prefilledEmail && emailInput) {
-      emailInput.value = decodeURIComponent(prefilledEmail);
-      this.checkLockoutStatus(emailInput.value);
-    }
-
-    if (emailInput) {
-      const handleEmailChange = () => {
-        const email = emailInput.value.trim();
-        this.checkLockoutStatus(email);
-      };
-      emailInput.addEventListener('input', handleEmailChange);
-      emailInput.addEventListener('blur', handleEmailChange);
-      if (emailInput.value) handleEmailChange();
-    }
-
-    // ── Render Saved Accounts Quick Selector ─────────────────────────────────
-    const savedAccounts = SavedAccountsService.getAll();
-    const savedContainer = this.$('#saved-accounts-login-container');
-    if (savedContainer && savedAccounts.length > 0) {
-      savedContainer.innerHTML = `
-        <div style="
-          padding: 8px 12px; margin-bottom: 14px;
-          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-          border-radius: var(--radius-md);
-        ">
-          <div style="font-size: 0.72rem; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">
-            Cuentas guardadas
-          </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${savedAccounts.map(acc => `
-              <button type="button" class="btn-saved-acc-chip" data-email="${acc.email}" style="
-                display: inline-flex; align-items: center; gap: 6px;
-                background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-                border-radius: 20px; padding: 4px 10px; cursor: pointer; color: var(--color-text-primary);
-                font-size: 0.78rem; transition: background 0.2s;
-              " onmouseover="this.style.background='rgba(139,92,246,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-                <span style="width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, #0891b2, #06b6d4); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem;">${acc.initial}</span>
-                <span>${acc.displayName}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-      `;
-
-      savedContainer.querySelectorAll('.btn-saved-acc-chip').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const email = btn.dataset.email;
-          if (emailInput) {
-            emailInput.value = email;
-            this.checkLockoutStatus(email);
-          }
-          const savedPass = SavedAccountsService.getPassword(email);
-          if (savedPass && passInput) {
-            passInput.value = savedPass;
-          } else if (passInput) {
-            passInput.focus();
-          }
-        });
+    if (toggleOwnerReqBtn && ownerReqPanel) {
+      toggleOwnerReqBtn.addEventListener('click', () => {
+        const isHidden = ownerReqPanel.style.display === 'none';
+        ownerReqPanel.style.display = isHidden ? 'block' : 'none';
+        toggleOwnerReqBtn.textContent = isHidden
+          ? '✖ Cerrar Formulario'
+          : '🏢 ¿Quieres registrar tu negocio? Solicitar Cuenta';
       });
     }
 
-    // ── Login Form Submission ────────────────────────────────────────────────
-    const form = this.$('#login-form');
-    if (form) {
-      form.addEventListener('submit', async (e) => {
+    // ── Business Owner Request Form Submission ──────────────────────────────
+    const ownerReqForm = this.$('#owner-request-form');
+    if (ownerReqForm) {
+      ownerReqForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await this.handleLogin();
-      });
-    }
-
-    // ── Developer Panel Toggle ──────────────────────────────────────────────
-    const toggleBtn = this.$('#btn-toggle-dev-panel');
-    const devPanel  = this.$('#dev-registration-panel');
-
-    if (toggleBtn && devPanel) {
-      toggleBtn.addEventListener('click', () => {
-        const isHidden = devPanel.style.display === 'none';
-        devPanel.style.display = isHidden ? 'block' : 'none';
-        toggleBtn.style.opacity = isHidden ? '1' : '0.4';
-        toggleBtn.textContent   = isHidden ? '✖ Cerrar Panel' : '⌨️ Acceso Programador';
-      });
-    }
-
-    // ── Developer Registration Form ─────────────────────────────────────────
-    const devForm = this.$('#dev-register-form');
-    if (devForm) {
-      devForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await this.handleDevRegister();
+        await this.handleOwnerRequestSubmit();
       });
     }
 
@@ -821,90 +765,95 @@ export class LoginView extends Component {
     }
   }
 
-  // ── Developer Registration Handler ────────────────────────────────────────
-  async handleDevRegister() {
-    const secretInput   = this.$('#dev-secret');
-    const nameInput     = this.$('#dev-name');
-    const emailInput    = this.$('#dev-email');
-    const passInput     = this.$('#dev-password');
-    const submitBtn     = this.$('#btn-dev-register');
-    const secretError   = this.$('#dev-secret-error');
-    const emailError    = this.$('#dev-email-error');
-    const passError     = this.$('#dev-password-error');
+  // ── Business Owner Request Handler ─────────────────────────────────────────
+  async handleOwnerRequestSubmit() {
+    const ownerNameInput    = this.$('#req-owner-name');
+    const companyNameInput  = this.$('#req-company-name');
+    const businessTypeInput = this.$('#req-business-type');
+    const emailInput        = this.$('#req-email');
+    const phoneInput        = this.$('#req-phone');
+    const passInput         = this.$('#req-password');
+    const submitBtn         = this.$('#btn-submit-owner-req');
+    const successAlert      = this.$('#owner-req-success-alert');
+
+    const ownerNameErr   = this.$('#req-owner-name-error');
+    const companyNameErr = this.$('#req-company-name-error');
+    const emailErr       = this.$('#req-email-error');
+    const phoneErr       = this.$('#req-phone-error');
+    const passErr        = this.$('#req-password-error');
 
     // Reset errors
-    [secretError, emailError, passError].forEach(el => el && (el.style.display = 'none'));
+    [ownerNameErr, companyNameErr, emailErr, phoneErr, passErr].forEach(el => el && (el.style.display = 'none'));
+    if (successAlert) successAlert.style.display = 'none';
 
-    const secret   = secretInput?.value || '';
-    const name     = nameInput?.value.trim() || 'Programador';
-    const email    = emailInput?.value.trim() || '';
-    const password = passInput?.value || '';
+    const ownerName    = ownerNameInput?.value.trim() || '';
+    const companyName  = companyNameInput?.value.trim() || '';
+    const businessType = businessTypeInput?.value || 'Restaurante';
+    const email        = emailInput?.value.trim() || '';
+    const phone        = phoneInput?.value.trim() || '';
+    const password     = passInput?.value || '';
 
     let isValid = true;
 
-    // 1. Validate secret key
-    if (secret !== DEV_SECRET_KEY) {
-      secretError.style.display = 'block';
-      secretInput?.classList.add('input-error');
-      secretInput?.focus();
+    if (!ownerName) {
+      if (ownerNameErr) { ownerNameErr.textContent = 'Ingresa tu nombre completo'; ownerNameErr.style.display = 'block'; }
       isValid = false;
     }
 
-    // 2. Validate email
+    if (!companyName) {
+      if (companyNameErr) { companyNameErr.textContent = 'Ingresa el nombre del negocio'; companyNameErr.style.display = 'block'; }
+      isValid = false;
+    }
+
     if (!isValidEmail(email)) {
-      emailError.textContent   = 'Ingresa un correo electrónico válido';
-      emailError.style.display = 'block';
-      emailInput?.classList.add('input-error');
+      if (emailErr) { emailErr.textContent = 'Ingresa un correo electrónico válido'; emailErr.style.display = 'block'; }
       isValid = false;
     }
 
-    // 3. Validate password length
-    if (!password || password.length < 8) {
-      passError.textContent   = 'La contraseña debe tener al menos 8 caracteres';
-      passError.style.display = 'block';
-      passInput?.classList.add('input-error');
+    if (!phone) {
+      if (phoneErr) { phoneErr.textContent = 'Ingresa tu número de teléfono de contacto'; phoneErr.style.display = 'block'; }
+      isValid = false;
+    }
+
+    if (!password || password.length < 6) {
+      if (passErr) { passErr.textContent = 'La contraseña debe tener al menos 6 caracteres'; passErr.style.display = 'block'; }
       isValid = false;
     }
 
     if (!isValid) return;
 
     submitBtn.disabled    = true;
-    submitBtn.textContent = '⚙️ Registrando en la nube...';
+    submitBtn.textContent = '⏳ Enviando solicitud...';
 
     try {
-      await AuthService.createUser(email, password, {
-        displayName: name,
-        role: 'SUPER_ADMIN',
-        companyId: 'global',
-        branchId: 'global'
+      await FirestoreService.createPendingOwnerRequest({
+        ownerName,
+        companyName,
+        businessType,
+        email,
+        phone,
+        password
       });
 
-      NotificationService.success(`✅ Cuenta "${name}" creada. Ya puedes iniciar sesión.`);
+      if (successAlert) successAlert.style.display = 'block';
+      NotificationService.success('✅ Solicitud enviada exitosamente. El programador la revisará pronto.');
 
-      // Auto-fill login form with new credentials
-      const loginEmailInput = this.$('#login-email');
-      if (loginEmailInput) loginEmailInput.value = email;
-
-      // Close dev panel
-      const devPanel  = this.$('#dev-registration-panel');
-      const toggleBtn = this.$('#btn-toggle-dev-panel');
-      if (devPanel)  devPanel.style.display  = 'none';
-      if (toggleBtn) toggleBtn.textContent   = '⌨️ Acceso Programador';
-
-      // Clear dev form
-      nameInput  && (nameInput.value  = '');
-      emailInput && (emailInput.value = '');
-      passInput  && (passInput.value  = '');
-      secretInput && (secretInput.value = '');
+      // Clear form
+      if (ownerNameInput)   ownerNameInput.value   = '';
+      if (companyNameInput) companyNameInput.value = '';
+      if (emailInput)        emailInput.value       = '';
+      if (phoneInput)        phoneInput.value       = '';
+      if (passInput)         passInput.value        = '';
 
     } catch (err) {
-      const message = err.message || 'Error desconocido al registrar la cuenta.';
-      passError.textContent   = message;
-      passError.style.display = 'block';
-      console.error('[LoginView] Dev register error:', err);
+      console.error('[LoginView] Error al enviar solicitud de dueño:', err);
+      if (passErr) {
+        passErr.textContent   = err.message || 'Error al enviar la solicitud. Intenta nuevamente.';
+        passErr.style.display = 'block';
+      }
     } finally {
       submitBtn.disabled    = false;
-      submitBtn.textContent = '⚡ Crear Cuenta SuperAdmin';
+      submitBtn.textContent = '📩 Enviar Solicitud a Programador';
     }
   }
 

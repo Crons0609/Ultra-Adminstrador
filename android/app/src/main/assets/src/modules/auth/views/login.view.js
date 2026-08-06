@@ -166,6 +166,79 @@ export class LoginView extends Component {
                 ${loading ? 'Accediendo...' : 'Iniciar sesión'}
               </button>
             </form>
+
+            <!-- Join as Business Owner Link -->
+            <div style="text-align: center; margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid rgba(255,255,255,0.06);">
+              <p style="font-size: 0.8rem; color: var(--color-text-tertiary); margin-bottom: 8px;">¿Eres dueño de un negocio y quieres unirte?</p>
+              <button
+                id="btn-show-owner-join"
+                style="
+                  background: none;
+                  border: none;
+                  color: var(--color-accent);
+                  font-size: 0.85rem;
+                  font-weight: 700;
+                  cursor: pointer;
+                  text-decoration: underline;
+                "
+              >
+                Registrar mi Negocio
+              </button>
+            </div>
+          </div>
+
+          <!-- Business Owner Request Panel (hidden by default) -->
+          <div id="owner-join-panel" style="
+            display: none;
+            margin-top: var(--space-4);
+            animation: slideDown 0.3s ease forwards;
+          ">
+            <div class="card" style="
+              padding: var(--space-6);
+              border: 1px solid rgba(16, 185, 129, 0.35);
+              background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(0,0,0,0));
+            ">
+              <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4);">
+                <span style="font-size: 1.2rem;">🏢</span>
+                <div>
+                  <h3 style="margin: 0; font-size: 0.95rem; color: #10b981; font-weight: 700;">
+                    Solicitud de Nuevo Negocio
+                  </h3>
+                  <p style="margin: 0; font-size: 0.7rem; color: var(--color-text-tertiary);">
+                    Tu solicitud será revisada por nuestro equipo técnico
+                  </p>
+                </div>
+                <button id="btn-close-owner-join" style="margin-left: auto; background:none; border:none; color:#9ca3af; cursor:pointer; font-size:1.2rem;">&times;</button>
+              </div>
+
+              <form id="owner-join-form" novalidate>
+                <div class="form-group" style="margin-bottom: var(--space-3);">
+                  <label class="form-label" for="join-biz-name" style="font-size: 0.75rem;">Nombre del Negocio</label>
+                  <input type="text" id="join-biz-name" class="input input-md" placeholder="Ej. Restaurante La Parrilla" required />
+                </div>
+                <div class="form-group" style="margin-bottom: var(--space-3);">
+                  <label class="form-label" for="join-owner-name" style="font-size: 0.75rem;">Nombre del Propietario</label>
+                  <input type="text" id="join-owner-name" class="input input-md" placeholder="Tu nombre completo" required />
+                </div>
+                <div class="form-group" style="margin-bottom: var(--space-3);">
+                  <label class="form-label" for="join-email" style="font-size: 0.75rem;">Correo Electrónico</label>
+                  <input type="email" id="join-email" class="input input-md" placeholder="tu@correo.com" required />
+                </div>
+                <div class="form-group" style="margin-bottom: var(--space-4);">
+                  <label class="form-label" for="join-phone" style="font-size: 0.75rem;">Teléfono de Contacto</label>
+                  <input type="tel" id="join-phone" class="input input-md" placeholder="+505 8888-8888" required />
+                </div>
+
+                <button
+                  type="submit"
+                  id="btn-submit-owner-join"
+                  class="btn btn-primary btn-md"
+                  style="width: 100%; background: linear-gradient(135deg, #10b981, #059669);"
+                >
+                  Enviar Solicitud de Registro
+                </button>
+              </form>
+            </div>
           </div>
 
           <!-- Developer Panel Toggle Link -->
@@ -516,6 +589,87 @@ export class LoginView extends Component {
         this.checkLockoutStatus(email);
         NotificationService.success(`Intentos reiniciados para: ${email}`);
       });
+    }
+
+    // ── Business Owner Join Panel Handlers ──────────────────────────────────
+    const showJoinBtn = this.$('#btn-show-owner-join');
+    const closeJoinBtn = this.$('#btn-close-owner-join');
+    const joinPanel = this.$('#owner-join-panel');
+    const joinForm = this.$('#owner-join-form');
+
+    if (showJoinBtn && joinPanel) {
+      showJoinBtn.addEventListener('click', () => {
+        joinPanel.style.display = 'block';
+        gsap.fromTo(joinPanel, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4 });
+        showJoinBtn.parentElement.style.display = 'none';
+      });
+    }
+
+    if (closeJoinBtn && joinPanel) {
+      closeJoinBtn.addEventListener('click', () => {
+        joinPanel.style.display = 'none';
+        if (showJoinBtn) showJoinBtn.parentElement.style.display = 'block';
+      });
+    }
+
+    if (joinForm) {
+      joinForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.handleOwnerJoinSubmit();
+      });
+    }
+  }
+
+  async handleOwnerJoinSubmit() {
+    const bizNameInput = this.$('#join-biz-name');
+    const ownerNameInput = this.$('#join-owner-name');
+    const emailInput = this.$('#join-email');
+    const phoneInput = this.$('#join-phone');
+    const submitBtn = this.$('#btn-submit-owner-join');
+
+    const bizName = bizNameInput.value.trim();
+    const ownerName = ownerNameInput.value.trim();
+    const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
+
+    if (!bizName || !ownerName || !email || !phone) {
+      NotificationService.warn('Por favor completa todos los campos.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      NotificationService.error('Ingresa un correo electrónico válido.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando solicitud...';
+
+    try {
+      // Use FirestoreService to save a pending request
+      // Since it's public, we might need a non-auth write path
+      await AuthService.submitBusinessJoinRequest({
+        bizName,
+        ownerName,
+        email,
+        phone,
+        status: 'PENDING',
+        requestedAt: Date.now()
+      });
+
+      NotificationService.success('¡Solicitud enviada! Un programador revisará tu registro pronto.', 6000);
+
+      // Close panel and reset form
+      this.$('#owner-join-panel').style.display = 'none';
+      this.$('#btn-show-owner-join').parentElement.style.display = 'block';
+      this.$('#owner-join-form').reset();
+
+    } catch (err) {
+      console.error('[LoginView] Error submitting join request:', err);
+      NotificationService.error('Error al enviar la solicitud. Intenta de nuevo más tarde.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar Solicitud de Registro';
     }
   }
 

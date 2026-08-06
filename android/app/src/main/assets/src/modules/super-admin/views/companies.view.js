@@ -16,6 +16,7 @@ export class CompaniesView extends Component {
 
     // Initialize store with empty list — data will be loaded from Firebase RTDB
     GlobalStore.set({ companies: [] });
+    this.state = { requests: [] };
 
     // Initialize DataTable
     this.table = new DataTable({
@@ -126,6 +127,19 @@ export class CompaniesView extends Component {
         </button>
       `,
       contentHTML: `
+        <!-- Pending Requests Section -->
+        <div id="pending-requests-container" style="display:none;" class="animate-fade-in mb-6">
+          <div class="card p-5" style="border: 2px solid var(--color-success); background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent);">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h3 class="text-lg font-bold" style="color:var(--color-success);">✨ Solicitudes de Registro Pendientes</h3>
+              <span class="badge" id="requests-count-badge" style="background:var(--color-success); color:#fff; border-radius:20px; padding:2px 10px; font-size:0.75rem;">0 solicitudes</span>
+            </div>
+            <div id="requests-list-wrapper" class="d-flex flex-column gap-3">
+              <!-- Requests injected here -->
+            </div>
+          </div>
+        </div>
+
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <h3 class="text-lg font-semibold">Registros de Clientes Activos</h3>
@@ -149,6 +163,11 @@ export class CompaniesView extends Component {
       const companies = await FirestoreService.listAllCompanies();
       GlobalStore.set({ companies });
       
+      // Load pending join requests
+      const requests = await AuthService.getPendingBusinessRequests();
+      this.state.requests = requests;
+      this.renderRequests();
+
       let plans = await FirestoreService.listPlans();
       if (!plans || !plans.length) {
         const defaults = [
@@ -1150,6 +1169,153 @@ export class CompaniesView extends Component {
       'hard-delete': 'eliminar definitivamente'
     };
     return labels[action] || 'actualizar';
+  }
+
+  renderRequests() {
+    const container = this.layout.$('#pending-requests-container');
+    const wrapper = this.layout.$('#requests-list-wrapper');
+    const badge = this.layout.$('#requests-count-badge');
+
+    if (!container || !wrapper) return;
+
+    if (this.state.requests.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    badge.textContent = `${this.state.requests.length} solicitud${this.state.requests.length !== 1 ? 'es' : ''}`;
+
+    wrapper.innerHTML = this.state.requests.map(req => `
+      <div class="request-item p-4" style="background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div style="flex:1; min-width:200px;">
+          <div style="font-weight:700; font-size:1rem; color:var(--color-text-primary);">${req.bizName}</div>
+          <div style="font-size:0.85rem; color:var(--color-text-secondary); margin-top:2px;">Propietario: <strong>${req.ownerName}</strong></div>
+          <div style="display:flex; gap:12px; margin-top:6px; font-size:0.78rem; color:var(--color-text-tertiary);">
+            <span>📧 ${req.email}</span>
+            <span>📱 ${req.phone}</span>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-secondary btn-sm btn-reject-request" data-id="${req.id}">Rechazar</button>
+          <button class="btn btn-primary btn-sm btn-approve-request" data-id="${req.id}" style="background:var(--color-success); border:none; color:#fff;">✅ Aprobar y Configurar</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Bind events
+    wrapper.querySelectorAll('.btn-reject-request').forEach(btn => {
+      btn.addEventListener('click', () => this.handleRejectRequest(btn.dataset.id));
+    });
+    wrapper.querySelectorAll('.btn-approve-request').forEach(btn => {
+      btn.addEventListener('click', () => this.handleApproveRequest(btn.dataset.id));
+    });
+  }
+
+  async handleRejectRequest(requestId) {
+    const reason = prompt('Motivo del rechazo (opcional):', '');
+    if (reason === null) return;
+
+    try {
+      await AuthService.rejectBusinessJoinRequest(requestId, reason);
+      NotificationService.success('Solicitud rechazada.');
+      await this.loadCompanies();
+    } catch (err) {
+      NotificationService.error('Error al rechazar: ' + err.message);
+    }
+  }
+
+  async handleApproveRequest(requestId) {
+    const req = this.state.requests.find(r => r.id === requestId);
+    if (!req) return;
+
+    // Open configuration modal before actual approval
+    let plans = GlobalStore.getState().plans || [];
+    const planOptionsHTML = plans.map(p => `<option value="${p.id}">${p.name} — $${p.price}</option>`).join('');
+
+    const formHTML = `
+      <form id="approve-request-form" class="d-flex flex-column gap-4" style="color: var(--color-text-primary);">
+        <p style="font-size:0.9rem; color:var(--color-text-secondary);">Configura el negocio <strong>${req.bizName}</strong> para completar el registro de <strong>${req.ownerName}</strong>.</p>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Tipo de Negocio</label>
+            <select id="appr-biz-type" class="input input-md">
+              ${getBusinessTypeOptions()}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Plan SaaS</label>
+            <select id="appr-plan" class="input input-md">
+              ${planOptionsHTML}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contraseña de Acceso (Temporal)</label>
+          <input type="text" id="appr-password" class="input input-md" value="${Math.random().toString(36).slice(-8)}" required />
+          <small class="text-secondary">Esta es la clave que el dueño usará para su primer inicio de sesión.</small>
+        </div>
+
+        <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
+          <label class="form-label mb-3" style="font-weight: 700;">🧩 Módulos a Activar</label>
+          ${this._renderModuleCheckboxes(getDefaultModuleConfig())}
+        </div>
+      </form>
+    `;
+
+    const footerHTML = `
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn" style="background:var(--color-success); border:none;">Finalizar Registro y Notificar</button>
+    `;
+
+    this.modalInstance = new Modal({
+      title: 'Aprobar y Registrar Negocio',
+      bodyHTML: formHTML,
+      footerHTML: footerHTML,
+      size: 'lg'
+    });
+
+    document.body.appendChild(this.modalInstance.mount());
+
+    this.modalInstance.$('#modal-cancel-btn').addEventListener('click', () => this.modalInstance.close());
+    this.modalInstance.$('#modal-submit-btn').addEventListener('click', async () => {
+      const btn = this.modalInstance.$('#modal-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Procesando registro...';
+
+      const businessType = this.modalInstance.$('#appr-biz-type').value;
+      const plan = this.modalInstance.$('#appr-plan').value;
+      const password = this.modalInstance.$('#appr-password').value;
+
+      const modules = {};
+      MODULE_REGISTRY.forEach(m => {
+        const cb = this.modalInstance.$(`#mod-registry-${m.id}`);
+        modules[m.id] = cb ? cb.checked : m.defaultEnabled;
+      });
+
+      try {
+        const result = await AuthService.approveBusinessJoinRequest(requestId, {
+          businessType,
+          plan,
+          password,
+          modules
+        });
+
+        this.modalInstance.close();
+        NotificationService.success(`¡Negocio "${req.bizName}" registrado con éxito!`);
+
+        // Show credentials modal
+        this.showOwnerCredentialsModal(req.bizName, req.email, result.initialPassword);
+
+        await this.loadCompanies();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Finalizar Registro y Notificar';
+        alert('Error al aprobar: ' + err.message);
+      }
+    });
   }
 
   unmount() {

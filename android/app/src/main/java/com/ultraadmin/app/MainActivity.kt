@@ -13,30 +13,27 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.Uri
 import android.net.http.SslError
-import android.os.Build
-import android.os.Bundle
-import android.os.Environment
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
+import android.os.*
 import android.provider.MediaStore
 import android.view.View
 import android.webkit.*
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.WebViewAssetLoader
 import java.io.File
+import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 /**
  * MainActivity — hosts the Ultra Administrador SaaS inside a professional WebView.
@@ -59,7 +56,6 @@ class MainActivity : AppCompatActivity() {
         const val LOCAL_URL = "https://appassets.androidplatform.net/index.html"
         // ─────────────────────────────────────────────────────────────────────
 
-        private const val RC_PERMISSIONS = 1001
         private var activeInstance: MainActivity? = null
 
         fun notifyNewFcmToken(token: String) {
@@ -80,7 +76,10 @@ class MainActivity : AppCompatActivity() {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var wasOffline = false
 
-    private val assetLoader by lazy {
+    private var geoOrigin: String? = null
+    private var geoCallback: GeolocationPermissions.Callback? = null
+
+    private val assetLoader: WebViewAssetLoader by lazy {
         WebViewAssetLoader.Builder()
             .setDomain("appassets.androidplatform.net")
             .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -105,7 +104,13 @@ class MainActivity : AppCompatActivity() {
 
     private val requestLocationPermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* handled in WebChromeClient */ }
+    ) { results ->
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        geoCallback?.invoke(geoOrigin, granted, false)
+        geoOrigin = null
+        geoCallback = null
+    }
 
     private val filePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -142,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         webView         = findViewById(R.id.webview)
 
         setupWebView()
+        setupBackNavigation()
 
         // Handle deep links & notification intent extras
         handleIntent(intent)
@@ -155,18 +161,12 @@ class MainActivity : AppCompatActivity() {
 
     // ── System Status & Notification Bar setup ─────────────────────────────
     private fun setupEdgeToEdge() {
-        // Let the system decorate the window area — the WebView layout will be
-        // pushed below the status bar automatically via fitsSystemWindows="true"
-        // in activity_main.xml. This ensures header buttons are never obstructed.
         WindowCompat.setDecorFitsSystemWindows(window, true)
 
         val controller = WindowInsetsControllerCompat(window, window.decorView)
-        // Keep the Android notification/status bar visible at all times
         controller.show(WindowInsetsCompat.Type.statusBars())
-        // Use light icons on dark status bar backgrounds
         controller.isAppearanceLightStatusBars = false
 
-        // Apply branded dark background color to the status bar
         window.statusBarColor = ContextCompat.getColor(this, R.color.bg_primary)
     }
 
@@ -267,7 +267,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Telephone / mailto → system handler
                 url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:") -> {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                     true
                 }
 
@@ -322,13 +322,14 @@ class MainActivity : AppCompatActivity() {
             if (fineGranted) {
                 callback?.invoke(origin, true, false)
             } else {
+                geoOrigin = origin
+                geoCallback = callback
                 requestLocationPermission.launch(
                     arrayOf(
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     )
                 )
-                callback?.invoke(origin, fineGranted, false)
             }
         }
 
@@ -507,7 +508,9 @@ class MainActivity : AppCompatActivity() {
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful && task.result != null) {
                         val newToken = task.result
-                        prefs.edit().putString(UltraFirebaseMessagingService.PREF_FCM_TOKEN, newToken).apply()
+                        prefs.edit {
+                            putString(UltraFirebaseMessagingService.PREF_FCM_TOKEN, newToken)
+                        }
                         notifyNewFcmToken(newToken)
                     }
                 }
@@ -636,37 +639,49 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) {
-            // Check if we are at a "root" hash (like #/dashboard) to avoid getting stuck in loops
-            val url = webView.url ?: ""
-            if (url.contains("#/dashboard") || url.contains("#/login") || !url.contains("#")) {
-                 super.onBackPressed()
-            } else {
-                 webView.goBack()
-            }
-        } else {
-            super.onBackPressed()
-        }
-    }
-
     // ── Lifecycle ────────────────────────────────────────────────────────────
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        webView.saveState(outState)
+        if (::webView.isInitialized) {
+            webView.saveState(outState)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         activeInstance = this
-        webView.onResume()
+        if (::webView.isInitialized) {
+            webView.onResume()
+        }
         setupEdgeToEdge() // Re-apply after system dialogs
     }
 
     override fun onPause() {
         super.onPause()
-        webView.onPause()
+        if (::webView.isInitialized) {
+            webView.onPause()
+        }
+    }
+
+    private fun setupBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (::webView.isInitialized && webView.canGoBack()) {
+                    val url = webView.url ?: ""
+                    if (url.contains("#/dashboard") || url.contains("#/login") || !url.contains("#")) {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    } else {
+                        webView.goBack()
+                    }
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
     }
 
     override fun onDestroy() {

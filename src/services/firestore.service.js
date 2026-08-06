@@ -1634,11 +1634,113 @@ export class FirestoreService {
    * @param {string} status 
    * @param {Object} [details] 
    */
+  /**
+   * Update invoice import status.
+   * @param {string} invoiceId 
+   * @param {string} status 
+   * @param {Object} [details] 
+   */
   static async updateInvoiceStatus(invoiceId, status, details = {}) {
     return await this.update('invoices', invoiceId, {
       status,
       ...details,
       updatedAtLocal: TimeService.timestamp()
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PENDING OWNER REGISTRATION REQUESTS (Global / Super Admin)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Creates a new business owner registration request.
+   * Saved at root path /pending_owner_requests/{requestId}
+   * @param {Object} data - { ownerName, companyName, businessType, email, phone, password, city, state, country }
+   * @returns {Promise<string>} Request ID
+   */
+  static async createPendingOwnerRequest(data) {
+    const path = 'pending_owner_requests';
+    const requestId = db ? push(ref(db, path)).key : `REQ-${Date.now()}`;
+    const fullPath = `${path}/${requestId}`;
+
+    const payload = {
+      id: requestId,
+      ownerName: data.ownerName || '',
+      companyName: data.companyName || '',
+      businessType: data.businessType || 'Restaurante',
+      email: (data.email || '').toLowerCase().trim(),
+      phone: data.phone || '',
+      password: data.password || '',
+      city: data.city || '',
+      state: data.state || '',
+      country: data.country || 'Nicaragua',
+      notes: data.notes || '',
+      status: 'PENDIENTE',
+      createdAt: serverTimestamp(),
+      createdAtLocal: TimeService.timestamp(),
+      updatedAtLocal: TimeService.timestamp()
+    };
+
+    if (navigator.onLine && db) {
+      await set(ref(db, fullPath), payload);
+      console.log(`[DB] ✅ Created pending owner request: ${fullPath}`);
+    } else {
+      await OfflineSyncService.write('set', fullPath, payload, 'Crear solicitud de dueño');
+    }
+
+    return requestId;
+  }
+
+  /**
+   * Retrieves all pending business owner registration requests.
+   * @returns {Promise<Array>}
+   */
+  static async listPendingOwnerRequests() {
+    const path = 'pending_owner_requests';
+    if (!navigator.onLine || !db) {
+      const cached = (await LocalStorageDBService.getCache(path)) || [];
+      return cached;
+    }
+
+    try {
+      const snap = await get(ref(db, path));
+      if (!snap.exists()) return [];
+
+      const results = [];
+      snap.forEach(childSnap => {
+        results.push({ id: childSnap.key, ...childSnap.val() });
+      });
+
+      results.sort((a, b) => (b.createdAtLocal || '').localeCompare(a.createdAtLocal || ''));
+
+      await LocalStorageDBService.setCache(path, results);
+      return results;
+    } catch (err) {
+      console.error('[DB] Error listing pending owner requests:', err);
+      return (await LocalStorageDBService.getCache(path)) || [];
+    }
+  }
+
+  /**
+   * Updates the status of a pending owner request (e.g. APROBADO or RECHAZADO).
+   * @param {string} requestId 
+   * @param {string} status - 'APROBADO' | 'RECHAZADO' | 'PENDIENTE'
+   * @param {Object} [extraData]
+   */
+  static async updatePendingOwnerRequestStatus(requestId, status, extraData = {}) {
+    const fullPath = `pending_owner_requests/${requestId}`;
+    const payload = {
+      status,
+      ...extraData,
+      updatedAt: serverTimestamp(),
+      updatedAtLocal: TimeService.timestamp()
+    };
+
+    if (navigator.onLine && db) {
+      await update(ref(db, fullPath), payload);
+      console.log(`[DB] ✅ Updated pending request ${requestId} status to: ${status}`);
+    } else {
+      await OfflineSyncService.write('update', fullPath, payload, 'Actualizar estado de solicitud');
+    }
   }
 }
