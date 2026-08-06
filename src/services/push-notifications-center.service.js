@@ -93,4 +93,129 @@ export class PushNotificationsCenterService {
 
     return listenerId;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROGRAMMER MESSAGING & APK DISTRIBUTION SERVICE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Send a direct notification or APK update message to a specific user.
+   * @param {string} userId
+   * @param {Object} payload - { title, body, type, version, apkUrl, actionLabel, senderName, companyId }
+   */
+  static async sendNotificationToUser(userId, payload = {}) {
+    if (!userId) throw new Error('ID de usuario requerido.');
+
+    const notifId = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const fullPath = `users/${userId}/notifications/${notifId}`;
+
+    const data = {
+      id: notifId,
+      type: payload.type || 'DIRECT_MESSAGE',
+      title: payload.title || 'Mensaje del Programador',
+      body: payload.body || '',
+      version: payload.version || '',
+      apkUrl: payload.apkUrl || '',
+      actionLabel: payload.actionLabel || '📥 Descargar APK',
+      senderName: payload.senderName || 'Programador SaaS',
+      companyId: payload.companyId || '',
+      isRead: false,
+      createdAt: new Date().toISOString()
+    };
+
+    await FirestoreService.writePath(fullPath, data);
+    return notifId;
+  }
+
+  /**
+   * Broadcast a notification / APK update to all business owners (OWNER) or a specific company.
+   * @param {Object} payload - { title, body, type, version, apkUrl, actionLabel, targetScope, companyId }
+   * @returns {Promise<{ success: boolean, count: number }>}
+   */
+  static async broadcastToOwners(payload = {}) {
+    const { currentUser } = GlobalStore.getState();
+    const senderEmail = currentUser?.email || 'Programador';
+
+    const targetScope = payload.targetScope || 'ALL_OWNERS'; // 'ALL_OWNERS' | 'SPECIFIC_COMPANY' | 'ALL_USERS'
+    const targetCompanyId = payload.companyId || '';
+
+    // Fetch all users from /users
+    const allUsersData = await FirestoreService.readPath('users');
+    if (!allUsersData || typeof allUsersData !== 'object') {
+      throw new Error('No se pudieron obtener los usuarios desde Firebase.');
+    }
+
+    const usersList = Object.entries(allUsersData).map(([uid, u]) => ({
+      uid,
+      ...(typeof u === 'object' && u !== null ? u : {})
+    }));
+
+    // Filter recipients based on scope
+    let recipients = [];
+    if (targetScope === 'SPECIFIC_COMPANY' && targetCompanyId) {
+      recipients = usersList.filter(u => u.companyId === targetCompanyId && (u.role === 'OWNER' || u.role === 'MANAGER'));
+    } else if (targetScope === 'ALL_USERS') {
+      recipients = usersList;
+    } else {
+      // Default: ALL_OWNERS
+      recipients = usersList.filter(u => u.role === 'OWNER' || u.role === 'SUPER_ADMIN' || !u.role);
+    }
+
+    if (recipients.length === 0) {
+      return { success: false, count: 0, message: 'No se encontraron destinatarios con el criterio seleccionado.' };
+    }
+
+    // Send in parallel
+    const promises = recipients.map(user => this.sendNotificationToUser(user.uid, {
+      ...payload,
+      companyId: user.companyId || ''
+    }));
+
+    await Promise.all(promises);
+
+    // Record in global broadcast history log
+    const broadcastId = `bcast_${Date.now()}`;
+    const logData = {
+      id: broadcastId,
+      title: payload.title || '',
+      body: payload.body || '',
+      type: payload.type || 'ANNOUNCEMENT',
+      version: payload.version || '',
+      apkUrl: payload.apkUrl || '',
+      actionLabel: payload.actionLabel || '',
+      targetScope,
+      targetCompanyId,
+      recipientsCount: recipients.length,
+      sentAt: new Date().toISOString(),
+      sentBy: senderEmail
+    };
+
+    try {
+      await FirestoreService.writePath(`global/broadcast_history/${broadcastId}`, logData);
+    } catch (e) {
+      console.warn('[PushNotificationsCenter] Could not write broadcast history log:', e.message);
+    }
+
+    return { success: true, count: recipients.length };
+  }
+
+  /**
+   * Read the global broadcast history log.
+   * Path: global/broadcast_history
+   * @returns {Promise<Array>}
+   */
+  static async getBroadcastHistory() {
+    try {
+      const data = await FirestoreService.readPath('global/broadcast_history');
+      if (!data || typeof data !== 'object') return [];
+
+      return Object.values(data)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.sentAt || 0) - new Date(a.sentAt || 0));
+    } catch (e) {
+      console.warn('[PushNotificationsCenter] Error reading broadcast history:', e.message);
+      return [];
+    }
+  }
 }
+

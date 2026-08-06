@@ -18,7 +18,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { AppearanceService, THEMES } from '../../../services/appearance.service.js';
 import { GlobalStore } from '../../../core/state.js';
 import { TimeService } from '../../../services/time.service.js';
-import { MobileNavConfigService, NAV_TAB_CATALOG, DEFAULT_NAV_TABS } from '../../../services/mobile-nav-config.service.js';
+import { PushNotificationsCenterService } from '../../../services/push-notifications-center.service.js';
 
 // Build the theme grid HTML from the THEMES dictionary
 function buildThemeGrid() {
@@ -71,6 +71,7 @@ export class SettingsView extends Component {
             <button type="button" class="settings-tab-btn" data-tab="tab-mantenimiento">🛠️ Modo Mantenimiento</button>
             <button type="button" class="settings-tab-btn" data-tab="tab-avanzado">⚡ Avanzado y Monitoreo</button>
             <button type="button" class="settings-tab-btn" data-tab="tab-mobile-nav">📱 Barra Móvil</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-broadcasts" style="background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-weight:700;">📢 Mensajes y APKs</button>
           </div>
 
           <!-- Right Content Panels -->
@@ -557,6 +558,115 @@ export class SettingsView extends Component {
                 </div>
               </div>
 
+              <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- 8. MENSAJES Y ACTUALIZACIONES DE APK                      -->
+              <!-- ══════════════════════════════════════════════════════════ -->
+              <div class="settings-panel" id="tab-broadcasts">
+                <h3 class="text-lg font-bold" style="color: #10b981;">📢 Mensajes Personalizados y Distribución de APK Android</h3>
+                <p class="text-xs text-secondary mb-4">Envía avisos masivos o mensajes directos a cada dueño de negocio registrado (OWNER), notifica nuevas versiones de la aplicación APK Android y comparte enlaces de descarga directos.</p>
+
+                <!-- FORM CARD -->
+                <div class="card p-5 mb-5" style="border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.02);">
+                  <h4 class="text-md font-bold mb-3" style="color: #10b981; display:flex; align-items:center; gap:8px;">
+                    <span>🚀 Redactar Comunicado o Enviar Actualización de APK</span>
+                  </h4>
+
+                  <div id="bcast-form-wrapper" style="display: flex; flex-direction: column; gap: 14px;">
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+                      <div class="form-group mb-0">
+                        <label class="form-label" for="bcast-target-scope">🎯 Destinatarios</label>
+                        <select id="bcast-target-scope" class="input input-md">
+                          <option value="ALL_OWNERS">🌐 Todos los Dueños de Negocio (OWNER)</option>
+                          <option value="SPECIFIC_COMPANY">🏪 Dueño de Negocio Específico</option>
+                          <option value="ALL_USERS">👥 Todos los Usuarios Registrados</option>
+                        </select>
+                      </div>
+
+                      <div class="form-group mb-0" id="bcast-company-select-group" style="display: none;">
+                        <label class="form-label" for="bcast-company-id">🏪 Seleccionar Negocio / Dueño</label>
+                        <select id="bcast-company-id" class="input input-md">
+                          <option value="">Cargando empresas...</option>
+                        </select>
+                      </div>
+
+                      <div class="form-group mb-0">
+                        <label class="form-label" for="bcast-type">🏷️ Tipo de Notificación</label>
+                        <select id="bcast-type" class="input input-md">
+                          <option value="APK_UPDATE">📲 Actualización de Aplicación Android (APK)</option>
+                          <option value="ANNOUNCEMENT">📢 Comunicado Oficial / Aviso General</option>
+                          <option value="DIRECT_MESSAGE">✉️ Mensaje Personalizado Directo</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="form-group mb-0">
+                      <label class="form-label" for="bcast-title">📌 Título del Mensaje / Notificación</label>
+                      <input type="text" id="bcast-title" class="input input-md" placeholder="ej. 📲 Nueva Versión Disponible: Ultra Administrador v2.5.0" />
+                    </div>
+
+                    <div class="form-group mb-0">
+                      <label class="form-label" for="bcast-body">📝 Mensaje / Novedades para los Dueños</label>
+                      <textarea id="bcast-body" class="input" style="height: 90px; padding: 10px;" placeholder="Escribe el mensaje o las novedades de la actualización para los dueños..."></textarea>
+                    </div>
+
+                    <!-- APK FIELDS CONTAINER -->
+                    <div id="bcast-apk-fields-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 14px; background: rgba(16,185,129,0.06); border: 1px dashed rgba(16,185,129,0.3); border-radius: 10px;">
+                      <div class="form-group mb-0">
+                        <label class="form-label" for="bcast-apk-version">🏷️ Versión del APK (opcional)</label>
+                        <input type="text" id="bcast-apk-version" class="input input-md" placeholder="ej. v2.5.0" />
+                      </div>
+
+                      <div class="form-group mb-0">
+                        <label class="form-label" for="bcast-action-label">🔘 Texto del Botón de Descarga</label>
+                        <input type="text" id="bcast-action-label" class="input input-md" placeholder="ej. 📥 Descargar APK v2.5.0" value="📥 Descargar Actualización APK" />
+                      </div>
+
+                      <div class="form-group mb-0" style="grid-column: 1 / -1;">
+                        <label class="form-label" for="bcast-apk-url">🔗 Enlace de Descarga de APK Android (.apk URL)</label>
+                        <input type="url" id="bcast-apk-url" class="input input-md" placeholder="https://mi-servidor.com/descargas/UltraAdmin-v2.5.0.apk" />
+                      </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
+                      <button type="button" id="btn-submit-broadcast" class="btn btn-primary btn-md" style="background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight:700;">
+                        🚀 Enviar Notificación / Actualización APK
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- HISTORY TABLE CARD -->
+                <div class="card p-5">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 class="text-md font-bold">📜 Historial de Comunicados y Actualizaciones Enviadas</h4>
+                    <button type="button" id="btn-refresh-broadcast-history" class="btn btn-secondary btn-sm">🔄 Actualizar Historial</button>
+                  </div>
+
+                  <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem;">
+                      <thead>
+                        <tr style="border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary);">
+                          <th style="padding: 10px 12px;">Fecha / Hora</th>
+                          <th style="padding: 10px 12px;">Tipo</th>
+                          <th style="padding: 10px 12px;">Título</th>
+                          <th style="padding: 10px 12px;">Alcance / Destino</th>
+                          <th style="padding: 10px 12px;">Notificados</th>
+                          <th style="padding: 10px 12px;">Versión / APK Link</th>
+                        </tr>
+                      </thead>
+                      <tbody id="broadcast-history-table-body">
+                        <tr>
+                          <td colspan="6" style="padding: 24px; text-align: center; color: var(--color-text-tertiary);">
+                            Cargando historial de envíos...
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
               <!-- Form Actions Bar -->
               <div id="settings-actions-bar" style="display: flex; justify-content: flex-end; gap: var(--space-3); border-top: 1px solid rgba(255,255,255,0.06); padding-top: var(--space-4);">
                 <button type="button" id="btn-cancel-settings" class="btn btn-secondary btn-md">Cancelar Cambios</button>
@@ -577,6 +687,8 @@ export class SettingsView extends Component {
     this.afterMount(element);
     this.loadSaaSSettings(element);
     this.loadMobileNavConfig(element);
+    this.loadBroadcastCompanies(element);
+    this.loadBroadcastHistory(element);
     return element;
   }
 
@@ -596,9 +708,12 @@ export class SettingsView extends Component {
         btn.classList.add('active');
         const panel = root.querySelector(`#${btn.dataset.tab}`);
         if (panel) panel.classList.add('active');
-        // Hide save bar on advanced tab
+        // Hide save bar on advanced and broadcast tabs
         if (actionsBar) {
-          actionsBar.style.display = btn.dataset.tab === 'tab-avanzado' ? 'none' : 'flex';
+          actionsBar.style.display = ['tab-avanzado', 'tab-broadcasts'].includes(btn.dataset.tab) ? 'none' : 'flex';
+        }
+        if (btn.dataset.tab === 'tab-broadcasts') {
+          this.loadBroadcastHistory(root);
         }
       });
     });
@@ -652,6 +767,18 @@ export class SettingsView extends Component {
     root.querySelector('#btn-copy-cron-url')?.addEventListener('click', () => this.copyCronEndpoint());
     root.querySelector('#btn-test-cron-url')?.addEventListener('click', () => this.testCronEndpoint());
     root.querySelector('#btn-execute-purge')?.addEventListener('click', () => this.handleExecuteProductionReset());
+
+    // 8. Broadcast & APK Updates
+    const scopeSelect = root.querySelector('#bcast-target-scope');
+    const companyGroup = root.querySelector('#bcast-company-select-group');
+    if (scopeSelect && companyGroup) {
+      scopeSelect.addEventListener('change', () => {
+        companyGroup.style.display = scopeSelect.value === 'SPECIFIC_COMPANY' ? 'block' : 'none';
+      });
+    }
+
+    root.querySelector('#btn-submit-broadcast')?.addEventListener('click', () => this.handleSendBroadcast(root));
+    root.querySelector('#btn-refresh-broadcast-history')?.addEventListener('click', () => this.loadBroadcastHistory(root));
   }
 
   // ─── Theme selection ─────────────────────────────────────────────────────────
@@ -1418,6 +1545,146 @@ export class SettingsView extends Component {
         this.renderMobileNavUI(root, [...DEFAULT_NAV_TABS]);
         NotificationService.success('Barra móvil restaurada a predeterminados.');
       };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROGRAMMER BROADCASTING & APK DISTRIBUTION HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async loadBroadcastCompanies(parentEl) {
+    const root = parentEl || this.layout.element;
+    const select = root?.querySelector('#bcast-company-id');
+    if (!select) return;
+
+    try {
+      const companies = await FirestoreService.listAllCompanies();
+      if (!companies || companies.length === 0) {
+        select.innerHTML = `<option value="">No hay empresas registradas</option>`;
+        return;
+      }
+
+      select.innerHTML = companies
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        .map(c => `<option value="${c.id}">${c.name || c.id} — ${c.ownerEmail ? `👤 ${c.ownerEmail}` : 'Sin correo registrado'}</option>`)
+        .join('');
+    } catch (err) {
+      console.warn('[SettingsView] Error loading broadcast companies:', err.message);
+      select.innerHTML = `<option value="">Error al cargar empresas</option>`;
+    }
+  }
+
+  async loadBroadcastHistory(parentEl) {
+    const root = parentEl || this.layout.element;
+    const tbody = root?.querySelector('#broadcast-history-table-body');
+    if (!tbody) return;
+
+    try {
+      const history = await PushNotificationsCenterService.getBroadcastHistory();
+      if (!history || history.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="padding:24px; text-align:center; color:var(--color-text-tertiary);">
+              ✨ Aún no has enviado comunicados o actualizaciones de APK.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = history.map(b => {
+        const timeStr = b.sentAt ? TimeService.formatTime(b.sentAt) + ' ' + TimeService.formatDate(b.sentAt) : '—';
+        const typeBadge = b.type === 'APK_UPDATE'
+          ? '<span class="badge" style="background:#10b981; color:#fff; font-size:0.7rem; font-weight:700;">📲 Actualización APK</span>'
+          : '<span class="badge" style="background:var(--color-accent); color:#fff; font-size:0.7rem; font-weight:700;">📢 Comunicado</span>';
+
+        const apkInfo = b.apkUrl
+          ? `<a href="${b.apkUrl}" target="_blank" style="color:#10b981; text-decoration:underline; font-weight:600;">🔗 Descargar APK (${b.version || 'v1.0'})</a>`
+          : '<span style="color:var(--color-text-tertiary);">—</span>';
+
+        return `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size:0.8rem;">
+            <td style="padding:10px 12px; color:var(--color-text-tertiary); white-space:nowrap;">${timeStr}</td>
+            <td style="padding:10px 12px;">${typeBadge}</td>
+            <td style="padding:10px 12px; font-weight:700; color:var(--color-text-primary);">${b.title || '—'}</td>
+            <td style="padding:10px 12px; color:var(--color-text-secondary);">${b.targetScope || 'General'}</td>
+            <td style="padding:10px 12px; font-weight:700; color:var(--color-accent);">${b.recipientsCount || 0} dueño(s)</td>
+            <td style="padding:10px 12px;">${apkInfo}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.warn('[SettingsView] Error loading broadcast history:', err.message);
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:16px; text-align:center; color:var(--color-danger);">Error al cargar historial.</td></tr>`;
+    }
+  }
+
+  async handleSendBroadcast(parentEl) {
+    const root = parentEl || this.layout.element;
+    const btn = root?.querySelector('#btn-submit-broadcast');
+
+    const targetScope = root?.querySelector('#bcast-target-scope')?.value || 'ALL_OWNERS';
+    const companyId   = root?.querySelector('#bcast-company-id')?.value || '';
+    const type        = root?.querySelector('#bcast-type')?.value || 'APK_UPDATE';
+    const title       = (root?.querySelector('#bcast-title')?.value || '').trim();
+    const body        = (root?.querySelector('#bcast-body')?.value || '').trim();
+    const version     = (root?.querySelector('#bcast-apk-version')?.value || '').trim();
+    const apkUrl      = (root?.querySelector('#bcast-apk-url')?.value || '').trim();
+    const actionLabel = (root?.querySelector('#bcast-action-label')?.value || '').trim() || '📥 Descargar Actualización APK';
+
+    if (!title || !body) {
+      alert('Por favor ingresa al menos el Título y el Mensaje de la notificación.');
+      return;
+    }
+
+    if (type === 'APK_UPDATE' && !apkUrl) {
+      if (!confirm('No has ingresado un enlace de descarga APK. ¿Deseas enviar el aviso de todos modos?')) {
+        return;
+      }
+    }
+
+    if (!confirm(`¿Confirmas el envío de este comunicado/actualización a ${targetScope === 'ALL_OWNERS' ? 'todos los dueños registrados' : 'el destinatario seleccionado'}?`)) {
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Enviando a Firebase...';
+    }
+
+    try {
+      const result = await PushNotificationsCenterService.broadcastToOwners({
+        targetScope,
+        companyId,
+        type,
+        title,
+        body,
+        version,
+        apkUrl,
+        actionLabel
+      });
+
+      if (result.success) {
+        NotificationService.success(`🚀 Comunicado enviado exitosamente a ${result.count} destinatario(s).`);
+        // Reset form inputs
+        if (root.querySelector('#bcast-title')) root.querySelector('#bcast-title').value = '';
+        if (root.querySelector('#bcast-body')) root.querySelector('#bcast-body').value = '';
+        if (root.querySelector('#bcast-apk-version')) root.querySelector('#bcast-apk-version').value = '';
+        if (root.querySelector('#bcast-apk-url')) root.querySelector('#bcast-apk-url').value = '';
+
+        // Reload history table
+        await this.loadBroadcastHistory(root);
+      } else {
+        NotificationService.warning(result.message || 'No se enviaron notificaciones.');
+      }
+    } catch (err) {
+      console.error('[SettingsView] Error sending broadcast:', err);
+      NotificationService.error(`Error al enviar comunicado: ${err.message || err}`);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🚀 Enviar Notificación / Actualización APK';
+      }
     }
   }
 

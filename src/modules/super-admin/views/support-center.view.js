@@ -33,9 +33,14 @@ export class SupportCenterView extends Component {
       title: 'Centro de Soporte Técnico',
       subtitle: 'Administración global de solicitudes de recuperación de cuentas y consultas de clientes.',
       actionHTML: `
-        <button class="btn btn-primary btn-sm" id="btn-supp-change-password">
-          🔑 Cambiar Contraseña / Desbloquear
-        </button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-success btn-sm" id="btn-supp-broadcast-apk" style="background: linear-gradient(135deg, #10b981, #059669); border:none; font-weight:700; color:#fff;">
+            📢 Mensajes y APK Android
+          </button>
+          <button class="btn btn-primary btn-sm" id="btn-supp-change-password">
+            🔑 Cambiar Contraseña / Desbloquear
+          </button>
+        </div>
       `,
       contentHTML: `
         <div class="card p-5 mb-5" style="border: 1px solid var(--color-border); background: var(--color-bg-secondary);">
@@ -109,6 +114,14 @@ export class SupportCenterView extends Component {
 
     el.querySelector('#btn-supp-change-password')?.addEventListener('click', () => {
       this.openChangePasswordModal();
+    });
+
+    el.querySelector('#btn-supp-broadcast-apk')?.addEventListener('click', () => {
+      window.location.hash = '#/super-admin/settings';
+      setTimeout(() => {
+        const btn = document.querySelector('[data-tab="tab-broadcasts"]');
+        if (btn) btn.click();
+      }, 150);
     });
 
     // Subscribe to support_tickets in real time

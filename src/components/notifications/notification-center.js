@@ -220,6 +220,49 @@ export class NotificationCenter {
         `;
       }
 
+      // ── Special: APK Update / Download Notification ────────────────────────
+      if ((n.type || '').toUpperCase() === 'APK_UPDATE' || n.apkUrl) {
+        const bg      = n.isRead ? 'rgba(16, 185, 129, 0.04)' : 'rgba(16, 185, 129, 0.12)';
+        const border  = n.isRead ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.5)';
+        const timeStr = this.formatTime(n.createdAt);
+        const apkUrl  = n.apkUrl || '#';
+        const version = n.version ? `v${n.version.replace(/^v/i, '')}` : '';
+
+        return `
+          <div class="notif-item notif-apk-update-card" data-id="${n.id}" style="
+            padding: 14px; margin-bottom: 10px; border-radius: 12px;
+            background: ${bg}; border: 1px solid ${border};
+            display: flex; flex-direction: column; gap: 10px;
+          ">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div style="font-size: 1.5rem; line-height:1; flex-shrink:0;">📲</div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:0.85rem; font-weight:700; color:#fff;">${n.title || 'Actualización de APK Android'}</span>
+                  <span style="font-size:0.7rem; color:rgba(255,255,255,0.4); white-space:nowrap; margin-left:8px;">${timeStr}</span>
+                </div>
+                ${version ? `<div style="display:inline-block; background:#10b981; color:#fff; font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:10px; margin-bottom:6px;">Actualización ${version}</div>` : ''}
+                <p style="font-size:0.8rem; color:rgba(255,255,255,0.85); margin:0; line-height:1.4;">${n.body || ''}</p>
+              </div>
+              ${!n.isRead ? '<span style="width:8px; height:8px; border-radius:50%; background:#10b981; flex-shrink:0; margin-top:4px;"></span>' : ''}
+            </div>
+
+            ${apkUrl !== '#' ? `
+              <a href="${apkUrl}" target="_blank" rel="noopener noreferrer" class="notif-apk-download-btn" data-notif-id="${n.id}" style="
+                display: flex; align-items: center; justify-content: center; gap: 8px;
+                width: 100%; padding: 10px 14px; border-radius: 8px; text-decoration: none;
+                background: linear-gradient(135deg, #10b981, #047857); color: #ffffff;
+                font-size: 0.8rem; font-weight: 700; letter-spacing: 0.01em;
+                box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+                transition: transform 0.15s, filter 0.15s;
+              " onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='none'">
+                📥 ${n.actionLabel || 'Descargar Nueva Versión APK'}
+              </a>
+            ` : ''}
+          </div>
+        `;
+      }
+
       // ── Default notification item ─────────────────────────────────────────
       const icon    = this.getCategoryIcon(n.type);
       const bg      = n.isRead ? 'transparent' : 'rgba(139,92,246,0.08)';
@@ -375,8 +418,20 @@ export class NotificationCenter {
       });
     });
 
+    // ── APK Update download link click ─────────────────────────────────────────
+    el.querySelectorAll('.notif-apk-download-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const notifId = btn.dataset.notifId;
+        if (notifId && userId) {
+          try {
+            await PushNotificationsCenterService.markAsRead(userId, notifId);
+          } catch (_) {}
+        }
+      });
+    });
+
     // ── Standard notification items ──────────────────────────────────────────
-    el.querySelectorAll('.notif-item:not(.notif-owner-request)').forEach(item => {
+    el.querySelectorAll('.notif-item:not(.notif-owner-request):not(.notif-apk-update-card)').forEach(item => {
       item.addEventListener('click', async () => {
         const notifId = item.dataset.id;
         const rawRoute = item.dataset.route || '';
@@ -392,7 +447,6 @@ export class NotificationCenter {
         this.close();
 
         if (rawRoute) {
-          // Fix: removePrefix is not native — use replace instead
           const cleanRoute = rawRoute.trim().replace(/^[#/]+/, '');
           window.location.hash = '#/' + cleanRoute;
         }
@@ -403,6 +457,9 @@ export class NotificationCenter {
   static getCategoryIcon(type) {
     switch ((type || '').toUpperCase()) {
       case 'OWNER_REQUEST': return '📩';
+      case 'APK_UPDATE':    return '📲';
+      case 'BROADCAST':
+      case 'ANNOUNCEMENT':  return '📢';
       case 'NEW_ORDER':
       case 'ORDER_STATUS':
       case 'PEDIDOS':    return '📦';
