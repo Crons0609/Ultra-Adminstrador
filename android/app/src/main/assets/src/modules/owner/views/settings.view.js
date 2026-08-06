@@ -17,6 +17,7 @@ import {
 import { auth, db } from '../../../config/firebase.config.js';
 import { ref, get, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { AppearanceService, THEMES } from '../../../services/appearance.service.js';
+import { MobileNavConfigService, NAV_TAB_CATALOG, DEFAULT_NAV_TABS } from '../../../services/mobile-nav-config.service.js';
 
 // Build the theme grid HTML for Business Owners
 function buildOwnerThemeGrid() {
@@ -278,6 +279,9 @@ export class SettingsView extends Component {
             </button>
             <button class="settings-tab-btn" data-tab="location">
               📍 Ubicación del Establecimiento
+            </button>
+            <button class="settings-tab-btn" data-tab="mobile-nav">
+              📱 Barra Móvil
             </button>
           </div>
 
@@ -689,6 +693,38 @@ export class SettingsView extends Component {
             </div>
           </div>
 
+          <!-- TAB CONTENT: MOBILE NAV CUSTOMIZATION -->
+          <div class="tab-content-panel" id="panel-tab-mobile-nav" style="display:none;">
+            <div class="form-card animate-fade-in" style="max-width:680px; margin:0 auto;">
+              <span class="card-title-badge">📱 Personalizar Barra de Navegación Móvil</span>
+              <p style="font-size:0.82rem; color:var(--color-text-secondary); margin:8px 0 20px;">Elige hasta <strong>5 botones</strong> y ordénalos según tu flujo de trabajo. Solo se muestran las opciones disponibles para tu rol.</p>
+
+              <!-- LIVE PREVIEW -->
+              <div style="margin-bottom:20px;">
+                <p style="font-size:0.78rem; font-weight:600; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;">Vista Previa</p>
+                <div id="mnc-preview" style="display:flex; align-items:center; justify-content:space-around; background:rgba(18,20,29,0.9); border:1px solid var(--color-border); border-radius:14px; padding:10px 8px; gap:4px;"></div>
+              </div>
+
+              <!-- SELECTED TABS (ordered) -->
+              <div style="margin-bottom:20px;">
+                <p style="font-size:0.78rem; font-weight:600; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;">🔢 Orden actual <span id="mnc-count" style="color:var(--color-accent); font-size:0.72rem;">(0/5)</span></p>
+                <div id="mnc-selected-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+              </div>
+
+              <!-- AVAILABLE TABS catalog -->
+              <div style="margin-bottom:24px;">
+                <p style="font-size:0.78rem; font-weight:600; color:var(--color-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;">📋 Botones disponibles</p>
+                <div id="mnc-catalog" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:8px;"></div>
+              </div>
+
+              <!-- ACTIONS -->
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="btn-save-mobile-nav" class="btn btn-primary btn-md" style="display:flex;align-items:center;gap:6px;">💾 Guardar Configuración</button>
+                <button id="btn-reset-mobile-nav" class="btn btn-secondary btn-sm" style="color:var(--color-text-tertiary);">↩️ Restaurar predeterminados</button>
+              </div>
+            </div>
+          </div>
+
         </div>
       `
     });
@@ -704,6 +740,7 @@ export class SettingsView extends Component {
     this.loadOwnerProfile(element);
     this.loadEmployeesList(element);
     this.loadEstablishmentLocation(element);
+    this.loadMobileNavConfig(element);
 
     return element;
   }
@@ -743,6 +780,9 @@ export class SettingsView extends Component {
         }
         if (selectedTab === 'location') {
           this.loadEstablishmentLocation(root);
+        }
+        if (selectedTab === 'mobile-nav') {
+          this.loadMobileNavConfig(root);
         }
       });
     }
@@ -2464,6 +2504,193 @@ export class SettingsView extends Component {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Guardar Configuración de Alertas';
       }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERSONALIZACIÓN DE BARRA DE NAVEGACIÓN MÓVIL
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async loadMobileNavConfig(root) {
+    if (!root) return;
+    try {
+      const tabs = await MobileNavConfigService.load(this.uid);
+      this.state.mobileNavSelectedTabs = tabs;
+      this.renderMobileNavUI(root, tabs);
+    } catch (err) {
+      console.error('[SettingsView] Error loading mobile nav config:', err);
+      this.renderMobileNavUI(root, [...DEFAULT_NAV_TABS]);
+    }
+  }
+
+  renderMobileNavUI(root, selectedIds = []) {
+    const previewEl = root.querySelector('#mnc-preview');
+    const selectedListEl = root.querySelector('#mnc-selected-list');
+    const catalogEl = root.querySelector('#mnc-catalog');
+    const countEl = root.querySelector('#mnc-count');
+
+    if (!previewEl || !selectedListEl || !catalogEl) return;
+
+    this.state.mobileNavSelectedTabs = [...selectedIds];
+    const role = this.currentUser.role || 'OWNER';
+
+    if (countEl) {
+      countEl.textContent = `(${selectedIds.length}/5 seleccionados)`;
+    }
+
+    // 1. Live Preview
+    previewEl.innerHTML = selectedIds.map(id => {
+      const tab = MobileNavConfigService.getTabById(id);
+      if (!tab) return '';
+      return `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:2px; font-size:0.65rem; color:var(--color-accent); font-weight:600;">
+          <span style="font-size:1.1rem; line-height:1;">${tab.emoji}</span>
+          <span>${tab.label}</span>
+        </div>
+      `;
+    }).join('');
+
+    // 2. Selected Tabs List
+    if (selectedIds.length === 0) {
+      selectedListEl.innerHTML = `<p style="font-size:0.8rem; color:var(--color-text-tertiary); text-align:center; padding:12px; border:1px dashed var(--color-border); border-radius:8px;">No has seleccionado ningún botón. Agrega al menos 1 del catálogo abajo.</p>`;
+    } else {
+      selectedListEl.innerHTML = selectedIds.map((id, index) => {
+        const tab = MobileNavConfigService.getTabById(id);
+        if (!tab) return '';
+        const isFirst = index === 0;
+        const isLast = index === selectedIds.length - 1;
+
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; background:var(--color-bg-tertiary); border:1px solid var(--color-border); padding:8px 12px; border-radius:10px; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+              <span style="font-size:1.2rem;">${tab.emoji}</span>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:0.85rem; font-weight:700; color:var(--color-text-primary);">${index + 1}. ${tab.label}</span>
+                <span style="font-size:0.7rem; color:var(--color-text-tertiary);">${tab.description}</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <button type="button" class="btn btn-secondary btn-sm mnc-btn-up" data-id="${id}" ${isFirst ? 'disabled style="opacity:0.3;"' : ''} title="Mover arriba">▲</button>
+              <button type="button" class="btn btn-secondary btn-sm mnc-btn-down" data-id="${id}" ${isLast ? 'disabled style="opacity:0.3;"' : ''} title="Mover abajo">▼</button>
+              <button type="button" class="btn btn-secondary btn-sm mnc-btn-remove" data-id="${id}" style="color:#ef4444; border-color:rgba(239,68,68,0.3);" title="Quitar">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 3. Available Catalog
+    const roleCatalog = MobileNavConfigService.getAvailableTabsForRole(role);
+    catalogEl.innerHTML = roleCatalog.map(tab => {
+      const isSelected = selectedIds.includes(tab.id);
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; background:${isSelected ? 'rgba(99,102,241,0.06)' : 'var(--color-bg-secondary)'}; border:1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-border)'}; padding:8px 10px; border-radius:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.1rem;">${tab.emoji}</span>
+            <span style="font-size:0.8rem; font-weight:600; color:${isSelected ? 'var(--color-accent)' : 'var(--color-text-primary)'};">${tab.label}</span>
+          </div>
+          ${isSelected 
+            ? `<span style="font-size:0.7rem; color:var(--color-accent); font-weight:700;">✓ Activo</span>`
+            : `<button type="button" class="btn btn-secondary btn-sm mnc-btn-add" data-id="${tab.id}" ${selectedIds.length >= 5 ? 'disabled title="Máximo 5 botones"' : ''} style="font-size:0.7rem; padding:3px 8px;">+ Agregar</button>`
+          }
+        </div>
+      `;
+    }).join('');
+
+    // Bind item action listeners
+    selectedListEl.querySelectorAll('.mnc-btn-up').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const idx = selectedIds.indexOf(id);
+        if (idx > 0) {
+          const newArr = [...selectedIds];
+          [newArr[idx - 1], newArr[idx]] = [newArr[idx], newArr[idx - 1]];
+          this.renderMobileNavUI(root, newArr);
+        }
+      });
+    });
+
+    selectedListEl.querySelectorAll('.mnc-btn-down').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const idx = selectedIds.indexOf(id);
+        if (idx >= 0 && idx < selectedIds.length - 1) {
+          const newArr = [...selectedIds];
+          [newArr[idx + 1], newArr[idx]] = [newArr[idx], newArr[idx + 1]];
+          this.renderMobileNavUI(root, newArr);
+        }
+      });
+    });
+
+    selectedListEl.querySelectorAll('.mnc-btn-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const newArr = selectedIds.filter(i => i !== id);
+        this.renderMobileNavUI(root, newArr);
+      });
+    });
+
+    catalogEl.querySelectorAll('.mnc-btn-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        if (selectedIds.length < 5 && !selectedIds.includes(id)) {
+          const newArr = [...selectedIds, id];
+          this.renderMobileNavUI(root, newArr);
+        }
+      });
+    });
+
+    // Save & Reset Buttons
+    const saveBtn = root.querySelector('#btn-save-mobile-nav');
+    if (saveBtn) {
+      saveBtn.onclick = () => this.handleSaveMobileNav(root);
+    }
+
+    const resetBtn = root.querySelector('#btn-reset-mobile-nav');
+    if (resetBtn) {
+      resetBtn.onclick = () => this.handleResetMobileNav(root);
+    }
+  }
+
+  async handleSaveMobileNav(root) {
+    const selectedIds = this.state.mobileNavSelectedTabs || [];
+    if (selectedIds.length === 0) {
+      NotificationService.warning('Debes seleccionar al menos 1 botón para la barra móvil.');
+      return;
+    }
+
+    const saveBtn = root.querySelector('#btn-save-mobile-nav');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Guardando...';
+    }
+
+    try {
+      await MobileNavConfigService.save(this.uid, selectedIds);
+      GlobalStore.set({ mobileNavConfig: selectedIds });
+      NotificationService.success('📱 ¡Barra de navegación móvil personalizada guardada con éxito!');
+    } catch (err) {
+      console.error('[SettingsView] Error saving mobile nav config:', err);
+      NotificationService.error('Error al guardar configuración de barra móvil.');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Guardar Configuración';
+      }
+    }
+  }
+
+  async handleResetMobileNav(root) {
+    if (!confirm('¿Deseas restaurar los botones predeterminados de la barra móvil?')) return;
+    try {
+      const defaultTabs = [...DEFAULT_NAV_TABS];
+      await MobileNavConfigService.save(this.uid, defaultTabs);
+      GlobalStore.set({ mobileNavConfig: defaultTabs });
+      this.renderMobileNavUI(root, defaultTabs);
+      NotificationService.success('Barra móvil restaurada a los valores predeterminados.');
+    } catch (err) {
+      console.error('[SettingsView] Error resetting mobile nav config:', err);
+      NotificationService.error('Error al restaurar valores predeterminados.');
     }
   }
 

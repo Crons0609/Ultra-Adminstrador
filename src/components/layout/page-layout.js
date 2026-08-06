@@ -6,6 +6,7 @@
 import { Component } from '../../core/component.js';
 import { Sidebar } from './sidebar.js';
 import { Header } from './header.js';
+import { MobileBottomNav } from './mobile-bottom-nav.js';
 
 export class PageLayout extends Component {
   /**
@@ -19,6 +20,7 @@ export class PageLayout extends Component {
     super(props);
     this.sidebarComponent = new Sidebar();
     this.headerComponent = new Header();
+    this.mobileBottomNavComponent = new MobileBottomNav();
   }
 
   render() {
@@ -50,6 +52,9 @@ export class PageLayout extends Component {
             </div>
           </main>
         </div>
+
+        <!-- Mobile Bottom Navigation placeholder -->
+        <div id="mobile-bottom-nav-container"></div>
       </div>
     `;
   }
@@ -66,11 +71,18 @@ export class PageLayout extends Component {
     if (headerContainer) {
       headerContainer.appendChild(this.headerComponent.mount());
     }
+
+    // 3. Mount Mobile Bottom Navigation
+    const mobileBottomNavContainer = this.$('#mobile-bottom-nav-container');
+    if (mobileBottomNavContainer) {
+      mobileBottomNavContainer.appendChild(this.mobileBottomNavComponent.mount());
+    }
   }
 
   unmount() {
     this.sidebarComponent.unmount();
     this.headerComponent.unmount();
+    this.mobileBottomNavComponent.unmount();
     super.unmount();
   }
 }

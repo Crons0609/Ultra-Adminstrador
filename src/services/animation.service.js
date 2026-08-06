@@ -26,21 +26,10 @@ export const AnimationService = {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
       wheelMultiplier: 1.0,
-      touchMultiplier: 2.0,
-      prevent: (node) => {
-        return (
-          node.tagName === 'TEXTAREA' ||
-          node.classList.contains('sidebar-menu') ||
-          node.classList.contains('pub-category-carousel') ||
-          node.classList.contains('modal-body') ||
-          node.classList.contains('pos-ticket-container') ||
-          node.classList.contains('table-responsive') ||
-          node.closest('[data-lenis-prevent]') ||
-          node.closest('.sidebar-menu') ||
-          node.closest('.modal-body') ||
-          node.closest('.pub-category-carousel')
-        );
-      }
+      touchMultiplier: 0,
+      syncTouch: false,
+      smoothTouch: false,
+      prevent: () => true // Allow native scroll on all nodes
     });
 
     function raf(time) {

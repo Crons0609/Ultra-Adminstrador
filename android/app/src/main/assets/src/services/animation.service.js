@@ -21,37 +21,15 @@ export const AnimationService = {
   initGlobalScroll() {
     if (lenisInstance) return lenisInstance;
 
-    // 📱 OPTIMIZATION: Disable Lenis smooth scroll on Android native app.
-    // Native touch scrolling in WebView is more performant and avoids conflicts
-    // with SwipeRefreshLayout and system gestures.
-    if (window.AndroidApp || /Android/i.test(navigator.userAgent)) {
-      console.log('[AnimationService] 🚀 Android detected: Using native scrolling for maximum performance.');
-
-      // Ensure smooth behavior at CSS level
-      document.documentElement.style.scrollBehavior = 'smooth';
-      return null;
-    }
-
     lenisInstance = new Lenis({
-      duration: 1.2,
+      duration: 1.0,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      touchMultiplier: 1.5,
-      infinite: false,
-      prevent: (node) => {
-        return (
-          node.tagName === 'TEXTAREA' ||
-          node.classList.contains('sidebar-menu') ||
-          node.classList.contains('pub-category-carousel') ||
-          node.classList.contains('modal-body') ||
-          node.classList.contains('pos-ticket-container') ||
-          node.classList.contains('table-responsive') ||
-          node.closest('[data-lenis-prevent]') ||
-          node.closest('.sidebar-menu') ||
-          node.closest('.modal-body') ||
-          node.closest('.pub-category-carousel')
-        );
-      }
+      wheelMultiplier: 1.0,
+      touchMultiplier: 0,
+      syncTouch: false,
+      smoothTouch: false,
+      prevent: () => true // Allow native scroll on all nodes
     });
 
     function raf(time) {

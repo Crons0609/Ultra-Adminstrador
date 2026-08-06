@@ -1,0 +1,363 @@
+/**
+ * @file mobile-bottom-nav.css
+ * @description Native-like Bottom Navigation Bar & Action Sheets for Android WebView.
+ *              Active ONLY on mobile/tablet screens (< 1024px). Hidden on desktop.
+ */
+
+/* ─── Page Body Spacing for Mobile ─── */
+@media (max-width: 1023px) {
+  .page-body {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* ─── Desktop Hidden Rule ─── */
+@media (min-width: 1024px) {
+  .mobile-bottom-nav,
+  .mbn-overlay {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BOTTOM NAVIGATION BAR SHELL
+   ══════════════════════════════════════════════════════════════ */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(62px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: rgba(18, 20, 29, 0.95);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 890;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  user-select: none;
+}
+
+/* Auto-hide state (keyboard active or camera scanner open) */
+.mobile-bottom-nav.mbn-hidden {
+  transform: translateY(100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ─── MBN Items (5 Tabs) ─── */
+.mbn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 0;
+  gap: 3px;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.mbn-item:active {
+  transform: scale(0.92);
+}
+
+.mbn-item.active {
+  color: var(--color-accent);
+}
+
+/* Icons */
+.mbn-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.mbn-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
+}
+
+.mbn-item.active .mbn-icon {
+  transform: translateY(-1px);
+}
+
+/* Special Center "+" Button (Crear) */
+.mbn-item--create {
+  color: var(--color-accent);
+}
+
+.mbn-item--create .mbn-icon-wrapper {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent, #6366f1), #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+  margin-top: -16px;
+  border: 3px solid rgba(18, 20, 29, 0.95);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+.mbn-item--create:active .mbn-icon-wrapper {
+  transform: scale(0.9);
+}
+
+/* Notification Badge */
+.mbn-badge {
+  position: absolute;
+  top: 4px;
+  right: 50%;
+  margin-right: -16px;
+  background-color: var(--color-danger, #ef4444);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  border-radius: 10px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+  border: 1.5px solid rgba(18, 20, 29, 0.95);
+  animation: mbnPulse 2.5s infinite;
+}
+
+@keyframes mbnPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BOTTOM SHEETS / ACTION PANELS OVERLAY
+   ══════════════════════════════════════════════════════════════ */
+.mbn-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 950;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.mbn-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mbn-sheet {
+  background: var(--color-bg-secondary, #1a1d2d);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border-top: 1px solid var(--color-border);
+  padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mbn-overlay.active .mbn-sheet {
+  transform: translateY(0);
+}
+
+/* Sheet Top Grab Handle */
+.mbn-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto -4px;
+}
+
+/* Sheet Header */
+.mbn-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mbn-sheet-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mbn-sheet-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--color-text-secondary);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.18s, color 0.18s;
+  outline: none;
+}
+
+.mbn-sheet-close:active {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--color-text-primary);
+}
+
+/* Sheet Grid of Touchable Cards */
+.mbn-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 360px) {
+  .mbn-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mbn-action-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface, #23273c);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mbn-action-card:active {
+  transform: scale(0.97);
+  background: rgba(99, 102, 241, 0.12);
+  border-color: var(--color-accent);
+}
+
+.mbn-action-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.mbn-action-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mbn-action-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mbn-action-sub {
+  font-size: 0.70rem;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Notifications Sheet List */
+.mbn-notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.mbn-notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-surface, #23273c);
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.mbn-notif-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mbn-notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mbn-notif-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.mbn-notif-desc {
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.mbn-notif-time {
+  font-size: 0.68rem;
+  color: var(--color-text-tertiary);
+  margin-top: 4px;
+}

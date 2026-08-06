@@ -5,7 +5,9 @@
  */
 
 /* ─── Global Box-Sizing Reset ─── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -16,11 +18,15 @@ html {
 
 body {
   overflow-x: hidden;
-  -webkit-text-size-adjust: 100%; /* Prevent iOS font zoom on rotate */
+  -webkit-text-size-adjust: 100%;
+  /* Prevent iOS font zoom on rotate */
 }
 
 /* ─── Images & Media ─── */
-img, video, svg, canvas {
+img,
+video,
+svg,
+canvas {
   max-width: 100%;
   height: auto;
   display: block;
@@ -37,28 +43,37 @@ img, video, svg, canvas {
   --bp-3xl: 1920px;
 
   /* ── Fluid Spacing (clamp: min @ 320px, preferred, max @ 1440px) ── */
-  --space-1: clamp(2px,  0.25vw, 4px);
-  --space-2: clamp(4px,  0.5vw,  8px);
-  --space-3: clamp(6px,  0.75vw, 12px);
-  --space-4: clamp(8px,  1vw,    16px);
+  --space-1: clamp(2px, 0.25vw, 4px);
+  --space-2: clamp(4px, 0.5vw, 8px);
+  --space-3: clamp(6px, 0.75vw, 12px);
+  --space-4: clamp(8px, 1vw, 16px);
   --space-5: clamp(12px, 1.25vw, 20px);
-  --space-6: clamp(16px, 1.5vw,  24px);
-  --space-8: clamp(20px, 2vw,    32px);
+  --space-6: clamp(16px, 1.5vw, 24px);
+  --space-8: clamp(20px, 2vw, 32px);
   --space-10: clamp(24px, 2.5vw, 40px);
-  --space-12: clamp(32px, 3vw,   48px);
-  --space-16: clamp(40px, 4vw,   64px);
-  --space-20: clamp(48px, 5vw,   80px);
+  --space-12: clamp(32px, 3vw, 48px);
+  --space-16: clamp(40px, 4vw, 64px);
+  --space-20: clamp(48px, 5vw, 80px);
 
   /* ── Fluid Typography Scale ── */
-  --text-xs:   clamp(0.65rem, 0.6rem + 0.2vw,  0.75rem);  /* ~10–12px */
-  --text-sm:   clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem); /* ~12–14px */
-  --text-base: clamp(0.875rem, 0.8rem + 0.3vw, 1rem);     /* ~14–16px */
-  --text-md:   clamp(1rem, 0.9rem + 0.4vw,     1.125rem); /* ~16–18px */
-  --text-lg:   clamp(1.125rem, 1rem + 0.5vw,   1.25rem);  /* ~18–20px */
-  --text-xl:   clamp(1.25rem, 1.1rem + 0.7vw,  1.5rem);   /* ~20–24px */
-  --text-2xl:  clamp(1.5rem, 1.3rem + 1vw,     1.875rem); /* ~24–30px */
-  --text-3xl:  clamp(1.75rem, 1.5rem + 1.3vw,  2.25rem);  /* ~28–36px */
-  --text-4xl:  clamp(2rem, 1.7rem + 1.7vw,     2.75rem);  /* ~32–44px */
+  --text-xs: clamp(0.65rem, 0.6rem + 0.2vw, 0.75rem);
+  /* ~10–12px */
+  --text-sm: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  /* ~12–14px */
+  --text-base: clamp(0.875rem, 0.8rem + 0.3vw, 1rem);
+  /* ~14–16px */
+  --text-md: clamp(1rem, 0.9rem + 0.4vw, 1.125rem);
+  /* ~16–18px */
+  --text-lg: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
+  /* ~18–20px */
+  --text-xl: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+  /* ~20–24px */
+  --text-2xl: clamp(1.5rem, 1.3rem + 1vw, 1.875rem);
+  /* ~24–30px */
+  --text-3xl: clamp(1.75rem, 1.5rem + 1.3vw, 2.25rem);
+  /* ~28–36px */
+  --text-4xl: clamp(2rem, 1.7rem + 1.7vw, 2.75rem);
+  /* ~32–44px */
 
   /* ── Sidebar / Layout Dimensions ── */
   --sidebar-width: 264px;
@@ -69,10 +84,10 @@ img, video, svg, canvas {
   --touch-target: 44px;
 
   /* Border Radii */
-  --radius-sm:  4px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-xxl: 24px;
   --radius-full: 9999px;
 
@@ -89,69 +104,69 @@ img, video, svg, canvas {
   --font-display: 'Outfit', 'Inter', sans-serif;
 
   /* Transition Timings */
-  --transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow:   350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Light Theme Variables */
 .theme-light {
-  --color-bg-primary:    #ffffff;
-  --color-bg-secondary:  #f8f9fa;
-  --color-bg-tertiary:   #f0f1f3;
-  --color-surface:       #ffffff;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #f0f1f3;
+  --color-surface: #ffffff;
   --color-surface-hover: #f3f4f6;
-  --color-border:        #e2e4e9;
-  --color-border-hover:  #cdd0d8;
+  --color-border: #e2e4e9;
+  --color-border-hover: #cdd0d8;
 
-  --color-text-primary:   #0a0a0b;
+  --color-text-primary: #0a0a0b;
   --color-text-secondary: #62636c;
-  --color-text-tertiary:  #92939e;
+  --color-text-tertiary: #92939e;
 
-  --color-accent:        #635bff;
-  --color-accent-hover:  #524ae5;
-  --color-accent-light:  rgba(99, 91, 255, 0.08);
+  --color-accent: #635bff;
+  --color-accent-hover: #524ae5;
+  --color-accent-light: rgba(99, 91, 255, 0.08);
 
-  --color-success:       #0ea371;
+  --color-success: #0ea371;
   --color-success-light: rgba(14, 163, 113, 0.08);
-  --color-warning:       #f59e0b;
+  --color-warning: #f59e0b;
   --color-warning-light: rgba(245, 158, 11, 0.08);
-  --color-danger:        #ef4444;
-  --color-danger-light:  rgba(239, 68, 68, 0.08);
-  --color-info:          #3b82f6;
-  --color-info-light:    rgba(59, 130, 246, 0.08);
+  --color-danger: #ef4444;
+  --color-danger-light: rgba(239, 68, 68, 0.08);
+  --color-info: #3b82f6;
+  --color-info-light: rgba(59, 130, 246, 0.08);
 
-  --glass-bg:     rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(226, 228, 233, 0.6);
 }
 
 /* Dark Theme Variables */
 .theme-dark {
-  --color-bg-primary:    #0a0a0b;
-  --color-bg-secondary:  #111113;
-  --color-bg-tertiary:   #1a1a1e;
-  --color-surface:       #16161a;
+  --color-bg-primary: #0a0a0b;
+  --color-bg-secondary: #111113;
+  --color-bg-tertiary: #1a1a1e;
+  --color-surface: #16161a;
   --color-surface-hover: #1f1f24;
-  --color-border:        #27272b;
-  --color-border-hover:  #38383e;
+  --color-border: #27272b;
+  --color-border-hover: #38383e;
 
-  --color-text-primary:   #ededef;
+  --color-text-primary: #ededef;
   --color-text-secondary: #8b8c94;
-  --color-text-tertiary:  #5e5f66;
+  --color-text-tertiary: #5e5f66;
 
-  --color-accent:       #7c75ff;
+  --color-accent: #7c75ff;
   --color-accent-hover: #968fff;
   --color-accent-light: rgba(124, 117, 255, 0.15);
 
-  --color-success:       #34d399;
+  --color-success: #34d399;
   --color-success-light: rgba(52, 211, 153, 0.15);
-  --color-warning:       #fbbf24;
+  --color-warning: #fbbf24;
   --color-warning-light: rgba(251, 191, 36, 0.15);
-  --color-danger:        #f87171;
-  --color-danger-light:  rgba(248, 113, 113, 0.15);
-  --color-info:          #60a5fa;
-  --color-info-light:    rgba(96, 165, 250, 0.15);
+  --color-danger: #f87171;
+  --color-danger-light: rgba(248, 113, 113, 0.15);
+  --color-info: #60a5fa;
+  --color-info-light: rgba(96, 165, 250, 0.15);
 
-  --glass-bg:     rgba(10, 10, 11, 0.7);
+  --glass-bg: rgba(10, 10, 11, 0.7);
   --glass-border: rgba(39, 39, 43, 0.6);
 }

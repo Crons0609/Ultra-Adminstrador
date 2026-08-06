@@ -13,6 +13,7 @@
 @import url('./layouts/sidebar.css');
 @import url('./layouts/header.css');
 @import url('./layouts/page.css');
+@import url('./layouts/mobile-bottom-nav.css');
 @import url('./layouts/grid.css');
 
 /* 3. Reusable UI Components */
@@ -47,6 +48,6 @@ body, html {
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
-  touch-action: manipulation;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

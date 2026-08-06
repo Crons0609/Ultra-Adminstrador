@@ -17,12 +17,14 @@
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  min-width: 0;        /* Prevent flex overflow */
+  min-width: 0;
+  /* Prevent flex overflow */
   min-height: 100svh;
   transition: margin-left var(--transition-normal);
   /* Offset for fixed header, which already includes the Android status bar inset */
   padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  overflow-x: hidden;  /* Contain any child overflow */
+  overflow-x: hidden;
+  /* Contain any child overflow */
   touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
   /* Prevent pull-to-refresh from occurring at the CSS level */
@@ -76,6 +78,7 @@ body.sidebar-collapsed .main-content {
 .hover-lift {
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
+
 .hover-lift:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
@@ -86,6 +89,7 @@ body.sidebar-collapsed .main-content {
   .main-content {
     margin-left: 0;
   }
+
   body.sidebar-collapsed .main-content {
     margin-left: 0;
   }
@@ -98,12 +102,12 @@ body.sidebar-collapsed .main-content {
     gap: var(--space-3);
   }
 
-  .page-header > *:last-child {
+  .page-header>*:last-child {
     width: 100%;
   }
 
-  .page-header > *:last-child .btn,
-  .page-header > *:last-child button {
+  .page-header>*:last-child .btn,
+  .page-header>*:last-child button {
     width: 100%;
     justify-content: center;
   }

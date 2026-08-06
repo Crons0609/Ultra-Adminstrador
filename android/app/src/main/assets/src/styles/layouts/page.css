@@ -9,7 +9,6 @@
   min-height: 100svh;
   background-color: var(--color-bg-primary);
   overflow-x: hidden;
-  touch-action: manipulation;
 }
 
 .main-content {
@@ -22,9 +21,7 @@
   transition: margin-left var(--transition-normal);
   /* Offset for fixed header, which already includes the Android status bar inset */
   padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  overflow-x: hidden;
-  overflow-y: auto;    /* 🛠️ FIX: Ensure content can scroll if longer than viewport */
-  touch-action: auto;
+  overflow-x: hidden;  /* Contain any child overflow */
   -webkit-overflow-scrolling: touch;
 }
 
