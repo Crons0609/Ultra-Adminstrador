@@ -19,7 +19,9 @@ export class MobileBottomNav extends Component {
     this.state = {
       activeSheet: null, // null | 'actions' | 'create' | 'notifications' | 'more'
       unreadNotificationsCount: 0,
-      notifications: [],
+      notifications: [
+        { id: '1', icon: '📢', title: 'Sistema Actualizado', message: 'Ultra Administrador versión móvil activa.', time: 'Hace 5 min' }
+      ],
       activeTabs: [...DEFAULT_NAV_TABS] // Ordered list of up to 5 tab IDs
     };
   }
@@ -640,43 +642,48 @@ export class MobileBottomNav extends Component {
   /** Real-time listener for support & system notifications */
   startNotificationsRealtimeListener() {
     const { currentUser, currentCompany } = GlobalStore.getState();
-    if (!currentUser) return;
+    if (!currentUser || !currentCompany?.id || !db) return;
 
-    const sampleNotifs = [
-      { id: '1', icon: '📢', title: 'Sistema Actualizado', message: 'Ultra Administrador versión móvil activa.', time: 'Hace 5 min' }
-    ];
+    if (this._unsubRealtimeNotifs) {
+      this._unsubRealtimeNotifs();
+      this._unsubRealtimeNotifs = null;
+    }
 
-    if (currentCompany?.id && db) {
-      const ticketsRef = ref(db, `support_tickets`);
-      onValue(ticketsRef, (snap) => {
-        let count = 0;
-        const list = [...sampleNotifs];
-        if (snap.exists()) {
-          const tickets = snap.val();
-          Object.values(tickets).forEach(t => {
-            if (t.status === 'Pendiente') {
-              count++;
-              list.unshift({
-                id: t.id || String(Math.random()),
-                icon: '📩',
-                title: `Solicitud: ${t.userName || 'Cliente'}`,
-                message: t.message || 'Solicitud de soporte pendiente',
-                time: 'Hoy'
-              });
-            }
-          });
-        }
+    const defaultNotif = { id: '1', icon: '📢', title: 'Sistema Actualizado', message: 'Ultra Administrador versión móvil activa.', time: 'Hace 5 min' };
+    const ticketsRef = ref(db, `support_tickets`);
+    
+    this._unsubRealtimeNotifs = onValue(ticketsRef, (snap) => {
+      let count = 0;
+      const list = [defaultNotif];
+      if (snap.exists()) {
+        const tickets = snap.val();
+        Object.values(tickets).forEach(t => {
+          if (t.status === 'Pendiente') {
+            count++;
+            list.unshift({
+              id: t.id || String(Math.random()),
+              icon: '📩',
+              title: `Solicitud: ${t.userName || 'Cliente'}`,
+              message: t.message || 'Solicitud de soporte pendiente',
+              time: 'Hoy'
+            });
+          }
+        });
+      }
+      if (this.state.unreadNotificationsCount !== count || this.state.notifications.length !== list.length) {
         this.setState({
           unreadNotificationsCount: count,
           notifications: list
         });
-      });
-    } else {
-      this.setState({ notifications: sampleNotifs, unreadNotificationsCount: 0 });
-    }
+      }
+    });
   }
 
   unmount() {
+    if (this._unsubRealtimeNotifs) {
+      this._unsubRealtimeNotifs();
+      this._unsubRealtimeNotifs = null;
+    }
     if (this._focusCleanup) this._focusCleanup();
     if (window.visualViewport && this._viewportHandler) {
       window.visualViewport.removeEventListener('resize', this._viewportHandler);
