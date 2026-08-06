@@ -126,20 +126,11 @@ export class CompaniesView extends Component {
         </button>
       `,
       contentHTML: `
-        <!-- Pending Owner Registration Requests Card -->
-        <div id="pending-requests-card" class="card p-5 mb-5" style="border: 1px solid rgba(139,92,246,0.35); background: rgba(139,92,246,0.03);">
-          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h3 class="text-lg font-semibold" style="display:flex; align-items:center; gap:8px; margin:0;">
-              <span>📩 Solicitudes de Registro de Dueños Pendientes</span>
-              <span id="pending-requests-badge" class="badge" style="background:var(--color-accent); color:white; font-size:0.75rem; border-radius:12px; padding:2px 8px;">0</span>
-            </h3>
-            <button class="btn btn-secondary btn-xs" id="btn-refresh-pending-requests" style="font-size:0.75rem;">
-              🔄 Actualizar
-            </button>
-          </div>
-          <div id="pending-requests-table-container">
-            <p style="color:var(--color-text-secondary); font-size:0.85rem; font-style:italic;">Cargando solicitudes pendientes...</p>
-          </div>
+        <!-- Hidden containers kept for legacy loadPendingRequests() compatibility -->
+        <div id="pending-requests-card" style="display:none;">
+          <span id="pending-requests-badge"></span>
+          <button id="btn-refresh-pending-requests"></button>
+          <div id="pending-requests-table-container"></div>
         </div>
 
         <div class="card p-5">

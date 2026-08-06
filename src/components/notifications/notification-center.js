@@ -7,6 +7,7 @@
  *  - overlay.innerHTML reset never re-adds the outer click listener (no duplicate listeners)
  *  - Removed String.removePrefix() which is not a native JS method
  *  - Panel container rebuilt cleanly each open() to avoid stale DOM state
+ *  - OWNER_REQUEST notifications render inline Accept/Reject buttons
  */
 
 import { PushNotificationsCenterService } from '../../services/push-notifications-center.service.js';
@@ -176,6 +177,50 @@ export class NotificationCenter {
     }
 
     return notifications.map(n => {
+      // ── Special: Owner Registration Requests ─────────────────────────────
+      if ((n.type || '').toUpperCase() === 'OWNER_REQUEST') {
+        const bg     = n.isRead ? 'transparent' : 'rgba(139,92,246,0.08)';
+        const border = n.isRead ? 'rgba(255,255,255,0.06)' : 'rgba(139,92,246,0.35)';
+        const timeStr = this.formatTime(n.createdAt);
+        const reqId   = n.requestId || '';
+        const meta    = n.meta || {};
+        return `
+          <div class="notif-item notif-owner-request" data-id="${n.id}" data-request-id="${reqId}" style="
+            padding:14px;margin-bottom:10px;border-radius:12px;
+            background:${bg};border:1px solid ${border};
+            cursor:default;
+          ">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="font-size:1.4rem;line-height:1;flex-shrink:0;">📩</div>
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                  <span style="font-size:0.85rem;font-weight:700;color:#fff;">${n.title || 'Solicitud de Registro'}</span>
+                  <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);white-space:nowrap;margin-left:8px;">${timeStr}</span>
+                </div>
+                <p style="font-size:0.8rem;color:rgba(255,255,255,0.7);margin:0 0 10px;line-height:1.4;">${n.body || ''}</p>
+                ${meta.ownerName ? `<div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">👤 ${meta.ownerName} &nbsp;·&nbsp; 📧 ${meta.email || ''}</div>` : ''}
+                <div style="display:flex;gap:8px;">
+                  <button class="notif-owner-approve" data-request-id="${reqId}" data-notif-id="${n.id}" style="
+                    flex:1;padding:7px 12px;border-radius:8px;border:none;cursor:pointer;
+                    background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+                    font-size:0.78rem;font-weight:700;letter-spacing:0.02em;
+                    transition:opacity 0.15s;
+                  " onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">✓ Aceptar</button>
+                  <button class="notif-owner-reject" data-request-id="${reqId}" data-notif-id="${n.id}" style="
+                    flex:1;padding:7px 12px;border-radius:8px;border:none;cursor:pointer;
+                    background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;
+                    font-size:0.78rem;font-weight:700;letter-spacing:0.02em;
+                    transition:opacity 0.15s;
+                  " onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">✕ Declinar</button>
+                </div>
+              </div>
+              ${!n.isRead ? '<span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;flex-shrink:0;margin-top:4px;"></span>' : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      // ── Default notification item ─────────────────────────────────────────
       const icon    = this.getCategoryIcon(n.type);
       const bg      = n.isRead ? 'transparent' : 'rgba(139,92,246,0.08)';
       const border  = n.isRead ? 'rgba(255,255,255,0.06)' : 'rgba(139,92,246,0.3)';
@@ -210,7 +255,128 @@ export class NotificationCenter {
     const el = container || document.getElementById('notif-list-container');
     if (!el) return;
 
-    el.querySelectorAll('.notif-item').forEach(item => {
+    // ── Owner Request: Approve ───────────────────────────────────────────────
+    el.querySelectorAll('.notif-owner-approve').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const requestId = btn.dataset.requestId;
+        const notifId   = btn.dataset.notifId;
+        if (!requestId) return;
+
+        const card = btn.closest('.notif-owner-request');
+        const owner = card?.querySelector('.notif-owner-approve')?.closest('.notif-owner-request');
+
+        const { FirestoreService } = await import('../../services/firestore.service.js');
+        const { AuthService }      = await import('../../services/auth.service.js');
+        const { NotificationService } = await import('../../services/notification.service.js');
+
+        // Get all pending requests & find this one
+        const allReqs    = await FirestoreService.listPendingOwnerRequests();
+        const req        = allReqs.find(r => r.id === requestId);
+        if (!req) { NotificationService.error('Solicitud no encontrada.'); return; }
+
+        if (!confirm(`¿Confirmas la aprobación de "${req.companyName}" para ${req.ownerName}?`)) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳...';
+        const rejectBtn = card?.querySelector('.notif-owner-reject');
+        if (rejectBtn) rejectBtn.disabled = true;
+
+        try {
+          const companyName  = req.companyName.trim();
+          const newCompanyId = FirestoreService.sanitiseKey(companyName);
+
+          await FirestoreService.createCompanyBranch(newCompanyId, {
+            name: companyName,
+            businessType: req.businessType || 'Restaurante',
+            plan: 'PREMIUM',
+            status: 'ACTIVO',
+            ownerEmail: req.email,
+            ownerPassword: req.password,
+            country: req.country || 'Nicaragua',
+            city: req.city || ''
+          }, {});
+
+          const ownerUid = await AuthService.createUser(req.email, req.password, {
+            displayName: req.ownerName || `Dueño - ${companyName}`,
+            role: 'OWNER',
+            companyId: newCompanyId,
+            branchId: 'main'
+          });
+
+          await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: ownerUid });
+          await FirestoreService.updatePendingOwnerRequestStatus(requestId, 'APROBADO', {
+            approvedAt: Date.now(),
+            approvedCompanyId: newCompanyId
+          });
+
+          if (notifId && userId) {
+            await PushNotificationsCenterService.markAsRead(userId, notifId);
+          }
+
+          NotificationService.success(`✅ Empresa "${companyName}" aprobada y registrada.`);
+
+          // Remove card from panel
+          if (card) card.remove();
+
+        } catch (err) {
+          console.error('[NotifCenter] Error aprobando solicitud:', err);
+          NotificationService.error(`Error: ${err.message || err}`);
+          btn.disabled = false;
+          btn.textContent = '✓ Aceptar';
+          if (rejectBtn) rejectBtn.disabled = false;
+        }
+      });
+    });
+
+    // ── Owner Request: Reject ────────────────────────────────────────────────
+    el.querySelectorAll('.notif-owner-reject').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const requestId = btn.dataset.requestId;
+        const notifId   = btn.dataset.notifId;
+        if (!requestId) return;
+
+        const card = btn.closest('.notif-owner-request');
+
+        const { FirestoreService }    = await import('../../services/firestore.service.js');
+        const { NotificationService } = await import('../../services/notification.service.js');
+
+        const allReqs = await FirestoreService.listPendingOwnerRequests();
+        const req     = allReqs.find(r => r.id === requestId);
+        if (!req) { NotificationService.error('Solicitud no encontrada.'); return; }
+
+        if (!confirm(`¿Rechazar la solicitud de "${req.companyName}" (${req.ownerName})?`)) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳...';
+        const approveBtn = card?.querySelector('.notif-owner-approve');
+        if (approveBtn) approveBtn.disabled = true;
+
+        try {
+          await FirestoreService.updatePendingOwnerRequestStatus(requestId, 'RECHAZADO', {
+            rejectedAt: Date.now()
+          });
+
+          if (notifId && userId) {
+            await PushNotificationsCenterService.markAsRead(userId, notifId);
+          }
+
+          NotificationService.info(`Solicitud de "${req.companyName}" rechazada.`);
+          if (card) card.remove();
+
+        } catch (err) {
+          console.error('[NotifCenter] Error rechazando solicitud:', err);
+          NotificationService.error(`Error: ${err.message || err}`);
+          btn.disabled = false;
+          btn.textContent = '✕ Declinar';
+          if (approveBtn) approveBtn.disabled = false;
+        }
+      });
+    });
+
+    // ── Standard notification items ──────────────────────────────────────────
+    el.querySelectorAll('.notif-item:not(.notif-owner-request)').forEach(item => {
       item.addEventListener('click', async () => {
         const notifId = item.dataset.id;
         const rawRoute = item.dataset.route || '';
@@ -236,6 +402,7 @@ export class NotificationCenter {
 
   static getCategoryIcon(type) {
     switch ((type || '').toUpperCase()) {
+      case 'OWNER_REQUEST': return '📩';
       case 'NEW_ORDER':
       case 'ORDER_STATUS':
       case 'PEDIDOS':    return '📦';

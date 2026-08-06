@@ -120,12 +120,14 @@ export class Header extends Component {
           </button>
 
 
-          <!-- Global Barcode Scanner Toggle -->
-          <button class="scanner-toggle-btn" id="global-scanner-toggle-btn" title="Activar Escáner Global (Ctrl+B)">
-            <div class="scanner-toggle-dot"></div>
-            <span>📊 Escáner</span>
-            <kbd class="scanner-toggle-kbd">Ctrl+B</kbd>
-          </button>
+          <!-- Global Barcode Scanner Toggle (hidden for SUPER_ADMIN) -->
+          ${currentUser?.role !== 'SUPER_ADMIN' ? `
+            <button class="scanner-toggle-btn" id="global-scanner-toggle-btn" title="Activar Escáner Global (Ctrl+B)">
+              <div class="scanner-toggle-dot"></div>
+              <span>📊 Escáner</span>
+              <kbd class="scanner-toggle-kbd">Ctrl+B</kbd>
+            </button>
+          ` : ''}
 
           <!-- GPS Location Toggle (For Employees) -->
           ${currentUser && ['WAITER', 'CASHIER', 'KITCHEN'].includes(currentUser.role) ? `
@@ -297,6 +299,10 @@ export class Header extends Component {
       );
     }
 
+    // ── Super-Admin: sync pending owner requests → notifications ──
+    if (currentUser?.role === 'SUPER_ADMIN' && currentUser?.uid) {
+      this._syncOwnerRequests(currentUser.uid);
+    }
     // 1. Sidebar toggle — supports both mobile/tablet slide-in and desktop rail collapse
     const toggleBtn = this.$('#sidebar-toggle-btn');
     const isMobile  = () => window.innerWidth <= 1023;
@@ -722,6 +728,67 @@ export class Header extends Component {
     });
   }
 
+  /**
+   * Listens in real-time to `pending_owner_requests` in Firebase and syncs
+   * any PENDIENTE request as an OWNER_REQUEST notification in the super-admin's
+   * notifications node. This keeps the notification badge accurate without
+   * requiring the user to navigate to the companies view.
+   * @param {string} userId - UID of the current SUPER_ADMIN user
+   */
+  async _syncOwnerRequests(userId) {
+    try {
+      const { FirestoreService } = await import('../../services/firestore.service.js');
+
+      this._ownerRequestsListenerId = FirestoreService.listenToPath(
+        'pending_owner_requests',
+        async (docs) => {
+          const list = Array.isArray(docs) ? docs : [];
+          const pending = list.filter(r => r.status === 'PENDIENTE');
+
+          // Load current notifications to avoid duplicates
+          const existing = await PushNotificationsCenterService.getNotifications(userId);
+          const existingRequestIds = new Set(
+            existing
+              .filter(n => (n.type || '').toUpperCase() === 'OWNER_REQUEST')
+              .map(n => n.requestId)
+              .filter(Boolean)
+          );
+
+          // Create a notification for each new pending request
+          for (const req of pending) {
+            if (existingRequestIds.has(req.id)) continue;
+
+            const notifPayload = {
+              type: 'OWNER_REQUEST',
+              requestId: req.id,
+              title: `📩 Solicitud de Registro: ${req.companyName || 'Nueva empresa'}`,
+              body: `${req.ownerName || 'Un dueño'} solicita registrar "${req.companyName || 'su negocio'}" (${req.businessType || 'Restaurante'})`,
+              meta: {
+                ownerName: req.ownerName || '',
+                email: req.email || '',
+                companyName: req.companyName || '',
+                businessType: req.businessType || ''
+              },
+              isRead: false,
+              createdAt: req.createdAt || new Date().toISOString()
+            };
+
+            try {
+              await FirestoreService.writePath(
+                `users/${userId}/notifications/${req.id}_owner_req`,
+                notifPayload
+              );
+            } catch (writeErr) {
+              console.warn('[Header] Could not write owner request notification:', writeErr.message);
+            }
+          }
+        }
+      );
+    } catch (e) {
+      console.warn('[Header] _syncOwnerRequests error:', e.message);
+    }
+  }
+
   unmount() {
     if (this._syncStatusHandler) window.removeEventListener('ua:sync-status', this._syncStatusHandler);
     if (this._onlineHandler) window.removeEventListener('online', this._onlineHandler);
@@ -731,6 +798,12 @@ export class Header extends Component {
     if (this._kbdHandler) window.removeEventListener('keydown', this._kbdHandler);
     if (this._gpsChangeHandler) window.removeEventListener('ua_gps_changed', this._gpsChangeHandler);
     if (this._sidebarNavHandler) document.removeEventListener('click', this._sidebarNavHandler);
+    // Clean up owner requests listener
+    if (this._ownerRequestsListenerId) {
+      import('../../services/firestore.service.js').then(({ FirestoreService }) => {
+        FirestoreService.unsubscribe(this._ownerRequestsListenerId);
+      });
+    }
     // Remove the programmatic overlay from body
     if (this._overlay && this._overlay.parentNode) this._overlay.remove();
     BarcodeScannerService.detachGlobal();
