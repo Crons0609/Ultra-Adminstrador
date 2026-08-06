@@ -35,10 +35,14 @@ export function moduleGuard(moduleId) {
     if (!authenticated) return false;
 
     const state = GlobalStore.getState();
-    const userRole = state.activeRole || state.currentUser?.role;
+    const currentUser = state.currentUser || {};
+    const rawRole = state.activeRole || currentUser.role || '';
+    const userRole = rawRole.toUpperCase().trim();
 
     // Super Admin bypasses all module restrictions
-    if (userRole === 'SUPER_ADMIN') return true;
+    if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN' || (currentUser.email || '').toLowerCase() === 'superadmin@ultraadmin.com') {
+      return true;
+    }
 
     const company = state.currentCompany;
     if (!company) return true; // Allow if company not loaded yet
@@ -70,8 +74,13 @@ export function autoModuleGuard() {
     if (!authenticated) return false;
 
     const state = GlobalStore.getState();
-    const userRole = state.activeRole || state.currentUser?.role;
-    if (userRole === 'SUPER_ADMIN') return true;
+    const currentUser = state.currentUser || {};
+    const rawRole = state.activeRole || currentUser.role || '';
+    const userRole = rawRole.toUpperCase().trim();
+
+    if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN' || (currentUser.email || '').toLowerCase() === 'superadmin@ultraadmin.com') {
+      return true;
+    }
 
     const company = state.currentCompany;
     if (!company) return true;
@@ -107,12 +116,22 @@ export function roleGuard(allowedRoles) {
 
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
-    const userRole = state.activeRole || currentUser.role;
+    const rawRole = state.activeRole || currentUser.role || '';
+    const userRole = rawRole.toUpperCase().trim();
     const company = state.currentCompany;
     const path = route.path || '';
 
+    const isSuperAdmin = userRole === 'SUPER_ADMIN' ||
+                         userRole === 'SUPERADMIN' ||
+                         (currentUser.email || '').toLowerCase() === 'superadmin@ultraadmin.com';
+
+    // SUPER_ADMIN bypasses ALL guards — full access always
+    if (isSuperAdmin) {
+      return true;
+    }
+
     // Business type category guards validation
-    if (company && userRole !== 'SUPER_ADMIN') {
+    if (company) {
       const bType = company.businessType || company.rubro || company.type || company.category || company.name || '';
       const category = getBusinessCategory(bType);
       const guards = getModuleGuards(bType);
@@ -143,13 +162,8 @@ export function roleGuard(allowedRoles) {
       }
     }
 
-    // SUPER_ADMIN bypasses ALL guards — full access always
-    if (userRole === 'SUPER_ADMIN') {
-      return true;
-    }
-
     // Check company status / subscription
-    if (company && userRole !== 'SUPER_ADMIN') {
+    if (company) {
       const isFaltaPago = company.status === 'FALTA_PAGO' || company.status === 'INACTIVO' || company.status === 'SUSPENDIDO';
       const isExpired = company.subscriptionExpiresAt && (new Date(company.subscriptionExpiresAt) < new Date().setHours(0,0,0,0));
       
@@ -191,7 +205,8 @@ export function roleGuard(allowedRoles) {
       if (permissions.ver_reportes === true || permissions.administrar_empleados === true) return true;
     }
 
-    if (!allowedRoles.includes(userRole)) {
+    const normAllowed = allowedRoles.map(r => (r || '').toUpperCase().trim());
+    if (!normAllowed.includes(userRole)) {
       console.error(`Access Denied: Role '${userRole}' or required permissions not allowed on '${route.path}'.`);
       
       // Redirect to correct dashboard according to the user's role
@@ -209,39 +224,45 @@ export function roleGuard(allowedRoles) {
  * @param {Router} router 
  */
 export function redirectUserDashboard(role, router) {
-  switch (role) {
-    case 'SUPER_ADMIN':
-      router.navigate('/super-admin/companies');
-      break;
-    case 'OWNER':
-      router.navigate('/owner/finance');
-      break;
-    case 'MANAGER':
-      router.navigate('/manager/dashboard');
-      break;
-    case 'CASHIER':
-      router.navigate('/cashier/pos');
-      break;
-    case 'WAITER':
-      try {
-        const companyObj = GlobalStore.getState().currentCompany;
-        const categoryObj = getBusinessCategory(companyObj?.businessType || '');
-        if (categoryObj === 'GASTRONOMIA' || categoryObj === 'BAR_DISCOTECA') {
-          router.navigate('/waiter/tables');
-        } else {
-          router.navigate('/waiter/client-assignments');
-        }
-      } catch (err) {
-        router.navigate('/waiter/tables');
-      }
-      break;
-    case 'KITCHEN':
-      router.navigate('/kitchen/kds');
-      break;
-    case 'CUSTOMER':
-      router.navigate('/customer/menu');
-      break;
-    default:
-      router.navigate('/login');
+  const normRole = (role || '').toUpperCase().trim();
+  const rawHash = (window.location.hash || '').slice(1) || '/';
+  const currentHashPath = rawHash.split('?')[0] || '/';
+
+  let targetPath = '/login';
+
+  if (normRole === 'SUPER_ADMIN' || normRole === 'SUPERADMIN') {
+    targetPath = '/super-admin/companies';
+  } else if (normRole === 'OWNER') {
+    targetPath = '/owner/finance';
+  } else if (normRole === 'MANAGER') {
+    targetPath = '/manager/dashboard';
+  } else if (normRole === 'CASHIER') {
+    targetPath = '/cashier/pos';
+  } else if (normRole === 'WAITER') {
+    try {
+      const companyObj = GlobalStore.getState().currentCompany;
+      const categoryObj = getBusinessCategory(companyObj?.businessType || '');
+      targetPath = (categoryObj === 'GASTRONOMIA' || categoryObj === 'BAR_DISCOTECA')
+        ? '/waiter/tables'
+        : '/waiter/client-assignments';
+    } catch (_) {
+      targetPath = '/waiter/tables';
+    }
+  } else if (normRole === 'KITCHEN') {
+    targetPath = '/kitchen/kds';
+  } else if (normRole === 'CUSTOMER') {
+    targetPath = '/customer/menu';
   }
+
+  // Prevent infinite redirect loops if targetPath matches current route
+  if (currentHashPath === targetPath || currentHashPath.startsWith(targetPath)) {
+    if (targetPath !== '/login') {
+      console.warn(`[redirectUserDashboard] Prevented infinite redirect loop for '${normRole}' at '${currentHashPath}'. Redirecting to /login`);
+      router.navigate('/login');
+    }
+    return;
+  }
+
+  router.navigate(targetPath);
 }
+
