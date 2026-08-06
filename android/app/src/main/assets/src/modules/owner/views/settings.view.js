@@ -703,7 +703,7 @@ export class SettingsView extends Component {
     // Initial load
     this.loadOwnerProfile(element);
     this.loadEmployeesList(element);
-    // Location tab is loaded lazily when the tab is clicked (see afterMount)
+    this.loadEstablishmentLocation(element);
 
     return element;
   }
@@ -906,7 +906,7 @@ export class SettingsView extends Component {
         if (el && value !== undefined && value !== null) el.value = value;
       };
 
-      // Also try flat fields from informacion_local (written by firestore.service.js)
+      // Try flat fields from informacion_local (written by firestore.service.js)
       let flatSnap = null;
       try {
         const flatRef = ref(db, `${this.companyId}/informacion_local`);
@@ -914,37 +914,50 @@ export class SettingsView extends Component {
       } catch (_) {}
       const flat = (flatSnap && flatSnap.exists()) ? flatSnap.val() : {};
 
-      // Merge: /location sub-node takes priority over flat fields
+      // Try root company registry node /companies/{companyId} as fallback
+      let compSnap = null;
+      try {
+        const compRef = ref(db, `companies/${this.companyId}`);
+        compSnap = await get(compRef);
+      } catch (_) {}
+      const comp = (compSnap && compSnap.exists()) ? compSnap.val() : {};
+
+      const currentComp = GlobalStore.getState().currentCompany || {};
+
+      // Merge across all storage nodes with fallback hierarchy
       const merged = {
-        latitude: loc?.latitude ?? loc?.lat ?? '',
-        longitude: loc?.longitude ?? loc?.lng ?? '',
-        country:      loc?.country      ?? flat.pais         ?? '',
-        department:   loc?.department   ?? flat.estado        ?? '',
-        municipality: loc?.municipality ?? flat.municipio     ?? '',
-        postalCode:   loc?.postalCode   ?? flat.codigoPostal  ?? '',
-        address:      loc?.address      ?? flat.direccion     ?? '',
+        latitude:     loc?.latitude     ?? loc?.lat          ?? comp.location?.latitude  ?? currentComp.location?.latitude  ?? '',
+        longitude:    loc?.longitude    ?? loc?.lng          ?? comp.location?.longitude ?? currentComp.location?.longitude ?? '',
+        country:      loc?.country      ?? flat.pais         ?? flat.country  ?? comp.country    ?? currentComp.country    ?? 'Nicaragua',
+        department:   loc?.department   ?? flat.estado       ?? flat.state    ?? comp.state      ?? currentComp.state      ?? '',
+        municipality: loc?.municipality ?? flat.municipio    ?? flat.city     ?? comp.city       ?? currentComp.city       ?? '',
+        postalCode:   loc?.postalCode   ?? flat.codigoPostal ?? flat.postalCode ?? flat.zip     ?? comp.postalCode ?? currentComp.postalCode ?? '',
+        address:      loc?.address      ?? flat.direccion    ?? comp.address  ?? currentComp.address  ?? '',
         reference:    loc?.reference    ?? '',
-        updatedAt:    loc?.updatedAt    ?? ''
+        updatedAt:    loc?.updatedAt    ?? comp.updatedAt    ?? ''
       };
 
-      if (merged.latitude || merged.country || merged.municipality) {
-        fill('#loc-lat-input',         merged.latitude);
-        fill('#loc-lng-input',         merged.longitude);
-        fill('#loc-country-input',     merged.country);
-        fill('#loc-department-input',  merged.department);
-        fill('#loc-municipality-input',merged.municipality);
-        fill('#loc-postalcode-input',  merged.postalCode);
-        fill('#loc-address-input',     merged.address);
-        fill('#loc-reference-input',   merged.reference);
+      // Always populate fields
+      fill('#loc-lat-input',         merged.latitude);
+      fill('#loc-lng-input',         merged.longitude);
+      fill('#loc-country-input',     merged.country);
+      fill('#loc-department-input',  merged.department);
+      fill('#loc-municipality-input',merged.municipality);
+      fill('#loc-postalcode-input',  merged.postalCode);
+      fill('#loc-address-input',     merged.address);
+      fill('#loc-reference-input',   merged.reference);
 
-        // Show saved indicator
-        const indicator = root.querySelector('#loc-saved-indicator');
-        const savedText = root.querySelector('#loc-saved-text');
-        if (indicator) indicator.style.display = 'flex';
-        if (savedText && merged.updatedAt) {
+      const hasAnyData = Boolean(merged.country || merged.department || merged.municipality || merged.postalCode || merged.address || merged.latitude);
+
+      // Show saved indicator
+      const indicator = root.querySelector('#loc-saved-indicator');
+      const savedText = root.querySelector('#loc-saved-text');
+      if (indicator && hasAnyData) indicator.style.display = 'flex';
+      if (savedText && hasAnyData) {
+        if (merged.updatedAt) {
           const d = new Date(merged.updatedAt);
           savedText.textContent = `Ubicación guardada el ${d.toLocaleDateString()} a las ${d.toLocaleTimeString()}`;
-        } else if (savedText && (merged.country || merged.municipality)) {
+        } else {
           savedText.textContent = 'Datos de ubicación cargados desde la nube ✅';
         }
       }

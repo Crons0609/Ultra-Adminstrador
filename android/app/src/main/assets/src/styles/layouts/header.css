@@ -11,7 +11,7 @@
   background-color: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   display: flex;
-  align-items: flex-end; /* content aligns at the bottom of the expanded height */
+  align-items: center;
   justify-content: space-between;
   padding-left: var(--space-6);
   padding-right: var(--space-6);
@@ -29,8 +29,15 @@
 
 /* Account switcher dropdown entrance animation */
 @keyframes dropdown-in {
-  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)    scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Sidebar collapsed: shrink left offset */
@@ -45,6 +52,7 @@ body.sidebar-collapsed .header {
   gap: var(--space-3);
   min-width: 0;
   flex: 1;
+  transform: translateY(7px);
 }
 
 .header-breadcrumb {
@@ -82,6 +90,7 @@ body.sidebar-collapsed .header {
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
+  transform: translateY(7px);
 }
 
 /* Real-time clock */
@@ -112,6 +121,7 @@ body.sidebar-collapsed .header {
   width: 36px;
   height: 36px;
 }
+
 .menu-toggle:hover {
   background-color: var(--color-surface-hover);
 }
@@ -131,6 +141,7 @@ body.sidebar-collapsed .header {
   flex-shrink: 0;
   transition: all var(--transition-fast);
 }
+
 .header-action:hover {
   background-color: var(--color-surface-hover);
   border-color: var(--color-border-hover);
@@ -149,6 +160,7 @@ body.sidebar-collapsed .header {
   transition: all var(--transition-fast);
   flex-shrink: 0;
 }
+
 .header-user-chip:hover {
   background-color: var(--color-surface-hover);
   border-color: var(--color-border-hover);
@@ -206,21 +218,48 @@ body.sidebar-collapsed .header {
   white-space: nowrap;
   flex-shrink: 0;
 }
-.gps-header-btn:hover { background: var(--color-surface-hover); border-color: var(--color-border-hover); }
-.gps-header-btn.active  { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #10b981; }
-.gps-header-btn.inactive { background: rgba(239, 68, 68, 0.08);  border-color: rgba(239, 68, 68, 0.25);  color: #ef4444; }
+
+.gps-header-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+}
+
+.gps-header-btn.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.gps-header-btn.inactive {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
 
 .gps-dot {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
 }
-.gps-header-btn.active .gps-dot { animation: pulse-gps-green 1.8s infinite; }
+
+.gps-header-btn.active .gps-dot {
+  animation: pulse-gps-green 1.8s infinite;
+}
 
 @keyframes pulse-gps-green {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50%       { transform: scale(1.4); opacity: 0.5; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 0.5;
+  }
 }
 
 /* ─── Tablet + Mobile Responsive (<1024px) ─── */
@@ -229,12 +268,15 @@ body.sidebar-collapsed .header {
     left: 0;
     padding: 0 var(--space-4);
   }
+
   body.sidebar-collapsed .header {
     left: 0;
   }
+
   .menu-toggle {
     display: flex;
   }
+
   .header-greeting,
   .header-divider {
     display: none;
@@ -255,6 +297,7 @@ body.sidebar-collapsed .header {
   .header-user-name {
     display: none;
   }
+
   .header-user-chip {
     padding: 4px;
   }
@@ -264,6 +307,7 @@ body.sidebar-collapsed .header {
   .scanner-toggle-kbd {
     display: none !important;
   }
+
   .scanner-toggle-btn {
     padding: var(--space-2);
     width: 36px;
@@ -275,6 +319,7 @@ body.sidebar-collapsed .header {
   .gps-header-btn span {
     display: none;
   }
+
   .gps-header-btn {
     padding: 6px;
     width: 36px;
@@ -286,6 +331,7 @@ body.sidebar-collapsed .header {
 
 /* ─── Extra small (<400px) ─── */
 @media (max-width: 399px) {
+
   /* Hide secondary header actions to avoid overflow */
   .header-action.header-action-secondary {
     display: none;

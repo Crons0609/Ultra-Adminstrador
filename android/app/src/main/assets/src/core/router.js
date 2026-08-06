@@ -36,7 +36,9 @@ export class Router {
     // If a newer navigation starts before this one finishes, this one aborts.
     const navId = ++this._navId;
 
-    let hashPath = window.location.hash.slice(1) || '/';
+    const rawHash = window.location.hash.slice(1) || '/';
+    // Strip query strings (e.g. /login?email=foo -> /login) to prevent query params from corrupting route regex matching
+    const hashPath = rawHash.split('?')[0] || '/';
     
     // Simple dynamic parameter parsing (e.g. /customer/menu/:companyId/:branchId/:tableId)
     const route = this.matchRoute(hashPath);
@@ -73,7 +75,7 @@ export class Router {
 
     // Initialize and render new View component
     try {
-      const params = this.getRouteParams(hashPath, route.path);
+      const params = this.getRouteParams(rawHash, route.path);
       const ViewClass = route.view;
       
       this.currentViewInstance = new ViewClass(params);
@@ -131,10 +133,11 @@ export class Router {
 
   /**
    * Extract parameterized variables from the active path.
-   * @param {string} hashPath 
+   * @param {string} rawHash 
    * @param {string} routePathPattern 
    */
-  getRouteParams(hashPath, routePathPattern) {
+  getRouteParams(rawHash, routePathPattern) {
+    const [hashPath, queryString] = (rawHash || '/').split('?');
     const values = hashPath.match(this.pathToRegex(routePathPattern));
     const keys = [...routePathPattern.matchAll(/:(\w+)/g)].map(result => result[1]);
     
@@ -148,6 +151,14 @@ export class Router {
         }
       });
     }
+
+    if (queryString) {
+      try {
+        const searchParams = new URLSearchParams(queryString);
+        params.queryParams = Object.fromEntries(searchParams.entries());
+      } catch (_) {}
+    }
+
     return params;
   }
 

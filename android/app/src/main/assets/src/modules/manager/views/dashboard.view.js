@@ -69,12 +69,7 @@ export class ManagerDashboardView extends Component {
     this.layout = new PageLayout({
       title: `Bienvenido, ${currentUser.displayName?.split(' ')[0] || 'Usuario'}`,
       subtitle: `Resumen del rendimiento de ${companyDisplayName} en tiempo real.${subscriptionNotice}`,
-      actionHTML: `
-        <span class="header-status-chip" id="db-mode-chip">
-          <span class="status-dot status-dot-success" id="db-status-dot"></span>
-          <span id="db-status-text">Tiempo Real</span>
-        </span>
-      `,
+      actionHTML: '',
       contentHTML: `
         <!-- KPI Cards -->
         <div class="grid-stats animate-fade-in" id="dashboard-kpi-row">

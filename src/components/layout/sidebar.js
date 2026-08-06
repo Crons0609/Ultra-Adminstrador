@@ -93,8 +93,21 @@ export class Sidebar extends Component {
             m.allowedRoles.includes('OWNER') && isModuleEnabled(currentCompany, m.id)
           );
 
-          // Dynamically extract unique categories in order of appearance
+          // 4 Canonical Accordion Categories Order with Icons
+          const categoryOrder = ['General', 'Finanzas', 'Operaciones', 'Automatización'];
+          const categoryIcons = {
+            'General': '🧩',
+            'Finanzas': '💰',
+            'Operaciones': '⚙️',
+            'Automatización': '🤖'
+          };
+
           const categories = [];
+          categoryOrder.forEach(cat => {
+            if (enabledModules.some(m => m.category === cat)) {
+              categories.push(cat);
+            }
+          });
           enabledModules.forEach(m => {
             if (m.category && !categories.includes(m.category)) {
               categories.push(m.category);
@@ -104,6 +117,7 @@ export class Sidebar extends Component {
           return categories
             .map(cat => ({
               label: cat,
+              icon: categoryIcons[cat] || '📦',
               items: enabledModules
                 .filter(m => m.category === cat)
                 .map(m => ({ label: m.name, path: m.path, icon: m.icon }))
@@ -113,19 +127,18 @@ export class Sidebar extends Component {
       },
       MANAGER: {
         groups: (() => {
-          // Filter MODULE_REGISTRY by company's enabled modules and generate dynamic groups for manager
           const enabledModules = MODULE_REGISTRY.filter(m =>
             m.allowedRoles.includes('MANAGER') && isModuleEnabled(currentCompany, m.id)
           );
-          // Manager gets one flat group with all allowed modules
           const allItems = enabledModules.map(m => ({ label: m.name, path: m.path, icon: m.icon }));
-          return allItems.length > 0 ? [{ label: 'Operaciones', items: allItems }] : [{ label: 'Operaciones', items: [] }];
+          return allItems.length > 0 ? [{ label: 'Operaciones', icon: '⚙️', items: allItems }] : [{ label: 'Operaciones', icon: '⚙️', items: [] }];
         })()
       },
       CASHIER: {
         groups: [
           {
             label: 'Caja',
+            icon: '💰',
             items: [
               { label: 'Punto de Venta', path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` },
               { label: 'Pagos', path: '#/cashier/payments', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>` },
@@ -143,6 +156,7 @@ export class Sidebar extends Component {
         groups: [
           {
             label: 'Servicio',
+            icon: '🛎️',
             items: [
               ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
                 ? [{ label: 'Mis Clientes Asignados', path: '#/waiter/client-assignments', icon: icons.calendar }]
@@ -157,6 +171,7 @@ export class Sidebar extends Component {
         groups: [
           {
             label: 'Cocina',
+            icon: '🍳',
             items: [
               { label: 'KDS – Comandas', path: '#/kitchen/kds', icon: icons.kds },
               { label: 'Estadísticas', path: '#/kitchen/stats', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>` },
@@ -195,8 +210,6 @@ export class Sidebar extends Component {
   }
 
   render() {
-    // Always read fresh state from GlobalStore so the sidebar reflects the latest
-    // activeRole and currentCompany (including config/guards) on every render.
     const { currentUser, activeRole, currentCompany } = GlobalStore.getState();
     const role = activeRole || (currentUser ? currentUser.role : '');
     const menuConfig = this.getMenuConfig(role);
@@ -206,15 +219,34 @@ export class Sidebar extends Component {
       ? (currentCompany.name || currentCompany.id || 'Mi Negocio')
       : (role === 'SUPER_ADMIN' ? 'Ultra Admin' : 'Mi Negocio');
 
-    const companyInitial = companyName[0]?.toUpperCase() || 'U';
     const roleLabel = this.getRoleLabel(role);
     const roleColor = this.getRoleBadgeColor(role);
 
-    // Build grouped menu HTML
+    // Build grouped menu HTML with collapsible accordions
     let menuHTML = '';
-    menuConfig.groups.forEach(group => {
-      menuHTML += `<div class="sidebar-group">`;
-      menuHTML += `<span class="sidebar-group-label">${group.label}</span>`;
+    menuConfig.groups.forEach((group, index) => {
+      // Check if any item in this group matches current hash route
+      const hasActiveItem = group.items.some(item => 
+        currentHash === item.path || currentHash.startsWith(item.path + '/')
+      );
+
+      // Auto expand if group has active route OR if there's only 1 group
+      const isOpen = hasActiveItem || (menuConfig.groups.length === 1);
+
+      menuHTML += `
+        <div class="sidebar-group ${isOpen ? 'is-open' : ''}" data-group-index="${index}">
+          <button class="sidebar-group-header" type="button" data-sidebar-toggle-group="${index}">
+            ${group.icon ? `<span class="sidebar-group-icon">${group.icon}</span>` : ''}
+            <span class="sidebar-group-label">${group.label}</span>
+            <span class="sidebar-group-chevron">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </span>
+          </button>
+          <div class="sidebar-group-items">
+      `;
+
       group.items.forEach(item => {
         const isActive = currentHash === item.path || currentHash.startsWith(item.path + '/');
         const badgeHTML = item.badgeId 
@@ -230,7 +262,11 @@ export class Sidebar extends Component {
           </a>
         `;
       });
-      menuHTML += `</div>`;
+
+      menuHTML += `
+          </div>
+        </div>
+      `;
     });
 
     const userName = currentUser ? currentUser.displayName : 'Cargando...';
@@ -298,14 +334,28 @@ export class Sidebar extends Component {
       });
     }
 
-    // Re-render active state on hash change
+    // Collapsible Group Accordion Toggle Click Handler
+    this.$$('[data-sidebar-toggle-group]').forEach(headerBtn => {
+      headerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const groupEl = headerBtn.closest('.sidebar-group');
+        if (!groupEl) return;
+        groupEl.classList.toggle('is-open');
+      });
+    });
+
+    // Re-render active state & auto-expand parent group on hash change
     this._hashHandler = () => {
       const items = this.element?.querySelectorAll('.sidebar-item');
       const hash = window.location.hash;
       items?.forEach(el => {
         const href = el.getAttribute('href');
-        if (hash === href || hash.startsWith(href + '/')) {
+        const isActive = hash === href || (href && hash.startsWith(href + '/'));
+        if (isActive) {
           el.classList.add('active');
+          const group = el.closest('.sidebar-group');
+          if (group) group.classList.add('is-open');
         } else {
           el.classList.remove('active');
         }
