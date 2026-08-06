@@ -7,11 +7,13 @@
 .header {
   /* Base height + status bar inset so the header never sits under the Android notification bar */
   height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: calc(env(safe-area-inset-top, 0px) - 3px);
+  margin-top: -3px;
   background-color: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  /* content aligns at the bottom of the expanded height */
   justify-content: space-between;
   padding-left: var(--space-6);
   padding-right: var(--space-6);
@@ -52,7 +54,6 @@ body.sidebar-collapsed .header {
   gap: var(--space-3);
   min-width: 0;
   flex: 1;
-  transform: translateY(7px);
 }
 
 .header-breadcrumb {
@@ -90,7 +91,6 @@ body.sidebar-collapsed .header {
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
-  transform: translateY(7px);
 }
 
 /* Real-time clock */
