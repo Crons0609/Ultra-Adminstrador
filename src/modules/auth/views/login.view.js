@@ -400,6 +400,26 @@ export class LoginView extends Component {
       { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', delay: 0.8 }
     );
 
+    // ── Login Form Submission ────────────────────────────────────────────────
+    const loginForm  = this.$('#login-form');
+    const emailInput = this.$('#login-email');
+
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.handleLogin();
+      });
+    }
+
+    if (emailInput) {
+      emailInput.addEventListener('input', () => {
+        this.checkLockoutStatus(emailInput.value.trim());
+      });
+      emailInput.addEventListener('blur', () => {
+        this.checkLockoutStatus(emailInput.value.trim());
+      });
+    }
+
     // ── Password Visibility Toggles ─────────────────────────────────────────
     const loginPassInput = this.$('#login-password');
     const toggleLoginPass = this.$('#btn-toggle-password');
