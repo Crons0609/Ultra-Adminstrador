@@ -237,48 +237,6 @@ export class ClientAssignmentsView extends Component {
     }
   }
 
-  async loadData() {
-    try {
-      this.state.employees = await FirestoreService.getCompanyEmployees(this.companyId);
-      this.state.clients = await FirestoreService.getAll('clients');
-    } catch (e) {
-      console.warn('[ClientAssignments] loadData error:', e.message);
-    }
-  }
-
-  subscribeToRealtimeData() {
-    if (!this.companyId) return;
-
-    try {
-      const asgUnsub = FirestoreService.listenToTenant('assignments', (data) => {
-        this.state.assignments = data || [];
-        if (this.state.activeTab === 'history') this.renderActiveTabContent();
-      });
-      this.listeners.push(asgUnsub);
-
-      const pendingUnsub = FirestoreService.listenToTenant('pending_clients', (data) => {
-        this.state.pendingClients = data || [];
-        if (this.state.activeTab === 'pending-clients') this.renderActiveTabContent();
-      });
-      this.listeners.push(pendingUnsub);
-
-      const locUnsub = FirestoreService.listenToTenant('pending_locations', (data) => {
-        this.state.pendingLocations = data || [];
-        if (this.state.activeTab === 'pending-clients') this.renderActiveTabContent();
-      });
-      this.listeners.push(locUnsub);
-
-      const authUnsub = FirestoreService.listenToTenant('authorizations', (data) => {
-        this.state.authRequests = data || [];
-        if (this.state.activeTab === 'authorizations') this.renderActiveTabContent();
-      });
-      this.listeners.push(authUnsub);
-
-    } catch (e) {
-      console.warn('[ClientAssignments] Realtime subscription error:', e.message);
-    }
-  }
-
   // ═══════════════════════════════════════════════════════════════════════════
   // REVIEWS CONTAINER & GPS UPDATES APPROVAL WORKSPACE
   // ═══════════════════════════════════════════════════════════════════════════

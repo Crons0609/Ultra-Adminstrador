@@ -48,7 +48,7 @@ export class POSView extends Component {
 
     this.layout = new PageLayout({
       title: this.isBar ? 'Punto de Venta & Taquilla (POS)' : 'Punto de Venta (POS)',
-      subtitle: this.isBar 
+      subtitle: this.isBar
         ? 'Procesa cobros de barras, VIPs y registros de covers/entradas.'
         : 'Procesa cobros de mesas, órdenes separadas y ventas directas.',
       actionHTML: `
@@ -731,9 +731,9 @@ export class POSView extends Component {
         clientSelector.innerHTML = `
           <option value="">-- Seleccionar Cliente --</option>
           ${tableOrders.map(o => {
-            const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
-            return `<option value="${o.id}" ${o.id === orderId ? 'selected' : ''}>${label}</option>`;
-          }).join('')}
+          const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
+          return `<option value="${o.id}" ${o.id === orderId ? 'selected' : ''}>${label}</option>`;
+        }).join('')}
         `;
         clientSelector.value = orderId;
       }
@@ -782,11 +782,11 @@ export class POSView extends Component {
     selector.innerHTML = `
       <option value="">-- Venta Directa (Sin Mesa) --</option>
       ${occupiedTables.map(t => {
-        const tableOrders = this.state.orders.filter(o => o.tableId === t.id && o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
-        const isBillRequested = tableOrders.some(o => o.status === 'ESPERANDO_PAGO');
-        const label = isBillRequested ? `⚠️ ${t.name} (Pidió Cuenta)` : `● ${t.name} (En servicio)`;
-        return `<option value="${t.id}">${label}</option>`;
-      }).join('')}
+      const tableOrders = this.state.orders.filter(o => o.tableId === t.id && o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
+      const isBillRequested = tableOrders.some(o => o.status === 'ESPERANDO_PAGO');
+      const label = isBillRequested ? `⚠️ ${t.name} (Pidió Cuenta)` : `● ${t.name} (En servicio)`;
+      return `<option value="${t.id}">${label}</option>`;
+    }).join('')}
     `;
 
     if (occupiedTables.some(t => t.id === previousVal)) {
@@ -827,9 +827,9 @@ export class POSView extends Component {
         clientSelector.innerHTML = `
           <option value="">-- Seleccionar Cliente --</option>
           ${tableOrders.map(o => {
-            const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
-            return `<option value="${o.id}">${label}</option>`;
-          }).join('')}
+          const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
+          return `<option value="${o.id}">${label}</option>`;
+        }).join('')}
         `;
         clientSelector.value = '';
       }
@@ -1207,8 +1207,8 @@ export class POSView extends Component {
           // 🔔 WhatsApp / Telegram stock alerts
           const threshold = Number(prod.lowStockThreshold || prod.minStock || 5);
           if (newStock <= threshold && this.companyId) {
-            WhatsAppService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => {});
-            TelegramService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => {});
+            WhatsAppService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => { });
+            TelegramService.sendLowStockAlert(this.companyId, prod.name, newStock, threshold).catch(() => { });
           }
         }
       }
@@ -1220,7 +1220,7 @@ export class POSView extends Component {
           clientName: this.state.selectedClientName || 'Cliente',
           total,
           paymentMethod: this.state.paymentMethod
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       const clientChatId = this.state.selectedClientTelegramChatId || null;
@@ -1229,7 +1229,7 @@ export class POSView extends Component {
           clientName: this.state.selectedClientName || 'Cliente',
           total,
           paymentMethod: this.state.paymentMethod
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       // 5. If a table order was loaded, update the order status and table node
@@ -1239,10 +1239,10 @@ export class POSView extends Component {
       if (loadedOrderId && loadedTableId) {
         await FirestoreService.update('orders', loadedOrderId, { status: 'COMPLETED', completedAt: Date.now() });
 
-        const remaining = this.state.orders.filter(o => 
-          o.tableId === loadedTableId && 
-          o.id !== loadedOrderId && 
-          o.status !== 'COMPLETED' && 
+        const remaining = this.state.orders.filter(o =>
+          o.tableId === loadedTableId &&
+          o.id !== loadedOrderId &&
+          o.status !== 'COMPLETED' &&
           o.status !== 'CANCELADA'
         );
 

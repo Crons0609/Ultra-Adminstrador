@@ -11,7 +11,6 @@ const QUEUE_STORE = 'write_queue';
 const METADATA_STORE = 'sync_metadata';
 const IMAGES_STORE = 'images_cache';
 const SESSIONS_STORE = 'user_sessions';
-const ACCOUNTS_STORE = 'saved_accounts';
 
 export class LocalStorageDBService {
   static _dbPromise = null;
@@ -65,11 +64,6 @@ export class LocalStorageDBService {
         if (!db.objectStoreNames.contains(SESSIONS_STORE)) {
           const sessStore = db.createObjectStore(SESSIONS_STORE, { keyPath: 'uid' });
           sessStore.createIndex('email', 'email', { unique: false });
-        }
-
-        // Saved Accounts Store for Profile Switcher
-        if (!db.objectStoreNames.contains(ACCOUNTS_STORE)) {
-          db.createObjectStore(ACCOUNTS_STORE, { keyPath: 'email' });
         }
       };
 
@@ -419,42 +413,6 @@ export class LocalStorageDBService {
       if (!db) return;
       const tx = db.transaction(SESSIONS_STORE, 'readwrite');
       tx.objectStore(SESSIONS_STORE).delete(uid);
-    } catch (_) {}
-  }
-
-  // ─── SAVED ACCOUNTS METHODS ──────────────────────────────────────────────
-
-  static async setSavedAccount(account) {
-    if (!account?.email) return;
-    try {
-      const db = await this.getDB();
-      if (!db) return;
-      const tx = db.transaction(ACCOUNTS_STORE, 'readwrite');
-      tx.objectStore(ACCOUNTS_STORE).put(account);
-    } catch (_) {}
-  }
-
-  static async getSavedAccounts() {
-    try {
-      const db = await this.getDB();
-      if (!db) return [];
-      return new Promise((resolve) => {
-        const tx = db.transaction(ACCOUNTS_STORE, 'readonly');
-        const req = tx.objectStore(ACCOUNTS_STORE).getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
-      });
-    } catch {
-      return [];
-    }
-  }
-
-  static async removeSavedAccount(email) {
-    try {
-      const db = await this.getDB();
-      if (!db) return;
-      const tx = db.transaction(ACCOUNTS_STORE, 'readwrite');
-      tx.objectStore(ACCOUNTS_STORE).delete(email);
     } catch (_) {}
   }
 }

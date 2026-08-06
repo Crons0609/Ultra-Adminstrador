@@ -16,7 +16,6 @@ export class CompaniesView extends Component {
 
     // Initialize store with empty list — data will be loaded from Firebase RTDB
     GlobalStore.set({ companies: [] });
-    this.state = { requests: [] };
 
     // Initialize DataTable
     this.table = new DataTable({
@@ -127,16 +126,19 @@ export class CompaniesView extends Component {
         </button>
       `,
       contentHTML: `
-        <!-- Pending Requests Section -->
-        <div id="pending-requests-container" style="display:none;" class="animate-fade-in mb-6">
-          <div class="card p-5" style="border: 2px solid var(--color-success); background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent);">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <h3 class="text-lg font-bold" style="color:var(--color-success);">✨ Solicitudes de Registro Pendientes</h3>
-              <span class="badge" id="requests-count-badge" style="background:var(--color-success); color:#fff; border-radius:20px; padding:2px 10px; font-size:0.75rem;">0 solicitudes</span>
-            </div>
-            <div id="requests-list-wrapper" class="d-flex flex-column gap-3">
-              <!-- Requests injected here -->
-            </div>
+        <!-- Pending Owner Registration Requests Card -->
+        <div id="pending-requests-card" class="card p-5 mb-5" style="border: 1px solid rgba(139,92,246,0.35); background: rgba(139,92,246,0.03);">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h3 class="text-lg font-semibold" style="display:flex; align-items:center; gap:8px; margin:0;">
+              <span>📩 Solicitudes de Registro de Dueños Pendientes</span>
+              <span id="pending-requests-badge" class="badge" style="background:var(--color-accent); color:white; font-size:0.75rem; border-radius:12px; padding:2px 8px;">0</span>
+            </h3>
+            <button class="btn btn-secondary btn-xs" id="btn-refresh-pending-requests" style="font-size:0.75rem;">
+              🔄 Actualizar
+            </button>
+          </div>
+          <div id="pending-requests-table-container">
+            <p style="color:var(--color-text-secondary); font-size:0.85rem; font-style:italic;">Cargando solicitudes pendientes...</p>
           </div>
         </div>
 
@@ -163,11 +165,6 @@ export class CompaniesView extends Component {
       const companies = await FirestoreService.listAllCompanies();
       GlobalStore.set({ companies });
       
-      // Load pending join requests
-      const requests = await AuthService.getPendingBusinessRequests();
-      this.state.requests = requests;
-      this.renderRequests();
-
       let plans = await FirestoreService.listPlans();
       if (!plans || !plans.length) {
         const defaults = [
@@ -180,6 +177,10 @@ export class CompaniesView extends Component {
       }
       GlobalStore.set({ plans });
       console.log('[CompaniesView] ✅ Carga desde RTDB. Total:', companies.length);
+      
+      // Cargar también las solicitudes pendientes de dueños de negocio
+      await this.loadPendingRequests();
+
     } catch (e) {
       console.error('[CompaniesView] Fallo al leer de la base de datos:', e);
       NotificationService.error('Error al sincronizar con la base de datos remota.');
@@ -208,6 +209,11 @@ export class CompaniesView extends Component {
     const addBtn = this.layout.$('#btn-add-company');
     if (addBtn) {
       addBtn.addEventListener('click', () => this.openAddCompanyModal());
+    }
+
+    const refreshPendingBtn = this.layout.$('#btn-refresh-pending-requests');
+    if (refreshPendingBtn) {
+      refreshPendingBtn.addEventListener('click', () => this.loadPendingRequests());
     }
 
     const purgeBtn = this.layout.$('#btn-purge-production');
@@ -1171,151 +1177,220 @@ export class CompaniesView extends Component {
     return labels[action] || 'actualizar';
   }
 
-  renderRequests() {
-    const container = this.layout.$('#pending-requests-container');
-    const wrapper = this.layout.$('#requests-list-wrapper');
-    const badge = this.layout.$('#requests-count-badge');
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PENDING OWNER REQUESTS MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════════════════
 
-    if (!container || !wrapper) return;
+  async loadPendingRequests() {
+    const container = this.layout.$('#pending-requests-table-container');
+    const badge = this.layout.$('#pending-requests-badge');
 
-    if (this.state.requests.length === 0) {
-      container.style.display = 'none';
+    if (!container) return;
+
+    try {
+      const allRequests = await FirestoreService.listPendingOwnerRequests();
+      const pendingList = allRequests.filter(r => r.status === 'PENDIENTE');
+
+      if (badge) badge.textContent = pendingList.length;
+
+      this.pendingRequests = pendingList;
+      this.renderPendingRequests(pendingList);
+    } catch (err) {
+      console.error('[CompaniesView] Error loading pending owner requests:', err);
+      container.innerHTML = `<p style="color:var(--color-danger); font-size:0.85rem;">Error al cargar las solicitudes pendientes.</p>`;
+    }
+  }
+
+  renderPendingRequests(requests) {
+    const container = this.layout.$('#pending-requests-table-container');
+    if (!container) return;
+
+    if (!requests || requests.length === 0) {
+      container.innerHTML = `
+        <div style="padding: var(--space-4); text-align: center; color: var(--color-text-tertiary); font-size: 0.85rem;">
+          ✨ No hay solicitudes de dueños pendientes de aprobación en este momento.
+        </div>
+      `;
       return;
     }
 
-    container.style.display = 'block';
-    badge.textContent = `${this.state.requests.length} solicitud${this.state.requests.length !== 1 ? 'es' : ''}`;
-
-    wrapper.innerHTML = this.state.requests.map(req => `
-      <div class="request-item p-4" style="background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
-        <div style="flex:1; min-width:200px;">
-          <div style="font-weight:700; font-size:1rem; color:var(--color-text-primary);">${req.bizName}</div>
-          <div style="font-size:0.85rem; color:var(--color-text-secondary); margin-top:2px;">Propietario: <strong>${req.ownerName}</strong></div>
-          <div style="display:flex; gap:12px; margin-top:6px; font-size:0.78rem; color:var(--color-text-tertiary);">
-            <span>📧 ${req.email}</span>
-            <span>📱 ${req.phone}</span>
-          </div>
-        </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm btn-reject-request" data-id="${req.id}">Rechazar</button>
-          <button class="btn btn-primary btn-sm btn-approve-request" data-id="${req.id}" style="background:var(--color-success); border:none; color:#fff;">✅ Aprobar y Configurar</button>
-        </div>
+    container.innerHTML = `
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary);">
+              <th style="padding: 8px 12px;">Fecha</th>
+              <th style="padding: 8px 12px;">Dueño / Propietario</th>
+              <th style="padding: 8px 12px;">Empresa / Negocio</th>
+              <th style="padding: 8px 12px;">Tipo</th>
+              <th style="padding: 8px 12px;">Contacto</th>
+              <th style="padding: 8px 12px; text-align: right;">Acciones del Programador</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${requests.map(req => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 10px 12px; color: var(--color-text-tertiary); font-size: 0.75rem;">
+                  ${req.createdAtLocal || '—'}
+                </td>
+                <td style="padding: 10px 12px; font-weight: 600; color: var(--color-text-primary);">
+                  👤 ${req.ownerName || '—'}
+                </td>
+                <td style="padding: 10px 12px; color: var(--color-accent); font-weight: 700;">
+                  🏪 ${req.companyName || '—'}
+                </td>
+                <td style="padding: 10px 12px; color: var(--color-text-secondary);">
+                  ${req.businessType || 'Restaurante'}
+                </td>
+                <td style="padding: 10px 12px;">
+                  <div>📧 ${req.email || '—'}</div>
+                  <div style="font-size: 0.75rem; color: var(--color-text-tertiary);">📞 ${req.phone || '—'}</div>
+                </td>
+                <td style="padding: 10px 12px; text-align: right;">
+                  <div style="display: inline-flex; gap: 6px;">
+                    <button
+                      type="button"
+                      class="btn btn-success btn-sm btn-approve-request"
+                      data-id="${req.id}"
+                      style="background-color: #16a34a; color: white; border: none; padding: 4px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;"
+                    >
+                      ✓ Aceptar y Registrar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-sm btn-reject-request"
+                      data-id="${req.id}"
+                      style="background-color: #ef4444; color: white; border: none; padding: 4px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;"
+                    >
+                      ✕ Rechazar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
       </div>
-    `).join('');
+    `;
 
-    // Bind events
-    wrapper.querySelectorAll('.btn-reject-request').forEach(btn => {
-      btn.addEventListener('click', () => this.handleRejectRequest(btn.dataset.id));
+    // Bind action buttons
+    container.querySelectorAll('.btn-approve-request').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        this.handleApproveRequest(id, btn);
+      });
     });
-    wrapper.querySelectorAll('.btn-approve-request').forEach(btn => {
-      btn.addEventListener('click', () => this.handleApproveRequest(btn.dataset.id));
+
+    container.querySelectorAll('.btn-reject-request').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        this.handleRejectRequest(id, btn);
+      });
     });
   }
 
-  async handleRejectRequest(requestId) {
-    const reason = prompt('Motivo del rechazo (opcional):', '');
-    if (reason === null) return;
+  async handleApproveRequest(requestId, btnElement) {
+    const req = (this.pendingRequests || []).find(r => r.id === requestId);
+    if (!req) return;
+
+    const confirmApprove = confirm(`¿Confirmas la aprobación y registro del negocio "${req.companyName}" para el dueño "${req.ownerName}" (${req.email})?`);
+    if (!confirmApprove) return;
+
+    if (btnElement) {
+      btnElement.disabled = true;
+      btnElement.textContent = '⏳ Registrando...';
+    }
+
+    const companyName = req.companyName.trim();
+    const newCompanyId = FirestoreService.sanitiseKey(companyName);
+
+    if (!newCompanyId) {
+      alert('El nombre del negocio contiene caracteres no válidos.');
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.textContent = '✓ Aceptar y Registrar';
+      }
+      return;
+    }
 
     try {
-      await AuthService.rejectBusinessJoinRequest(requestId, reason);
-      NotificationService.success('Solicitud rechazada.');
+      // 1. Create full company branch structure
+      console.log('[CompaniesView] Aprobando solicitud de dueño. Creando rama empresa:', newCompanyId);
+      await FirestoreService.createCompanyBranch(newCompanyId, {
+        name: companyName,
+        businessType: req.businessType || 'Restaurante',
+        plan: 'PREMIUM',
+        status: 'ACTIVO',
+        ownerEmail: req.email,
+        ownerPassword: req.password,
+        country: req.country || 'Nicaragua',
+        city: req.city || ''
+      }, {});
+
+      // 2. Create owner user in Firebase Auth
+      console.log('[CompaniesView] Creando usuario dueño para:', req.email);
+      const ownerUid = await AuthService.createUser(req.email, req.password, {
+        displayName: req.ownerName || `Dueño - ${companyName}`,
+        role: 'OWNER',
+        companyId: newCompanyId,
+        branchId: 'main'
+      });
+
+      // 3. Link ownerId in company info
+      await FirestoreService.updateCompanyInfo(newCompanyId, { ownerId: ownerUid });
+
+      // 4. Mark pending request status as APROBADO
+      await FirestoreService.updatePendingOwnerRequestStatus(requestId, 'APROBADO', {
+        approvedAt: Date.now(),
+        approvedCompanyId: newCompanyId
+      });
+
+      NotificationService.success(`✅ Empresa "${companyName}" y dueño "${req.ownerName}" aprobados y registrados exitosamente.`);
+
+      // 5. Reload companies & pending requests
       await this.loadCompanies();
+      await this.loadPendingRequests();
+
+      // Show credentials modal for convenience
+      this.showOwnerCredentialsModal(companyName, req.email, req.password);
+
     } catch (err) {
-      NotificationService.error('Error al rechazar: ' + err.message);
+      console.error('[CompaniesView] Error al aprobar solicitud:', err);
+      NotificationService.error(`Error al aprobar solicitud: ${err.message || err}`);
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.textContent = '✓ Aceptar y Registrar';
+      }
     }
   }
 
-  async handleApproveRequest(requestId) {
-    const req = this.state.requests.find(r => r.id === requestId);
+  async handleRejectRequest(requestId, btnElement) {
+    const req = (this.pendingRequests || []).find(r => r.id === requestId);
     if (!req) return;
 
-    // Open configuration modal before actual approval
-    let plans = GlobalStore.getState().plans || [];
-    const planOptionsHTML = plans.map(p => `<option value="${p.id}">${p.name} — $${p.price}</option>`).join('');
+    const confirmReject = confirm(`¿Estás seguro de rechazar la solicitud de registro para "${req.companyName}" (${req.ownerName})?`);
+    if (!confirmReject) return;
 
-    const formHTML = `
-      <form id="approve-request-form" class="d-flex flex-column gap-4" style="color: var(--color-text-primary);">
-        <p style="font-size:0.9rem; color:var(--color-text-secondary);">Configura el negocio <strong>${req.bizName}</strong> para completar el registro de <strong>${req.ownerName}</strong>.</p>
+    if (btnElement) {
+      btnElement.disabled = true;
+      btnElement.textContent = '⏳ Rechazando...';
+    }
 
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label">Tipo de Negocio</label>
-            <select id="appr-biz-type" class="input input-md">
-              ${getBusinessTypeOptions()}
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Plan SaaS</label>
-            <select id="appr-plan" class="input input-md">
-              ${planOptionsHTML}
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Contraseña de Acceso (Temporal)</label>
-          <input type="text" id="appr-password" class="input input-md" value="${Math.random().toString(36).slice(-8)}" required />
-          <small class="text-secondary">Esta es la clave que el dueño usará para su primer inicio de sesión.</small>
-        </div>
-
-        <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
-          <label class="form-label mb-3" style="font-weight: 700;">🧩 Módulos a Activar</label>
-          ${this._renderModuleCheckboxes(getDefaultModuleConfig())}
-        </div>
-      </form>
-    `;
-
-    const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn" style="background:var(--color-success); border:none;">Finalizar Registro y Notificar</button>
-    `;
-
-    this.modalInstance = new Modal({
-      title: 'Aprobar y Registrar Negocio',
-      bodyHTML: formHTML,
-      footerHTML: footerHTML,
-      size: 'lg'
-    });
-
-    document.body.appendChild(this.modalInstance.mount());
-
-    this.modalInstance.$('#modal-cancel-btn').addEventListener('click', () => this.modalInstance.close());
-    this.modalInstance.$('#modal-submit-btn').addEventListener('click', async () => {
-      const btn = this.modalInstance.$('#modal-submit-btn');
-      btn.disabled = true;
-      btn.textContent = 'Procesando registro...';
-
-      const businessType = this.modalInstance.$('#appr-biz-type').value;
-      const plan = this.modalInstance.$('#appr-plan').value;
-      const password = this.modalInstance.$('#appr-password').value;
-
-      const modules = {};
-      MODULE_REGISTRY.forEach(m => {
-        const cb = this.modalInstance.$(`#mod-registry-${m.id}`);
-        modules[m.id] = cb ? cb.checked : m.defaultEnabled;
+    try {
+      await FirestoreService.updatePendingOwnerRequestStatus(requestId, 'RECHAZADO', {
+        rejectedAt: Date.now()
       });
 
-      try {
-        const result = await AuthService.approveBusinessJoinRequest(requestId, {
-          businessType,
-          plan,
-          password,
-          modules
-        });
-
-        this.modalInstance.close();
-        NotificationService.success(`¡Negocio "${req.bizName}" registrado con éxito!`);
-
-        // Show credentials modal
-        this.showOwnerCredentialsModal(req.bizName, req.email, result.initialPassword);
-
-        await this.loadCompanies();
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = 'Finalizar Registro y Notificar';
-        alert('Error al aprobar: ' + err.message);
+      NotificationService.info(`Solicitud de "${req.companyName}" fue rechazada.`);
+      await this.loadPendingRequests();
+    } catch (err) {
+      console.error('[CompaniesView] Error al rechazar solicitud:', err);
+      NotificationService.error(`Error al rechazar: ${err.message || err}`);
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.textContent = '✕ Rechazar';
       }
-    });
+    }
   }
 
   unmount() {

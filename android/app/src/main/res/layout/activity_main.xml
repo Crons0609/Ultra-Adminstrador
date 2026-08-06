@@ -5,17 +5,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="#0a0a0b">
+    android:background="#ffffff">
 
-    <!-- 🛠️ REMOVED SwipeRefreshLayout to prevent touch event hijacking -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="none"
-        android:overScrollMode="never"
-        android:background="#0a0a0b" />
-
-    <!-- ── REMOVED Offline Banner (Using Web Header Indicator) ───────────────── -->
+        android:background="#ffffff" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

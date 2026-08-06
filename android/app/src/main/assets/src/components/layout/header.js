@@ -358,7 +358,6 @@ export class Header extends Component {
     document.addEventListener('click', this._sidebarNavHandler);
 
 
-    // 3. Real-time clock
     const clockEl = this.$('#header-clock');
     const updateClock = () => {
       if (clockEl) {

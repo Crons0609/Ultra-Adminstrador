@@ -31,19 +31,23 @@ class App {
    * Main application initializer. Called once when the DOM is ready.
    */
   async init() {
-    // 1. Apply saved theme fallback immediately (prevents flash before Firebase loads)
+    // 1. Show loading indicator and activate failsafe timer immediately
+    this.showLoadingScreen();
+
+    // 2. Apply saved theme fallback immediately (prevents flash before Firebase loads)
     const fallbackTheme = localStorage.getItem('theme') || APP_CONFIG.defaultTheme;
     document.body.classList.add(fallbackTheme);
 
-    // 2. Register service worker for PWA capabilities
+    // 3. Register service worker for PWA capabilities
     this.registerServiceWorker();
 
-    // 3. Initialize IndexedDB offline database and offline sync service FIRST so offline sessions can be loaded
-    await LocalStorageDBService.getDB();
-    await OfflineSyncService.init();
-
-    // 4. Show loading indicator while Firebase or IndexedDB resolves session
-    this.showLoadingScreen();
+    // 4. Initialize IndexedDB offline database and offline sync service FIRST so offline sessions can be loaded
+    try {
+      await LocalStorageDBService.getDB();
+      await OfflineSyncService.init();
+    } catch (dbErr) {
+      console.warn('[App] Offline DB initialization warning:', dbErr);
+    }
 
     // 5. Wait for Firebase Auth or IndexedDB to determine current session state with a strict 3.5s timeout.
     await new Promise((resolve) => {

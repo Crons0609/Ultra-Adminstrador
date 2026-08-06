@@ -6,25 +6,26 @@
 
 .app-container {
   display: flex;
-  height: 100%;
-  width: 100%;
+  min-height: 100svh;
   background-color: var(--color-bg-primary);
-  overflow: hidden;
+  overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 .main-content {
-  flex: 1;
+  flex-grow: 1;
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  height: 100%;
+  min-width: 0;        /* Prevent flex overflow */
+  min-height: 100svh;
   transition: margin-left var(--transition-normal);
+  /* Offset for fixed header, which already includes the Android status bar inset */
   padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: auto;    /* 🛠️ FIX: Ensure content can scroll if longer than viewport */
+  touch-action: auto;
   -webkit-overflow-scrolling: touch;
-  background-color: var(--color-bg-primary);
 }
 
 /* Sidebar in collapsed/rail mode */

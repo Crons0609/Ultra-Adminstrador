@@ -56,10 +56,10 @@ class MainActivity : AppCompatActivity() {
         const val LOCAL_URL = "https://appassets.androidplatform.net/index.html"
         // ─────────────────────────────────────────────────────────────────────
 
-        private var activeInstance: MainActivity? = null
+        private var activeInstance: WeakReference<MainActivity>? = null
 
         fun notifyNewFcmToken(token: String) {
-            activeInstance?.let { activity ->
+            activeInstance?.get()?.let { activity ->
                 Handler(Looper.getMainLooper()).post {
                     activity.webView.evaluateJavascript(
                         "if(window.__onFcmTokenReceived){ window.__onFcmTokenReceived('${token}'); }",
@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
     private var geoOrigin: String? = null
     private var geoCallback: GeolocationPermissions.Callback? = null
 
-    private val assetLoader: WebViewAssetLoader by lazy {
+    private val assetLoader by lazy {
         WebViewAssetLoader.Builder()
             .setDomain("appassets.androidplatform.net")
             .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -139,12 +139,13 @@ class MainActivity : AppCompatActivity() {
     // ────────────────────────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        activeInstance = this
+        activeInstance = WeakReference(this)
 
         setupEdgeToEdge()
         setContentView(R.layout.activity_main)
 
         webView         = findViewById(R.id.webview)
+        webView.setBackgroundColor(android.graphics.Color.WHITE) // TEST: Confirm WebView is visible
 
         setupWebView()
         setupBackNavigation()
@@ -171,11 +172,11 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    // ── WebView full configuration ───────────────────────────────────────────
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         // Hardware acceleration is set at application level in Manifest
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         
         // 🛠️ Ensure the WebView can receive focus for touch events
         webView.isFocusable = true
@@ -262,7 +263,7 @@ class MainActivity : AppCompatActivity() {
             return when {
                 // Stay in WebView for our own domain or local assets domain
                 url.startsWith(SAAS_URL) -> false
-                url.startsWith("https://appassets.androidplatform.net") -> false
+                url.startsWith("https://appassets.androidplatform.net/assets/") -> false
                 url.startsWith("https://ultra-administrador") -> false
 
                 // Telephone / mailto → system handler
@@ -294,9 +295,8 @@ class MainActivity : AppCompatActivity() {
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             if (request?.isForMainFrame == true) {
                 val currentUrl = view?.url ?: ""
+                // Only show offline page if we are NOT loading from our internal assets domain
                 if (!currentUrl.startsWith("https://appassets.androidplatform.net")) {
-                    view?.loadUrl(LOCAL_URL)
-                } else {
                     showOfflinePage(view)
                 }
             }
@@ -649,7 +649,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        activeInstance = this
+        activeInstance = WeakReference(this)
         if (::webView.isInitialized) {
             webView.onResume()
         }
@@ -685,7 +685,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (activeInstance == this) {
+        if (activeInstance?.get() == this) {
             activeInstance = null
         }
         // Unregister network callback to avoid memory leaks

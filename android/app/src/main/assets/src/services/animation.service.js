@@ -80,19 +80,13 @@ export const AnimationService = {
   animatePageEntrance(container) {
     if (!container) return;
 
-    // Reset scroll position for newly mounted route.
-    // If using native scroll (Android), reset the main-content container.
-    // If using Lenis (Desktop), use its scrollTo method.
-    const mainContent = document.querySelector('.main-content');
-
+    // Reset scroll & recalculate Lenis dimensions for newly mounted route
+    window.scrollTo(0, 0);
     if (lenisInstance) {
       lenisInstance.scrollTo(0, { immediate: true });
       setTimeout(() => {
         lenisInstance.resize();
       }, 100);
-    } else {
-      window.scrollTo(0, 0);
-      if (mainContent) mainContent.scrollTop = 0;
     }
 
     // 1. GSAP for Hero / Page Header entry

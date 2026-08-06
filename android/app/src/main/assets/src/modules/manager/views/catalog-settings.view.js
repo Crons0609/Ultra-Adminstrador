@@ -553,7 +553,7 @@ export class CatalogSettingsView extends Component {
     };
 
     try {
-      await FirestoreService.setGlobal('configuracion_catalogo', this.companyId, payload);
+      await FirestoreService.setGlobal(this.companyId, 'configuracion_catalogo', payload);
       NotificationService.success('Configuración de WhatsApp API guardada con éxito.');
     } catch (err) {
       console.error('[CatalogSettingsView] Error saving whatsapp config:', err);
@@ -714,7 +714,7 @@ export class CatalogSettingsView extends Component {
     };
 
     try {
-      await FirestoreService.setGlobal('configuracion_catalogo', this.companyId, payload);
+      await FirestoreService.setGlobal(this.companyId, 'configuracion_catalogo', payload);
       NotificationService.success('Configuración de catálogo guardada con éxito.');
     } catch (err) {
       console.error('[CatalogSettingsView] Error saving config:', err);

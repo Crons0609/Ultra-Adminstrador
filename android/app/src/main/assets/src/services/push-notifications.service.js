@@ -79,11 +79,7 @@ export class PushNotificationsService {
   static async registerDevice(token, userSession) {
     if (!token || !userSession?.uid) return;
 
-    // Skip cloud registration if offline to avoid useless errors
-    if (!navigator.onLine) {
-      console.log('[PushNotificationsService] 📴 Offline: skipping cloud token registration.');
-      return;
-    }
+    const deviceId = this.getOrCreateDeviceId();
     const isAndroid = !!window.AndroidApp?.isAndroidApp();
     const appVersion = window.AndroidApp?.getAppVersion?.() || '1.0.0';
 
@@ -103,7 +99,7 @@ export class PushNotificationsService {
     };
 
     try {
-      await FirestoreService.writePath(`users/${userSession.uid}/devices/${deviceId}`, deviceData);
+      await FirestoreService.setPath(`users/${userSession.uid}/devices/${deviceId}`, deviceData);
       console.log('[PushNotificationsService] ✅ FCM device registered in Firestore:', deviceId);
     } catch (err) {
       console.warn('[PushNotificationsService] Could not save FCM token in Firestore:', err.message);

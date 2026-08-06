@@ -9,14 +9,16 @@
   box-sizing: border-box;
 }
 
-html {
-  /* Prevent horizontal overflow at root level */
-  overflow-x: hidden;
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
   overflow-x: hidden;
-  -webkit-text-size-adjust: 100%; /* Prevent iOS font zoom on rotate */
+  -webkit-text-size-adjust: 100%;
 }
 
 /* ─── Images & Media ─── */
@@ -63,7 +65,7 @@ img, video, svg, canvas {
   /* ── Sidebar / Layout Dimensions ── */
   --sidebar-width: 264px;
   --sidebar-collapsed-width: 64px;
-  --header-height: 56px;
+  --header-height: 64px;
 
   /* ── Touch Target Minimum ── */
   --touch-target: 44px;

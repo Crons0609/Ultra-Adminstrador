@@ -302,11 +302,7 @@ export class FirestoreService {
 
     let cached = (await LocalStorageDBService.getCache(path)) || [];
     if (!navigator.onLine && (!cached || (Array.isArray(cached) && cached.length === 0))) {
-      const now = Date.now();
-      if (now - (FirestoreService._lastOfflineNoticeTime || 0) > 10000) {
-        FirestoreService._lastOfflineNoticeTime = now;
-        NotificationService.warn('⚠️ Se necesita conexión a internet. No hay datos guardados localmente para esta sección.', 6000);
-      }
+      console.warn(`[DB] Offline, no cached data for: ${path}`);
     }
 
     let results = this._applyFilters(cached, filters);
@@ -560,14 +556,6 @@ export class FirestoreService {
       city: companyData.city || '',
       postalCode: companyData.postalCode || '',
       address: companyData.address || '',
-      location: {
-        country: companyData.country || 'Nicaragua',
-        department: companyData.state || '',
-        municipality: companyData.city || '',
-        postalCode: companyData.postalCode || '',
-        address: companyData.address || '',
-        updatedAt: now
-      },
       subscriptionExpiresAt: companyData.subscriptionExpiresAt || '',
       ownerId: companyData.ownerId || '',
       ownerEmail: companyData.ownerEmail || '',
@@ -1089,11 +1077,6 @@ export class FirestoreService {
                 businessType: info.businessType || 'Restaurante',
                 plan: info.plan || 'FREE',
                 status: info.status || 'ACTIVO',
-                country: info.country || info.location?.country || 'Nicaragua',
-                state: info.state || info.estado || info.location?.department || info.location?.state || '',
-                city: info.city || info.municipio || info.location?.municipality || info.location?.city || '',
-                postalCode: info.postalCode || info.codigoPostal || info.location?.postalCode || info.location?.zip || '',
-                address: info.address || info.direccion || info.location?.address || '',
                 deletedAt: info.deletedAt || null,
                 statusReason: info.statusReason || '',
                 ownerId: info.ownerId || '',
@@ -1164,32 +1147,22 @@ export class FirestoreService {
     }
     if (data.country !== undefined) {
       updates[`${companyId}/informacion_local/pais`] = data.country;
-      updates[`${companyId}/informacion_local/location/country`] = data.country;
-      updates[`companies/${companyId}/location/country`] = data.country;
       updates[`${companyId}/branches/main/country`] = data.country;
     }
     if (data.state !== undefined) {
       updates[`${companyId}/informacion_local/estado`] = data.state;
-      updates[`${companyId}/informacion_local/location/department`] = data.state;
-      updates[`companies/${companyId}/location/department`] = data.state;
       updates[`${companyId}/branches/main/state`] = data.state;
     }
     if (data.city !== undefined) {
       updates[`${companyId}/informacion_local/municipio`] = data.city;
-      updates[`${companyId}/informacion_local/location/municipality`] = data.city;
-      updates[`companies/${companyId}/location/municipality`] = data.city;
       updates[`${companyId}/branches/main/city`] = data.city;
     }
     if (data.postalCode !== undefined) {
       updates[`${companyId}/informacion_local/codigoPostal`] = data.postalCode;
-      updates[`${companyId}/informacion_local/location/postalCode`] = data.postalCode;
-      updates[`companies/${companyId}/location/postalCode`] = data.postalCode;
       updates[`${companyId}/branches/main/postalCode`] = data.postalCode;
     }
     if (data.address !== undefined) {
       updates[`${companyId}/informacion_local/direccion`] = data.address;
-      updates[`${companyId}/informacion_local/location/address`] = data.address;
-      updates[`companies/${companyId}/location/address`] = data.address;
       updates[`${companyId}/branches/main/address`] = data.address;
     }
     if (data.businessType !== undefined) {
@@ -1560,6 +1533,20 @@ export class FirestoreService {
   }
 
   /**
+   * Read data at any arbitrary RTDB path (one-time fetch, no auth required).
+   * Used for public QR token resolution and similar unauthenticated reads.
+   * @param {string} path - Absolute RTDB path
+   * @returns {Promise<Object|null>} The value at that path, or null if not found
+   */
+  static async readPath(path) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+
+    const pathRef = ref(db, path);
+    const snap = await get(pathRef);
+    return snap.exists() ? snap.val() : null;
+  }
+
+  /**
    * Update data at any arbitrary RTDB path (merge, non-destructive).
    * @param {string} path
    * @param {Object} data
@@ -1647,6 +1634,12 @@ export class FirestoreService {
    * @param {string} status 
    * @param {Object} [details] 
    */
+  /**
+   * Update invoice import status.
+   * @param {string} invoiceId 
+   * @param {string} status 
+   * @param {Object} [details] 
+   */
   static async updateInvoiceStatus(invoiceId, status, details = {}) {
     return await this.update('invoices', invoiceId, {
       status,
@@ -1656,34 +1649,98 @@ export class FirestoreService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ALIASES & COMPATIBILITY LAYER
+  // PENDING OWNER REGISTRATION REQUESTS (Global / Super Admin)
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Alias for listenToTenant to support legacy view calls.
-   * @param {string} collectionName
-   * @param {Function} callback
+   * Creates a new business owner registration request.
+   * Saved at root path /pending_owner_requests/{requestId}
+   * @param {Object} data - { ownerName, companyName, businessType, email, phone, password, city, state, country }
+   * @returns {Promise<string>} Request ID
    */
-  static subscribeCollection(collectionName, callback) {
-    return this.listenToTenant(collectionName, callback);
+  static async createPendingOwnerRequest(data) {
+    const path = 'pending_owner_requests';
+    const requestId = db ? push(ref(db, path)).key : `REQ-${Date.now()}`;
+    const fullPath = `${path}/${requestId}`;
+
+    const payload = {
+      id: requestId,
+      ownerName: data.ownerName || '',
+      companyName: data.companyName || '',
+      businessType: data.businessType || 'Restaurante',
+      email: (data.email || '').toLowerCase().trim(),
+      phone: data.phone || '',
+      password: data.password || '',
+      city: data.city || '',
+      state: data.state || '',
+      country: data.country || 'Nicaragua',
+      notes: data.notes || '',
+      status: 'PENDIENTE',
+      createdAt: serverTimestamp(),
+      createdAtLocal: TimeService.timestamp(),
+      updatedAtLocal: TimeService.timestamp()
+    };
+
+    if (navigator.onLine && db) {
+      await set(ref(db, fullPath), payload);
+      console.log(`[DB] ✅ Created pending owner request: ${fullPath}`);
+    } else {
+      await OfflineSyncService.write('set', fullPath, payload, 'Crear solicitud de dueño');
+    }
+
+    return requestId;
   }
 
   /**
-   * Alias for getById to support legacy service calls.
+   * Retrieves all pending business owner registration requests.
+   * @returns {Promise<Array>}
    */
-  static async readOne(collectionName, id) {
-    return this.getById(collectionName, id);
+  static async listPendingOwnerRequests() {
+    const path = 'pending_owner_requests';
+    if (!navigator.onLine || !db) {
+      const cached = (await LocalStorageDBService.getCache(path)) || [];
+      return cached;
+    }
+
+    try {
+      const snap = await get(ref(db, path));
+      if (!snap.exists()) return [];
+
+      const results = [];
+      snap.forEach(childSnap => {
+        results.push({ id: childSnap.key, ...childSnap.val() });
+      });
+
+      results.sort((a, b) => (b.createdAtLocal || '').localeCompare(a.createdAtLocal || ''));
+
+      await LocalStorageDBService.setCache(path, results);
+      return results;
+    } catch (err) {
+      console.error('[DB] Error listing pending owner requests:', err);
+      return (await LocalStorageDBService.getCache(path)) || [];
+    }
   }
 
   /**
-   * Alias for getAll to support legacy service calls.
+   * Updates the status of a pending owner request (e.g. APROBADO or RECHAZADO).
+   * @param {string} requestId 
+   * @param {string} status - 'APROBADO' | 'RECHAZADO' | 'PENDIENTE'
+   * @param {Object} [extraData]
    */
-  static async readAll(collectionName) {
-    return this.getAll(collectionName);
+  static async updatePendingOwnerRequestStatus(requestId, status, extraData = {}) {
+    const fullPath = `pending_owner_requests/${requestId}`;
+    const payload = {
+      status,
+      ...extraData,
+      updatedAt: serverTimestamp(),
+      updatedAtLocal: TimeService.timestamp()
+    };
+
+    if (navigator.onLine && db) {
+      await update(ref(db, fullPath), payload);
+      console.log(`[DB] ✅ Updated pending request ${requestId} status to: ${status}`);
+    } else {
+      await OfflineSyncService.write('update', fullPath, payload, 'Actualizar estado de solicitud');
+    }
   }
 }
-
-/**
- * Precautious lowercase export for cases where components import as 'firestoreService'
- */
-export const firestoreService = FirestoreService;

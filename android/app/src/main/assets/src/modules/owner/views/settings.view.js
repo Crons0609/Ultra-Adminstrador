@@ -656,8 +656,8 @@ export class SettingsView extends Component {
                       <input type="text" id="loc-municipality-input" class="input input-md" placeholder="Managua" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="loc-zip-input">Código Postal</label>
-                      <input type="text" id="loc-zip-input" class="input input-md" placeholder="Ej. 11001" />
+                      <label class="form-label" for="loc-postalcode-input">Código Postal</label>
+                      <input type="text" id="loc-postalcode-input" class="input input-md" placeholder="10001" />
                     </div>
                   </div>
 
@@ -839,7 +839,7 @@ export class SettingsView extends Component {
     if (clearLocBtn) {
       clearLocBtn.addEventListener('click', () => {
         ['#loc-lat-input','#loc-lng-input','#loc-country-input','#loc-department-input',
-         '#loc-municipality-input','#loc-address-input','#loc-reference-input'].forEach(sel => {
+         '#loc-municipality-input','#loc-postalcode-input','#loc-address-input','#loc-reference-input'].forEach(sel => {
           const el = root.querySelector(sel);
           if (el) el.value = '';
         });
@@ -916,26 +916,26 @@ export class SettingsView extends Component {
 
       // Merge: /location sub-node takes priority over flat fields
       const merged = {
-        latitude:     loc?.latitude     ?? loc?.lat ?? '',
-        longitude:    loc?.longitude    ?? loc?.lng ?? '',
-        country:      loc?.country      ?? flat.pais        ?? '',
-        department:   loc?.department   ?? loc?.state ?? flat.estado       ?? '',
-        municipality: loc?.municipality ?? loc?.city  ?? flat.municipio    ?? '',
-        postalCode:   loc?.postalCode   ?? loc?.zip   ?? flat.codigoPostal ?? '',
-        address:      loc?.address      ?? flat.direccion   ?? '',
+        latitude: loc?.latitude ?? loc?.lat ?? '',
+        longitude: loc?.longitude ?? loc?.lng ?? '',
+        country:      loc?.country      ?? flat.pais         ?? '',
+        department:   loc?.department   ?? flat.estado        ?? '',
+        municipality: loc?.municipality ?? flat.municipio     ?? '',
+        postalCode:   loc?.postalCode   ?? flat.codigoPostal  ?? '',
+        address:      loc?.address      ?? flat.direccion     ?? '',
         reference:    loc?.reference    ?? '',
         updatedAt:    loc?.updatedAt    ?? ''
       };
 
       if (merged.latitude || merged.country || merged.municipality) {
-        fill('#loc-lat-input',          merged.latitude);
-        fill('#loc-lng-input',          merged.longitude);
-        fill('#loc-country-input',      merged.country);
-        fill('#loc-department-input',   merged.department);
-        fill('#loc-municipality-input', merged.municipality);
-        fill('#loc-zip-input',          merged.postalCode);
-        fill('#loc-address-input',      merged.address);
-        fill('#loc-reference-input',    merged.reference);
+        fill('#loc-lat-input',         merged.latitude);
+        fill('#loc-lng-input',         merged.longitude);
+        fill('#loc-country-input',     merged.country);
+        fill('#loc-department-input',  merged.department);
+        fill('#loc-municipality-input',merged.municipality);
+        fill('#loc-postalcode-input',  merged.postalCode);
+        fill('#loc-address-input',     merged.address);
+        fill('#loc-reference-input',   merged.reference);
 
         // Show saved indicator
         const indicator = root.querySelector('#loc-saved-indicator');
@@ -1308,6 +1308,7 @@ export class SettingsView extends Component {
     const avatarImageId = root.querySelector('#owner-photo-imageId')?.value?.trim() || null;
 
     try {
+      const timestamp = Date.now();
       const updates = {};
       
       updates[`users/${this.uid}/displayName`] = displayName;
@@ -1351,7 +1352,6 @@ export class SettingsView extends Component {
         await LocalStorageDBService.setUserSession(newSession);
       }
 
-      // 3. Write to RTDB or queue for offline sync
       if (db && navigator.onLine) {
         try {
           await update(ref(db), updates);

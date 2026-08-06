@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file push-notifications-center.service.js
  * @description In-app notification center service managing read/unread notifications in Firebase RTDB.
  */
@@ -73,7 +73,7 @@ export class PushNotificationsCenterService {
    * Uses FirestoreService.listenToPath which wraps Firebase RTDB onValue.
    * @param {string} userId
    * @param {Function} callback - Called with (unreadCount: number, docs: Array)
-   * @returns {string} listenerId â€” pass to FirestoreService.unsubscribe() to clean up
+   * @returns {string} listenerId — pass to FirestoreService.unsubscribe() to clean up
    */
   static subscribeUnreadCount(userId, callback) {
     if (!userId || typeof callback !== 'function') return null;
@@ -94,4 +94,3 @@ export class PushNotificationsCenterService {
     return listenerId;
   }
 }
-
