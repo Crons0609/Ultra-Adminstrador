@@ -61,32 +61,45 @@ export class WorkCalendarView extends Component {
 
     return `
       <style>
-        .cal-view-btn { padding:4px 12px; font-size:0.75rem; font-weight:600; border:none; background:transparent; color:var(--color-text-secondary); cursor:pointer; border-radius:var(--radius-sm); transition:all 0.2s; }
+        .cal-view-btn { padding:8px 14px; font-size:0.78rem; font-weight:600; border:none; background:transparent; color:var(--color-text-secondary); cursor:pointer; border-radius:var(--radius-sm); transition:all 0.2s; white-space:nowrap; min-height:36px; display:inline-flex; align-items:center; }
         .cal-view-btn.active { background:var(--color-accent); color:#fff; }
         .cal-month-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:1px; background:var(--color-border); border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--color-border); }
         .cal-day-cell { background:var(--color-bg-secondary); min-height:110px; padding:6px; display:flex; flex-direction:column; gap:4px; cursor:pointer; transition:background 0.15s; }
         .cal-day-cell:hover { background:var(--color-bg-tertiary); }
         .cal-day-cell.today { background:rgba(99, 102, 241, 0.08); border:1px solid var(--color-accent); }
         .cal-day-number { font-size:0.78rem; font-weight:700; color:var(--color-text-secondary); }
-        .cal-event-badge { font-size:0.70rem; padding:2px 6px; border-radius:4px; color:#fff; font-weight:600; cursor:pointer; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+        .cal-event-badge { font-size:0.70rem; padding:3px 6px; border-radius:4px; color:#fff; font-weight:600; cursor:pointer; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+
+        .cal-view-tabs { display:flex; background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:2px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+        .cal-view-tabs::-webkit-scrollbar { display:none; }
+
+        @media (max-width: 640px) {
+          .cal-month-grid { font-size:0.72rem; }
+          .cal-day-cell { min-height:65px; padding:3px; }
+          .cal-event-badge { font-size:0.65rem; padding:2px 4px; }
+          .cal-header-bar { flex-direction:column; align-items:stretch !important; gap:10px !important; }
+          .cal-nav-group { justify-content:space-between; width:100%; }
+          .cal-filter-bar { flex-direction:column; align-items:stretch !important; }
+          .cal-filter-bar select { max-width:100% !important; width:100%; }
+        }
       </style>
       <div class="calendar-module" style="display:flex; flex-direction:column; gap:var(--space-4);">
 
         <!-- HEADER & TOOLBAR -->
-        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); background:var(--color-bg-secondary); padding:var(--space-3) var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border);">
+        <div class="cal-header-bar" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); background:var(--color-bg-secondary); padding:var(--space-3) var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border);">
 
           <!-- Date Navigation -->
-          <div style="display:flex; align-items:center; gap:var(--space-3);">
+          <div class="cal-nav-group" style="display:flex; align-items:center; gap:var(--space-3);">
             <div style="display:flex; border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden;">
-              <button class="btn btn-secondary btn-sm" id="cal-nav-prev" style="border:none; border-right:1px solid var(--color-border); border-radius:0;">◀</button>
-              <button class="btn btn-secondary btn-sm" id="cal-nav-today" style="border:none; border-right:1px solid var(--color-border); border-radius:0;">Hoy</button>
-              <button class="btn btn-secondary btn-sm" id="cal-nav-next" style="border:none; border-radius:0;">▶</button>
+              <button class="btn btn-secondary btn-sm" id="cal-nav-prev" style="border:none; border-right:1px solid var(--color-border); border-radius:0; min-height:38px; min-width:40px;">◀</button>
+              <button class="btn btn-secondary btn-sm" id="cal-nav-today" style="border:none; border-right:1px solid var(--color-border); border-radius:0; min-height:38px; font-weight:600;">Hoy</button>
+              <button class="btn btn-secondary btn-sm" id="cal-nav-next" style="border:none; border-radius:0; min-height:38px; min-width:40px;">▶</button>
             </div>
-            <h3 id="cal-period-label" style="font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin:0;">${currentPeriodLabel}</h3>
+            <h3 id="cal-period-label" style="font-size:1.05rem; font-weight:700; color:var(--color-text-primary); margin:0;">${currentPeriodLabel}</h3>
           </div>
 
           <!-- View Switcher Tabs -->
-          <div style="display:flex; background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:2px;">
+          <div class="cal-view-tabs">
             <button class="cal-view-btn ${this.state.currentView === 'MONTH' ? 'active' : ''}" data-view="MONTH">📅 Mes</button>
             <button class="cal-view-btn ${this.state.currentView === 'WEEK' ? 'active' : ''}" data-view="WEEK">🗓️ Semana</button>
             <button class="cal-view-btn ${this.state.currentView === 'DAY' ? 'active' : ''}" data-view="DAY">📆 Día</button>
@@ -95,30 +108,30 @@ export class WorkCalendarView extends Component {
           </div>
 
           <!-- Action Buttons -->
-          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap;">
+          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; width:100%; max-width:600px;">
             ${isOwnerOrManager && isModuleEnabled(this.currentCompany, 'hrRecruitment') ? `
-              <a href="#/hr/recruitment" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:600;">👥 Recursos Humanos (RH)</a>
+              <a href="#/hr/recruitment" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:600;flex:1;justify-content:center;min-height:38px;">👥 RH</a>
             ` : ''}
             ${isOwnerOrManager ? `
-              <button class="btn btn-secondary btn-sm" id="btn-cal-settings" title="Configurar límite de ausencias y festivos">⚙️ Reglas</button>
+              <button class="btn btn-secondary btn-sm" id="btn-cal-settings" title="Configurar límite de ausencias y festivos" style="min-height:38px;">⚙️ Reglas</button>
             ` : ''}
-            <button class="btn btn-primary btn-sm" id="btn-cal-new-event">+ Solicitar Día / Evento</button>
+            <button class="btn btn-primary btn-sm" id="btn-cal-new-event" style="flex:1;min-height:38px;font-weight:600;">+ Solicitar Día / Evento</button>
           </div>
         </div>
 
         <!-- FILTERS BAR -->
-        <div style="display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; background:var(--color-bg-tertiary); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border);">
+        <div class="cal-filter-bar" style="display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; background:var(--color-bg-tertiary); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border);">
           <div style="font-size:0.8rem; font-weight:600; color:var(--color-text-secondary); display:flex; align-items:center; gap:6px;">
             🔍 Filtrar:
           </div>
-          <select id="flt-employee" class="input input-sm" style="max-width:180px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary);">
+          <select id="flt-employee" class="input input-sm" style="max-width:180px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); min-height:38px;">
             <option value="">👤 Todos los empleados</option>
           </select>
-          <select id="flt-type" class="input input-sm" style="max-width:180px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary);">
+          <select id="flt-type" class="input input-sm" style="max-width:180px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); min-height:38px;">
             <option value="">📌 Todos los tipos</option>
             ${Object.entries(EVENT_TYPES).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join('')}
           </select>
-          <select id="flt-status" class="input input-sm" style="max-width:150px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary);">
+          <select id="flt-status" class="input input-sm" style="max-width:150px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); min-height:38px;">
             <option value="">Status (Todos)</option>
             <option value="APROBADO">✅ Aprobados</option>
             <option value="PENDIENTE">⏳ Pendientes</option>
@@ -129,7 +142,7 @@ export class WorkCalendarView extends Component {
         </div>
 
         <!-- MAIN CALENDAR CONTAINER -->
-        <div id="calendar-body-container">
+        <div id="calendar-body-container" style="overflow-x:auto;">
           <div style="text-align:center; padding:40px; color:var(--color-text-secondary);">⏳ Cargando calendario laboral...</div>
         </div>
 

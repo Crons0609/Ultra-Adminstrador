@@ -24,15 +24,14 @@ export class InvoiceOCRView extends Component {
     this.state = {
       activeTab: 'digitize', // 'digitize' | 'history' | 'stats'
       isScanning: false,
+      scanningText: '',
       hasScannedData: false,
 
-      // Canvas / Preprocessing image states
+      // File & Preview states
       imageFile: null,
       imagePreviewUrl: null,
-      brightness: 100,
-      contrast: 120,
-      rotation: 0,
-      grayscale: true,
+      fileName: '',
+      fileSizeText: '',
 
       // Extracted Invoice Header
       supplierName: '',
@@ -154,11 +153,12 @@ export class InvoiceOCRView extends Component {
     const btnConfirm = this.container.querySelector('#btn-confirm-import');
     const btnAddRow = this.container.querySelector('#btn-add-item-row');
 
-    // Filter controls
-    const sliderBrightness = this.container.querySelector('#slider-brightness');
-    const sliderContrast = this.container.querySelector('#slider-contrast');
-    const btnRotate = this.container.querySelector('#btn-rotate-image');
-    const chkGrayscale = this.container.querySelector('#chk-grayscale');
+    dropzone?.addEventListener('click', () => {
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    });
 
     fileInput?.addEventListener('change', (e) => {
       if (e.target.files && e.target.files[0]) {
@@ -185,28 +185,12 @@ export class InvoiceOCRView extends Component {
 
     btnScanDemo?.addEventListener('click', () => this.processInvoiceOCR());
 
-    sliderBrightness?.addEventListener('input', (e) => {
-      this.state.brightness = e.target.value;
-      this.applyImageFilters();
-    });
-
-    sliderContrast?.addEventListener('input', (e) => {
-      this.state.contrast = e.target.value;
-      this.applyImageFilters();
-    });
-
-    btnRotate?.addEventListener('click', () => {
-      this.state.rotation = (this.state.rotation + 90) % 360;
-      this.applyImageFilters();
-    });
-
-    chkGrayscale?.addEventListener('change', (e) => {
-      this.state.grayscale = e.target.checked;
-      this.applyImageFilters();
-    });
-
     btnClear?.addEventListener('click', () => {
       this.state.hasScannedData = false;
+      this.state.imageFile = null;
+      this.state.imagePreviewUrl = null;
+      this.state.fileName = '';
+      this.state.fileSizeText = '';
       this.state.items = [];
       this.state.supplierName = '';
       this.state.ruc = '';
@@ -263,49 +247,124 @@ export class InvoiceOCRView extends Component {
     });
   }
 
-  handleFileUpload(file) {
+  async handleFileUpload(file) {
+    if (!file) return;
+    if (file.size === 0) {
+      NotificationService.warning('El archivo seleccionado está vacío (0 bytes). Selecciona un documento válido.');
+      return;
+    }
+
     this.state.imageFile = file;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      this.state.imagePreviewUrl = evt.target.result;
-      this.updateView();
-      this.applyImageFilters();
-    };
-    reader.readAsDataURL(file);
+    this.state.fileName = file.name || 'Factura';
+    this.state.fileSizeText = `${(file.size / 1024).toFixed(1)} KB`;
+
+    if (file.type && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        this.state.imagePreviewUrl = evt.target.result;
+        this.processInvoiceOCR(file);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      this.state.imagePreviewUrl = null;
+      this.processInvoiceOCR(file);
+    }
   }
 
-  applyImageFilters() {
-    if (!this.container) return;
-    const imgEl = this.container.querySelector('#img-invoice-preview');
-    if (!imgEl) return;
-    imgEl.style.filter = `brightness(${this.state.brightness}%) contrast(${this.state.contrast}%) ${this.state.grayscale ? 'grayscale(100%)' : ''}`;
-    imgEl.style.transform = `rotate(${this.state.rotation}deg)`;
-  }
-
-  async processInvoiceOCR() {
+  async processInvoiceOCR(file = null) {
+    const targetFile = file || this.state.imageFile || null;
     this.state.isScanning = true;
+    this.state.scanningText = targetFile ? `Analizando "${targetFile.name}"...` : 'Procesando lectura OCR...';
     this.updateView();
 
     try {
-      const data = await OCRService.scanInvoice(this.state.imageFile || null);
-      this.state.supplierName = data.supplierName;
-      this.state.ruc = data.ruc;
-      this.state.invoiceNumber = data.invoiceNumber;
-      this.state.invoiceDate = data.invoiceDate;
-      this.state.phone = data.phone;
-      this.state.email = data.email;
-      this.state.address = data.address;
-      this.state.items = data.items;
-      this.state.confidenceScores = data.confidenceScores;
+      const data = await OCRService.scanInvoice(targetFile);
+      this.state.supplierName = data.supplierName || '';
+      this.state.ruc = data.ruc || '';
+      this.state.invoiceNumber = data.invoiceNumber || '';
+      this.state.invoiceDate = data.invoiceDate || new Date().toISOString().split('T')[0];
+      this.state.phone = data.phone || '';
+      this.state.email = data.email || '';
+      this.state.address = data.address || '';
+      this.state.items = data.items || [];
+      this.state.confidenceScores = data.confidenceScores || {};
       this.state.hasScannedData = true;
-      NotificationService.success('Factura analizada correctamente mediante OCR.');
+      NotificationService.success(`Documento analizado correctamente. ${this.state.items.length} productos identificados.`);
     } catch (err) {
       console.error('[OCR] Scan failed:', err);
-      NotificationService.error('Error al procesar la factura.');
+      NotificationService.error('Error al procesar el archivo: ' + err.message);
     } finally {
       this.state.isScanning = false;
       this.updateView();
     }
+  }
+
+  renderTabsNav() {
+    return `
+      <div class="d-flex gap-2 border-b mb-4 pb-2 overflow-x-auto touch-scroll flex-nowrap" style="-webkit-overflow-scrolling: touch;">
+        <button id="tab-btn-digitize" class="btn ${this.state.activeTab === 'digitize' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
+          📄 Cargar / Digitalizar
+        </button>
+        <button id="tab-btn-history" class="btn ${this.state.activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
+          📜 Historial de Facturas
+        </button>
+        <button id="tab-btn-stats" class="btn ${this.state.activeTab === 'stats' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
+          📊 Indicadores & Márgenes
+        </button>
+      </div>
+    `;
+  }
+
+  renderDigitizeTab() {
+    const subtotal = this.state.items.reduce((sum, i) => sum + (i.subtotal || 0), 0);
+    const tax = subtotal * 0.18;
+    const grandTotal = subtotal + tax;
+
+    return `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Column 1: Upload & File Status -->
+        <div class="card p-4 sm:p-5">
+          <h3 class="text-md font-bold mb-3">1. Subir Factura o Documento</h3>
+          
+          <div id="invoice-dropzone" class="border-dashed border-2 p-4 sm:p-6 text-center rounded-lg mb-4 cursor-pointer hover:bg-slate-800 transition" style="border-radius: var(--radius-lg);">
+            <input type="file" id="invoice-file-input" accept=".pdf,.xlsx,.xls,.csv,.docx,.json,.txt,image/*" class="hidden" />
+            <label class="cursor-pointer">
+              <div class="text-3xl mb-2">📸 / 📁</div>
+              <p class="font-medium text-sm">Arrastra tu factura o haz clic para explorar</p>
+              <span class="text-xs text-secondary mt-1 block">Formatos: PDF, Excel (.xlsx, .csv), JSON, Word, TXT e Imágenes (JPG, PNG)</span>
+            </label>
+          </div>
+
+          <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-secondary btn-xs w-full" id="btn-scan-demo">⚡ Probar Factura Demo</button>
+          </div>
+
+          <!-- Loading & Scanning Indicator -->
+          ${this.state.isScanning ? `
+            <div class="p-6 text-center rounded-lg border border-accent" style="background: rgba(124, 58, 237, 0.1);">
+              <div class="spinner-border text-accent mb-3" role="status" style="width: 2.5rem; height: 2.5rem; border-width: 3px; border-color: var(--color-accent) transparent transparent transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              <h4 class="font-bold text-sm" style="color: var(--color-text-primary);">Analizando e Interpretando Documento...</h4>
+              <p class="text-xs text-secondary mt-1">${this.state.scanningText || 'Extrayendo productos y precios...'}</p>
+            </div>
+          ` : ''}
+
+          <!-- Clean File Preview (No Pre-processing Sliders) -->
+          ${!this.state.isScanning && (this.state.imagePreviewUrl || this.state.fileName) ? `
+            <div class="border rounded-lg p-4 bg-slate-900 text-center">
+              ${this.state.imagePreviewUrl ? `
+                <img id="img-invoice-preview" src="${this.state.imagePreviewUrl}" class="max-h-48 mx-auto rounded object-contain mb-2" />
+              ` : `
+                <div class="text-4xl mb-2">📄</div>
+              `}
+              <h4 class="font-bold text-xs text-truncate">${this.state.fileName}</h4>
+              <span class="text-xs text-secondary">${this.state.fileSizeText || 'Documento cargado'}</span>
+            </div>
+          ` : ''}
+        </div>
+        
+        <!-- Placeholder for rest of component view logic -->
+      </div>
+    `;
   }
 
   addNewRow() {
@@ -586,44 +645,42 @@ export class InvoiceOCRView extends Component {
 
     return `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Column 1: Upload & Image Filters -->
+        <!-- Column 1: Upload & File Status -->
         <div class="card p-4 sm:p-5">
-          <h3 class="text-md font-bold mb-3">1. Subir Factura o Fotografía</h3>
+          <h3 class="text-md font-bold mb-3">1. Subir Factura o Documento</h3>
           
-          <div id="invoice-dropzone" class="border-dashed border-2 p-4 sm:p-6 text-center rounded-lg mb-4 cursor-pointer hover:bg-slate-800 transition">
-            <input type="file" id="invoice-file-input" accept="image/*,.pdf" class="hidden" />
-            <label for="invoice-file-input" class="cursor-pointer">
+          <div id="invoice-dropzone" class="border-dashed border-2 p-4 sm:p-6 text-center rounded-lg mb-4 cursor-pointer hover:bg-slate-800 transition" style="border-radius: var(--radius-lg);">
+            <input type="file" id="invoice-file-input" accept=".pdf,.xlsx,.xls,.csv,.docx,.json,.txt,image/*" class="hidden" />
+            <label class="cursor-pointer">
               <div class="text-3xl mb-2">📸 / 📁</div>
               <p class="font-medium text-sm">Arrastra tu factura o haz clic para explorar</p>
-              <span class="text-xs text-secondary">Formatos: JPG, PNG, WEBP, HEIC, PDF</span>
+              <span class="text-xs text-secondary mt-1 block">Formatos: PDF, Excel (.xlsx, .csv), JSON, Word, TXT e Imágenes (JPG, PNG)</span>
             </label>
           </div>
 
           <div class="d-flex gap-2 mb-4">
-            <button class="btn btn-secondary btn-xs w-full" id="btn-scan-demo">⚡ Escanear Factura Demo</button>
+            <button class="btn btn-secondary btn-xs w-full" id="btn-scan-demo">⚡ Probar Factura Demo</button>
           </div>
 
-          <!-- Preview & Pre-processing Controls -->
-          ${this.state.imagePreviewUrl ? `
-            <div class="border rounded p-3 mb-3 bg-slate-900 text-center overflow-hidden">
-              <img id="img-invoice-preview" src="${this.state.imagePreviewUrl}" class="max-h-48 mx-auto rounded object-contain transition-all" />
+          <!-- Loading & Scanning Indicator -->
+          ${this.state.isScanning ? `
+            <div class="p-6 text-center rounded-lg border border-accent mb-4" style="background: rgba(124, 58, 237, 0.1);">
+              <div class="spinner-border text-accent mb-3" role="status" style="width: 2.5rem; height: 2.5rem; border-width: 3px; border-color: var(--color-accent) transparent transparent transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              <h4 class="font-bold text-sm" style="color: var(--color-text-primary);">Analizando e Interpretando Documento...</h4>
+              <p class="text-xs text-secondary mt-1">${this.state.scanningText || 'Extrayendo productos y precios...'}</p>
             </div>
-            <div class="space-y-3 text-xs border-t pt-3">
-              <h4 class="font-semibold text-secondary">Ajustes de Pre-procesamiento:</h4>
-              <div>
-                <label class="d-flex justify-between">Brillo: <span>${this.state.brightness}%</span></label>
-                <input type="range" id="slider-brightness" min="50" max="150" value="${this.state.brightness}" class="w-full" />
-              </div>
-              <div>
-                <label class="d-flex justify-between">Contraste: <span>${this.state.contrast}%</span></label>
-                <input type="range" id="slider-contrast" min="50" max="200" value="${this.state.contrast}" class="w-full" />
-              </div>
-              <div class="d-flex justify-between align-items-center">
-                <button class="btn btn-secondary btn-xs" id="btn-rotate-image">🔄 Girar 90º</button>
-                <label class="d-flex align-items-center gap-1 cursor-pointer">
-                  <input type="checkbox" id="chk-grayscale" ${this.state.grayscale ? 'checked' : ''} /> Escala de Grises
-                </label>
-              </div>
+          ` : ''}
+
+          <!-- Clean File Preview (No Pre-processing Sliders) -->
+          ${!this.state.isScanning && (this.state.imagePreviewUrl || this.state.fileName) ? `
+            <div class="border rounded-lg p-4 bg-slate-900 text-center">
+              ${this.state.imagePreviewUrl ? `
+                <img id="img-invoice-preview" src="${this.state.imagePreviewUrl}" class="max-h-48 mx-auto rounded object-contain mb-2" />
+              ` : `
+                <div class="text-4xl mb-2">📄</div>
+              `}
+              <h4 class="font-bold text-xs text-truncate">${this.state.fileName}</h4>
+              <span class="text-xs text-secondary">${this.state.fileSizeText || 'Documento cargado'}</span>
             </div>
           ` : ''}
         </div>

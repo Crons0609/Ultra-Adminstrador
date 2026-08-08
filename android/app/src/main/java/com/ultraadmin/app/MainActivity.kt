@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private var cameraImageUri: Uri? = null
+    private var tempCameraFile: File? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var wasOffline = false
 
@@ -115,25 +116,34 @@ class MainActivity : AppCompatActivity() {
     private val filePickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val results: Array<Uri>? = when {
-            result.resultCode == Activity.RESULT_OK -> {
-                val data = result.data
-                when {
-                    data?.clipData != null -> {
-                        val count = data.clipData!!.itemCount
-                        Array(count) { i -> data.clipData!!.getItemAt(i).uri }
-                    }
-                    data?.data != null -> arrayOf(data.data!!)
-                    cameraImageUri != null -> arrayOf(cameraImageUri!!)
-                    else -> null
+        val results: Array<Uri>? = if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            when {
+                data?.clipData != null -> {
+                    val count = data.clipData!!.itemCount
+                    Array(count) { i -> data.clipData!!.getItemAt(i).uri }
                 }
+                data?.data != null -> arrayOf(data.data!!)
+                cameraImageUri != null && tempCameraFile?.exists() == true && (tempCameraFile?.length() ?: 0L) > 0L -> {
+                    arrayOf(cameraImageUri!!)
+                }
+                else -> null
             }
-            cameraImageUri != null -> arrayOf(cameraImageUri!!)
-            else -> null
+        } else {
+            null
         }
+
+        // Clean up temp camera file if it was not used or is 0 bytes
+        tempCameraFile?.let { file ->
+            if (results == null || !results.contains(cameraImageUri) || file.length() == 0L) {
+                try { file.delete() } catch (_: Exception) {}
+            }
+        }
+
         fileUploadCallback?.onReceiveValue(results)
         fileUploadCallback = null
         cameraImageUri = null
+        tempCameraFile = null
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -389,31 +399,49 @@ class MainActivity : AppCompatActivity() {
 
             val intents = mutableListOf<Intent>()
 
-            // Camera intent (creates temp file so we capture full resolution)
-            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            if (cameraIntent.resolveActivity(packageManager) != null) {
-                val photoFile = createImageFile()
-                cameraImageUri = FileProvider.getUriForFile(
-                    this@MainActivity,
-                    "${packageName}.fileprovider",
-                    photoFile
-                )
-                cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
-                intents.add(cameraIntent)
+            val acceptTypes = fileChooserParams?.acceptTypes ?: emptyArray()
+            val isImageAccept = acceptTypes.isEmpty() || acceptTypes.any { type ->
+                type.contains("image", ignoreCase = true) ||
+                type.contains("jpg", ignoreCase = true) ||
+                type.contains("jpeg", ignoreCase = true) ||
+                type.contains("png", ignoreCase = true) ||
+                type.contains("webp", ignoreCase = true) ||
+                type == "*/*"
+            }
+
+            if (isImageAccept) {
+                // Camera intent (creates temp file so we capture full resolution)
+                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                if (cameraIntent.resolveActivity(packageManager) != null) {
+                    val photoFile = createImageFile()
+                    tempCameraFile = photoFile
+                    cameraImageUri = FileProvider.getUriForFile(
+                        this@MainActivity,
+                        "${packageName}.fileprovider",
+                        photoFile
+                    )
+                    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+                    intents.add(cameraIntent)
+                }
             }
 
             // Gallery / file picker intent
+            val firstAccept = acceptTypes.firstOrNull()?.trim() ?: "*/*"
+            val mimeType = if (firstAccept.startsWith(".")) "*/*" else if (firstAccept.isBlank()) "*/*" else firstAccept
+
             val contentIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = fileChooserParams?.acceptTypes?.firstOrNull() ?: "*/*"
+                type = mimeType
                 addCategory(Intent.CATEGORY_OPENABLE)
                 putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             }
 
             val chooser = Intent.createChooser(contentIntent, "Seleccionar archivo")
-            chooser.putExtra(
-                Intent.EXTRA_INITIAL_INTENTS,
-                intents.toTypedArray()
-            )
+            if (intents.isNotEmpty()) {
+                chooser.putExtra(
+                    Intent.EXTRA_INITIAL_INTENTS,
+                    intents.toTypedArray()
+                )
+            }
 
             filePickerLauncher.launch(chooser)
             return true

@@ -69,6 +69,7 @@ const getCatalogSettingsView = () => import('../modules/manager/views/catalog-se
 const getItemInfoView = () => import('../modules/customer/views/item-info.view.js').then(m => m.ItemInfoView);
 
 // Owner Module
+const getOwnerDashboardView = () => import('../modules/owner/views/dashboard.view.js').then(m => m.OwnerDashboardView);
 const getOwnerFinanceView = () => import('../modules/owner/views/finance.view.js').then(m => m.FinanceView);
 const getOwnerExpensesView = () => import('../modules/owner/views/expenses.view.js').then(m => m.ExpensesView);
 const getOwnerProjectionsView = () => import('../modules/owner/views/projections.view.js').then(m => m.ProjectionsView);
@@ -189,6 +190,7 @@ export const ROUTES = [
   { path: '/manager/pricing', view: lazyView(getPricingView), middlewares: [roleGuard([USER_ROLES.MANAGER, USER_ROLES.OWNER])] },
 
   // Owner routes
+  { path: '/owner/dashboard', view: lazyView(getOwnerDashboardView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
   { path: '/owner/finance', view: lazyView(getOwnerFinanceView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
   { path: '/owner/expenses', view: lazyView(getOwnerExpensesView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
   { path: '/owner/projections', view: lazyView(getOwnerProjectionsView), middlewares: [roleGuard([USER_ROLES.OWNER])] },

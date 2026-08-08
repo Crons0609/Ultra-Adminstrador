@@ -737,11 +737,50 @@ export class MigrationView extends Component {
     const dropzone = this.layout.$('#migration-dropzone');
     const fileInput = this.layout.$('#migration-file-input');
     if (dropzone && fileInput) {
-      dropzone.addEventListener('click', () => fileInput.click());
+      dropzone.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInput.click();
+      });
+
+      const handleFileSelection = (file) => {
+        if (!file) return;
+        if (file.size === 0) {
+          NotificationService.warning('El archivo seleccionado está vacío (0 bytes). Por favor selecciona un documento válido.');
+          return;
+        }
+        this.state.selectedFile = file;
+        this.updateView();
+      };
+
       fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-          this.state.selectedFile = e.target.files[0];
-          this.updateView();
+          handleFileSelection(e.target.files[0]);
+        }
+      });
+
+      // Drag & Drop support
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.style.borderColor = 'var(--color-accent)';
+        dropzone.style.background = 'rgba(124, 58, 237, 0.1)';
+      });
+
+      dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.style.borderColor = 'var(--color-border)';
+        dropzone.style.background = 'var(--color-bg-tertiary)';
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.style.borderColor = 'var(--color-border)';
+        dropzone.style.background = 'var(--color-bg-tertiary)';
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files[0]) {
+          handleFileSelection(files[0]);
         }
       });
     }

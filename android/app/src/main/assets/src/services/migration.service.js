@@ -125,21 +125,31 @@ export class MigrationService {
     if (typeof rawValue === 'number') return isNaN(rawValue) ? 0 : rawValue;
     if (!rawValue) return 0;
     const str = String(rawValue).trim();
+    // Strip all currency symbols, spaces, and letters (C$, $, USD, S/, €, etc.)
     const cleanStr = str.replace(/[^0-9.,-]/g, '').trim();
     if (!cleanStr) return 0;
 
     let formatted = cleanStr;
+
     if (formatted.includes(',') && formatted.includes('.')) {
+      // Both separators present → determine which is decimal by position
       if (formatted.lastIndexOf('.') > formatted.lastIndexOf(',')) {
+        // e.g. "1,792.50" → period is decimal, commas are thousands
         formatted = formatted.replace(/,/g, '');
       } else {
+        // e.g. "1.792,50" → comma is decimal, periods are thousands
         formatted = formatted.replace(/\./g, '').replace(',', '.');
       }
     } else if (formatted.includes(',')) {
       const parts = formatted.split(',');
-      if (parts[parts.length - 1].length === 2) {
+      const lastPart = parts[parts.length - 1];
+      if (lastPart.length === 2 && parts.length === 2) {
+        // Exactly 2 digits after a single comma → treat as decimal separator
+        // e.g. "1,50" → 1.50
         formatted = formatted.replace(',', '.');
       } else {
+        // 3+ digits after comma → thousands separator
+        // e.g. "1,792" → 1792, "40,000" → 40000, "1,792,000" → 1792000
         formatted = formatted.replace(/,/g, '');
       }
     }

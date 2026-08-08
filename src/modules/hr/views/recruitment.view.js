@@ -64,17 +64,17 @@ export class RecruitmentView extends Component {
       title: '👥 Recursos Humanos (RH) & Reclutamiento',
       subtitle: 'Plataforma integral de talento, vacantes, editor de página pública y contratación',
       actionHTML: `
-        <div style="display:flex; flex-wrap:wrap; gap:6px;" id="hr-top-tab-actions">
-          <button class="btn btn-secondary btn-xs" id="btn-tab-dashboard" style="font-weight:600;">📊 Dashboard</button>
-          <button class="btn btn-secondary btn-xs" id="btn-tab-candidates" style="font-weight:600;">👥 Candidatos</button>
-          <button class="btn btn-secondary btn-xs" id="btn-tab-vacancies" style="font-weight:600;">💼 Vacantes</button>
-          <button class="btn btn-secondary btn-xs" id="btn-tab-page-editor" style="font-weight:600;">🎨 Editor Web</button>
-          <button class="btn btn-secondary btn-xs" id="btn-tab-qr" style="font-weight:600;">📲 Código QR</button>
-          <button class="btn btn-secondary btn-xs" id="btn-tab-form-builder" style="font-weight:600;">📝 Formularios</button>
-          <button class="btn btn-secondary btn-xs" id="btn-tab-documents" style="font-weight:600;">📄 Documentos</button>
+        <div style="display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:6px; padding-bottom:4px; max-width:100%; scroll-snap-type:x mandatory;" id="hr-top-tab-actions">
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-dashboard" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📊 Dashboard</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-candidates" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">👥 Candidatos</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-vacancies" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">💼 Vacantes</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-page-editor" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">🎨 Editor Web</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-qr" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📲 Código QR</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-form-builder" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📝 Formularios</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-documents" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📄 Documentos</button>
         </div>
       `,
-      contentHTML: `<div id="hr-recruitment-view-root"></div>`
+      contentHTML: `<div id="hr-recruitment-view-root" style="overflow-x:auto;"></div>`
     });
 
     this.listeners = [];

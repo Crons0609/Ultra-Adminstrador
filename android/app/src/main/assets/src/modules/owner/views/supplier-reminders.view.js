@@ -52,14 +52,21 @@ export class SupplierRemindersView extends Component {
       `,
       contentHTML: `
         <style>
+          /* ── Tab bar ── */
+          .sr-tab-bar { display:flex; gap:var(--space-2); overflow-x:auto; -webkit-overflow-scrolling:touch;
+            scrollbar-width:none; padding-bottom:6px; scroll-snap-type:x mandatory; }
+          .sr-tab-bar::-webkit-scrollbar { display:none; }
           .sr-tab-btn {
-            padding: 8px 18px; border-radius: var(--radius-xl); border: 1px solid var(--color-border);
+            flex-shrink:0; scroll-snap-align:start;
+            padding:10px 18px; border-radius:var(--radius-xl); border: 1px solid var(--color-border);
             background: transparent; color: var(--color-text-secondary); cursor: pointer;
             font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease; white-space: nowrap;
+            min-height:42px;
           }
           .sr-tab-btn.active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
           .sr-tab-btn:hover:not(.active) { background: var(--color-bg-tertiary); color: var(--color-text-primary); }
 
+          /* ── Toggle switch ── */
           .sr-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
           .sr-switch input { opacity: 0; width: 0; height: 0; }
           .sr-slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background: var(--color-border); border-radius: 24px; transition: 0.3s; }
@@ -67,18 +74,57 @@ export class SupplierRemindersView extends Component {
           input:checked + .sr-slider { background: var(--color-accent); }
           input:checked + .sr-slider:before { transform: translateX(20px); }
 
+          /* ── Desktop table ── */
           .sr-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
           .sr-table th { padding: 10px 12px; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); text-align: left; font-weight: 600; }
           .sr-table td { padding: 12px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
           .sr-table tr:hover { background: var(--color-bg-tertiary); }
+          .sr-desktop-table { display:table; width:100%; }
+          .sr-mobile-cards  { display:none; }
+
+          /* ── Payment cards (mobile) ── */
+          .sr-pay-card { background:var(--color-bg-secondary); border:1px solid var(--color-border);
+            border-radius:var(--radius-lg); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+          .sr-pay-card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+          .sr-pay-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+          .sr-pay-btn { flex:1; min-width:80px; padding:10px 8px; border-radius:var(--radius-md);
+            border:1px solid var(--color-border); background:var(--color-bg-tertiary);
+            color:var(--color-text-primary); font-size:0.78rem; font-weight:600;
+            cursor:pointer; text-align:center; min-height:44px;
+            display:flex; align-items:center; justify-content:center; gap:4px;
+            transition:all 0.18s; -webkit-tap-highlight-color:transparent; }
+          .sr-pay-btn:active { transform:scale(0.96); }
+          .sr-pay-btn.paid-btn { background:rgba(16,185,129,0.1); color:#10b981; border-color:rgba(16,185,129,0.3); }
+          .sr-pay-btn.wa-btn   { background:rgba(37,211,102,0.1); color:#25d366; border-color:rgba(37,211,102,0.3); }
+          .sr-pay-btn.tg-btn   { background:rgba(41,182,246,0.1); color:#29b6f6; border-color:rgba(41,182,246,0.3); }
+
+          /* ══ ANDROID / MOBILE ════════════════════════════════════════════ */
+          @media (max-width: 640px) {
+            /* Table → Cards */
+            .sr-desktop-table { display:none !important; }
+            .sr-mobile-cards  { display:flex !important; flex-direction:column; gap:10px; }
+
+            /* Forms: 4-col → 1-col */
+            .sr-form-grid { grid-template-columns: 1fr !important; }
+            .sr-form-2col { grid-template-columns: 1fr !important; }
+
+            /* Templates: side-by-side → stacked */
+            .sr-tmpl-layout { grid-template-columns: 1fr !important; }
+
+            /* Buttons full-width */
+            .sr-save-btn { width:100%; }
+
+            /* Tab bar extra padding */
+            .sr-tab-bar { padding-left:4px; padding-right:4px; }
+          }
         </style>
 
-        <!-- Tab Bar -->
-        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-5); overflow-x:auto; padding-bottom:4px;">
-          <button class="sr-tab-btn active" data-tab="monitor">📋 Monitor de Obligaciones</button>
-          <button class="sr-tab-btn" data-tab="rules">⚡ Destinatarios y Frecuencias</button>
-          <button class="sr-tab-btn" data-tab="templates">📝 Editor de Mensajes</button>
-          <button class="sr-tab-btn" data-tab="history">📜 Bitácora de Avisos</button>
+        <!-- Tab Bar (scrollable, touch-friendly) -->
+        <div class="sr-tab-bar" style="margin-bottom:var(--space-5);">
+          <button class="sr-tab-btn active" data-tab="monitor">📋 Monitor</button>
+          <button class="sr-tab-btn" data-tab="rules">⚡ Destinatarios</button>
+          <button class="sr-tab-btn" data-tab="templates">📝 Mensajes</button>
+          <button class="sr-tab-btn" data-tab="history">📜 Bitácora</button>
         </div>
 
         <div id="sr-tab-content"></div>
@@ -237,6 +283,28 @@ export class SupplierRemindersView extends Component {
             badge = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-xl);background:rgba(100,116,139,0.15);color:var(--color-text-secondary);">En tiempo (${daysDiff}d)</span>`;
           }
 
+          /* Build mobile card for each payment */
+          const mobileCard = (p, isPaid, daysDiff, badge, icon) => `
+            <div class="sr-pay-card" style="border-left:3px solid ${isPaid ? 'var(--color-success)' : daysDiff < 0 ? 'var(--color-danger)' : daysDiff <= 2 ? '#f59e0b' : 'var(--color-border)'}">
+              <div class="sr-pay-card-header">
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:700;color:var(--color-text-primary);font-size:0.9rem">${icon} ${p.providerName}</div>
+                  <div style="font-size:0.7rem;color:var(--color-text-secondary);margin-top:2px">${p.notes || p.category || 'Compromiso saliente'}</div>
+                </div>
+                <div>${badge}</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:1rem;font-weight:700;color:${isPaid ? 'var(--color-success)' : 'var(--color-danger)'}">${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(p.amount||0)}</span>
+                <span style="font-size:0.75rem;color:var(--color-text-secondary)">📅 ${new Date(Number(p.dueDate||now)).toLocaleDateString('es-MX',{month:'short',day:'numeric',year:'numeric'})}</span>
+              </div>
+              ${!isPaid ? `
+              <div class="sr-pay-card-actions">
+                <button class="sr-pay-btn paid-btn btn-mark-sup-paid" data-id="${p.id}" data-col="${p.collection||'supplier_payments'}">🟢 Pagado</button>
+                <button class="sr-pay-btn wa-btn btn-remind-sup-wa" data-id="${p.id}">💬 WA</button>
+                <button class="sr-pay-btn tg-btn btn-remind-sup-tg" data-id="${p.id}">✈️ TG</button>
+              </div>` : '<div style="font-size:0.78rem;color:var(--color-success);font-weight:600">✅ Liquidado</div>'}
+            </div>`;
+
           return `
             <tr>
               <td>
@@ -244,7 +312,7 @@ export class SupplierRemindersView extends Component {
                 <div class="text-secondary" style="font-size:0.7rem;">${p.notes || p.category || 'Compromiso saliente'}</div>
               </td>
               <td><span style="font-size:0.72rem;padding:2px 6px;border-radius:var(--radius-md);background:var(--color-bg-tertiary);">${p.category || 'GENERAL'}</span></td>
-              <td><strong style="color:${isPaid ? 'var(--color-success)' : 'var(--color-danger)'};">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(p.amount || 0)}</strong></td>
+              <td><strong style="color:${isPaid ? 'var(--color-success)' : 'var(--color-danger)'}">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(p.amount || 0)}</strong></td>
               <td>${new Date(dueTs).toLocaleDateString('es-MX', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
               <td>${badge}</td>
               <td>
@@ -257,14 +325,47 @@ export class SupplierRemindersView extends Component {
                 </div>
               </td>
             </tr>
+            ${mobileCard(p, isPaid, daysDiff, badge, icon)}
           `;
+        }).join('');
+
+    /* Separate desktop-table rows from mobile card data */
+    const tableRows = rowsHTML.split('${mobileCard(').map(chunk => chunk.split(')}`')[0]).join('');
+    const mobileCards = filtered.length === 0
+      ? `<div style="text-align:center;padding:32px;color:var(--color-text-secondary)">No hay obligaciones en esta categoría.</div>`
+      : filtered.map(p => {
+          const isPaid = p.status === 'PAGADO' || p.status === 'LIQUIDADO';
+          const dueTs = Number(p.dueDate || now);
+          const daysDiff = Math.ceil((dueTs - now) / 86400000);
+          const icon = this.categoryIcons[p.category] || '🏢';
+          let badge = '';
+          if (isPaid) badge = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-xl);background:rgba(52,211,153,0.15);color:var(--color-success);font-weight:600;">✅ Pagado</span>`;
+          else if (daysDiff < 0) badge = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-xl);background:rgba(239,68,68,0.15);color:var(--color-danger);font-weight:600;">⚠️ Vencido (${Math.abs(daysDiff)}d)</span>`;
+          else if (daysDiff <= 2) badge = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-xl);background:rgba(245,158,11,0.15);color:#f59e0b;font-weight:600;">⏰ Vence en ${daysDiff}d</span>`;
+          else badge = `<span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-xl);background:rgba(100,116,139,0.15);color:var(--color-text-secondary);">En tiempo (${daysDiff}d)</span>`;
+          return `<div class="sr-pay-card" style="border-left:3px solid ${isPaid ? 'var(--color-success)' : daysDiff < 0 ? 'var(--color-danger)' : daysDiff <= 2 ? '#f59e0b' : 'var(--color-border)'}">
+            <div class="sr-pay-card-header">
+              <div style="flex:1;min-width:0"><div style="font-weight:700;color:var(--color-text-primary);font-size:0.9rem">${icon} ${p.providerName}</div>
+              <div style="font-size:0.7rem;color:var(--color-text-secondary);margin-top:2px">${p.notes || p.category || 'Compromiso saliente'}</div></div>
+              <div>${badge}</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:1rem;font-weight:700;color:${isPaid ? 'var(--color-success)' : 'var(--color-danger)'}">${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(p.amount||0)}</span>
+              <span style="font-size:0.75rem;color:var(--color-text-secondary)">📅 ${new Date(dueTs).toLocaleDateString('es-MX',{month:'short',day:'numeric',year:'numeric'})}</span>
+            </div>
+            ${!isPaid ? `<div class="sr-pay-card-actions">
+              <button class="sr-pay-btn paid-btn btn-mark-sup-paid" data-id="${p.id}" data-col="${p.collection||'supplier_payments'}">🟢 Pagado</button>
+              <button class="sr-pay-btn wa-btn btn-remind-sup-wa" data-id="${p.id}">💬 WA</button>
+              <button class="sr-pay-btn tg-btn btn-remind-sup-tg" data-id="${p.id}">✈️ TG</button>
+            </div>` : '<div style="font-size:0.78rem;color:var(--color-success);font-weight:600">✅ Liquidado</div>'}
+          </div>`;
         }).join('');
 
     container.innerHTML = `
       <div class="animate-fade-in d-flex flex-column gap-5" style="color:var(--color-text-primary);">
 
         <!-- KPI Cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-4);">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3);">
           <div class="card p-4 hover-lift" style="border-left:4px solid var(--color-danger);">
             <div style="font-size:1.5rem;margin-bottom:4px;">💸</div>
             <div class="text-secondary text-xs">Total Pagos Pendientes</div>
@@ -289,12 +390,12 @@ export class SupplierRemindersView extends Component {
 
         <!-- Quick Add Form -->
         <div class="card p-5">
-          <h3 class="font-semibold mb-3" style="font-size:0.95rem;">➕ Registrar Pago Pendiente a Proveedor o Servicio</h3>
+          <h3 class="font-semibold mb-3" style="font-size:0.95rem;">➕ Registrar Pago Pendiente</h3>
           <form id="sr-quick-add-form" class="d-flex flex-column gap-3">
-            <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:var(--space-3);">
+            <div class="sr-form-grid" style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:var(--space-3);">
               <div class="form-group">
                 <label class="form-label">Nombre Proveedor / Servicio</label>
-                <input type="text" id="sr-add-name" class="input input-md" placeholder="Ej. Proveedor X, ENEL, Agua, Alquiler" required />
+                <input type="text" id="sr-add-name" class="input input-md" placeholder="Ej. Proveedor X, ENEL, Agua" required />
               </div>
               <div class="form-group">
                 <label class="form-label">Categoría</label>
@@ -318,7 +419,7 @@ export class SupplierRemindersView extends Component {
               </div>
             </div>
             <div class="d-flex justify-content-end">
-              <button type="submit" class="btn btn-primary btn-sm">+ Registrar Pago Pendiente</button>
+              <button type="submit" class="btn btn-primary btn-sm sr-save-btn">+ Registrar Pago Pendiente</button>
             </div>
           </form>
         </div>
@@ -326,30 +427,30 @@ export class SupplierRemindersView extends Component {
         <!-- Table + Filters -->
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-4" style="flex-wrap:wrap;gap:var(--space-3);">
-            <h3 class="font-semibold" style="font-size:0.95rem;">Listado de Compromisos Salientes</h3>
-            <div class="d-flex gap-2">
-              <button class="btn btn-xs ${this.state.filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}" data-filter="ALL">Todos (${payments.length})</button>
-              <button class="btn btn-xs ${this.state.filterStatus === 'UPCOMING' ? 'btn-primary' : 'btn-secondary'}" data-filter="UPCOMING">⏰ Vencen Pronto (${upcomingPayments.length})</button>
-              <button class="btn btn-xs ${this.state.filterStatus === 'OVERDUE' ? 'btn-primary' : 'btn-secondary'}" data-filter="OVERDUE">⚠️ Vencidos (${overduePayments.length})</button>
-              <button class="btn btn-xs ${this.state.filterStatus === 'PAID' ? 'btn-primary' : 'btn-secondary'}" data-filter="PAID">✅ Pagados (${paidThisMonth.length})</button>
+            <h3 class="font-semibold" style="font-size:0.95rem;">Compromisos Salientes</h3>
+            <div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;">
+              <button class="btn btn-xs ${this.state.filterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'}" data-filter="ALL" style="min-height:36px;white-space:nowrap">Todos (${payments.length})</button>
+              <button class="btn btn-xs ${this.state.filterStatus === 'UPCOMING' ? 'btn-primary' : 'btn-secondary'}" data-filter="UPCOMING" style="min-height:36px;white-space:nowrap">⏰ Pronto (${upcomingPayments.length})</button>
+              <button class="btn btn-xs ${this.state.filterStatus === 'OVERDUE' ? 'btn-primary' : 'btn-secondary'}" data-filter="OVERDUE" style="min-height:36px;white-space:nowrap">⚠️ Vencidos (${overduePayments.length})</button>
+              <button class="btn btn-xs ${this.state.filterStatus === 'PAID' ? 'btn-primary' : 'btn-secondary'}" data-filter="PAID" style="min-height:36px;white-space:nowrap">✅ Pagados (${paidThisMonth.length})</button>
             </div>
           </div>
 
-          <div style="overflow-x:auto;">
+          <!-- Desktop table -->
+          <div class="sr-desktop-table" style="overflow-x:auto;">
             <table class="sr-table">
               <thead>
                 <tr>
-                  <th>Proveedor / Servicio</th>
-                  <th>Categoría</th>
-                  <th>Monto</th>
-                  <th>Fecha Vencimiento</th>
-                  <th>Estado Vencimiento</th>
-                  <th>Acciones</th>
+                  <th>Proveedor / Servicio</th><th>Categoría</th><th>Monto</th>
+                  <th>Vencimiento</th><th>Estado</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody>${rowsHTML}</tbody>
             </table>
           </div>
+
+          <!-- Mobile cards -->
+          <div class="sr-mobile-cards">${mobileCards}</div>
         </div>
       </div>
     `;
@@ -449,7 +550,7 @@ export class SupplierRemindersView extends Component {
 
           <hr style="border:0;border-top:1px solid var(--color-border);" />
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);">
+          <div class="sr-form-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);">
             <div class="form-group">
               <label class="form-label" for="sr-recipient-phone">WhatsApp del Administrador</label>
               <input type="tel" id="sr-recipient-phone" class="input input-md" placeholder="5215512345678" value="${cfg.recipientPhone || ''}" />
@@ -480,7 +581,7 @@ export class SupplierRemindersView extends Component {
           </div>
 
           <div class="d-flex justify-content-end mt-2">
-            <button class="btn btn-primary btn-md" id="btn-save-sr-rules">💾 Guardar Configuración de Avisos</button>
+            <button class="btn btn-primary btn-md sr-save-btn" id="btn-save-sr-rules">💾 Guardar Configuración de Avisos</button>
           </div>
         </div>
       </div>
@@ -520,7 +621,7 @@ export class SupplierRemindersView extends Component {
     const tmpls = cfg.templates || SupplierRemindersService.getDefaultTemplates();
 
     container.innerHTML = `
-      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:var(--space-5);color:var(--color-text-primary);" class="animate-fade-in">
+      <div class="sr-tmpl-layout animate-fade-in" style="display:grid;grid-template-columns:1.2fr 1fr;gap:var(--space-5);color:var(--color-text-primary);">
         <div class="card p-5 d-flex flex-column gap-4">
           <h3 class="font-semibold text-primary" style="font-size:0.95rem;">📝 Mensajes de Notificación al Administrador</h3>
           <p class="text-secondary text-xs">Variables: <code>{{proveedor}}</code>, <code>{{monto}}</code>, <code>{{vencimiento}}</code>, <code>{{categoria}}</code>, <code>{{negocio}}</code></p>
@@ -541,7 +642,7 @@ export class SupplierRemindersView extends Component {
           </div>
 
           <div class="d-flex justify-content-end">
-            <button class="btn btn-primary btn-md" id="btn-save-sr-tmpls">💾 Guardar Plantillas</button>
+            <button class="btn btn-primary btn-md sr-save-btn" id="btn-save-sr-tmpls">💾 Guardar Plantillas</button>
           </div>
         </div>
 
@@ -621,22 +722,38 @@ export class SupplierRemindersView extends Component {
     container.innerHTML = `
       <div class="card p-5 animate-fade-in" style="color:var(--color-text-primary);">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h3 class="font-semibold" style="font-size:0.95rem;">📜 Bitácora de Avisos Enviados al Administrador (${logs.length})</h3>
+          <h3 class="font-semibold" style="font-size:0.95rem;">📜 Bitácora de Avisos (${logs.length})</h3>
         </div>
-        <div style="overflow-x:auto;">
+        <!-- Desktop table -->
+        <div class="sr-desktop-table" style="overflow-x:auto;">
           <table class="sr-table">
             <thead>
               <tr>
-                <th>Fecha y Hora</th>
-                <th>Proveedor / Servicio</th>
-                <th>Monto</th>
-                <th>Canal</th>
-                <th>Frecuencia Disparada</th>
-                <th>Estado</th>
+                <th>Fecha y Hora</th><th>Proveedor / Servicio</th><th>Monto</th>
+                <th>Canal</th><th>Frecuencia</th><th>Estado</th>
               </tr>
             </thead>
             <tbody>${rowsHTML}</tbody>
           </table>
+        </div>
+        <!-- Mobile cards -->
+        <div class="sr-mobile-cards">
+          ${logs.length === 0 ? '<div style="text-align:center;padding:32px;color:var(--color-text-secondary)">No hay registros aún.</div>' :
+            logs.slice(0,30).map(log => `
+              <div style="background:var(--color-bg-tertiary);border-radius:var(--radius-md);padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                  <div style="font-weight:700;font-size:0.88rem;color:var(--color-text-primary)">${log.providerName || 'Proveedor'}</div>
+                  <span style="font-size:0.7rem;font-weight:700;color:${log.status==='DELIVERED'?'var(--color-success)':'var(--color-danger)'}">${log.status}</span>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:0.75rem;color:var(--color-text-secondary)">
+                  <span>${log.channel==='WHATSAPP'?'💬 WhatsApp':'✈️ Telegram'}</span>
+                  <span>·</span>
+                  <span>${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(log.amount||0)}</span>
+                  <span>·</span>
+                  <span>${new Date(log.timestamp).toLocaleString('es-MX')}</span>
+                </div>
+              </div>`).join('')
+          }
         </div>
       </div>
     `;

@@ -251,7 +251,7 @@ export function redirectUserDashboard(role, router) {
   if (isProgrammerRole(normRole, currentUser.email)) {
     targetPath = '/super-admin/companies';
   } else if (normRole === 'OWNER') {
-    targetPath = '/owner/finance';
+    targetPath = '/owner/dashboard';
   } else if (normRole === 'MANAGER') {
     targetPath = '/manager/dashboard';
   } else if (normRole === 'CASHIER') {
