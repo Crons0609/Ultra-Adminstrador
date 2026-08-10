@@ -1,3 +1,1 @@
-
-
-necesito poder agregar un apartado que se llame "traslado" dentro de ese apartado se aran las exportaciones de una socursal a otra o de una bodega a otra. es decir primero se elegira si se trasladara desde el local o de la bodega dependiendo si tiene bodega y luego se seleccionara el o los productos que se aran el traslado y luego el lugar del traslado. dependiendo si el dueño tiene varias sucursales o si las sucursales tienen bodegas o simplemente las bodegas., agregale mas
+ahora quiero que cuandio este cambiando de apartados no exista un retraso. ya que hace un parpedeo y hay retraso al cargar el modulo que quiero abrir, necesito qe no haya un retraso para que la web saas o la apk se vea premiun y fluida sin ningun tipo de retraso ni parpedeos.

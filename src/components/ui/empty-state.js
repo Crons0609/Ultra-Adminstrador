@@ -18,7 +18,7 @@ export class EmptyState extends Component {
     this.props = {
       title: '',
       description: '',
-      icon: '📁',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="42" height="42" style="color:var(--color-text-tertiary);"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
       actionHTML: '',
       ...props
     };
@@ -41,11 +41,12 @@ export class EmptyState extends Component {
 
     return `
       <div class="empty-state-container" style="${styles}">
-        <span class="empty-state-icon" style="font-size: 3rem; margin-bottom: var(--space-4); display: block; filter: grayscale(0.2);">${icon}</span>
-        <h3 class="text-xl font-semibold mb-2" style="margin-bottom: var(--space-2); color: var(--color-text-primary);">${title}</h3>
-        <p class="text-secondary max-w-sm" style="margin-bottom: var(--space-4); max-width: 320px; font-size: 0.875rem;">${description}</p>
+        <span class="empty-state-icon" style="margin-bottom: var(--space-4); display: flex; align-items: center; justify-content: center;">${icon}</span>
+        <h3 class="text-xl font-semibold mb-2" style="margin-bottom: var(--space-2); color: var(--color-text-primary); font-size: 1.1rem;">${title}</h3>
+        <p class="text-secondary max-w-sm" style="margin-bottom: var(--space-4); max-width: 320px; font-size: 0.85rem; color: var(--color-text-secondary);">${description}</p>
         ${actionHTML}
       </div>
     `;
+
   }
 }

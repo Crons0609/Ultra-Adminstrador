@@ -12,18 +12,18 @@ import { WhatsAppService } from './whatsapp.service.js';
 import { TelegramService } from './telegram.service.js';
 
 export const EVENT_TYPES = {
-  DIA_LIBRE: { label: 'Día Libre', color: '#3b82f6', category: 'ABSENCE', icon: '🏖️' },
-  VACACIONES: { label: 'Vacaciones', color: '#10b981', category: 'ABSENCE', icon: '✈️' },
-  PERMISO: { label: 'Permiso Personal', color: '#f97316', category: 'ABSENCE', icon: '📝' },
-  INCAPACIDAD: { label: 'Incapacidad Médica', color: '#ef4444', category: 'ABSENCE', icon: '🏥' },
-  CAPACITACION: { label: 'Capacitación', color: '#8b5cf6', category: 'WORK', icon: '🎓' },
-  REUNION: { label: 'Reunión Interna', color: '#eab308', category: 'WORK', icon: '👥' },
-  TURNO_ESPECIAL: { label: 'Turno Especial', color: '#06b6d4', category: 'WORK', icon: '⏰' },
-  HORAS_EXTRA: { label: 'Horas Extra', color: '#ec4899', category: 'WORK', icon: '⚡' },
-  EVENTO_INTERNO: { label: 'Evento Interno', color: '#6366f1', category: 'COMPANY', icon: '🎉' },
-  FERIADO_NACIONAL: { label: 'Feriado Nacional', color: '#6b7280', category: 'HOLIDAY', icon: '🏛️' },
-  FERIADO_PERSONALIZADO: { label: 'Feriado Personalizado', color: '#4b5563', category: 'HOLIDAY', icon: '🎈' },
-  OTRO: { label: 'Otro', color: '#64748b', category: 'GENERAL', icon: '📌' }
+  DIA_LIBRE: { label: 'Día Libre', color: '#3b82f6', category: 'ABSENCE', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>` },
+  VACACIONES: { label: 'Vacaciones', color: '#10b981', category: 'ABSENCE', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.7 5.2c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"/></svg>` },
+  PERMISO: { label: 'Permiso Personal', color: '#f97316', category: 'ABSENCE', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>` },
+  INCAPACIDAD: { label: 'Incapacidad Médica', color: '#ef4444', category: 'ABSENCE', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>` },
+  CAPACITACION: { label: 'Capacitación', color: '#8b5cf6', category: 'WORK', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>` },
+  REUNION: { label: 'Reunión Interna', color: '#eab308', category: 'WORK', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
+  TURNO_ESPECIAL: { label: 'Turno Especial', color: '#06b6d4', category: 'WORK', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>` },
+  HORAS_EXTRA: { label: 'Horas Extra', color: '#ec4899', category: 'WORK', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>` },
+  EVENTO_INTERNO: { label: 'Evento Interno', color: '#6366f1', category: 'COMPANY', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>` },
+  FERIADO_NACIONAL: { label: 'Feriado Nacional', color: '#6b7280', category: 'HOLIDAY', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/></svg>` },
+  FERIADO_PERSONALIZADO: { label: 'Feriado Personalizado', color: '#4b5563', category: 'HOLIDAY', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>` },
+  OTRO: { label: 'Otro', color: '#64748b', category: 'GENERAL', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>` }
 };
 
 export const ABSENCE_TYPES = ['DIA_LIBRE', 'VACACIONES', 'PERMISO', 'INCAPACIDAD'];
@@ -231,7 +231,7 @@ export class CalendarService {
     return list.map(h => ({
       id: `nat-holiday-${h.date}`,
       type: 'FERIADO_NACIONAL',
-      title: `🏛️ ${h.title}`,
+      title: h.title,
       startDate: h.date,
       endDate: h.date,
       status: 'APROBADO',

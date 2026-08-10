@@ -61,89 +61,130 @@ export class WorkCalendarView extends Component {
 
     return `
       <style>
-        .cal-view-btn { padding:8px 14px; font-size:0.78rem; font-weight:600; border:none; background:transparent; color:var(--color-text-secondary); cursor:pointer; border-radius:var(--radius-sm); transition:all 0.2s; white-space:nowrap; min-height:36px; display:inline-flex; align-items:center; }
+        .cal-header-bar { display:flex; flex-direction:column; gap:12px; background:var(--color-bg-secondary); padding:16px; border-radius:var(--radius-lg); border:1px solid var(--color-border); }
+        .cal-header-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .cal-nav-group { display:flex; align-items:center; gap:12px; }
+        .cal-period-title { font-size:1.1rem; font-weight:800; color:var(--color-text-primary); margin:0; letter-spacing:-0.01em; }
+        
+        .cal-view-tabs { display:flex; background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:3px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:2px; }
+        .cal-view-tabs::-webkit-scrollbar { display:none; }
+        .cal-view-btn { padding:6px 12px; font-size:0.78rem; font-weight:600; border:none; background:transparent; color:var(--color-text-secondary); cursor:pointer; border-radius:var(--radius-sm); transition:all 0.2s; white-space:nowrap; min-height:34px; display:inline-flex; align-items:center; gap:6px; }
         .cal-view-btn.active { background:var(--color-accent); color:#fff; }
-        .cal-month-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:1px; background:var(--color-border); border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--color-border); }
-        .cal-day-cell { background:var(--color-bg-secondary); min-height:110px; padding:6px; display:flex; flex-direction:column; gap:4px; cursor:pointer; transition:background 0.15s; }
+
+        .cal-filter-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:var(--color-bg-tertiary); padding:12px 14px; border-radius:var(--radius-md); border:1px solid var(--color-border); }
+        .cal-filter-bar select { min-height:36px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); font-size:0.8rem; }
+
+        .cal-month-grid { display:grid; grid-template-columns: repeat(7, 1fr); width:100%; gap:1px; background:var(--color-border); border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--color-border); box-sizing:border-box; }
+        .cal-day-cell { background:var(--color-bg-secondary); min-height:105px; padding:6px; display:flex; flex-direction:column; gap:4px; cursor:pointer; transition:background 0.15s; overflow:hidden; }
         .cal-day-cell:hover { background:var(--color-bg-tertiary); }
         .cal-day-cell.today { background:rgba(99, 102, 241, 0.08); border:1px solid var(--color-accent); }
         .cal-day-number { font-size:0.78rem; font-weight:700; color:var(--color-text-secondary); }
         .cal-event-badge { font-size:0.70rem; padding:3px 6px; border-radius:4px; color:#fff; font-weight:600; cursor:pointer; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
 
-        .cal-view-tabs { display:flex; background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:2px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-        .cal-view-tabs::-webkit-scrollbar { display:none; }
-
         @media (max-width: 640px) {
-          .cal-month-grid { font-size:0.72rem; }
-          .cal-day-cell { min-height:65px; padding:3px; }
-          .cal-event-badge { font-size:0.65rem; padding:2px 4px; }
-          .cal-header-bar { flex-direction:column; align-items:stretch !important; gap:10px !important; }
+          .cal-header-top { flex-direction:column; align-items:stretch; gap:10px; }
           .cal-nav-group { justify-content:space-between; width:100%; }
-          .cal-filter-bar { flex-direction:column; align-items:stretch !important; }
-          .cal-filter-bar select { max-width:100% !important; width:100%; }
+          .cal-filter-bar { flex-direction:column; align-items:stretch; }
+          .cal-filter-bar select { width:100% !important; max-width:100% !important; }
+          .cal-day-cell { min-height:56px; padding:3px 2px; gap:2px; }
+          .cal-day-number { font-size:0.70rem; }
+          .cal-event-badge { font-size:0.60rem; padding:1px 3px; gap:2px; border-radius:3px; }
+          .cal-event-badge svg { width:10px; height:10px; flex-shrink:0; }
         }
       </style>
+
       <div class="calendar-module" style="display:flex; flex-direction:column; gap:var(--space-4);">
 
         <!-- HEADER & TOOLBAR -->
-        <div class="cal-header-bar" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); background:var(--color-bg-secondary); padding:var(--space-3) var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border);">
-
-          <!-- Date Navigation -->
-          <div class="cal-nav-group" style="display:flex; align-items:center; gap:var(--space-3);">
-            <div style="display:flex; border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden;">
-              <button class="btn btn-secondary btn-sm" id="cal-nav-prev" style="border:none; border-right:1px solid var(--color-border); border-radius:0; min-height:38px; min-width:40px;">◀</button>
-              <button class="btn btn-secondary btn-sm" id="cal-nav-today" style="border:none; border-right:1px solid var(--color-border); border-radius:0; min-height:38px; font-weight:600;">Hoy</button>
-              <button class="btn btn-secondary btn-sm" id="cal-nav-next" style="border:none; border-radius:0; min-height:38px; min-width:40px;">▶</button>
+        <div class="cal-header-bar">
+          
+          <!-- Top Row: Date Navigation & Action Buttons -->
+          <div class="cal-header-top">
+            <div class="cal-nav-group">
+              <div style="display:flex; border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden;">
+                <button class="btn btn-secondary btn-sm" id="cal-nav-prev" style="border:none; border-right:1px solid var(--color-border); border-radius:0; min-height:36px; min-width:36px; padding:0 10px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="cal-nav-today" style="border:none; border-right:1px solid var(--color-border); border-radius:0; min-height:36px; font-weight:600; padding:0 12px;">Hoy</button>
+                <button class="btn btn-secondary btn-sm" id="cal-nav-next" style="border:none; border-radius:0; min-height:36px; min-width:36px; padding:0 10px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+              <h3 id="cal-period-label" class="cal-period-title">${currentPeriodLabel}</h3>
             </div>
-            <h3 id="cal-period-label" style="font-size:1.05rem; font-weight:700; color:var(--color-text-primary); margin:0;">${currentPeriodLabel}</h3>
+
+            <!-- Action Buttons -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              ${isOwnerOrManager && isModuleEnabled(this.currentCompany, 'hrRecruitment') ? `
+                <a href="#/hr/recruitment" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:600;min-height:36px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  RH
+                </a>
+              ` : ''}
+              ${isOwnerOrManager ? `
+                <button class="btn btn-secondary btn-sm" id="btn-cal-settings" title="Configurar límite de ausencias y festivos" style="display:inline-flex;align-items:center;gap:6px;min-height:36px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  Reglas
+                </button>
+              ` : ''}
+              <button class="btn btn-primary btn-sm" id="btn-cal-new-event" style="display:inline-flex;align-items:center;gap:6px;min-height:36px;font-weight:600;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Solicitar Día / Evento
+              </button>
+            </div>
           </div>
 
-          <!-- View Switcher Tabs -->
+          <!-- Bottom Row: Scrollable View Switcher Tabs -->
           <div class="cal-view-tabs">
-            <button class="cal-view-btn ${this.state.currentView === 'MONTH' ? 'active' : ''}" data-view="MONTH">📅 Mes</button>
-            <button class="cal-view-btn ${this.state.currentView === 'WEEK' ? 'active' : ''}" data-view="WEEK">🗓️ Semana</button>
-            <button class="cal-view-btn ${this.state.currentView === 'DAY' ? 'active' : ''}" data-view="DAY">📆 Día</button>
-            <button class="cal-view-btn ${this.state.currentView === 'AGENDA' ? 'active' : ''}" data-view="AGENDA">📋 Agenda</button>
-            <button class="cal-view-btn ${this.state.currentView === 'TIMELINE' ? 'active' : ''}" data-view="TIMELINE">📊 Timeline</button>
-          </div>
-
-          <!-- Action Buttons -->
-          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; width:100%; max-width:600px;">
-            ${isOwnerOrManager && isModuleEnabled(this.currentCompany, 'hrRecruitment') ? `
-              <a href="#/hr/recruitment" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-weight:600;flex:1;justify-content:center;min-height:38px;">👥 RH</a>
-            ` : ''}
-            ${isOwnerOrManager ? `
-              <button class="btn btn-secondary btn-sm" id="btn-cal-settings" title="Configurar límite de ausencias y festivos" style="min-height:38px;">⚙️ Reglas</button>
-            ` : ''}
-            <button class="btn btn-primary btn-sm" id="btn-cal-new-event" style="flex:1;min-height:38px;font-weight:600;">+ Solicitar Día / Evento</button>
+            <button class="cal-view-btn ${this.state.currentView === 'MONTH' ? 'active' : ''}" data-view="MONTH">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Mes
+            </button>
+            <button class="cal-view-btn ${this.state.currentView === 'WEEK' ? 'active' : ''}" data-view="WEEK">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="18"/></svg>
+              Semana
+            </button>
+            <button class="cal-view-btn ${this.state.currentView === 'DAY' ? 'active' : ''}" data-view="DAY">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="2"/></svg>
+              Día
+            </button>
+            <button class="cal-view-btn ${this.state.currentView === 'AGENDA' ? 'active' : ''}" data-view="AGENDA">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Agenda
+            </button>
+            <button class="cal-view-btn ${this.state.currentView === 'TIMELINE' ? 'active' : ''}" data-view="TIMELINE">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Timeline
+            </button>
           </div>
         </div>
 
         <!-- FILTERS BAR -->
-        <div class="cal-filter-bar" style="display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; background:var(--color-bg-tertiary); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border);">
-          <div style="font-size:0.8rem; font-weight:600; color:var(--color-text-secondary); display:flex; align-items:center; gap:6px;">
-            🔍 Filtrar:
+        <div class="cal-filter-bar">
+          <div style="font-size:0.8rem; font-weight:700; color:var(--color-text-secondary); display:flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtrar:
           </div>
-          <select id="flt-employee" class="input input-sm" style="max-width:180px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); min-height:38px;">
-            <option value="">👤 Todos los empleados</option>
+          <select id="flt-employee" class="input input-sm" style="flex:1; max-width:200px;">
+            <option value="">Todos los empleados</option>
           </select>
-          <select id="flt-type" class="input input-sm" style="max-width:180px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); min-height:38px;">
-            <option value="">📌 Todos los tipos</option>
-            ${Object.entries(EVENT_TYPES).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join('')}
+          <select id="flt-type" class="input input-sm" style="flex:1; max-width:200px;">
+            <option value="">Todos los tipos</option>
+            ${Object.entries(EVENT_TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}
           </select>
-          <select id="flt-status" class="input input-sm" style="max-width:150px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary); min-height:38px;">
+          <select id="flt-status" class="input input-sm" style="flex:1; max-width:160px;">
             <option value="">Status (Todos)</option>
-            <option value="APROBADO">✅ Aprobados</option>
-            <option value="PENDIENTE">⏳ Pendientes</option>
-            <option value="RECHAZADO">❌ Rechazados</option>
+            <option value="APROBADO">Aprobados</option>
+            <option value="PENDIENTE">Pendientes</option>
+            <option value="RECHAZADO">Rechazados</option>
           </select>
           <div id="cal-limit-badge" style="margin-left:auto; font-size:0.75rem; background:rgba(99, 102, 241, 0.15); border:1px solid var(--color-accent); color:var(--color-accent); padding:4px 10px; border-radius:20px; font-weight:600; display:none;">
           </div>
         </div>
 
         <!-- MAIN CALENDAR CONTAINER -->
-        <div id="calendar-body-container" style="overflow-x:auto;">
-          <div style="text-align:center; padding:40px; color:var(--color-text-secondary);">⏳ Cargando calendario laboral...</div>
+        <div id="calendar-body-container" style="width:100%; border-radius:var(--radius-lg);">
+          <div style="text-align:center; padding:40px; color:var(--color-text-secondary);">Cargando calendario laboral...</div>
         </div>
 
       </div>
@@ -200,7 +241,7 @@ export class WorkCalendarView extends Component {
       NotificationService.error('Error al cargar datos del calendario laboral.');
       const body = this.element?.querySelector('#calendar-body-container');
       if (body) {
-        body.innerHTML = `<div style="text-align:center; padding:40px; color:var(--color-danger);">⚠️ Error al conectar con la base de datos. Por favor recarga la página.</div>`;
+        body.innerHTML = `<div style="text-align:center; padding:40px; color:var(--color-danger);">Error al conectar con la base de datos. Por favor recarga la página.</div>`;
       }
     }
   }
@@ -209,14 +250,14 @@ export class WorkCalendarView extends Component {
     const fltEmp = this.element?.querySelector('#flt-employee');
     if (!fltEmp) return;
     fltEmp.innerHTML = `
-      <option value="">👤 Todos los empleados</option>
+      <option value="">Todos los empleados</option>
       ${this.state.employees.map(e => `<option value="${e.uid || e.id}" ${this.state.filters.employeeId === (e.uid || e.id) ? 'selected' : ''}>${e.displayName || e.email}</option>`).join('')}
     `;
 
     const limitBadge = this.element?.querySelector('#cal-limit-badge');
     if (limitBadge) {
       if (this.state.config.maxAbsentPerDay > 0) {
-        limitBadge.textContent = `⚠️ Límite Ausentes: Max ${this.state.config.maxAbsentPerDay}/día`;
+        limitBadge.textContent = `Límite Ausentes: Max ${this.state.config.maxAbsentPerDay}/día`;
         limitBadge.style.display = 'inline-block';
       } else {
         limitBadge.style.display = 'none';
@@ -270,10 +311,10 @@ export class WorkCalendarView extends Component {
     // View switcher buttons
     root.querySelectorAll('.cal-view-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const view = e.target.dataset.view;
+        const view = e.currentTarget.dataset.view;
         this.state.currentView = view;
         root.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
+        e.currentTarget.classList.add('active');
         this.updateCalendarBodyUI();
       });
     });
@@ -366,11 +407,11 @@ export class WorkCalendarView extends Component {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const events = this.getFilteredEvents();
-    const dayHeaders = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const dayHeaders = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
 
     let html = `
       <div class="cal-month-grid">
-        ${dayHeaders.map(d => `<div style="background:var(--color-bg-tertiary); padding:8px; text-align:center; font-size:0.75rem; font-weight:700; color:var(--color-text-secondary); text-transform:uppercase;">${d}</div>`).join('')}
+        ${dayHeaders.map(d => `<div style="background:var(--color-bg-tertiary); padding:8px 4px; text-align:center; font-size:0.72rem; font-weight:700; color:var(--color-text-secondary); text-transform:uppercase;">${d}</div>`).join('')}
     `;
 
     // Padding cells before day 1
@@ -390,7 +431,7 @@ export class WorkCalendarView extends Component {
         <div class="cal-day-cell ${isToday ? 'today' : ''}" data-date="${dateStr}">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span class="cal-day-number">${day}</span>
-            ${dayEvents.length > 0 ? `<span style="font-size:0.65rem; color:var(--color-text-secondary); font-weight:600;">${dayEvents.length}</span>` : ''}
+            ${dayEvents.length > 0 ? `<span style="font-size:0.65rem; color:var(--color-text-secondary); font-weight:700; background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:10px;">${dayEvents.length}</span>` : ''}
           </div>
           <div style="display:flex; flex-direction:column; gap:2px; flex:1; overflow-y:auto;">
             ${dayEvents.slice(0, 3).map(e => {
@@ -400,7 +441,7 @@ export class WorkCalendarView extends Component {
               const isPending = e.status === 'PENDIENTE';
               return `
                 <div class="cal-event-badge" data-event-id="${e.id}" style="background:${color}; ${isPending ? 'border:1px dashed #fff; opacity:0.85;' : ''}" title="${title} - ${e.employeeName || ''}">
-                  <span>${typeDef.icon}</span>
+                  <span style="display:inline-flex; align-items:center;">${typeDef.icon}</span>
                   <span style="flex:1; overflow:hidden; text-overflow:ellipsis;">${e.employeeName ? `${e.employeeName.split(' ')[0]}: ` : ''}${title}</span>
                 </div>
               `;
@@ -419,7 +460,7 @@ export class WorkCalendarView extends Component {
     const events = this.getFilteredEvents();
     return `
       <div style="background:var(--color-bg-secondary); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border);">
-        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">🗓️ Vista Semanal de Ausencias y Eventos</h4>
+        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">Vista Semanal de Ausencias y Eventos</h4>
         <div style="display:flex; flex-direction:column; gap:var(--space-2);">
           ${events.length === 0 ? '<p style="color:var(--color-text-secondary); font-size:0.85rem;">No hay eventos registrados para este periodo.</p>' : ''}
           ${events.map(e => this.renderEventCard(e)).join('')}
@@ -432,7 +473,7 @@ export class WorkCalendarView extends Component {
     const events = this.getFilteredEvents();
     return `
       <div style="background:var(--color-bg-secondary); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border);">
-        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">📆 Personal Ausente / Eventos del Día</h4>
+        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">Personal Ausente / Eventos del Día</h4>
         <div style="display:flex; flex-direction:column; gap:var(--space-2);">
           ${events.length === 0 ? '<p style="color:var(--color-text-secondary); font-size:0.85rem;">No hay ausencias ni eventos programados para este día.</p>' : ''}
           ${events.map(e => this.renderEventCard(e)).join('')}
@@ -445,7 +486,7 @@ export class WorkCalendarView extends Component {
     const events = this.getFilteredEvents().sort((a,b) => (a.startDate || '').localeCompare(b.startDate || ''));
     return `
       <div style="background:var(--color-bg-secondary); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border);">
-        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">📋 Próximos Eventos y Ausencias</h4>
+        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">Próximos Eventos y Ausencias</h4>
         <div style="display:flex; flex-direction:column; gap:var(--space-3);">
           ${events.length === 0 ? '<p style="color:var(--color-text-secondary); font-size:0.85rem;">No hay eventos ni solicitudes registradas.</p>' : ''}
           ${events.map(e => this.renderEventCard(e)).join('')}
@@ -459,7 +500,7 @@ export class WorkCalendarView extends Component {
 
     return `
       <div style="background:var(--color-bg-secondary); padding:var(--space-4); border-radius:var(--radius-lg); border:1px solid var(--color-border); overflow-x:auto;">
-        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">📊 Matriz de Disponibilidad (Timeline por Empleado)</h4>
+        <h4 style="font-size:0.9rem; font-weight:700; color:var(--color-text-primary); margin-bottom:var(--space-3);">Matriz de Disponibilidad (Timeline por Empleado)</h4>
         <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
           <thead>
             <tr style="background:var(--color-bg-tertiary); border-bottom:1px solid var(--color-border);">
@@ -474,7 +515,7 @@ export class WorkCalendarView extends Component {
             ${events.map(e => `
               <tr style="border-bottom:1px solid var(--color-border);">
                 <td style="padding:8px; font-weight:600; color:var(--color-text-primary);">${e.employeeName || 'General / Festivo'}</td>
-                <td style="padding:8px;"><span style="color:${EVENT_TYPES[e.type]?.color || '#fff'}">${EVENT_TYPES[e.type]?.icon || '📌'} ${e.title}</span></td>
+                <td style="padding:8px;"><span style="color:${EVENT_TYPES[e.type]?.color || '#fff'}; display:inline-flex; align-items:center; gap:6px;">${EVENT_TYPES[e.type]?.icon || ''} ${e.title}</span></td>
                 <td style="padding:8px; color:var(--color-text-secondary);">${e.startDate} ${e.endDate && e.endDate !== e.startDate ? `a ${e.endDate}` : ''}</td>
                 <td style="padding:8px; text-align:center;">
                   <span class="badge" style="font-size:0.7rem; padding:2px 8px; border-radius:10px; background:${e.status === 'APROBADO' ? 'rgba(16,185,129,0.15)' : e.status === 'PENDIENTE' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)'}; color:${e.status === 'APROBADO' ? '#10b981' : e.status === 'PENDIENTE' ? '#f59e0b' : '#ef4444'};">
@@ -494,10 +535,10 @@ export class WorkCalendarView extends Component {
     return `
       <div class="cal-event-badge" data-event-id="${e.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px var(--space-3); background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-left:4px solid ${typeDef.color}; border-radius:var(--radius-md); cursor:pointer;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.2rem;">${typeDef.icon}</span>
+          <span style="display:inline-flex; align-items:center;">${typeDef.icon}</span>
           <div>
             <div style="font-weight:700; font-size:0.85rem; color:var(--color-text-primary);">${e.title}</div>
-            <div style="font-size:0.75rem; color:var(--color-text-secondary);">👤 ${e.employeeName || 'General'} | 📅 ${e.startDate} ${e.endDate && e.endDate !== e.startDate ? `al ${e.endDate}` : ''}</div>
+            <div style="font-size:0.75rem; color:var(--color-text-secondary);">Empleado: ${e.employeeName || 'General'} | Fechas: ${e.startDate} ${e.endDate && e.endDate !== e.startDate ? `al ${e.endDate}` : ''}</div>
           </div>
         </div>
         <span class="badge" style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:${e.status === 'APROBADO' ? 'rgba(16,185,129,0.2)' : e.status === 'PENDIENTE' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'}; color:${e.status === 'APROBADO' ? '#10b981' : e.status === 'PENDIENTE' ? '#f59e0b' : '#ef4444'};">
@@ -516,7 +557,7 @@ export class WorkCalendarView extends Component {
     const todayStr = preselectedDate || new Date().toISOString().split('T')[0];
 
     const typeOptionsHTML = Object.entries(EVENT_TYPES).map(([k, v]) => `
-      <option value="${k}">${v.icon} ${v.label}</option>
+      <option value="${k}">${v.label}</option>
     `).join('');
 
     const empOptionsHTML = this.state.employees.map(e => `
@@ -526,7 +567,7 @@ export class WorkCalendarView extends Component {
     const formHTML = `
       <form id="form-cal-event" style="display:flex; flex-direction:column; gap:var(--space-3);">
         <div id="conflict-warning-box" style="display:none; background:rgba(239,68,68,0.12); border:1px solid var(--color-danger); border-radius:var(--radius-md); padding:var(--space-3); color:var(--color-danger); font-size:0.8rem;">
-          ⚠️ <strong>Alerta de Límite de Ausencias:</strong> En las fechas seleccionadas ya se alcanza el límite máximo de personal libre. La solicitud quedará como PENDIENTE para aprobación del dueño.
+          <strong>Alerta de Límite de Ausencias:</strong> En las fechas seleccionadas ya se alcanza el límite máximo de personal libre. La solicitud quedará como PENDIENTE para aprobación del dueño.
         </div>
 
         <div class="form-group">
@@ -574,7 +615,7 @@ export class WorkCalendarView extends Component {
     `;
 
     const modal = new Modal({
-      title: '📅 Solicitar Día Libre / Crear Evento',
+      title: 'Solicitar Día Libre / Crear Evento',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -668,33 +709,33 @@ export class WorkCalendarView extends Component {
     const bodyHTML = `
       <div style="display:flex; flex-direction:column; gap:var(--space-3);">
         <div style="display:flex; align-items:center; gap:12px; background:var(--color-bg-tertiary); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border);">
-          <span style="font-size:2rem;">${typeDef.icon}</span>
+          <span style="display:inline-flex; align-items:center;">${typeDef.icon}</span>
           <div>
             <h4 style="font-size:1rem; font-weight:700; color:var(--color-text-primary); margin:0;">${ev.title}</h4>
             <div style="font-size:0.78rem; color:var(--color-text-secondary); margin-top:2px;">
-              👤 Empleado: <strong>${ev.employeeName || 'General'}</strong> | Status: <span class="badge" style="font-size:0.7rem; padding:1px 6px;">${ev.status}</span>
+              Empleado: <strong>${ev.employeeName || 'General'}</strong> | Status: <span class="badge" style="font-size:0.7rem; padding:1px 6px;">${ev.status}</span>
             </div>
           </div>
         </div>
 
         ${ev.hasConflict ? `
           <div style="background:rgba(239,68,68,0.12); border:1px solid var(--color-danger); border-radius:var(--radius-md); padding:var(--space-3); color:var(--color-danger); font-size:0.8rem;">
-            ⚠️ <strong>Conflicto Detectado:</strong> En las fechas seleccionadas se alcanza el límite máximo de personal ausente simultáneo.
+            <strong>Conflicto Detectado:</strong> En las fechas seleccionadas se alcanza el límite máximo de personal ausente simultáneo.
           </div>
         ` : ''}
 
         <div style="font-size:0.82rem; color:var(--color-text-primary);">
-          📅 <strong>Fechas:</strong> ${ev.startDate} ${ev.endDate && ev.endDate !== ev.startDate ? `al ${ev.endDate}` : ''}
+          Fechas: ${ev.startDate} ${ev.endDate && ev.endDate !== ev.startDate ? `al ${ev.endDate}` : ''}
         </div>
 
         ${ev.comments ? `
           <div style="font-size:0.8rem; background:var(--color-bg-secondary); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border);">
-            💬 <strong>Comentarios:</strong> ${ev.comments}
+            Comentarios: ${ev.comments}
           </div>
         ` : ''}
 
         <div style="border-top:1px solid var(--color-border); padding-top:var(--space-3);">
-          <h5 style="font-size:0.8rem; font-weight:700; color:var(--color-text-secondary); margin-bottom:8px;">📜 Historial de Auditoría:</h5>
+          <h5 style="font-size:0.8rem; font-weight:700; color:var(--color-text-secondary); margin-bottom:8px;">Historial de Auditoría:</h5>
           ${historyHTML || '<p style="font-size:0.75rem; color:var(--color-text-secondary);">Sin registro de cambios.</p>'}
         </div>
       </div>
@@ -704,13 +745,13 @@ export class WorkCalendarView extends Component {
 
     if (isOwnerOrManager && ev.status === 'PENDIENTE') {
       footerHTML += `
-        <button class="btn btn-danger btn-sm" id="modal-dtl-reject">❌ Rechazar</button>
-        <button class="btn btn-primary btn-sm" id="modal-dtl-approve">✅ Aprobar Solicitud</button>
+        <button class="btn btn-danger btn-sm" id="modal-dtl-reject">Rechazar</button>
+        <button class="btn btn-primary btn-sm" id="modal-dtl-approve">Aprobar Solicitud</button>
       `;
     } else if (isOwnerOrManager && !ev.isSystemHoliday) {
-      footerHTML += `<button class="btn btn-danger btn-sm" id="modal-dtl-delete">🗑️ Eliminar</button>`;
+      footerHTML += `<button class="btn btn-danger btn-sm" id="modal-dtl-delete">Eliminar</button>`;
     } else if (ev.employeeId === currentUser?.uid && ev.status === 'PENDIENTE') {
-      footerHTML += `<button class="btn btn-warning btn-sm" id="modal-dtl-cancel-req">🚫 Cancelar Solicitud</button>`;
+      footerHTML += `<button class="btn btn-warning btn-sm" id="modal-dtl-cancel-req">Cancelar Solicitud</button>`;
     }
 
     const modal = new Modal({
@@ -779,14 +820,14 @@ export class WorkCalendarView extends Component {
     const bodyHTML = `
       <form id="form-cal-settings" style="display:flex; flex-direction:column; gap:var(--space-4);">
         <div style="background:var(--color-bg-tertiary); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border);">
-          <label class="form-label" style="font-weight:700;">🚨 Límite Máximo de Empleados Ausentes el Mismo Día</label>
+          <label class="form-label" style="font-weight:700;">Límite Máximo de Empleados Ausentes el Mismo Día</label>
           <p style="font-size:0.75rem; color:var(--color-text-secondary); margin-bottom:8px;">Define cuántos empleados pueden estar libres/vacaciones/permiso simultáneamente. Si se alcanza este número, las solicitudes siguientes generarán una alerta de conflicto para aprobación del dueño.</p>
           <input type="number" id="cfg-max-absent" class="input input-md" min="0" value="${config.maxAbsentPerDay ?? 2}" style="max-width:150px; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary);" />
           <small style="font-size:0.7rem; color:var(--color-text-secondary); display:block; margin-top:4px;">(Usa 0 para permitir ausencias sin límite)</small>
         </div>
 
         <div style="border-top:1px solid var(--color-border); padding-top:var(--space-3);">
-          <h4 style="font-size:0.85rem; font-weight:700; color:var(--color-text-primary); margin-bottom:6px;">🎈 Feriados Personalizados de la Empresa</h4>
+          <h4 style="font-size:0.85rem; font-weight:700; color:var(--color-text-primary); margin-bottom:6px;">Feriados Personalizados de la Empresa</h4>
           <p style="font-size:0.75rem; color:var(--color-text-secondary); margin-bottom:8px;">Agrega aniversarios de la empresa, patronales o días libres decretados.</p>
           <div style="display:flex; gap:8px; margin-bottom:8px;">
             <input type="text" id="cfg-holiday-title" class="input input-sm" placeholder="Nombre del feriado" style="flex:1; background:var(--color-bg-secondary); border-color:var(--color-border); color:var(--color-text-primary);" />
@@ -797,7 +838,7 @@ export class WorkCalendarView extends Component {
           <div id="custom-holidays-list" style="display:flex; flex-direction:column; gap:4px;">
             ${(config.customHolidays || []).map((ch, idx) => `
               <div style="display:flex; align-items:center; justify-content:space-between; background:var(--color-bg-tertiary); padding:4px 10px; border-radius:4px; font-size:0.78rem;">
-                <span>🎈 ${ch.title} (${ch.date})</span>
+                <span>${ch.title} (${ch.date})</span>
                 <button type="button" class="btn-remove-holiday" data-index="${idx}" style="background:none; border:none; color:var(--color-danger); cursor:pointer;">✕</button>
               </div>
             `).join('')}
@@ -808,11 +849,11 @@ export class WorkCalendarView extends Component {
 
     const footerHTML = `
       <button class="btn btn-secondary btn-sm" id="modal-cfg-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-cfg-save">💾 Guardar Configuración</button>
+      <button class="btn btn-primary btn-sm" id="modal-cfg-save">Guardar Configuración</button>
     `;
 
     const modal = new Modal({
-      title: '⚙️ Configuración del Calendario Laboral',
+      title: 'Configuración del Calendario Laboral',
       bodyHTML,
       footerHTML,
       size: 'md'
@@ -827,7 +868,7 @@ export class WorkCalendarView extends Component {
       if (!listContainer) return;
       listContainer.innerHTML = tempHolidays.map((ch, idx) => `
         <div style="display:flex; align-items:center; justify-content:space-between; background:var(--color-bg-tertiary); padding:4px 10px; border-radius:4px; font-size:0.78rem;">
-          <span>🎈 ${ch.title} (${ch.date})</span>
+          <span>${ch.title} (${ch.date})</span>
           <button type="button" class="btn-remove-holiday" data-index="${idx}" style="background:none; border:none; color:var(--color-danger); cursor:pointer;">✕</button>
         </div>
       `).join('');

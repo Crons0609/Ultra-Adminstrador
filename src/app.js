@@ -21,6 +21,7 @@ import { AppearanceService } from './services/appearance.service.js';
 import { OfflineSyncService } from './services/offline-sync.service.js';
 import { LocalStorageDBService } from './services/local-storage-db.service.js';
 import { DataPrefetchService } from './services/data-prefetch.service.js';
+import { BranchService } from './services/branch.service.js';
 
 class App {
   constructor() {
@@ -73,6 +74,9 @@ class App {
 
             // Start real-time company modules & settings listener
             this.startCompanyRealtimeListener(userSession);
+
+            // Initialize Multi-Branch listener so globalStore.branches / selectedBranchId are ready
+            BranchService.initBranchListener();
           }
           // Check GPS tracking prompt / auto-resume for employees
           GeolocationService.checkAndPromptGPS();

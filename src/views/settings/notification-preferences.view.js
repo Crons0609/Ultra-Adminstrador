@@ -97,13 +97,13 @@ export class NotificationPreferencesView extends Component {
     }
 
     const categories = [
-      { key: 'PEDIDOS', title: '📦 Pedidos', desc: 'Alertas de nuevos pedidos, cambios de estado y entregas' },
-      { key: 'VENTAS', title: '💰 Ventas', desc: 'Notificaciones de cierres de venta, anulaciones y ventas modificadas' },
-      { key: 'INVENTARIO', title: '⚠️ Inventario Bajo', desc: 'Alertas inmediatas cuando un producto alcance su stock mínimo' },
-      { key: 'MENSAJES', title: '💬 Mensajes Internos', desc: 'Notificaciones de chat entre empleados y avisos de equipo' },
-      { key: 'FINANZAS', title: '💳 Finanzas & Pagos', desc: 'Pagos recibidos, facturas emitidas y vencimientos de crédito' },
-      { key: 'RRHH', title: '👥 Recursos Humanos', desc: 'Solicitudes de vacaciones, permisos e incidencias de personal' },
-      { key: 'SISTEMA', title: '⚙️ Alertas de Sistema', desc: 'Avisos de seguridad, mantenimiento y actualizaciones importantes' }
+      { key: 'PEDIDOS', title: 'Pedidos', desc: 'Alertas de nuevos pedidos, cambios de estado y entregas' },
+      { key: 'VENTAS', title: 'Ventas', desc: 'Notificaciones de cierres de venta, anulaciones y ventas modificadas' },
+      { key: 'INVENTARIO', title: 'Inventario Bajo', desc: 'Alertas inmediatas cuando un producto alcance su stock mínimo' },
+      { key: 'MENSAJES', title: 'Mensajes Internos', desc: 'Notificaciones de chat entre empleados y avisos de equipo' },
+      { key: 'FINANZAS', title: 'Finanzas & Pagos', desc: 'Pagos recibidos, facturas emitidas y vencimientos de crédito' },
+      { key: 'RRHH', title: 'Recursos Humanos', desc: 'Solicitudes de vacaciones, permisos e incidencias de personal' },
+      { key: 'SISTEMA', title: 'Alertas de Sistema', desc: 'Avisos de seguridad, mantenimiento y actualizaciones importantes' }
     ];
 
     return `
@@ -143,10 +143,11 @@ export class NotificationPreferencesView extends Component {
 
           <div style="display:flex; justify-content:flex-end;">
             <button type="submit" class="btn btn-primary" ${saving ? 'disabled' : ''} style="padding: 12px 28px; font-weight: 700;">
-              ${saving ? 'Guardando...' : '💾 Guardar Preferencias'}
+              ${saving ? 'Guardando...' : 'Guardar Preferencias'}
             </button>
           </div>
         </form>
+
 
         <style>
           .notif-toggle-input:checked + .slider { background-color: #8b5cf6 !important; }

@@ -529,7 +529,7 @@ export class FirestoreService {
       enableVehiclesCatalog: false,
       enableRentals: false,
       enableRentalReminders: false,
-      enableAppointments: false,
+      enableAppointments: true,
       enableSchedules: false,
       enableReservations: false,
       enableServiceRequests: false,
