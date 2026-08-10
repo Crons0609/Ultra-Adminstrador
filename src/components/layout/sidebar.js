@@ -377,30 +377,48 @@ export class Sidebar extends Component {
     // Support tickets realtime badge count listener
     const { currentUser, activeRole } = GlobalStore.getState();
     const rawRole = activeRole || (currentUser ? currentUser.role : '');
-    if (isProgrammerRole(rawRole, currentUser?.email) && db) {
-      this._unsubTickets = onValue(ref(db, 'support_tickets'), (snapshot) => {
-        let pendingCount = 0;
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          Object.values(data).forEach(t => {
-            if (t.status === 'Pendiente') pendingCount++;
-          });
+    // Trap wheel & touch scroll events inside sidebar menu so main page never scrolls
+    const sidebarEl = this.element;
+    if (sidebarEl) {
+      const menuEl = sidebarEl.querySelector('.sidebar-menu');
+
+      this._wheelHandler = (e) => {
+        if (!menuEl) return;
+        const delta = e.deltaY;
+        menuEl.scrollTop += delta;
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      sidebarEl.addEventListener('wheel', this._wheelHandler, { passive: false });
+
+      let startY = 0;
+      this._touchStartHandler = (e) => {
+        if (e.touches && e.touches.length > 0) {
+          startY = e.touches[0].clientY;
         }
-        this._pendingTicketsCount = pendingCount;
-        const badgeEl = this.element?.querySelector('#sidebar-support-badge');
-        if (badgeEl) {
-          if (pendingCount > 0) {
-            badgeEl.textContent = pendingCount;
-            badgeEl.style.display = 'inline-flex';
-          } else {
-            badgeEl.style.display = 'none';
-          }
-        }
-      });
+      };
+      this._touchMoveHandler = (e) => {
+        if (!menuEl || !e.touches || e.touches.length === 0) return;
+        const currentY = e.touches[0].clientY;
+        const deltaY = startY - currentY;
+        startY = currentY;
+        menuEl.scrollTop += deltaY;
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      sidebarEl.addEventListener('touchstart', this._touchStartHandler, { passive: true });
+      sidebarEl.addEventListener('touchmove', this._touchMoveHandler, { passive: false });
     }
   }
 
   unmount() {
+    if (this.element && this._wheelHandler) {
+      this.element.removeEventListener('wheel', this._wheelHandler);
+    }
+    if (this.element && this._touchMoveHandler) {
+      this.element.removeEventListener('touchmove', this._touchMoveHandler);
+    }
     if (this._hashHandler) {
       window.removeEventListener('hashchange', this._hashHandler);
     }

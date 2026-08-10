@@ -1,8 +1,8 @@
 /**
  * @file tables.css
- * @description Data tables — responsive containers with scroll.
- *              Mobile (≤768px): expandable accordion cards — avatar + name visible,
- *              tap to reveal all business details with smooth animation.
+ * @description Enterprise data tables — dark surface, subtle dividers, hover glow,
+ *              and mobile accordion cards with glassmorphic styling.
+ * RESPONSIVE: Desktop table | Mobile accordion cards.
  */
 
 /* ─── Scroll Wrapper (Desktop) ─── */
@@ -12,15 +12,10 @@
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-  background-image:
-    linear-gradient(to right, var(--color-surface) 20%, transparent),
-    linear-gradient(to left,  var(--color-surface) 20%, transparent);
-  background-position: left center, right center;
-  background-repeat: no-repeat;
-  background-size: 30px 100%, 30px 100%;
-  background-attachment: local, local;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* ─── Table Base ─── */
@@ -32,23 +27,24 @@
   font-size: var(--text-sm);
 }
 
-/* ─── Cells ─── */
+/* ─── Header Cells ─── */
 .th {
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  background: rgba(7, 9, 14, 0.7);
+  color: var(--color-text-tertiary);
+  font-weight: 700;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   white-space: nowrap;
   user-select: none;
-  font-size: var(--text-xs);
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
+/* ─── Data Cells ─── */
 .td {
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   color: var(--color-text-primary);
   vertical-align: middle;
   font-size: var(--text-sm);
@@ -57,8 +53,14 @@
 .tr:last-child .td { border-bottom: none; }
 
 /* ─── Hover & Selection ─── */
-.tr-hover:hover { background-color: var(--color-bg-secondary); }
-.tr-selected    { background-color: var(--color-accent-light) !important; }
+.tr-hover:hover {
+  background: rgba(255, 255, 255, 0.035);
+  transition: background var(--transition-fast);
+}
+.tr-selected {
+  background: rgba(99, 102, 241, 0.1) !important;
+  border-left: 2px solid #6366f1;
+}
 
 /* ─── Dense variant ─── */
 .table-dense .th { padding: var(--space-2) var(--space-3); }
@@ -93,19 +95,21 @@
     padding: var(--space-6);
   }
 
-  /* ── Single card ── */
+  /* ── Single card — Enterprise glass ── */
   .dt-card {
     border-radius: 14px;
     border: 1px solid var(--color-border);
-    background: var(--color-bg-secondary);
+    background: rgba(13, 17, 26, 0.85);
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .dt-card--open {
-    border-color: var(--color-accent);
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 4px 24px rgba(99, 102, 241, 0.15);
   }
 
   /* ── Card header (always visible) ── */
@@ -125,7 +129,7 @@
   }
 
   .dt-card-header:active {
-    background: rgba(255,255,255,0.04);
+    background: rgba(99, 102, 241, 0.05);
   }
 
   /* ── Avatar circle ── */
@@ -141,8 +145,8 @@
     font-weight: 700;
     color: #fff;
     letter-spacing: 0.5px;
-    border: 2px solid rgba(255,255,255,0.15);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
     user-select: none;
   }
 
@@ -202,7 +206,7 @@
     display: flex;
     flex-direction: column;
     padding: 12px 16px 16px;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .dt-card-field {
@@ -210,7 +214,7 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     gap: 12px;
     flex-wrap: wrap;
   }
@@ -224,7 +228,7 @@
     font-size: 0.67rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.08em;
     color: var(--color-text-tertiary);
     flex-shrink: 0;
     padding-top: 1px;
@@ -245,7 +249,7 @@
     align-items: stretch;
     padding-top: 14px;
     margin-top: 4px;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
     border-bottom: none;
     gap: 0;
   }

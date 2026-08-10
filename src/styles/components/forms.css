@@ -15,8 +15,9 @@
 /* ─── Labels ─── */
 .form-label {
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
 }
 
 .form-label-required::after {
@@ -63,20 +64,21 @@
   width: 16px;
   height: 16px;
   min-width: 16px;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-sm);
-  background-color: var(--color-bg-primary);
+  background: rgba(255, 255, 255, 0.04);
   outline: none;
   cursor: pointer;
   position: relative;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.checkbox-input:hover { border-color: var(--color-border-hover); }
+.checkbox-input:hover { border-color: rgba(99, 102, 241, 0.5); background: rgba(99, 102, 241, 0.06); }
 
 .checkbox-input:checked {
-  background-color: var(--color-accent);
+  background: var(--color-accent);
   border-color: var(--color-accent);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
 }
 
 .checkbox-input:checked::after {
@@ -107,12 +109,13 @@
   width: 36px;
   height: 20px;
   min-width: 36px;
-  background-color: var(--color-border);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-full);
   position: relative;
   outline: none;
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .switch-input::after {
@@ -127,7 +130,7 @@
   transition: transform var(--transition-fast);
 }
 
-.switch-input:checked { background-color: var(--color-accent); }
+.switch-input:checked { background: var(--color-accent); border-color: rgba(99, 102, 241, 0.5); box-shadow: 0 0 12px rgba(99, 102, 241, 0.3); }
 .switch-input:checked::after { transform: translateX(16px); }
 
 /* ─── Form Section Headers ─── */
@@ -137,7 +140,8 @@
   color: var(--color-text-primary);
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  letter-spacing: -0.01em;
 }
 
 /* ─── Form Actions Row ─── */

@@ -61,7 +61,8 @@
             },
             surface: {
               DEFAULT: 'var(--color-surface)',
-              hover: 'var(--color-surface-hover)'
+              hover: 'var(--color-surface-hover)',
+              elevated: 'var(--color-surface-elevated)'
             },
             accent: {
               DEFAULT: 'var(--color-accent)',
@@ -73,6 +74,11 @@
               secondary: 'var(--color-text-secondary)',
               tertiary: 'var(--color-text-tertiary)'
             },
+            border: {
+              DEFAULT: 'var(--color-border)',
+              hover: 'var(--color-border-hover)',
+              focus: 'var(--color-border-focus)'
+            },
             success: 'var(--color-success)',
             warning: 'var(--color-warning)',
             danger: 'var(--color-danger)',
@@ -81,6 +87,14 @@
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
             display: ['Outfit', 'sans-serif']
+          },
+          backdropBlur: {
+            xs: '2px',
+            sm: '4px',
+            md: '8px',
+            lg: '12px',
+            xl: '16px',
+            '2xl': '20px'
           }
         }
       }

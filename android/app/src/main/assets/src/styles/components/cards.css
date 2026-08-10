@@ -1,29 +1,56 @@
 /**
  * @file cards.css
- * @description Card containers, inner paddings, hover effects and header/footer structures.
+ * @description Enterprise glassmorphic card containers — dark surface, accent hover,
+ *              depth shadows and luminous top-border on interaction.
  */
 
+/* ─── Base Card — Enterprise Glassmorphic ─── */
 .card {
-  background-color: var(--color-surface);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+  transition:
+    box-shadow var(--transition-normal),
+    border-color var(--transition-normal),
+    transform var(--transition-fast);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
 }
 
+/* Subtle top accent line (appears on hover) */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #6366f1 40%, #06b6d4 75%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* ─── Interactive Card ─── */
 .card-interactive {
   cursor: pointer;
 }
 
 .card-interactive:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-md);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(99, 102, 241, 0.08);
+  transform: translateY(-1px);
 }
 
-/* Card Elements */
+.card-interactive:hover::before {
+  opacity: 0.9;
+}
+
+/* ─── Card Elements ─── */
 .card-header {
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border);
@@ -38,6 +65,7 @@
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .card-description {
@@ -54,8 +82,24 @@
 .card-footer {
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
-  background-color: var(--color-bg-secondary);
+  background-color: rgba(7, 9, 14, 0.5);
   display: flex;
   align-items: center;
   justify-content: flex-end;
+}
+
+/* ─── Elevated card variant ─── */
+.card-elevated {
+  box-shadow: var(--shadow-xl);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Accent card variant (e.g. featured stats) ─── */
+.card-accent {
+  border-color: rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.card-accent::before {
+  opacity: 0.8;
 }

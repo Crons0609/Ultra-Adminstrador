@@ -170,12 +170,6 @@ export function roleGuard(allowedRoles) {
         redirectUserDashboard(userRole, router);
         return false;
       }
-
-      if (path === '/manager/appointments' && !guards.enableAppointments) {
-        console.warn(`Access Denied: Appointments are disabled for this business type.`);
-        redirectUserDashboard(userRole, router);
-        return false;
-      }
     }
 
     // Check company status / subscription

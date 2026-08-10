@@ -259,7 +259,7 @@ export function getModuleGuards(businessType) {
 
   const base = {
     enableQR:               false,
-    enableAppointments:     false,
+    enableAppointments:     true,
     enableServiceRequests:  false,
     enableRentals:          false,
     enableVehiclesCatalog:  false,

@@ -1,52 +1,84 @@
 /**
  * @file page.css
  * @description Main application layout — sidebar offset, content bounds, page headers.
+ *              Enterprise ambient background: subtle tech grid + ambient halos.
  * RESPONSIVE: Fluid padding via clamp(), sidebar offset managed via CSS variables.
  */
 
+/* ─── App Container ─── */
 .app-container {
   display: flex;
+  min-height: 100vh;
   min-height: 100svh;
   background-color: var(--color-bg-primary);
   overflow-x: hidden;
   touch-action: pan-y;
+  position: relative;
+  width: 100%;
 }
 
+/* ─── Ambient Tech Background (applied on body pseudo-elements) ─── */
+.theme-dark body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 80% 85%, rgba(6, 182, 212, 0.07) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 70% at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 50% 30%, #0d111a 0%, #06080c 100%);
+}
+
+/* Tech matrix grid overlay */
+.theme-dark body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 20%, transparent 80%);
+  opacity: 0.6;
+}
+
+/* ─── Main Content Area ─── */
 .main-content {
   flex-grow: 1;
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
   min-width: 0;
-  /* Prevent flex overflow */
+  min-height: 100vh;
   min-height: 100svh;
   transition: margin-left var(--transition-normal);
-  /* Offset for fixed header, which already includes the Android status bar inset */
   padding-top: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   overflow-x: hidden;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+  width: calc(100% - var(--sidebar-width));
 }
 
 /* Sidebar in collapsed/rail mode */
 body.sidebar-collapsed .main-content {
   margin-left: var(--sidebar-collapsed-width);
+  width: calc(100% - var(--sidebar-collapsed-width));
 }
 
 /* ─── Page Body ─── */
 .page-body {
   flex-grow: 1;
-  padding: clamp(12px, 3vw, 24px);
-  max-width: 1400px;
+  padding: clamp(16px, 2.5vw, 32px);
   width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Full-width variant (no max-width cap) */
-.page-body.page-body-full {
   max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ─── Page Header ─── */
@@ -57,12 +89,24 @@ body.sidebar-collapsed .main-content {
   margin-bottom: var(--space-6);
   flex-wrap: wrap;
   gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .page-title-group {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.theme-dark .page-body h1,
+.theme-dark .page-header h1 {
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
 }
 
 .page-subtitle {
@@ -81,14 +125,20 @@ body.sidebar-collapsed .main-content {
   box-shadow: var(--shadow-lg);
 }
 
-/* ─── Mobile Responsive ─── */
+/* ─── Mobile & Tablet Responsive ─── */
 @media (max-width: 1023px) {
   .main-content {
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100% !important;
   }
 
   body.sidebar-collapsed .main-content {
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .page-body {
+    padding: clamp(12px, 3vw, 20px);
   }
 }
 
@@ -99,12 +149,12 @@ body.sidebar-collapsed .main-content {
     gap: var(--space-3);
   }
 
-  .page-header>*:last-child {
+  .page-header > *:last-child {
     width: 100%;
   }
 
-  .page-header>*:last-child .btn,
-  .page-header>*:last-child button {
+  .page-header > *:last-child .btn,
+  .page-header > *:last-child button {
     width: 100%;
     justify-content: center;
   }

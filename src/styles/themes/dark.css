@@ -1,35 +1,82 @@
 /**
  * @file dark.css
- * @description Theme-specific overrides, body background settings, and custom dark shadow profiles.
+ * @description Enterprise dark theme overrides — global ambient background,
+ *              body surface, and component-level visual consistency.
+ *              Matches the futuristic, premium aesthetic of the Login screen.
  */
 
+/* ── Base body styles for dark Enterprise theme ── */
 .theme-dark body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.theme-dark .card {
-  background-color: var(--color-surface);
-  border-color: var(--color-border);
-}
-
-.theme-dark .header {
+/* ── Main app container — sets the deep obsidian stage ── */
+.theme-dark .app-container {
   background-color: var(--color-bg-primary);
+  position: relative;
+}
+
+/* ── Generic card surfaces ── */
+.theme-dark .card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Header — translucent Enterprise topbar ── */
+.theme-dark .header {
+  background-color: rgba(7, 9, 14, 0.85);
   border-bottom-color: var(--color-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
+/* ── Sidebar — deep glassmorphic Enterprise sidebar ── */
 .theme-dark .sidebar {
-  background-color: var(--color-bg-secondary);
+  background: rgba(11, 14, 21, 0.92);
   border-right-color: var(--color-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-/* Dark Mode specific shadows and visual effects */
+/* ── Global Glass utility ── */
 .theme-dark .glass {
-  background-color: rgba(10, 10, 11, 0.7);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* Specific component visual adjustment for Dark Mode */
+/* ── Placeholder text ── */
 .theme-dark ::placeholder {
   color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+/* ── Selection ── */
+.theme-dark ::selection {
+  background-color: var(--color-accent-light);
+  color: var(--color-text-primary);
+}
+
+/* ── Scrollbar ── */
+.theme-dark ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.theme-dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.theme-dark ::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.25);
+  border-radius: 99px;
+}
+.theme-dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.45);
 }

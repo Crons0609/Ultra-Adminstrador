@@ -1,3 +1,3 @@
-en el apartado de citas y reservas cuando lo quiero abrir se habre el apartado de "control financiero" no deberia de hacer eso ya que los 2 son apartados diferentes. 
 
-necesito que el apartado de dashboard sea la primera pagina que vea el dueño al abrir la app o la pagina web para saber rapidamente como esta el local. ademas necesito que agregues en el dashboard un grafico de rendimiento general ese rendimiento revisara todo el local y vera que tanto rendimento esta teniendo el local y los trabajadores.
+
+necesito poder agregar un apartado que se llame "traslado" dentro de ese apartado se aran las exportaciones de una socursal a otra o de una bodega a otra. es decir primero se elegira si se trasladara desde el local o de la bodega dependiendo si tiene bodega y luego se seleccionara el o los productos que se aran el traslado y luego el lugar del traslado. dependiendo si el dueño tiene varias sucursales o si las sucursales tienen bodegas o simplemente las bodegas., agregale mas

@@ -13,8 +13,8 @@
 
 /* Sidebar Menu */
 .settings-sidebar {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
+  background: rgba(11, 14, 21, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
   display: flex;
@@ -22,6 +22,8 @@
   gap: 4px;
   position: sticky;
   top: var(--space-4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .settings-tab-btn {
@@ -48,16 +50,17 @@
 }
 
 .settings-tab-btn.active {
-  background: var(--color-accent-light);
-  border-color: rgba(59, 130, 246, 0.2);
-  color: var(--color-accent);
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.1);
 }
 
 /* Content Area */
 .settings-content-wrapper {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
+  background: rgba(11, 14, 21, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   min-height: 500px;
@@ -65,6 +68,8 @@
   box-sizing: border-box;
   max-width: 100%;
   min-width: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .settings-panel {
@@ -112,13 +117,14 @@
 
 /* Internal Cards */
 .settings-card {
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  transition: border-color var(--transition-fast);
 }
 
 .settings-card-title {
@@ -126,11 +132,12 @@
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
+  letter-spacing: -0.01em;
 }
 
 /* Form Styles */

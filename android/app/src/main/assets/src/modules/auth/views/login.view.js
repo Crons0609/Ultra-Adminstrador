@@ -1,8 +1,9 @@
 /**
  * @file login.view.js
- * @description Login view — Premium full-screen auth page with email/password form.
- *             Also includes a hidden developer/superadmin registration panel
- *             protected by a secret access key.
+ * @description Enterprise SaaS Login View for Ultra Administrador.
+ *              Displays direct Enterprise login form upon entry. Runs validation first, then triggers
+ *              a Normal Vortex (Indigo/Cyan) on successful authentication before opening the Dashboard,
+ *              or a Red Vortex (Crimson) on failed authentication while keeping the user on the login page.
  */
 
 import { Component } from '../../../core/component.js';
@@ -14,351 +15,337 @@ import { GlobalStore } from '../../../core/state.js';
 import { redirectUserDashboard } from '../../../core/middleware.js';
 import { isValidEmail } from '../../../utils/validators.js';
 import { APP_CONFIG } from '../../../config/app.config.js';
-import { AnimationService } from '../../../services/animation.service.js';
 import { SavedAccountsService } from '../../../services/saved-accounts.service.js';
 import { getBusinessTypeOptions } from '../../../config/business-types.config.js';
+import { VortexEngine } from '../../../utils/vortex-engine.js';
 import gsap from 'gsap';
+
+/**
+ * Translates Firebase technical errors to user-friendly Spanish messages.
+ * @param {Error|Object} error 
+ * @returns {string}
+ */
+function getFriendlyAuthErrorMessage(error) {
+  const code = (error?.code || error?.message || '').toLowerCase();
+
+  if (code.includes('invalid-credential') || code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-email')) {
+    return 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+  }
+  if (code.includes('too-many-requests')) {
+    return 'Demasiados intentos fallidos. Por favor espera unos momentos para intentar de nuevo.';
+  }
+  if (code.includes('user-disabled')) {
+    return 'Esta cuenta ha sido deshabilitada. Contacta al administrador.';
+  }
+  if (code.includes('network') || code.includes('unavailable') || code.includes('offline')) {
+    return 'Error de conexión a internet. Verifica tu red e intenta nuevamente.';
+  }
+  return 'No se pudo iniciar sesión. Verifica tus credenciales e intenta de nuevo.';
+}
 
 export class LoginView extends Component {
   constructor(params = {}) {
     super(params);
-    this.state = { loading: false, errors: {}, showOwnerRequestPanel: false, ownerRequesting: false };
+    this.state = {
+      loading: false,
+      errors: {},
+      showOwnerRequestPanel: false,
+      ownerRequesting: false
+    };
+    this.vortexEngine = null;
   }
 
   render() {
     const { loading } = this.state;
 
     return `
-      <div class="login-page" style="
-        min-height: 100vh;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--color-bg-primary);
-        padding: var(--space-4);
-      ">
-        <!-- Three.js 3D Background Container -->
-        <div id="three-bg-container" style="
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: radial-gradient(ellipse 80% 60% at 50% -20%, var(--color-accent-light), transparent);
-          z-index: 0;
-          overflow: hidden;
-        "></div>
+      <div class="login-enterprise-page">
+        <!-- Enterprise Tech Background -->
+        <div class="tech-bg-container">
+          <div class="tech-bg-grid"></div>
+          <div class="tech-bg-halo tech-bg-halo-1"></div>
+          <div class="tech-bg-halo tech-bg-halo-2"></div>
+          <div class="tech-bg-halo tech-bg-halo-3"></div>
+        </div>
 
-        <div class="login-card-anim" style="
-          width: 100%;
-          max-width: 420px;
-          position: relative;
-          z-index: 1;
-        ">
-          <!-- Logo / Brand -->
-          <div style="text-align: center; margin-bottom: var(--space-8);">
-            <div class="hero-logo" style="
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              width: 84px;
-              height: 84px;
-              border-radius: var(--radius-xl);
-              background: rgba(255,255,255,0.03);
-              border: 1px solid rgba(255,255,255,0.1);
-              padding: 10px;
-              margin-bottom: var(--space-3);
-              box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-            ">
+        <!-- 2D Canvas Vortex Overlay -->
+        <canvas id="vortex-canvas"></canvas>
+        <div id="vortex-status-text" class="vortex-status-text"></div>
+
+        <div class="login-content-wrapper">
+          <!-- Enterprise Brand Header -->
+          <div class="enterprise-brand-header">
+            <div class="enterprise-logo-container">
               <img src="/assets/logo_ultra_administrador.png" 
                    alt="Ultra Administrador" 
-                   onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src='assets/logo_ultra_administrador.png';}else if(this.dataset.tried==='1'){this.dataset.tried='2';this.src='logo_ultra_administrador.png';}else if(this.dataset.tried==='2'){this.dataset.tried='3';this.src='/logo_ultra_administrador.png';}" 
-                   style="width: 100%; height: 100%; object-fit: contain;" />
+                   onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src='assets/logo_ultra_administrador.png';}else if(this.dataset.tried==='1'){this.dataset.tried='2';this.src='logo_ultra_administrador.png';}else if(this.dataset.tried==='2'){this.dataset.tried='3';this.src='/logo_ultra_administrador.png';}" />
             </div>
-            <h1 class="hero-title" style="
-              font-family: var(--font-display);
-              font-size: 1.6rem;
-              font-weight: 800;
-              color: var(--color-text-primary);
-              margin: 0 0 var(--space-1);
-              letter-spacing: -0.02em;
-            ">${APP_CONFIG.name}</h1>
-            <p class="hero-subtitle" style="color: var(--color-text-secondary); font-size: 0.85rem; margin: 0;">
-              Accede a tu panel de administración
-            </p>
+            <h1 class="enterprise-brand-title">${APP_CONFIG.name}</h1>
+            <div class="enterprise-brand-badge">
+              <span class="badge-dot"></span>
+              Enterprise Control Platform
+            </div>
+            <p class="enterprise-brand-subtitle">Accede a tu panel de administración</p>
           </div>
 
-          <!-- Login Card -->
-          <div class="card" style="padding: var(--space-6);">
-            <!-- Dynamic Lockout Alert Banner -->
-            <div id="login-alert" style="display: none; margin-bottom: var(--space-4);"></div>
-
-            <!-- Saved Accounts Quick Selector -->
-            <div id="saved-accounts-login-container"></div>
-
-            <form id="login-form" novalidate>
-              <div class="form-group">
-                <label class="form-label" for="login-email">Correo electrónico</label>
-                <input
-                  type="email"
-                  id="login-email"
-                  class="input input-md"
-                  placeholder="correo@empresa.com"
-                  autocomplete="email"
-                  required
-                />
-                <p class="form-helper error" id="email-error" style="display: none;"></p>
+          <!-- Enterprise Login Form Container (Direct Entrance) -->
+          <div id="login-card-container" class="login-card-container">
+            <div class="enterprise-card" id="main-enterprise-card">
+              <!-- Security Badge Header -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="color: #818cf8; font-size: 1.1rem;">🔒</span>
+                  <span style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; letter-spacing: 0.05em; text-transform: uppercase;">
+                    Autenticación Requerida
+                  </span>
+                </div>
+                <span style="font-size: 0.7rem; color: #64748b; background: rgba(255,255,255,0.04); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
+                  SSL 256-Bit
+                </span>
               </div>
 
-              <div class="form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <label class="form-label" for="login-password" style="margin-bottom: 0;">Contraseña</label>
-                  <a href="#/forgot-password" style="font-size: 0.75rem; color: var(--color-accent); text-decoration: none;">
-                    ¿Olvidaste tu contraseña?
-                  </a>
-                </div>
-                <div style="position: relative; display: flex; align-items: center;">
-                  <input
-                    type="password"
-                    id="login-password"
-                    class="input input-md"
-                    placeholder="••••••••"
-                    autocomplete="current-password"
-                    required
-                    style="padding-right: 42px; width: 100%;"
-                  />
-                  <button
-                    type="button"
-                    id="btn-toggle-password"
-                    style="
-                      position: absolute;
-                      right: 8px;
-                      background: transparent;
-                      border: none;
-                      color: var(--color-text-secondary);
-                      cursor: pointer;
-                      padding: 6px 8px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      font-size: 1.1rem;
-                      border-radius: var(--radius-sm);
-                      user-select: none;
-                      transition: color 0.2s;
-                    "
-                    title="Mostrar contraseña"
-                  >
-                    👁️
-                  </button>
-                </div>
-                <p class="form-helper error" id="password-error" style="display: none;"></p>
-              </div>
+              <!-- Dynamic Lockout Alert Banner -->
+              <div id="login-alert" style="display: none; margin-bottom: var(--space-4);"></div>
 
-              <button
-                type="submit"
-                id="login-submit-btn"
-                class="btn btn-primary btn-md w-full"
-                style="width: 100%; margin-top: var(--space-2);"
-                ${loading ? 'disabled' : ''}
-              >
-                ${loading ? 'Accediendo...' : 'Iniciar sesión'}
-              </button>
-            </form>
-          </div>
+              <!-- Saved Accounts Quick Selector -->
+              <div id="saved-accounts-login-container"></div>
 
-          <!-- Business Owner Request Panel Toggle Link -->
-          <div style="text-align: center; margin-top: var(--space-4);">
-            <button
-              id="btn-toggle-owner-request"
-              style="
-                background: none;
-                border: none;
-                color: var(--color-accent, #8b5cf6);
-                font-size: 0.82rem;
-                font-weight: 600;
-                cursor: pointer;
-                opacity: 0.9;
-                letter-spacing: 0.02em;
-                transition: all 0.2s;
-                padding: 6px 12px;
-                border-radius: var(--radius-md);
-              "
-              onmouseover="this.style.opacity='1'; this.style.background='rgba(139,92,246,0.1)'"
-              onmouseout="this.style.opacity='0.9'; this.style.background='none'"
-              title="Solicitar registro para tu negocio"
-            >
-              🏢 ¿Quieres registrar tu negocio? Solicitar Cuenta
-            </button>
-          </div>
-
-          <!-- Business Owner Request Panel (hidden by default) -->
-          <div id="owner-request-panel" style="
-            display: none;
-            margin-top: var(--space-4);
-            animation: slideDown 0.3s ease forwards;
-          ">
-            <div class="card" style="
-              padding: var(--space-6);
-              border: 1px solid rgba(139, 92, 246, 0.35);
-              background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(0,0,0,0));
-            ">
-              <!-- Header -->
-              <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4);">
-                <span style="font-size: 1.4rem;">🏢</span>
-                <div>
-                  <h3 style="margin: 0; font-size: 0.95rem; color: var(--color-accent); font-weight: 700;">
-                    Solicitud de Nuevo Dueño de Negocio
-                  </h3>
-                  <p style="margin: 0; font-size: 0.72rem; color: var(--color-text-tertiary);">
-                    Un programador revisará y aprobará tu registro para activar tu acceso
-                  </p>
-                </div>
-              </div>
-
-              <!-- Success Alert (hidden by default) -->
-              <div id="owner-req-success-alert" style="display: none; margin-bottom: var(--space-4); background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); border-radius: var(--radius-md); padding: var(--space-3); color: #22c55e; font-size: 0.82rem; text-align: center;">
-                ✅ <strong>¡Solicitud Enviada con Éxito!</strong><br/>
-                Un programador revisará tus datos y activará tu cuenta pronto.
-              </div>
-
-              <form id="owner-request-form" novalidate>
-                <!-- Owner Name -->
-                <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="req-owner-name" style="font-size: 0.75rem;">
-                    👤 Nombre Completo del Propietario
-                  </label>
-                  <input
-                    type="text"
-                    id="req-owner-name"
-                    class="input input-md"
-                    placeholder="Ej. Juan Pérez"
-                    required
-                  />
-                  <p class="form-helper error" id="req-owner-name-error" style="display: none; font-size: 0.7rem;"></p>
+              <form id="login-form" novalidate>
+                <!-- Email Input -->
+                <div class="enterprise-form-group">
+                  <label class="enterprise-input-label" for="login-email">Correo Electrónico</label>
+                  <div class="enterprise-input-wrapper">
+                    <span class="enterprise-input-icon">✉️</span>
+                    <input
+                      type="email"
+                      id="login-email"
+                      class="enterprise-input"
+                      placeholder="correo@empresa.com"
+                      autocomplete="email"
+                      required
+                    />
+                  </div>
+                  <p class="form-helper error" id="email-error" style="display: none; font-size: 0.72rem; color: #f87171; margin-top: 4px;"></p>
                 </div>
 
-                <!-- Company Name -->
-                <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="req-company-name" style="font-size: 0.75rem;">
-                    🏪 Nombre de la Empresa / Negocio
-                  </label>
-                  <input
-                    type="text"
-                    id="req-company-name"
-                    class="input input-md"
-                    placeholder="Ej. RestoBar El Portal"
-                    required
-                  />
-                  <p class="form-helper error" id="req-company-name-error" style="display: none; font-size: 0.7rem;"></p>
-                </div>
-
-                <!-- Business Type -->
-                <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="req-business-type" style="font-size: 0.75rem;">
-                    📌 Tipo de Negocio
-                  </label>
-                  <select
-                    id="req-business-type"
-                    class="input input-md"
-                    style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);"
-                  >
-                    ${getBusinessTypeOptions()}
-                  </select>
-                </div>
-
-                <!-- Email -->
-                <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="req-email" style="font-size: 0.75rem;">
-                    📧 Correo Electrónico
-                  </label>
-                  <input
-                    type="email"
-                    id="req-email"
-                    class="input input-md"
-                    placeholder="propietario@empresa.com"
-                    autocomplete="username"
-                    required
-                  />
-                  <p class="form-helper error" id="req-email-error" style="display: none; font-size: 0.7rem;"></p>
-                </div>
-
-                <!-- Phone -->
-                <div class="form-group" style="margin-bottom: var(--space-3);">
-                  <label class="form-label" for="req-phone" style="font-size: 0.75rem;">
-                    📞 Teléfono de Contacto
-                  </label>
-                  <input
-                    type="tel"
-                    id="req-phone"
-                    class="input input-md"
-                    placeholder="Ej. +505 8888 8888"
-                    required
-                  />
-                  <p class="form-helper error" id="req-phone-error" style="display: none; font-size: 0.7rem;"></p>
-                </div>
-
-                <!-- Password -->
-                <div class="form-group" style="margin-bottom: var(--space-4);">
-                  <label class="form-label" for="req-password" style="font-size: 0.75rem;">
-                    🔑 Contraseña Deseada (mín. 6 caracteres)
-                  </label>
-                  <div style="position: relative; display: flex; align-items: center;">
+                <!-- Password Input -->
+                <div class="enterprise-form-group">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label class="enterprise-input-label" for="login-password" style="margin-bottom: 0;">Contraseña</label>
+                    <a href="#/forgot-password" style="font-size: 0.75rem; color: #818cf8; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#a5b4fc'" onmouseout="this.style.color='#818cf8'">
+                      ¿Olvidaste tu contraseña?
+                    </a>
+                  </div>
+                  <div class="enterprise-input-wrapper">
+                    <span class="enterprise-input-icon">🔑</span>
                     <input
                       type="password"
-                      id="req-password"
-                      class="input input-md"
+                      id="login-password"
+                      class="enterprise-input"
                       placeholder="••••••••"
-                      minlength="6"
-                      autocomplete="new-password"
+                      autocomplete="current-password"
                       required
-                      style="padding-right: 40px; width: 100%;"
+                      style="padding-right: 44px;"
                     />
                     <button
                       type="button"
-                      id="btn-toggle-req-password"
+                      id="btn-toggle-password"
                       style="
                         position: absolute;
                         right: 8px;
                         background: transparent;
                         border: none;
-                        color: var(--color-text-secondary);
+                        color: #94a3b8;
                         cursor: pointer;
-                        padding: 4px 6px;
-                        font-size: 1rem;
+                        padding: 6px 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 1.05rem;
+                        border-radius: 6px;
+                        user-select: none;
+                        transition: color 0.2s;
                       "
                       title="Mostrar contraseña"
                     >
                       👁️
                     </button>
                   </div>
-                  <p class="form-helper error" id="req-password-error" style="display: none; font-size: 0.7rem;"></p>
+                  <p class="form-helper error" id="password-error" style="display: none; font-size: 0.72rem; color: #f87171; margin-top: 4px;"></p>
                 </div>
 
+                <!-- Submit Button -->
                 <button
                   type="submit"
-                  id="btn-submit-owner-req"
-                  class="btn btn-primary btn-md"
-                  style="width: 100%; background: linear-gradient(135deg, #7c3aed, #8b5cf6);"
+                  id="login-submit-btn"
+                  class="enterprise-submit-btn"
+                  ${loading ? 'disabled' : ''}
                 >
-                  📩 Enviar Solicitud a Programador
+                  ${loading ? '<span class="animate-spin" style="display:inline-block">⏳</span> Validando credenciales...' : 'Iniciar Sesión'}
                 </button>
               </form>
             </div>
-          </div>
 
-          <!-- Login Footer Copyright -->
-          <div style="text-align: center; margin-top: var(--space-6); font-size: 0.75rem; color: var(--color-text-tertiary);">
-            <p style="margin: 0;">&copy; ${new Date().getFullYear()} <strong>Ultra Administrador</strong>. Todos los derechos reservados.</p>
-            <p style="margin: 2px 0 0; opacity: 0.75;">Desarrollado por <strong style="color: var(--color-accent-light, #a78bfa);">ProLine System</strong></p>
-          </div>
+            <!-- Business Owner Request Panel Toggle Button -->
+            <div style="margin-top: 16px;">
+              <button
+                id="btn-toggle-owner-request"
+                class="enterprise-secondary-btn"
+                title="Solicitar registro para tu negocio"
+              >
+                <span>🏢</span>
+                <span>¿Quieres registrar tu negocio? Solicitar Cuenta</span>
+              </button>
+            </div>
 
+            <!-- Business Owner Request Form Panel (hidden by default) -->
+            <div id="owner-request-panel" style="display: none; margin-top: 16px; animation: slideDown 0.3s ease forwards;">
+              <div class="enterprise-card" style="background: rgba(15, 23, 42, 0.9); border-color: rgba(99, 102, 241, 0.3);">
+                <!-- Header -->
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                  <span style="font-size: 1.5rem;">🏢</span>
+                  <div>
+                    <h3 style="margin: 0; font-size: 0.95rem; color: #a5b4fc; font-weight: 700;">
+                      Solicitud de Nuevo Dueño de Negocio
+                    </h3>
+                    <p style="margin: 2px 0 0 0; font-size: 0.73rem; color: #94a3b8;">
+                      Un programador revisará y aprobará tu registro para activar tu acceso
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Success Alert -->
+                <div id="owner-req-success-alert" style="display: none; margin-bottom: 16px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 12px; color: #4ade80; font-size: 0.82rem; text-align: center;">
+                  ✅ <strong>¡Solicitud Enviada con Éxito!</strong><br/>
+                  Un programador revisará tus datos y activará tu cuenta pronto.
+                </div>
+
+                <form id="owner-request-form" novalidate>
+                  <!-- Owner Name -->
+                  <div class="enterprise-form-group">
+                    <label class="enterprise-input-label" for="req-owner-name">👤 Nombre Completo del Propietario</label>
+                    <input
+                      type="text"
+                      id="req-owner-name"
+                      class="enterprise-input"
+                      placeholder="Ej. Juan Pérez"
+                      style="padding-left: 14px;"
+                      required
+                    />
+                    <p class="form-helper error" id="req-owner-name-error" style="display: none; font-size: 0.7rem; color: #f87171; margin-top: 4px;"></p>
+                  </div>
+
+                  <!-- Company Name -->
+                  <div class="enterprise-form-group">
+                    <label class="enterprise-input-label" for="req-company-name">🏪 Nombre de la Empresa / Negocio</label>
+                    <input
+                      type="text"
+                      id="req-company-name"
+                      class="enterprise-input"
+                      placeholder="Ej. RestoBar El Portal"
+                      style="padding-left: 14px;"
+                      required
+                    />
+                    <p class="form-helper error" id="req-company-name-error" style="display: none; font-size: 0.7rem; color: #f87171; margin-top: 4px;"></p>
+                  </div>
+
+                  <!-- Business Type -->
+                  <div class="enterprise-form-group">
+                    <label class="enterprise-input-label" for="req-business-type">📌 Tipo de Negocio</label>
+                    <select
+                      id="req-business-type"
+                      class="enterprise-input"
+                      style="padding-left: 14px; background-color: rgba(15, 23, 42, 0.95); cursor: pointer;"
+                    >
+                      ${getBusinessTypeOptions()}
+                    </select>
+                  </div>
+
+                  <!-- Email -->
+                  <div class="enterprise-form-group">
+                    <label class="enterprise-input-label" for="req-email">📧 Correo Electrónico</label>
+                    <input
+                      type="email"
+                      id="req-email"
+                      class="enterprise-input"
+                      placeholder="propietario@empresa.com"
+                      autocomplete="username"
+                      style="padding-left: 14px;"
+                      required
+                    />
+                    <p class="form-helper error" id="req-email-error" style="display: none; font-size: 0.7rem; color: #f87171; margin-top: 4px;"></p>
+                  </div>
+
+                  <!-- Phone -->
+                  <div class="enterprise-form-group">
+                    <label class="enterprise-input-label" for="req-phone">📞 Teléfono de Contacto</label>
+                    <input
+                      type="tel"
+                      id="req-phone"
+                      class="enterprise-input"
+                      placeholder="Ej. +505 8888 8888"
+                      style="padding-left: 14px;"
+                      required
+                    />
+                    <p class="form-helper error" id="req-phone-error" style="display: none; font-size: 0.7rem; color: #f87171; margin-top: 4px;"></p>
+                  </div>
+
+                  <!-- Password -->
+                  <div class="enterprise-form-group">
+                    <label class="enterprise-input-label" for="req-password">🔑 Contraseña Deseada (mín. 6 caracteres)</label>
+                    <div class="enterprise-input-wrapper">
+                      <input
+                        type="password"
+                        id="req-password"
+                        class="enterprise-input"
+                        placeholder="••••••••"
+                        minlength="6"
+                        autocomplete="new-password"
+                        required
+                        style="padding-left: 14px; padding-right: 44px;"
+                      />
+                      <button
+                        type="button"
+                        id="btn-toggle-req-password"
+                        style="
+                          position: absolute;
+                          right: 8px;
+                          background: transparent;
+                          border: none;
+                          color: #94a3b8;
+                          cursor: pointer;
+                          padding: 6px;
+                          font-size: 1rem;
+                        "
+                        title="Mostrar contraseña"
+                      >
+                        👁️
+                      </button>
+                    </div>
+                    <p class="form-helper error" id="req-password-error" style="display: none; font-size: 0.7rem; color: #f87171; margin-top: 4px;"></p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    id="btn-submit-owner-req"
+                    class="enterprise-submit-btn"
+                    style="background: linear-gradient(135deg, #7c3aed, #8b5cf6);"
+                  >
+                    📩 Enviar Solicitud a Programador
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="enterprise-footer">
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} <strong>Ultra Administrador</strong>. Todos los derechos reservados.</p>
+              <p style="margin: 4px 0 0; opacity: 0.8;">Desarrollado por <strong style="color: #a78bfa;">ProLine System</strong></p>
+            </div>
+
+          </div>
         </div>
       </div>
-
-      <style>
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-12px); }
-          to   { opacity: 1; transform: translateY(0);    }
-        }
-      </style>
     `;
   }
 
@@ -371,36 +358,23 @@ export class LoginView extends Component {
       return;
     }
 
-    // ── Three.js & GSAP Premium Animations ───────────────────────────────────
-    this.cleanupThree = AnimationService.initThreeDBackground(this.$('#three-bg-container'));
+    // ── 1. Initialize 2D Canvas Vortex Engine ───────────────────────────────
+    const canvas = this.$('#vortex-canvas');
+    const statusText = this.$('#vortex-status-text');
+    if (canvas) {
+      this.vortexEngine = new VortexEngine(canvas, statusText);
+    }
 
-    // Hero & Form elements entry stagger animation with GSAP
-    gsap.fromTo(this.$('.hero-logo'),
-      { scale: 0, rotation: -45, opacity: 0 },
-      { scale: 1, rotation: 0, opacity: 1, duration: 0.8, ease: 'back.out(1.7)' }
-    );
+    // GSAP Entrance animation for card and fields
+    const card = this.$('#main-enterprise-card');
+    if (card) {
+      gsap.fromTo(card,
+        { opacity: 0, y: 30, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out' }
+      );
+    }
 
-    gsap.fromTo([this.$('.hero-title'), this.$('.hero-subtitle')],
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out', delay: 0.2 }
-    );
-
-    gsap.fromTo(this.$('.login-card-anim'),
-      { opacity: 0, y: 40, scale: 0.97 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power4.out', delay: 0.4 }
-    );
-
-    gsap.fromTo(this.$$('#login-form .form-group'),
-      { opacity: 0, y: 15 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out', delay: 0.6 }
-    );
-
-    gsap.fromTo(this.$('#login-submit-btn'),
-      { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', delay: 0.8 }
-    );
-
-    // ── Login Form Submission ────────────────────────────────────────────────
+    // ── 2. Login Form Submission & Validation Flow ─────────────────────────
     const loginForm  = this.$('#login-form');
     const emailInput = this.$('#login-email');
 
@@ -420,7 +394,7 @@ export class LoginView extends Component {
       });
     }
 
-    // ── Password Visibility Toggles ─────────────────────────────────────────
+    // ── 3. Password Visibility Toggles ──────────────────────────────────────
     const loginPassInput = this.$('#login-password');
     const toggleLoginPass = this.$('#btn-toggle-password');
     if (loginPassInput && toggleLoginPass) {
@@ -443,7 +417,7 @@ export class LoginView extends Component {
       });
     }
 
-    // ── Business Owner Request Panel Toggle ──────────────────────────────────
+    // ── 4. Business Owner Request Panel Toggle ──────────────────────────────
     const toggleOwnerReqBtn = this.$('#btn-toggle-owner-request');
     const ownerReqPanel     = this.$('#owner-request-panel');
 
@@ -451,34 +425,18 @@ export class LoginView extends Component {
       toggleOwnerReqBtn.addEventListener('click', () => {
         const isHidden = ownerReqPanel.style.display === 'none';
         ownerReqPanel.style.display = isHidden ? 'block' : 'none';
-        toggleOwnerReqBtn.textContent = isHidden
-          ? '✖ Cerrar Formulario'
-          : '🏢 ¿Quieres registrar tu negocio? Solicitar Cuenta';
+        toggleOwnerReqBtn.innerHTML = isHidden
+          ? '<span>✖</span> <span>Cerrar Formulario</span>'
+          : '<span>🏢</span> <span>¿Quieres registrar tu negocio? Solicitar Cuenta</span>';
       });
     }
 
-    // ── Business Owner Request Form Submission ──────────────────────────────
+    // ── 5. Business Owner Request Form Submission ───────────────────────────
     const ownerReqForm = this.$('#owner-request-form');
     if (ownerReqForm) {
       ownerReqForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await this.handleOwnerRequestSubmit();
-      });
-    }
-
-    // ── Dev Unlock Tool Button ───────────────────────────────────────────────
-    const unlockBtn = this.$('#btn-dev-unlock-account');
-    if (unlockBtn) {
-      unlockBtn.addEventListener('click', () => {
-        const email = (emailInput?.value || '').trim();
-        if (!email) {
-          alert('Escribe el correo electrónico que deseas desbloquear en el campo de Login.');
-          emailInput?.focus();
-          return;
-        }
-        this.clearLockoutState(email);
-        this.checkLockoutStatus(email);
-        NotificationService.success(`Intentos reiniciados para: ${email}`);
       });
     }
   }
@@ -546,13 +504,13 @@ export class LoginView extends Component {
       if (loginAlert) {
         loginAlert.style.display = 'block';
         loginAlert.innerHTML = `
-          <div style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); border-radius: var(--radius-md); padding: var(--space-4); text-align: center; color: var(--color-danger, #ef4444);">
+          <div style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); border-radius: 10px; padding: 14px; text-align: center; color: #f87171;">
             <div style="font-size: 1.8rem; margin-bottom: 4px;">🔒</div>
             <strong style="font-size: 0.95rem; display: block; margin-bottom: 6px;">Cuenta Bloqueada Temporalmente</strong>
-            <p style="margin: 0 0 10px 0; font-size: 0.8rem; line-height: 1.4; color: var(--color-text-primary);">
+            <p style="margin: 0 0 10px 0; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1;">
               Se han agotado los 8 intentos de acceso permitidos. Por favor, <strong>contacta al programador</strong> para restablecer tu acceso.
             </p>
-            <button type="button" id="btn-recheck-lockout" class="btn btn-secondary btn-xs" style="margin-top: 6px; font-size: 0.75rem; padding: 6px 12px; width: 100%; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; border-radius: 6px;">
+            <button type="button" id="btn-recheck-lockout" class="enterprise-secondary-btn" style="margin-top: 6px; font-size: 0.75rem; padding: 8px 12px; width: 100%;">
               🔄 ¿Ya te cambiaron la contraseña? Haz clic para desbloquear
             </button>
           </div>
@@ -568,7 +526,7 @@ export class LoginView extends Component {
             if (passwordInput) passwordInput.disabled = false;
             if (submitBtn) {
               submitBtn.disabled = false;
-              submitBtn.textContent = 'Iniciar sesión';
+              submitBtn.textContent = 'Iniciar Sesión';
             }
             this.checkLockoutStatus(email);
             NotificationService.success('Cuenta desbloqueada. Ya puedes ingresar tu nueva contraseña.');
@@ -595,13 +553,13 @@ export class LoginView extends Component {
       if (passwordInput) passwordInput.disabled = false;
       if (submitBtn && !this.state.loading) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Iniciar sesión';
+        submitBtn.textContent = 'Iniciar Sesión';
       }
       const remainingPhase2 = 3 - state.attemptsPhase2;
       if (loginAlert) {
         loginAlert.style.display = 'block';
         loginAlert.innerHTML = `
-          <div style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); border-radius: var(--radius-md); padding: var(--space-3); text-align: center; color: #f59e0b; font-size: 0.82rem;">
+          <div style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); border-radius: 10px; padding: 12px; text-align: center; color: #fbbf24; font-size: 0.82rem;">
             ℹ️ Tiempo de espera finalizado. Te quedan <strong style="font-size: 0.9rem;">${remainingPhase2} intento(s) final(es)</strong>.
           </div>
         `;
@@ -613,7 +571,7 @@ export class LoginView extends Component {
     if (passwordInput) passwordInput.disabled = false;
     if (submitBtn && !this.state.loading) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Iniciar sesión';
+      submitBtn.textContent = 'Iniciar Sesión';
     }
 
     return { blocked: false };
@@ -644,9 +602,9 @@ export class LoginView extends Component {
         if (loginAlert) {
           loginAlert.style.display = 'block';
           loginAlert.innerHTML = `
-            <div style="background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.4); border-radius: var(--radius-md); padding: var(--space-3); text-align: center; color: #f59e0b; font-size: 0.82rem;">
+            <div style="background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.4); border-radius: 10px; padding: 12px; text-align: center; color: #fbbf24; font-size: 0.82rem;">
               ⚠️ <strong>Límite de 5 intentos alcanzado</strong><br/>
-              Por favor espera <strong style="font-size: 1.05rem; color: #f59e0b;">${remainingSec}s</strong> para intentar de nuevo.<br/>
+              Por favor espera <strong style="font-size: 1.05rem; color: #fbbf24;">${remainingSec}s</strong> para intentar de nuevo.<br/>
               <span style="font-size: 0.72rem; opacity: 0.85;">(Tendrás 3 intentos finales tras la espera)</span>
             </div>
           `;
@@ -657,7 +615,7 @@ export class LoginView extends Component {
         if (passwordInput) passwordInput.disabled = false;
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Iniciar sesión';
+          submitBtn.textContent = 'Iniciar Sesión';
         }
         this.checkLockoutStatus(email);
       }
@@ -667,22 +625,28 @@ export class LoginView extends Component {
     this.countdownInterval = setInterval(updateTimer, 1000);
   }
 
-  // ── Login Handler ─────────────────────────────────────────────────────────
+  // ── Login Handler with Validation -> Authentication -> Vortex -> Result ──
   async handleLogin() {
+    if (this.state.loading) return; // Prevent duplicate clicks
+
     const emailInput    = this.$('#login-email');
     const passwordInput = this.$('#login-password');
     const submitBtn     = this.$('#login-submit-btn');
     const emailError    = this.$('#email-error');
     const passwordError = this.$('#password-error');
+    const card          = this.$('#main-enterprise-card');
 
     const email    = emailInput?.value.trim() || '';
     const password = passwordInput?.value || '';
 
+    // Reset previous error indicators
     emailError.style.display    = 'none';
     passwordError.style.display = 'none';
     emailInput?.classList.remove('input-error');
     passwordInput?.classList.remove('input-error');
+    if (card) card.classList.remove('card-error-state');
 
+    // ── 1. STEP A: FORM VALIDATION (NO VORTEX FOR FORMAT ERRORS) ───────────
     let isValid = true;
 
     if (!isValidEmail(email)) {
@@ -707,19 +671,21 @@ export class LoginView extends Component {
       return;
     }
 
-    submitBtn.disabled    = true;
-    submitBtn.textContent = 'Accediendo...';
+    // ── 2. STEP B: ENTER LOADING STATE ──────────────────────────────────────
+    this.state.loading = true;
+    submitBtn.disabled  = true;
+    submitBtn.innerHTML = '<span class="animate-spin" style="display:inline-block">⏳</span> Validando credenciales...';
 
+    // ── 3. STEP C: EXECUTE AUTHENTICATION ──────────────────────────────────
     try {
       const user = await AuthService.login(email, password);
       this.clearLockoutState(email);
 
-      // Prompt to save account credentials for fast switching
+      // Prompt / Save account details
       const isApk = !!(window.AndroidApp && typeof window.AndroidApp.isAndroidApp === 'function' && window.AndroidApp.isAndroidApp());
       const existing = SavedAccountsService.getByEmail(email);
       const companyName = GlobalStore.getState()?.currentCompany?.name || '';
 
-      // If password is not saved yet, prompt the user
       if (!existing?._enc) {
         const promptMsg = isApk
           ? '📱 ¿Deseas guardar los datos de este inicio de sesión en la aplicación para cambiar rápidamente entre tus perfiles?'
@@ -730,13 +696,24 @@ export class LoginView extends Component {
         SavedAccountsService.save(user, password, companyName);
       }
 
-      NotificationService.success(`Bienvenido, ${user.displayName}`);
-      redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
-    } catch (error) {
-      console.error('[LoginView] Error en inicio de sesión:', error);
-      submitBtn.disabled    = false;
-      submitBtn.textContent = 'Iniciar sesión';
+      // ── 4. SUCCESS: NORMAL VORTEX -> DASHBOARD ───────────────────────────
+      if (this.vortexEngine) {
+        this.vortexEngine.startTransition({
+          mode: 'success',
+          durationMs: 1800,
+          onComplete: () => {
+            NotificationService.success(`Bienvenido, ${user.displayName || user.email}`);
+            redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
+          }
+        });
+      } else {
+        NotificationService.success(`Bienvenido, ${user.displayName || user.email}`);
+        redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
+      }
 
+    } catch (error) {
+      console.error('[LoginView] Error en autenticación:', error);
+      
       const now = Date.now();
       const state = this.getLockoutState(email) || {
         email,
@@ -746,41 +723,54 @@ export class LoginView extends Component {
         isLockedOut: false
       };
 
-      // ── Handle Lockout Logic on Failed Attempt ───────────────────────────
+      // Friendly Spanish message (no raw Firebase codes)
+      const friendlyMsg = getFriendlyAuthErrorMessage(error);
+
+      // Update lockout tracking logic
       if (state.attemptsPhase1 < 5 && !state.lockoutUntil) {
         state.attemptsPhase1 += 1;
-
-        if (state.attemptsPhase1 < 5) {
-          const remaining = 5 - state.attemptsPhase1;
-          passwordError.textContent = `Credenciales incorrectas. Te quedan ${remaining} intento(s).`;
-          passwordError.style.display = 'block';
-          this.saveLockoutState(email, state);
-        } else {
-          // 5th failed attempt -> 1-minute timer lockout
+        if (state.attemptsPhase1 >= 5) {
           state.lockoutUntil = now + 60000;
-          this.saveLockoutState(email, state);
-          passwordError.style.display = 'none';
-          this.startCountdownTimer(email, state.lockoutUntil);
         }
+        this.saveLockoutState(email, state);
       } else if (state.attemptsPhase1 >= 5 && state.attemptsPhase2 < 3) {
         state.attemptsPhase2 += 1;
-
-        if (state.attemptsPhase2 < 3) {
-          const remaining = 3 - state.attemptsPhase2;
-          passwordError.textContent = `Credenciales incorrectas. Te quedan ${remaining} intento(s) finales antes del bloqueo.`;
-          passwordError.style.display = 'block';
-          this.saveLockoutState(email, state);
-        } else {
-          // 3rd attempt in Phase 2 failed (total 8 failed attempts) -> Permanent account lock
+        if (state.attemptsPhase2 >= 3) {
           state.isLockedOut = true;
           state.lockedAt = now;
-          this.saveLockoutState(email, state);
-          passwordError.style.display = 'none';
-          this.checkLockoutStatus(email);
-          NotificationService.error('Cuenta bloqueada temporalmente por seguridad.');
         }
+        this.saveLockoutState(email, state);
+      }
+
+      // ── 5. FAILURE: RED VORTEX -> RETURN TO LOGIN FORM (NO DASHBOARD) ────
+      if (card) card.classList.add('card-error-state');
+
+      if (this.vortexEngine) {
+        this.vortexEngine.startTransition({
+          mode: 'error',
+          durationMs: 1800,
+          onComplete: () => {
+            this.state.loading = false;
+            submitBtn.disabled  = false;
+            submitBtn.textContent = 'Iniciar Sesión';
+
+            if (state.isLockedOut || state.lockoutUntil > Date.now()) {
+              this.checkLockoutStatus(email);
+            } else {
+              passwordError.textContent   = friendlyMsg;
+              passwordError.style.display = 'block';
+              passwordInput?.classList.add('input-error');
+              passwordInput?.focus();
+            }
+          }
+        });
       } else {
-        ErrorHandler.handleError(error, 'LoginView');
+        this.state.loading = false;
+        submitBtn.disabled  = false;
+        submitBtn.textContent = 'Iniciar Sesión';
+        passwordError.textContent   = friendlyMsg;
+        passwordError.style.display = 'block';
+        passwordInput?.classList.add('input-error');
       }
     }
   }
@@ -842,8 +832,8 @@ export class LoginView extends Component {
 
     if (!isValid) return;
 
-    submitBtn.disabled    = true;
-    submitBtn.textContent = '⏳ Enviando solicitud...';
+    submitBtn.disabled  = true;
+    submitBtn.innerHTML = '<span class="animate-spin" style="display:inline-block">⏳</span> Enviando solicitud...';
 
     try {
       await FirestoreService.createPendingOwnerRequest({
@@ -882,8 +872,9 @@ export class LoginView extends Component {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
-    if (typeof this.cleanupThree === 'function') {
-      this.cleanupThree();
+    if (this.vortexEngine) {
+      this.vortexEngine.stop();
+      this.vortexEngine = null;
     }
     super.unmount();
   }

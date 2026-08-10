@@ -31,6 +31,14 @@ export class PageLayout extends Component {
 
     return `
       <div class="app-container w-full">
+        <!-- Enterprise Tech Background (Matches Login) -->
+        <div class="tech-bg-container">
+          <div class="tech-bg-grid"></div>
+          <div class="tech-bg-halo tech-bg-halo-1"></div>
+          <div class="tech-bg-halo tech-bg-halo-2"></div>
+          <div class="tech-bg-halo tech-bg-halo-3"></div>
+        </div>
+
         <!-- Sidebar placeholder -->
         <div id="sidebar-layout-container"></div>
         
