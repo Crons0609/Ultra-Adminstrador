@@ -16,6 +16,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { ImageDisplay } from '../../../components/ui/image-display.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
@@ -48,7 +49,7 @@ export class EmployeesView extends Component {
       columns: [
         {
           key: 'displayName',
-          label: 'Empleado',
+          label: I18nService.t('emp_col_employee'),
           render: (val, row) => `
             <div style="display:flex;align-items:center;gap:10px;">
               ${ImageDisplay.renderTag(row.imageId || null, `https://ui-avatars.com/api/?name=${encodeURIComponent(val || 'E')}&background=6366f1&color=fff&size=40`, 'width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--color-border);')}
@@ -59,39 +60,39 @@ export class EmployeesView extends Component {
             </div>
           `
         },
-        { key: 'email', label: 'Correo Electrónico' },
+        { key: 'email', label: I18nService.t('auth_email') },
         { 
           key: 'customRole', 
-          label: 'Puesto / Cargo',
+          label: I18nService.t('emp_col_role'),
           render: (val, row) => {
             if (val) return `<span class="badge" style="background-color: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-md); font-weight: 500;">${val}</span>`;
             
             const roleLabels = {
-              MANAGER: 'Gerente',
-              CASHIER: 'Cajero',
-              WAITER: 'Mesero',
-              KITCHEN: 'Cocinero'
+              MANAGER: I18nService.t('emp_role_manager'),
+              CASHIER: I18nService.t('emp_role_cashier'),
+              WAITER: I18nService.t('emp_role_waiter'),
+              KITCHEN: I18nService.t('emp_role_kitchen')
             };
             return `<span style="color: var(--color-text-secondary);">${roleLabels[row.role] || row.role}</span>`;
           }
         },
         { 
           key: 'role', 
-          label: 'Permisos del Sistema',
+          label: I18nService.t('emp_col_permissions'),
           render: (val) => {
             const roleLabels = {
-              MANAGER: 'Acceso Total (Gerente)',
-              CASHIER: 'Caja Registradora',
-              WAITER: 'Toma de Pedidos (Mesero)',
-              KITCHEN: 'Pantalla de Cocina (Chef)'
+              MANAGER: I18nService.t('emp_role_manager'),
+              CASHIER: I18nService.t('emp_role_cashier'),
+              WAITER: I18nService.t('emp_role_waiter'),
+              KITCHEN: I18nService.t('emp_role_kitchen')
             };
             return `<span style="font-size: 0.8rem; color: var(--color-accent); font-weight: 500;">${roleLabels[val] || val}</span>`;
           }
         },
         { 
           key: 'status', 
-          label: 'Estado',
-          render: () => `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-success-light);color:var(--color-success);">Activo</span>`
+          label: I18nService.t('status'),
+          render: () => `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-success-light);color:var(--color-success);">${I18nService.t('active')}</span>`
         },
         {
           key: 'locationStatus',

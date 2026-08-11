@@ -18,6 +18,8 @@ import { auth, db } from '../../../config/firebase.config.js';
 import { ref, get, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { AppearanceService, THEMES } from '../../../services/appearance.service.js';
 import { MobileNavConfigService, NAV_TAB_CATALOG, DEFAULT_NAV_TABS } from '../../../services/mobile-nav-config.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
+import { LanguageSelectorModal } from '../../../components/modals/language-selector.modal.js';
 
 // Build the theme grid HTML for Business Owners
 function buildOwnerThemeGrid() {
@@ -80,12 +82,12 @@ export class SettingsView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Ajustes de la Cuenta y del Panel',
-      subtitle: 'Administra tu perfil de dueño, las preferencias visuales de tu panel y el personal de tu negocio de manera autónoma.',
+      title: I18nService.t('settings_title'),
+      subtitle: I18nService.t('settings_subtitle'),
       actionHTML: `
         <span class="badge" style="font-size: 0.75rem; padding: 4px 10px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 4px; background: rgba(139, 92, 246, 0.1); color: var(--color-accent);">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); display: inline-block; animation: pulse 2s infinite;"></span>
-          Panel del Propietario
+          ${I18nService.t('emp_role_owner')}
         </span>
       `,
       contentHTML: `
@@ -336,19 +338,19 @@ export class SettingsView extends Component {
           <!-- Navigation Tabs -->
           <div class="settings-tabs" id="settings-tab-nav">
             <button class="settings-tab-btn active" data-tab="account">
-              👤 Mi Cuenta
+              👤 ${I18nService.t('settings_tab_account')}
             </button>
             <button class="settings-tab-btn" data-tab="employees">
-              👥 Gestión de Empleados
+              👥 ${I18nService.t('settings_tab_employees')}
             </button>
             <button class="settings-tab-btn" data-tab="preferences">
-              ⚙️ Preferencias del Dashboard
+              ⚙️ ${I18nService.t('settings_tab_preferences')}
             </button>
             <button class="settings-tab-btn" data-tab="location">
-              📍 Ubicación del Establecimiento
+              📍 Location
             </button>
             <button class="settings-tab-btn" data-tab="mobile-nav">
-              📱 Barra Móvil
+              📱 ${I18nService.t('settings_tab_mobile_nav')}
             </button>
           </div>
 
@@ -497,12 +499,18 @@ export class SettingsView extends Component {
                 
                 <form id="owner-preferences-form" style="display:flex; flex-direction:column; gap: var(--space-4);">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-                    <div class="form-group">
-                      <label class="form-label" for="pref-lang-select">Idioma</label>
-                      <select id="pref-lang-select" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                        <option value="es">Español 🇪🇸</option>
-                        <option value="en">English 🇺🇸</option>
-                      </select>
+                    <!-- Módulo de Idioma del Sistema -->
+                    <div style="grid-column: span 2; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 1.8rem; line-height: 1;">${I18nService.getCurrentLanguageInfo().flag}</span>
+                        <div>
+                          <strong style="color: var(--color-text-primary); font-size: 0.95rem; display: block;">${I18nService.t('system_language')}</strong>
+                          <span style="color: var(--color-text-secondary); font-size: 0.8rem;">${I18nService.getCurrentLanguageInfo().nativeName} (${I18nService.getCurrentLanguageInfo().name})</span>
+                        </div>
+                      </div>
+                      <button type="button" id="btn-open-owner-lang-modal" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 9px 18px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #0ea5e9); color: #ffffff; border: none; cursor: pointer; transition: all 0.2s ease;">
+                        <span>🌐</span> ${I18nService.t('change_language')}
+                      </button>
                     </div>
 
                     <div class="form-group">
@@ -899,6 +907,16 @@ export class SettingsView extends Component {
     const prefForm = root.querySelector('#owner-preferences-form');
     if (prefForm) {
       prefForm.addEventListener('submit', (e) => this.handleSavePreferences(e, root));
+    }
+
+    // Language Selector Modal Handler
+    const openLangBtn = root.querySelector('#btn-open-owner-lang-modal');
+    if (openLangBtn) {
+      openLangBtn.addEventListener('click', () => {
+        LanguageSelectorModal.open(() => {
+          this.render();
+        });
+      });
     }
 
     // 9. Alert System Form Submission

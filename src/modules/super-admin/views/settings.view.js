@@ -20,6 +20,8 @@ import { GlobalStore } from '../../../core/state.js';
 import { TimeService } from '../../../services/time.service.js';
 import { PushNotificationsCenterService } from '../../../services/push-notifications-center.service.js';
 import { MobileNavConfigService, NAV_TAB_CATALOG, DEFAULT_NAV_TABS } from '../../../services/mobile-nav-config.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
+import { LanguageSelectorModal } from '../../../components/modals/language-selector.modal.js';
 
 // Build the theme grid HTML from the THEMES dictionary
 function buildThemeGrid() {
@@ -58,8 +60,8 @@ export class SettingsView extends Component {
     this.config = {};
 
     this.layout = new PageLayout({
-      title: 'Configuración del Sistema',
-      subtitle: 'Administración central del SaaS: identidad visual, comportamiento global, copias de seguridad y mantenimiento.',
+      title: I18nService.t('settings_title'),
+      subtitle: I18nService.t('settings_subtitle'),
       contentHTML: `
         <style>
           /* Programmer Settings: Mobile Responsive */
@@ -112,14 +114,14 @@ export class SettingsView extends Component {
 
           <!-- Left Tabs Sidebar -->
           <div class="settings-sidebar">
-            <button type="button" class="settings-tab-btn active" data-tab="tab-identidad">ℹ️ Identidad del Sistema</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-apariencia">🎨 Apariencia y Diseño</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-general">⚙️ Configuración General</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-respaldos">💾 Copias de Seguridad</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-mantenimiento">🛠️ Modo Mantenimiento</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-avanzado">⚡ Avanzado y Monitoreo</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-mobile-nav">📱 Barra Móvil</button>
-            <button type="button" class="settings-tab-btn" data-tab="tab-broadcasts" style="background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-weight:700;">📢 Mensajes y APKs</button>
+            <button type="button" class="settings-tab-btn active" data-tab="tab-identidad">ℹ️ ${I18nService.t('settings_tab_identity')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-apariencia">🎨 ${I18nService.t('settings_tab_theme')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-general">⚙️ ${I18nService.t('settings_tab_general')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-respaldos">💾 ${I18nService.t('settings_tab_backup')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-mantenimiento">🛠️ ${I18nService.t('settings_tab_maintenance')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-avanzado">⚡ ${I18nService.t('settings_tab_advanced')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-mobile-nav">📱 ${I18nService.t('settings_tab_mobile_nav')}</button>
+            <button type="button" class="settings-tab-btn" data-tab="tab-broadcasts" style="background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-weight:700;">📢 ${I18nService.t('settings_tab_broadcasts')}</button>
           </div>
 
           <!-- Right Content Panels -->
@@ -130,53 +132,53 @@ export class SettingsView extends Component {
               <!-- 1. IDENTIDAD DEL SISTEMA                                  -->
               <!-- ══════════════════════════════════════════════════════════ -->
               <div class="settings-panel active" id="tab-identidad">
-                <h3 class="text-lg font-bold">ℹ️ Identidad del Sistema</h3>
-                <p class="text-xs text-secondary">Establece la marca de la plataforma SaaS y sus elementos visuales de identidad.</p>
+                <h3 class="text-lg font-bold">ℹ️ ${I18nService.t('settings_tab_identity')}</h3>
+                <p class="text-xs text-secondary">${I18nService.t('settings_identity_desc')}</p>
 
                 <div class="settings-card">
-                  <div class="settings-card-title">Detalles de Marca</div>
+                  <div class="settings-card-title">${I18nService.t('settings_brand_details')}</div>
                   <div class="settings-grid-2">
                     <div class="form-group">
-                      <label class="form-label" for="saas-name-input">Nombre del Sistema</label>
+                      <label class="form-label" for="saas-name-input">${I18nService.t('settings_system_name')}</label>
                       <input type="text" id="saas-name-input" class="input input-md" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="saas-comm-name-input">Nombre Comercial</label>
+                      <label class="form-label" for="saas-comm-name-input">${I18nService.t('settings_commercial_name')}</label>
                       <input type="text" id="saas-comm-name-input" class="input input-md" />
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="saas-slogan-input">Eslogan</label>
+                    <label class="form-label" for="saas-slogan-input">${I18nService.t('settings_slogan')}</label>
                     <input type="text" id="saas-slogan-input" class="input input-md" />
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="saas-desc-input">Descripción Corta</label>
+                    <label class="form-label" for="saas-desc-input">${I18nService.t('settings_short_desc')}</label>
                     <textarea id="saas-desc-input" class="input" style="height: 80px; padding: 10px;"></textarea>
                   </div>
                 </div>
 
                 <div class="settings-card">
-                  <div class="settings-card-title">Elementos Visuales (URLs de Imagen)</div>
+                  <div class="settings-card-title">${I18nService.t('settings_visual_elements')}</div>
                   <div class="settings-grid-2">
                     <div class="form-group">
-                      <label class="form-label" for="logo-main-input">Logo Tema Claro</label>
+                      <label class="form-label" for="logo-main-input">${I18nService.t('settings_logo_light')}</label>
                       <input type="text" id="logo-main-input" class="input input-md" placeholder="https://…/logo.png" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="logo-dark-input">Logo Tema Oscuro</label>
+                      <label class="form-label" for="logo-dark-input">${I18nService.t('settings_logo_dark')}</label>
                       <input type="text" id="logo-dark-input" class="input input-md" placeholder="https://…/logo-dark.png" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="favicon-input">Favicon (Ícono Navegador)</label>
+                      <label class="form-label" for="favicon-input">${I18nService.t('settings_favicon')}</label>
                       <input type="text" id="favicon-input" class="input input-md" placeholder="https://…/favicon.ico" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="app-icon-input">Ícono Móvil (PWA)</label>
+                      <label class="form-label" for="app-icon-input">${I18nService.t('settings_pwa_icon')}</label>
                       <input type="text" id="app-icon-input" class="input input-md" placeholder="https://…/icon-192.png" />
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="login-bg-input">Imagen de Fondo del Login</label>
+                    <label class="form-label" for="login-bg-input">${I18nService.t('settings_login_bg')}</label>
                     <input type="text" id="login-bg-input" class="input input-md" placeholder="https://…/login-bg.jpg" />
                   </div>
                 </div>
@@ -186,13 +188,13 @@ export class SettingsView extends Component {
               <!-- 2. APARIENCIA Y DISEÑO                                    -->
               <!-- ══════════════════════════════════════════════════════════ -->
               <div class="settings-panel" id="tab-apariencia">
-                <h3 class="text-lg font-bold">🎨 Apariencia y Diseño</h3>
-                <p class="text-xs text-secondary">Selecciona un tema prediseñado o personaliza cada color individualmente. Los cambios se aplican en tiempo real.</p>
+                <h3 class="text-lg font-bold">🎨 ${I18nService.t('settings_tab_theme')}</h3>
+                <p class="text-xs text-secondary">${I18nService.t('settings_appearance_desc')}</p>
 
                 <!-- Theme Preset Grid -->
                 <div class="settings-card">
-                  <div class="settings-card-title">Temas Prediseñados</div>
-                  <p class="text-xs text-secondary" style="margin: 0 0 10px 0;">Haz clic en un tema para aplicarlo de inmediato. Luego guarda para persistirlo en Firebase.</p>
+                  <div class="settings-card-title">${I18nService.t('settings_theme_presets')}</div>
+                  <p class="text-xs text-secondary" style="margin: 0 0 10px 0;">Click on a theme to preview instantly, then save changes.</p>
                   <div id="theme-presets-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px;">
                     ${buildThemeGrid()}
                   </div>
@@ -201,36 +203,36 @@ export class SettingsView extends Component {
 
                 <!-- Typography & Style -->
                 <div class="settings-card">
-                  <div class="settings-card-title">Tipografía y Estilo de Componentes</div>
+                  <div class="settings-card-title">${I18nService.t('settings_typography_style')}</div>
                   <div class="settings-grid-2">
                     <div class="form-group">
-                      <label class="form-label" for="font-family-select">Tipografía Principal</label>
+                      <label class="form-label" for="font-family-select">${I18nService.t('settings_main_font')}</label>
                       <select id="font-family-select" class="input input-md">
-                        <option value="Inter">Inter (Predeterminado SaaS)</option>
+                        <option value="Inter">Inter (Default)</option>
                         <option value="Outfit">Outfit</option>
                         <option value="Roboto">Roboto</option>
                         <option value="Poppins">Poppins</option>
-                        <option value="system-ui">Sistema (Predeterminada)</option>
+                        <option value="system-ui">System</option>
                       </select>
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="font-size-select">Tamaño de Fuente Base</label>
+                      <label class="form-label" for="font-size-select">${I18nService.t('settings_font_size')}</label>
                       <select id="font-size-select" class="input input-md">
-                        <option value="12px">12px (Compacto)</option>
-                        <option value="14px">14px (Predeterminado)</option>
-                        <option value="16px">16px (Grande)</option>
+                        <option value="12px">12px (Compact)</option>
+                        <option value="14px">14px (Default)</option>
+                        <option value="16px">16px (Large)</option>
                       </select>
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="border-radius-input">Redondeo de Bordes (px)</label>
+                      <label class="form-label" for="border-radius-input">${I18nService.t('settings_border_radius')}</label>
                       <input type="number" id="border-radius-input" class="input input-md" min="0" max="30" value="8" />
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="button-style-select">Estilo de Botones</label>
+                      <label class="form-label" for="button-style-select">${I18nService.t('settings_button_style')}</label>
                       <select id="button-style-select" class="input input-md">
-                        <option value="rounded">Redondeados</option>
-                        <option value="pill">Píldora (Oval)</option>
-                        <option value="flat">Recto / Cuadrado</option>
+                        <option value="rounded">Rounded</option>
+                        <option value="pill">Pill (Oval)</option>
+                        <option value="flat">Flat</option>
                       </select>
                     </div>
                   </div>
@@ -238,7 +240,7 @@ export class SettingsView extends Component {
 
                 <!-- Custom Colors (visible when theme = custom) -->
                 <div class="settings-card" id="custom-colors-panel">
-                  <div class="settings-card-title">🎨 Colores Personalizados <span style="font-size:0.7rem; color: var(--color-accent); font-weight:500;">(Activo en modo "Personalizado")</span></div>
+                  <div class="settings-card-title">🎨 ${I18nService.t('settings_custom_colors')}</div>
                   <p class="text-xs text-secondary" style="margin: 0 0 12px 0;">Modifica cada color individualmente. Selecciona el tema "Personalizado" para que estos valores se apliquen.</p>
                   <div class="settings-grid-3">
                     <div class="form-group">
@@ -330,26 +332,26 @@ export class SettingsView extends Component {
               <!-- 3. CONFIGURACIÓN GENERAL                                  -->
               <!-- ══════════════════════════════════════════════════════════ -->
               <div class="settings-panel" id="tab-general">
-                <h3 class="text-lg font-bold">⚙️ Configuración General</h3>
-                <p class="text-xs text-secondary">Ajusta la localización, moneda y comportamiento por defecto de toda la plataforma.</p>
+                <h3 class="text-lg font-bold">⚙️ ${I18nService.t('settings_tab_general')}</h3>
+                <p class="text-xs text-secondary">${I18nService.t('settings_gen_desc')}</p>
 
                 <div class="settings-card">
-                  <div class="settings-card-title">Datos de la Empresa Propietaria</div>
+                  <div class="settings-card-title">${I18nService.t('settings_company_details')}</div>
                   <div class="form-group">
-                    <label class="form-label" for="company-name-input">Nombre de la Empresa Propietaria del SaaS</label>
-                    <input type="text" id="company-name-input" class="input input-md" placeholder="Ej. Ultra Software Group" />
+                    <label class="form-label" for="company-name-input">${I18nService.t('settings_company_name')}</label>
+                    <input type="text" id="company-name-input" class="input input-md" placeholder="e.g. Ultra Software Group" />
                   </div>
                   <div class="form-group">
-                    <label class="form-label" for="saas-branch-limit-input">Límite de Sucursales por Negocio</label>
+                    <label class="form-label" for="saas-branch-limit-input">${I18nService.t('settings_branch_limit')}</label>
                     <input type="number" id="saas-branch-limit-input" class="input input-md" min="1" max="50" value="5" />
                   </div>
                 </div>
 
                 <div class="settings-card">
-                  <div class="settings-card-title">Localización y Fechas</div>
+                  <div class="settings-card-title">${I18nService.t('settings_localization')}</div>
                   <div class="settings-grid-2">
                     <div class="form-group">
-                      <label class="form-label" for="timezone-select">Zona Horaria Predeterminada</label>
+                      <label class="form-label" for="timezone-select">${I18nService.t('settings_timezone')}</label>
                       <select id="timezone-select" class="input input-md">
                         <option value="America/Managua">America/Managua (GMT-6)</option>
                         <option value="America/Mexico_City">America/Mexico_City (GMT-6)</option>
@@ -362,14 +364,21 @@ export class SettingsView extends Component {
                         <option value="UTC">UTC</option>
                       </select>
                     </div>
-                    <div class="form-group">
-                      <label class="form-label" for="language-select">Idioma del Sistema</label>
-                      <select id="language-select" class="input input-md">
-                        <option value="es">Español</option>
-                        <option value="en">English (Inglés)</option>
-                        <option value="pt">Português</option>
-                      </select>
+                <!-- Módulo de Idioma del Sistema -->
+                <div class="settings-card" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25);">
+                  <div class="settings-card-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <span style="font-size: 1.8rem; line-height: 1;">${I18nService.getCurrentLanguageInfo().flag}</span>
+                      <div>
+                        <strong style="color: var(--color-text-primary); font-size: 0.95rem; display: block;">${I18nService.t('system_language')}</strong>
+                        <span style="color: var(--color-text-secondary); font-size: 0.8rem;">${I18nService.getCurrentLanguageInfo().nativeName} (${I18nService.getCurrentLanguageInfo().name})</span>
+                      </div>
                     </div>
+                    <button type="button" id="btn-open-sa-lang-modal" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 9px 18px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #0ea5e9); color: #ffffff; border: none; cursor: pointer; transition: all 0.2s ease;">
+                      <span>🌐</span> ${I18nService.t('change_language')}
+                    </button>
+                  </div>
+                </div>
                     <div class="form-group">
                       <label class="form-label" for="date-format-select">Formato de Fecha</label>
                       <select id="date-format-select" class="input input-md">
@@ -842,6 +851,11 @@ export class SettingsView extends Component {
     // 6. Backup & restore
     root.querySelector('#btn-download-backup-tab')?.addEventListener('click', () => this.handleDownloadBackup());
     root.querySelector('#btn-restore-backup')?.addEventListener('click', () => this.handleRestoreBackup());
+    root.querySelector('#btn-open-sa-lang-modal')?.addEventListener('click', () => {
+      LanguageSelectorModal.open(() => {
+        this.render();
+      });
+    });
 
     // 7. Advanced
     root.querySelector('#btn-create-sa-action')?.addEventListener('click', e => this.handleCreateSuperAdmin(e));

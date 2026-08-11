@@ -9,6 +9,7 @@ import { AuthService } from '../../../services/auth.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { getBusinessTypeOptions, getBusinessCategory, getModuleGuards } from '../../../config/business-types.config.js';
 import { MODULE_REGISTRY, getDefaultModuleConfig } from '../../../config/modules.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class CompaniesView extends Component {
   constructor(params = {}) {
@@ -22,7 +23,7 @@ export class CompaniesView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: 'Empresa / Negocio',
+          label: I18nService.t('sa_company_name'),
           render: (val, row) => {
             const country = row.country || 'Nicaragua';
             const city = row.city || row.municipio || '';
@@ -42,14 +43,14 @@ export class CompaniesView extends Component {
         },
         { 
           key: 'plan', 
-          label: 'Plan / Estado',
+          label: `${I18nService.t('sa_company_plan')} / ${I18nService.t('status')}`,
           render: (val, row) => {
-            let statusLabel = 'Activo';
+            let statusLabel = I18nService.t('active');
             let variant = 'success';
-            if (row.status === 'INACTIVO') { statusLabel = 'Inactivo'; variant = 'secondary'; }
-            else if (row.status === 'FALTA_PAGO') { statusLabel = 'Falta Pago'; variant = 'danger'; }
-            else if (row.status === 'SUSPENDIDO') { statusLabel = 'Suspendido'; variant = 'warning'; }
-            else if (row.status === 'ELIMINADO') { statusLabel = 'Papelera'; variant = 'danger'; }
+            if (row.status === 'INACTIVO') { statusLabel = I18nService.t('inactive'); variant = 'secondary'; }
+            else if (row.status === 'FALTA_PAGO') { statusLabel = I18nService.t('unpaid'); variant = 'danger'; }
+            else if (row.status === 'SUSPENDED' || row.status === 'SUSPENDIDO') { statusLabel = I18nService.t('on_hold'); variant = 'warning'; }
+            else if (row.status === 'ELIMINADO') { statusLabel = I18nService.t('archived'); variant = 'danger'; }
 
             return `
               <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
@@ -64,56 +65,37 @@ export class CompaniesView extends Component {
           }
         },
         {
-          key: 'subscriptionExpiresAt',
-          label: 'Vencimiento',
-          render: (val) => {
-            if (!val) return '<span style="color:var(--color-text-secondary); font-size:0.78rem; font-style:italic;">Ilimitado</span>';
-            const expDate = new Date(val);
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const isExpired = expDate < today;
-            const formatted = val.split('-').reverse().join('/'); // DD/MM/YYYY
-            return isExpired 
-              ? `<span style="color:var(--color-danger); font-weight:600; font-size:0.78rem;">⚠️ ${formatted}<br/><small>(Vencido)</small></span>`
-              : `<span style="color:var(--color-text-primary); font-size:0.8rem;">${formatted}</span>`;
-          }
-        },
-        {
-          key: 'ownerEmail',
-          label: 'Credenciales del Cliente',
+          key: 'owner',
+          label: I18nService.t('sa_company_owner'),
           render: (val, row) => `
-            <div style="font-size: 0.78rem; max-width: 220px; word-break: break-all;">
-              <div style="font-weight: 600; color: #a5b4fc; display: flex; align-items: center; gap: 4px;">
-                <span>📧</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${val || row.ownerEmail || '—'}</span>
-              </div>
-              <div style="font-size: 0.73rem; color: var(--color-text-secondary); margin-top:3px;">
-                🔑 <code style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px; font-family:monospace; font-weight:bold; color:#e2e8f0;">${row.ownerPassword || '••••••••'}</code>
-              </div>
+            <div>
+              <div style="font-weight: 600; font-size: 0.84rem;">${val || row.ownerEmail || 'Sin Asignar'}</div>
+              ${row.ownerPhone ? `<div style="font-size: 0.73rem; color: var(--color-text-secondary); margin-top:2px;">📞 ${row.ownerPhone}</div>` : ''}
             </div>
           `
         },
         {
-          key: 'branches',
-          label: 'Estructura',
+          key: 'infrastructure',
+          label: I18nService.t('details'),
           render: (_, row) => `
-            <div style="font-size: 0.78rem; color: var(--color-text-secondary); white-space: nowrap;">
-              <div>🏢 <strong>${row.branches || 1}</strong> sucursal${(row.branches || 1) > 1 ? 'es' : ''}</div>
-              <div style="font-size: 0.73rem; opacity: 0.85; margin-top:2px;">👥 <strong>${row.users || 1}</strong> usuario${(row.users || 1) > 1 ? 's' : ''}</div>
+            <div style="font-size: 0.8rem;">
+              <div>🏢 <strong>${row.branches || 1}</strong> ${I18nService.t('branch_title').toLowerCase()}</div>
+              <div style="font-size: 0.73rem; opacity: 0.85; margin-top:2px;">👥 <strong>${row.users || 1}</strong> ${I18nService.t('sa_users').toLowerCase()}</div>
             </div>
           `
         },
         {
           key: 'id',
-          label: 'Acciones',
+          label: I18nService.t('actions'),
           render: (_, row) => `
             <div class="d-flex gap-1 flex-wrap" data-stop-row-click="true" style="min-width: 140px;">
               ${row.status === 'ELIMINADO'
-                ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;">Restaurar</button>
-                   <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;">Eliminar</button>`
-                : `<button class="btn btn-primary btn-sm btn-company-action" data-action="edit" data-id="${row.id}" style="background-color: var(--color-accent); color: white; border: none; padding:4px 8px; font-size:0.72rem;" title="Editar Negocio">✏️ Editar</button>
-                   <button class="btn btn-warning btn-sm btn-company-action" data-action="credentials" data-id="${row.id}" style="font-size:0.72rem; padding: 4px 8px;" title="Ver / Cambiar Contraseña">🔑 Claves</button>
-                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;" title="Suspender o Cambiar Estado">⏸️ Estado</button>
-                   <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;" title="Mover a Papelera">🗑️</button>`}
+                ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;">Restore</button>
+                   <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;">${I18nService.t('delete')}</button>`
+                : `<button class="btn btn-primary btn-sm btn-company-action" data-action="edit" data-id="${row.id}" style="background-color: var(--color-accent); color: white; border: none; padding:4px 8px; font-size:0.72rem;" title="${I18nService.t('edit')}">✏️ ${I18nService.t('edit')}</button>
+                   <button class="btn btn-warning btn-sm btn-company-action" data-action="credentials" data-id="${row.id}" style="font-size:0.72rem; padding: 4px 8px;" title="${I18nService.t('settings_change_password')}">🔑 ${I18nService.t('auth_password')}</button>
+                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;" title="${I18nService.t('status')}">⏸️ ${I18nService.t('status')}</button>
+                   <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;" title="${I18nService.t('delete')}">🗑️</button>`}
             </div>
           `
         }
@@ -127,11 +109,11 @@ export class CompaniesView extends Component {
 
     // PageLayout setup
     this.layout = new PageLayout({
-      title: 'Gestión de Empresas',
-      subtitle: 'Administración, parametrización y asignación de licencias para múltiples modelos de negocio en el SaaS.',
+      title: I18nService.t('sa_companies'),
+      subtitle: 'Administration and module management for companies registered on the platform.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-company">
-          <span style="margin-right: var(--space-1);">+</span> Registrar Negocio
+          <span style="margin-right: var(--space-1);">+</span> ${I18nService.t('sa_add_company')}
         </button>
       `,
       contentHTML: `

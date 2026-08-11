@@ -17,6 +17,7 @@ import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { WhatsAppService } from '../../../services/whatsapp.service.js';
 import { TelegramService } from '../../../services/telegram.service.js';
 import { ComprobanteService } from '../../../services/comprobante.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class POSView extends Component {
   constructor(params = {}) {
@@ -24,7 +25,7 @@ export class POSView extends Component {
 
     const currentUser = GlobalStore.getState().currentUser || {};
     this.companyId = currentUser.companyId || '';
-    this.sellerName = currentUser.displayName || currentUser.name || 'Cajero';
+    this.sellerName = currentUser.displayName || currentUser.name || I18nService.t('pos_cashier');
 
     const company = GlobalStore.getState().currentCompany || {};
     this.businessCategory = getBusinessCategory(company.businessType || '');
@@ -47,13 +48,11 @@ export class POSView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: this.isBar ? 'Punto de Venta & Taquilla (POS)' : 'Punto de Venta (POS)',
-      subtitle: this.isBar
-        ? 'Procesa cobros de barras, VIPs y registros de covers/entradas.'
-        : 'Procesa cobros de mesas, órdenes separadas y ventas directas.',
+      title: I18nService.t('pos_title'),
+      subtitle: 'Process sales, direct checkout, table orders, and receipts.',
       actionHTML: `
         <button id="btn-reopen-last-receipt" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
-          🧾 Último Comprobante
+          🧾 ${I18nService.t('pos_receipt')}
         </button>
       `,
       contentHTML: `

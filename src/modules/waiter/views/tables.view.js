@@ -5,6 +5,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class TablesView extends Component {
   constructor(params = {}) {
@@ -12,7 +13,7 @@ export class TablesView extends Component {
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
     this.companyId = currentUser.companyId || '';
-    this.waiterName = currentUser.displayName || 'Mesero';
+    this.waiterName = currentUser.displayName || I18nService.t('emp_role_waiter');
     this.currentUserId = currentUser.uid || '';
 
     this.state = {
@@ -31,11 +32,11 @@ export class TablesView extends Component {
     this._timerInterval = null;
 
     this.layout = new PageLayout({
-      title: 'Mis Mesas',
-      subtitle: 'Tus mesas asignadas — confirma pedidos, envía a cocina y solicita cuentas.',
+      title: I18nService.t('waiter_my_tables'),
+      subtitle: 'Your assigned tables — manage orders, send to kitchen, and collect payments.',
       actionHTML: `
         <span class="badge animate-pulse" style="background:#34d39922; color:#34d399; border:1px solid #34d39944; padding:4px 10px;">
-          ● En Servicio
+          ● ${I18nService.t('online')}
         </span>
       `,
       contentHTML: `

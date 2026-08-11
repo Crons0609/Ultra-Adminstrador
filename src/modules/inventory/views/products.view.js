@@ -11,6 +11,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { ImageStorageService } from '../../../services/image-storage.service.js';
 import { ImageDisplay } from '../../../components/ui/image-display.js';
 import { ImageUploader } from '../../../components/ui/image-uploader.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ProductsView extends Component {
   constructor(params = {}) {
@@ -32,7 +33,7 @@ export class ProductsView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: 'Producto',
+          label: I18nService.t('inv_product_name'),
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               ${(row.imageId || row.image)
@@ -41,15 +42,15 @@ export class ProductsView extends Component {
               }
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val}</span>
-                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Sin categoría'}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Uncategorized'}</span>
               </div>
             </div>
           `
         },
-        { key: 'sku', label: 'SKU / Código' },
+        { key: 'sku', label: I18nService.t('inv_product_code') },
         { 
           key: 'stock', 
-          label: 'Stock Actual',
+          label: I18nService.t('inv_stock'),
           render: (val, row) => `
             <span class="font-medium ${Number(val) === 0 ? 'text-danger font-bold' : (Number(val) <= Number(row.minStock || 0) ? 'text-warning font-semibold' : 'text-success')}">
               ${val} ${row.unit || 'uds'}
@@ -58,22 +59,22 @@ export class ProductsView extends Component {
         },
         { 
           key: 'minStock', 
-          label: 'Stock Mín.',
+          label: I18nService.t('inv_min_stock'),
           render: (val, row) => `<span class="text-secondary">${val} ${row.unit || 'uds'}</span>`
         },
         { 
           key: 'purchasePrice', 
-          label: 'P. Compra',
+          label: I18nService.t('inv_cost'),
           render: (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)
         },
         { 
           key: 'price', 
-          label: 'P. Venta',
+          label: I18nService.t('inv_price'),
           render: (val) => `<strong class="text-primary">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>`
         },
         { 
           key: 'margin', 
-          label: 'Margen',
+          label: 'Margin',
           render: (_, row) => {
             const purchase = Number(row.purchasePrice || 0);
             const sale = Number(row.price || 0);
@@ -84,16 +85,16 @@ export class ProductsView extends Component {
         },
         { 
           key: 'status', 
-          label: 'Estado',
+          label: I18nService.t('status'),
           render: (_, row) => {
             const stock = Number(row.stock || 0);
             const min = Number(row.minStock || 0);
             if (stock === 0) {
-              return `<span class="stock-badge stock-out">Agotado</span>`;
+              return `<span class="stock-badge stock-out">${I18nService.t('inv_out_of_stock')}</span>`;
             } else if (stock <= min) {
-              return `<span class="stock-badge stock-low">Bajo Stock</span>`;
+              return `<span class="stock-badge stock-low">${I18nService.t('inv_low_stock')}</span>`;
             } else {
-              return `<span class="stock-badge stock-ok">Disponible</span>`;
+              return `<span class="stock-badge stock-ok">${I18nService.t('inv_in_stock')}</span>`;
             }
           }
         },
@@ -112,11 +113,11 @@ export class ProductsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Inventario de Productos',
-      subtitle: 'Administra el catálogo de artículos, niveles de stock, precios y márgenes de ganancia.',
+      title: I18nService.t('inv_title') || 'Inventario de Productos',
+      subtitle: I18nService.t('inv_subtitle') || 'Administra el catálogo de artículos, niveles de stock, precios y márgenes de ganancia.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-product">
-          + Agregar Producto
+          + ${I18nService.t('add_product') || 'Agregar Producto'}
         </button>
       `,
       contentHTML: `
@@ -124,38 +125,38 @@ export class ProductsView extends Component {
         <div class="grid-stats animate-fade-in" id="products-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Artículos Registrados</span>
+              <span class="kpi-label">${I18nService.t('registered_articles') || 'Artículos Registrados'}</span>
               <div class="kpi-icon kpi-icon-accent">📦</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-items">0</h3>
-            <span class="text-xs text-secondary">Productos únicos activos</span>
+            <span class="text-xs text-secondary">${I18nService.t('active_unique_products') || 'Productos únicos activos'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Valor del Inventario</span>
+              <span class="kpi-label">${I18nService.t('inventory_value') || 'Valor del Inventario'}</span>
               <div class="kpi-icon kpi-icon-success">💰</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-value">$0.00</h3>
-            <span class="text-xs text-secondary">Costo total acumulado</span>
+            <span class="text-xs text-secondary">${I18nService.t('total_accumulated_cost') || 'Costo total acumulado'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Stock Crítico (Agotados)</span>
+              <span class="kpi-label">${I18nService.t('critical_stock_out') || 'Stock Crítico (Agotados)'}</span>
               <div class="kpi-icon kpi-icon-danger">⚠️</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-critical-items">0</h3>
-            <span class="text-xs text-secondary">Requieren reabastecimiento urgente</span>
+            <span class="text-xs text-secondary">${I18nService.t('urgent_restock_required') || 'Requieren reabastecimiento urgente'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Stock Mínimo (Bajo)</span>
+              <span class="kpi-label">${I18nService.t('minimum_stock_low') || 'Stock Mínimo (Bajo)'}</span>
               <div class="kpi-icon kpi-icon-warning">📉</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-low-items">0</h3>
-            <span class="text-xs text-secondary">Artículos por debajo del límite</span>
+            <span class="text-xs text-secondary">${I18nService.t('items_below_limit') || 'Artículos por debajo del límite'}</span>
           </div>
         </div>
 
@@ -163,7 +164,7 @@ export class ProductsView extends Component {
         <div class="card p-4 mb-4">
           <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3);">
             <span style="font-size: 1rem;">📊</span>
-            <span class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;">Búsqueda por Escaneo</span>
+            <span class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;">${I18nService.t('search_by_scan') || 'Búsqueda por Escaneo'}</span>
           </div>
           <div class="barcode-input-wrapper barcode-input-compact">
             <div class="barcode-input-container">
@@ -172,7 +173,7 @@ export class ProductsView extends Component {
                   <path d="M3 5v14"/><path d="M6 5v14"/><path d="M9 5v14"/><path d="M12 5v14"/><path d="M16 5v14"/><path d="M19 5v14"/><path d="M21 5v14"/>
                 </svg>
               </div>
-              <input type="text" id="inp-barcode-scan" class="input input-md barcode-input-field" placeholder="Escanea un código de barras o QR para buscar..." autocomplete="off" autocorrect="off" spellcheck="false" />
+              <input type="text" id="inp-barcode-scan" class="input input-md barcode-input-field" placeholder="${I18nService.t('scan_barcode_placeholder') || 'Escanea un código de barras o QR para buscar...'}" autocomplete="off" autocorrect="off" spellcheck="false" />
               <div class="barcode-input-indicator"><span class="barcode-pulse"></span></div>
             </div>
             <div id="barcode-scan-feedback" class="barcode-input-feedback" style="display: none;">
@@ -187,18 +188,18 @@ export class ProductsView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search" class="input input-md" placeholder="Buscar por nombre, SKU o código de barras..." />
+              <input type="text" id="inp-search" class="input input-md" placeholder="${I18nService.t('search_by_name_sku') || 'Buscar por nombre, SKU o código de barras...'}" />
             </div>
 
             <select id="sel-filter-category" class="inv-filter-select">
-              <option value="">Todas las categorías</option>
+              <option value="">${I18nService.t('all_categories') || 'Todas las categorías'}</option>
             </select>
 
             <select id="sel-filter-status" class="inv-filter-select">
-              <option value="">Todos los estados</option>
-              <option value="OK">Disponibles</option>
-              <option value="LOW">Stock Bajo</option>
-              <option value="OUT">Agotados</option>
+              <option value="">${I18nService.t('all_statuses') || 'Todos los estados'}</option>
+              <option value="OK">${I18nService.t('available') || 'Disponibles'}</option>
+              <option value="LOW">${I18nService.t('inv_low_stock') || 'Stock Bajo'}</option>
+              <option value="OUT">${I18nService.t('inv_out_of_stock') || 'Agotados'}</option>
             </select>
           </div>
         </div>

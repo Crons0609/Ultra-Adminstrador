@@ -18,6 +18,8 @@ import { auth, db } from '../../../config/firebase.config.js';
 import { ref, get, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { AppearanceService, THEMES } from '../../../services/appearance.service.js';
 import { MobileNavConfigService, NAV_TAB_CATALOG, DEFAULT_NAV_TABS } from '../../../services/mobile-nav-config.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
+import { LanguageSelectorModal } from '../../../components/modals/language-selector.modal.js';
 
 // Build the theme grid HTML for Business Owners
 function buildOwnerThemeGrid() {
@@ -80,12 +82,12 @@ export class SettingsView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Ajustes de la Cuenta y del Panel',
-      subtitle: 'Administra tu perfil de dueño, las preferencias visuales de tu panel y el personal de tu negocio de manera autónoma.',
+      title: I18nService.t('settings_title'),
+      subtitle: I18nService.t('settings_subtitle'),
       actionHTML: `
         <span class="badge" style="font-size: 0.75rem; padding: 4px 10px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 4px; background: rgba(139, 92, 246, 0.1); color: var(--color-accent);">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); display: inline-block; animation: pulse 2s infinite;"></span>
-          Panel del Propietario
+          ${I18nService.t('emp_role_owner')}
         </span>
       `,
       contentHTML: `
@@ -336,19 +338,19 @@ export class SettingsView extends Component {
           <!-- Navigation Tabs -->
           <div class="settings-tabs" id="settings-tab-nav">
             <button class="settings-tab-btn active" data-tab="account">
-              👤 Mi Cuenta
+              👤 ${I18nService.t('settings_tab_account')}
             </button>
             <button class="settings-tab-btn" data-tab="employees">
-              👥 Gestión de Empleados
+              👥 ${I18nService.t('settings_tab_employees')}
             </button>
             <button class="settings-tab-btn" data-tab="preferences">
-              ⚙️ Preferencias del Dashboard
+              ⚙️ ${I18nService.t('settings_tab_preferences')}
             </button>
             <button class="settings-tab-btn" data-tab="location">
-              📍 Ubicación del Establecimiento
+              📍 Location
             </button>
             <button class="settings-tab-btn" data-tab="mobile-nav">
-              📱 Barra Móvil
+              📱 ${I18nService.t('settings_tab_mobile_nav')}
             </button>
           </div>
 
@@ -358,7 +360,7 @@ export class SettingsView extends Component {
               
               <!-- Profile Info Column -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">👤 Información Personal</span>
+                <span class="card-title-badge">👤 ${I18nService.t('set_personal_info') || 'Información Personal'}</span>
                 
                 <form id="owner-profile-form" style="display:flex; flex-direction:column; gap: var(--space-3);">
                   <!-- Photo Upload Widget -->
@@ -396,7 +398,7 @@ export class SettingsView extends Component {
 
               <!-- Security, Credentials & Password Column -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">🔒 Seguridad y Credenciales</span>
+                <span class="card-title-badge">🔒 ${I18nService.t('set_security_credentials') || 'Seguridad y Credenciales'}</span>
                 <p class="text-xs text-secondary mb-4">Actualiza tu correo electrónico de acceso o cambia la contraseña directamente. Para realizar estos cambios se requiere ingresar tu contraseña actual.</p>
 
                 <form id="owner-credentials-form" style="display:flex; flex-direction:column; gap: var(--space-3);">
@@ -446,7 +448,7 @@ export class SettingsView extends Component {
               <!-- List Controls -->
               <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
-                  <h3 class="text-lg font-bold" style="margin:0;">👥 Administración de Empleados</h3>
+                  <h3 class="text-lg font-bold" style="margin:0;">👥 ${I18nService.t('set_employee_mgmt') || 'Administración de Empleados'}</h3>
                   <p class="text-secondary" style="font-size:0.8rem; margin-top:4px;">Gestiona los meseros, cocineros, cajeros y gerentes exclusivos de tu negocio.</p>
                 </div>
                 
@@ -493,16 +495,22 @@ export class SettingsView extends Component {
               
               <!-- Dashboard Display Preferences -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">⚙️ Personalización del Panel</span>
+                <span class="card-title-badge">⚙️ ${I18nService.t('set_dashboard_custom') || 'Personalización del Panel'}</span>
                 
                 <form id="owner-preferences-form" style="display:flex; flex-direction:column; gap: var(--space-4);">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
-                    <div class="form-group">
-                      <label class="form-label" for="pref-lang-select">Idioma</label>
-                      <select id="pref-lang-select" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                        <option value="es">Español 🇪🇸</option>
-                        <option value="en">English 🇺🇸</option>
-                      </select>
+                    <!-- Módulo de Idioma del Sistema -->
+                    <div style="grid-column: span 2; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 1.8rem; line-height: 1;">${I18nService.getCurrentLanguageInfo().flag}</span>
+                        <div>
+                          <strong style="color: var(--color-text-primary); font-size: 0.95rem; display: block;">${I18nService.t('system_language')}</strong>
+                          <span style="color: var(--color-text-secondary); font-size: 0.8rem;">${I18nService.getCurrentLanguageInfo().nativeName} (${I18nService.getCurrentLanguageInfo().name})</span>
+                        </div>
+                      </div>
+                      <button type="button" id="btn-open-owner-lang-modal" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; padding: 9px 18px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #0ea5e9); color: #ffffff; border: none; cursor: pointer; transition: all 0.2s ease;">
+                        <span>🌐</span> ${I18nService.t('change_language')}
+                      </button>
                     </div>
 
                     <div class="form-group">
@@ -540,7 +548,7 @@ export class SettingsView extends Component {
                   <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-4); margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4);">
                     <div>
                       <label class="form-label" style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; color: var(--color-text-primary);">
-                        🎨 Apariencia y Tema de tu Negocio
+                        🎨 ${I18nService.t('set_appearance_theme') || 'Apariencia y Tema de tu Negocio'}
                       </label>
                       <span class="text-xs text-secondary">Elige la apariencia que mejor represente a tu negocio. Se aplicará a tu panel y al de todos tus empleados.</span>
                     </div>
@@ -633,7 +641,7 @@ export class SettingsView extends Component {
 
               <!-- Notifications Alert System Card -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">🔔 Notificaciones y Alertas</span>
+                <span class="card-title-badge">🔔 ${I18nService.t('set_notifications_alerts') || 'Notificaciones y Alertas'}</span>
                 
                 <form id="owner-alerts-form" style="display:flex; flex-direction:column; gap: var(--space-4);">
                   <div class="form-group">
@@ -679,7 +687,7 @@ export class SettingsView extends Component {
           <div class="tab-content-panel" id="panel-tab-location" style="display:none;">
             <div class="settings-grid" style="grid-template-columns:1fr;">
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">📍 Ubicación del Establecimiento</span>
+                <span class="card-title-badge">📍 ${I18nService.t('set_business_location') || 'Ubicación del Establecimiento'}</span>
                 <p class="text-xs text-secondary" style="margin-bottom:var(--space-4);">
                   Configura la dirección física de tu negocio. Esta información se guardará en la nube y estará disponible en cualquier dispositivo, sesión o navegador.
                 </p>
@@ -763,7 +771,7 @@ export class SettingsView extends Component {
           <!-- TAB CONTENT: MOBILE NAV CUSTOMIZATION -->
           <div class="tab-content-panel" id="panel-tab-mobile-nav" style="display:none;">
             <div class="form-card animate-fade-in" style="max-width:680px; margin:0 auto;">
-              <span class="card-title-badge">📱 Personalizar Barra de Navegación Móvil</span>
+              <span class="card-title-badge">📱 ${I18nService.t('set_mobile_nav') || 'Personalizar Barra de Navegación Móvil'}</span>
               <p style="font-size:0.82rem; color:var(--color-text-secondary); margin:8px 0 20px;">Elige hasta <strong>5 botones</strong> y ordénalos según tu flujo de trabajo. Solo se muestran las opciones disponibles para tu rol.</p>
 
               <!-- LIVE PREVIEW -->
@@ -899,6 +907,16 @@ export class SettingsView extends Component {
     const prefForm = root.querySelector('#owner-preferences-form');
     if (prefForm) {
       prefForm.addEventListener('submit', (e) => this.handleSavePreferences(e, root));
+    }
+
+    // Language Selector Modal Handler
+    const openLangBtn = root.querySelector('#btn-open-owner-lang-modal');
+    if (openLangBtn) {
+      openLangBtn.addEventListener('click', () => {
+        LanguageSelectorModal.open(() => {
+          this.render();
+        });
+      });
     }
 
     // 9. Alert System Form Submission

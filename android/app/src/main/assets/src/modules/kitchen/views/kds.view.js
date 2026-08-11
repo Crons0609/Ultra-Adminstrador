@@ -4,6 +4,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { GlobalStore } from '../../../core/state.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class KDSView extends Component {
   constructor(params = {}) {
@@ -19,13 +20,11 @@ export class KDSView extends Component {
     this.isBar = this.businessCategory === 'BAR_DISCOTECA';
 
     this.layout = new PageLayout({
-      title: this.isBar ? 'Pantalla de Barra (BDS)' : 'Pantalla de Cocina (KDS)',
-      subtitle: this.isBar 
-        ? 'Control en tiempo real de bebidas, tragos y cócteles ordenados.' 
-        : 'Control en tiempo real de órdenes entrantes y tiempos de preparación.',
+      title: I18nService.t('kds_title'),
+      subtitle: 'Real-time kitchen order display and preparation tracking.',
       actionHTML: `
         <span id="kds-timer-sync" class="badge" style="background:#3b82f622; color:#3b82f6; border:1px solid #3b82f644; padding:4px 10px;">
-          ⏱️ Auto-actualizando
+          ⏱️ Auto-sync
         </span>
       `,
       contentHTML: `

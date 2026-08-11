@@ -7,6 +7,7 @@
  */
 
 import { Component } from '../../core/component.js';
+import { I18nService } from '../../services/i18n.service.js';
 
 export class DataTable extends Component {
   /**
@@ -58,7 +59,7 @@ export class DataTable extends Component {
       rowsHTML = `
         <tr>
           <td class="td text-center" colspan="${columns.length}">
-            No hay datos disponibles
+            ${I18nService.t('no_data')}
           </td>
         </tr>`;
     } else {

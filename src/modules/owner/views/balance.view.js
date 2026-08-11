@@ -3,6 +3,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class BalanceView extends Component {
   constructor(params = {}) {
@@ -14,43 +15,43 @@ export class BalanceView extends Component {
     this.state = { orders: [], expenses: [] };
 
     this.layout = new PageLayout({
-      title: 'Balance General',
-      subtitle: 'Estado financiero integral del negocio — ingresos, egresos y posición neta.',
+      title: I18nService.t('bal_title'),
+      subtitle: I18nService.t('bal_subtitle') || 'Estado financiero integral — activos, pasivos y posición neta.',
       actionHTML: '',
       contentHTML: `
         <!-- Summary Row -->
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift" style="border-top: 3px solid var(--color-success);">
             <div class="kpi-card-header">
-              <span class="kpi-label">Total Ingresos</span>
+              <span class="kpi-label">${I18nService.t('fin_total_income')}</span>
               <div class="kpi-icon kpi-icon-success">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
               </div>
             </div>
             <h3 class="kpi-value" id="bal-total-income">$0.00</h3>
-            <span class="kpi-change kpi-change-up" id="bal-income-count">0 ventas completadas</span>
+            <span class="kpi-change kpi-change-up" id="bal-income-count">${I18nService.t('fin_sales_count') || '0 ventas completadas'}</span>
           </div>
 
           <div class="kpi-card hover-lift" style="border-top: 3px solid var(--color-danger);">
             <div class="kpi-card-header">
-              <span class="kpi-label">Total Egresos</span>
+              <span class="kpi-label">${I18nService.t('fin_total_expenses')}</span>
               <div class="kpi-icon kpi-icon-danger">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
               </div>
             </div>
             <h3 class="kpi-value" id="bal-total-expenses">$0.00</h3>
-            <span class="kpi-change kpi-change-down" id="bal-expense-count">0 salidas registradas</span>
+            <span class="kpi-change kpi-change-down" id="bal-expense-count">${I18nService.t('fin_outflows') || '0 salidas registradas'}</span>
           </div>
 
           <div class="kpi-card hover-lift" id="bal-net-card">
             <div class="kpi-card-header">
-              <span class="kpi-label">Posición Neta</span>
+              <span class="kpi-label">${I18nService.t('fin_balance')}</span>
               <div class="kpi-icon kpi-icon-accent" id="bal-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </div>
             </div>
             <h3 class="kpi-value" id="bal-net">$0.00</h3>
-            <span class="kpi-change" id="bal-margin">Margen neto: 0%</span>
+            <span class="kpi-change" id="bal-margin">${I18nService.t('fin_net_margin') || 'Margen neto: 0%'}</span>
           </div>
         </div>
 

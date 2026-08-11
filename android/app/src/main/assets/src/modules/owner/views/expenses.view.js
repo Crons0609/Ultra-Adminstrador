@@ -5,6 +5,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ExpensesView extends Component {
   constructor(params = {}) {
@@ -21,43 +22,43 @@ export class ExpensesView extends Component {
     // Initialize DataTable
     this.table = new DataTable({
       columns: [
-        { key: 'concept', label: 'Concepto / Descripción' },
+        { key: 'concept', label: I18nService.t('exp_concept') },
         { 
           key: 'category', 
-          label: 'Categoría',
+          label: I18nService.t('exp_category'),
           render: (val) => `<span class="badge" style="background-color: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-md); font-size: 0.75rem;">📦 ${val}</span>`
         },
         { 
           key: 'amount', 
-          label: 'Monto',
+          label: I18nService.t('exp_amount'),
           render: (val) => `<strong style="color: var(--color-danger);">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val)}</strong>`
         },
         { 
           key: 'date', 
-          label: 'Fecha',
+          label: I18nService.t('exp_date'),
           render: (val) => new Date(val).toLocaleDateString()
         },
-        { key: 'registeredBy', label: 'Registrado por' },
+        { key: 'registeredBy', label: I18nService.t('log_user') },
         {
           key: 'id',
-          label: 'Acción',
-          render: (val) => `<button class="btn btn-danger btn-sm py-1 px-2 btn-delete-expense" data-id="${val}" style="font-size: 0.7rem;">🗑️ Eliminar</button>`
+          label: I18nService.t('actions'),
+          render: (val) => `<button class="btn btn-danger btn-sm py-1 px-2 btn-delete-expense" data-id="${val}" style="font-size: 0.7rem;">🗑️ ${I18nService.t('delete')}</button>`
         }
       ],
       data: this.state.expenses
     });
 
     this.layout = new PageLayout({
-      title: 'Control de Gastos',
-      subtitle: 'Registra y monitorea las salidas de caja y costos operativos del negocio.',
+      title: I18nService.t('exp_title'),
+      subtitle: 'Track and manage operational expenses and outflows.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-expense">
-          + Registrar Gasto
+          + ${I18nService.t('exp_add')}
         </button>
       `,
       contentHTML: `
         <div class="card p-5">
-          <h3 class="text-lg font-semibold mb-4">Registro Histórico de Gastos</h3>
+          <h3 class="text-lg font-semibold mb-4">${I18nService.t('exp_title')}</h3>
           <div id="expenses-table-wrapper"></div>
         </div>
       `

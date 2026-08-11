@@ -9,6 +9,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PlansView extends Component {
   constructor(params = {}) {
@@ -18,9 +19,9 @@ export class PlansView extends Component {
 
     // Set up PageLayout
     this.layout = new PageLayout({
-      title: 'Planes SaaS',
-      subtitle: 'Administración de suscripciones, límites de sucursales, productos y costos de licencias.',
-      actionHTML: `<button class="btn btn-primary btn-sm" id="btn-add-plan">+ Nuevo Plan</button>`,
+      title: I18nService.t('plan_title'),
+      subtitle: 'SaaS subscription management, branch limits, products, and license fees.',
+      actionHTML: `<button class="btn btn-primary btn-sm" id="btn-add-plan">+ ${I18nService.t('plan_add')}</button>`,
       contentHTML: `
         <div class="grid-stats" id="plans-container-grid">
           <!-- Dinamically loaded plans cards -->

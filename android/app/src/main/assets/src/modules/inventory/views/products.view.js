@@ -11,6 +11,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { ImageStorageService } from '../../../services/image-storage.service.js';
 import { ImageDisplay } from '../../../components/ui/image-display.js';
 import { ImageUploader } from '../../../components/ui/image-uploader.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ProductsView extends Component {
   constructor(params = {}) {
@@ -32,7 +33,7 @@ export class ProductsView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: 'Producto',
+          label: I18nService.t('inv_product_name'),
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               ${(row.imageId || row.image)
@@ -41,15 +42,15 @@ export class ProductsView extends Component {
               }
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val}</span>
-                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Sin categoría'}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Uncategorized'}</span>
               </div>
             </div>
           `
         },
-        { key: 'sku', label: 'SKU / Código' },
+        { key: 'sku', label: I18nService.t('inv_product_code') },
         { 
           key: 'stock', 
-          label: 'Stock Actual',
+          label: I18nService.t('inv_stock'),
           render: (val, row) => `
             <span class="font-medium ${Number(val) === 0 ? 'text-danger font-bold' : (Number(val) <= Number(row.minStock || 0) ? 'text-warning font-semibold' : 'text-success')}">
               ${val} ${row.unit || 'uds'}
@@ -58,22 +59,22 @@ export class ProductsView extends Component {
         },
         { 
           key: 'minStock', 
-          label: 'Stock Mín.',
+          label: I18nService.t('inv_min_stock'),
           render: (val, row) => `<span class="text-secondary">${val} ${row.unit || 'uds'}</span>`
         },
         { 
           key: 'purchasePrice', 
-          label: 'P. Compra',
+          label: I18nService.t('inv_cost'),
           render: (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)
         },
         { 
           key: 'price', 
-          label: 'P. Venta',
+          label: I18nService.t('inv_price'),
           render: (val) => `<strong class="text-primary">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>`
         },
         { 
           key: 'margin', 
-          label: 'Margen',
+          label: 'Margin',
           render: (_, row) => {
             const purchase = Number(row.purchasePrice || 0);
             const sale = Number(row.price || 0);
@@ -84,16 +85,16 @@ export class ProductsView extends Component {
         },
         { 
           key: 'status', 
-          label: 'Estado',
+          label: I18nService.t('status'),
           render: (_, row) => {
             const stock = Number(row.stock || 0);
             const min = Number(row.minStock || 0);
             if (stock === 0) {
-              return `<span class="stock-badge stock-out">Agotado</span>`;
+              return `<span class="stock-badge stock-out">${I18nService.t('inv_out_of_stock')}</span>`;
             } else if (stock <= min) {
-              return `<span class="stock-badge stock-low">Bajo Stock</span>`;
+              return `<span class="stock-badge stock-low">${I18nService.t('inv_low_stock')}</span>`;
             } else {
-              return `<span class="stock-badge stock-ok">Disponible</span>`;
+              return `<span class="stock-badge stock-ok">${I18nService.t('inv_in_stock')}</span>`;
             }
           }
         },

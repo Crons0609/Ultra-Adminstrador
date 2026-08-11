@@ -14,6 +14,7 @@ import { WarehouseService } from '../../../services/warehouse.service.js';
 import { BranchService } from '../../../services/branch.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class TransfersView extends Component {
   constructor(props = {}) {
@@ -35,12 +36,12 @@ export class TransfersView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '📦 Traslados de Inventario',
-      subtitle: `${this.currentCompany.name || 'Mi Negocio'} — Control de envíos, traspasos y existencias entre sucursales y bodegas.`,
+      title: `📦 ${I18nService.t('nav_transfers') || 'Traslados de Inventario'}`,
+      subtitle: `${this.currentCompany.name || 'Mi Negocio'} — ${I18nService.t('tr_subtitle') || 'Control de envíos, traspasos y existencias entre sucursales y bodegas.'}`,
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-new-transfer" style="display:flex;align-items:center;gap:6px;font-weight:700;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nuevo Traslado
+          ${I18nService.t('tr_new_transfer') || 'Nuevo Traslado'}
         </button>
       `,
       contentHTML: `<div id="transfers-view-root"></div>`

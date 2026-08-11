@@ -14,6 +14,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { isModuleEnabled } from '../../../config/modules.config.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class OwnerDashboardView extends Component {
   constructor(params = {}) {
@@ -55,10 +56,10 @@ export class OwnerDashboardView extends Component {
 
     this.layout = new PageLayout({
       title: this._getGreeting(),
-      subtitle: 'Resumen de tu negocio',
+      subtitle: I18nService.t('business_summary'),
       actionHTML: `
         <button class="btn btn-secondary btn-sm" id="btn-refresh-dashboard" style="min-height:36px;display:flex;align-items:center;gap:6px;font-weight:600;">
-          🔄 Actualizar
+          🔄 ${I18nService.t('refresh')}
         </button>
       `,
       contentHTML: `<div id="owner-dashboard-root"></div>`
@@ -67,10 +68,10 @@ export class OwnerDashboardView extends Component {
 
   _getGreeting() {
     const hour = new Date().getHours();
-    const name = (this.currentUser.displayName || 'Dueño').split(' ')[0];
-    let greeting = 'Buenos días';
-    if (hour >= 12 && hour < 19) greeting = 'Buenas tardes';
-    else if (hour >= 19 || hour < 5) greeting = 'Buenas noches';
+    const name = (this.currentUser.displayName || I18nService.t('emp_role_owner')).split(' ')[0];
+    let greeting = I18nService.t('good_morning');
+    if (hour >= 12 && hour < 19) greeting = I18nService.t('good_afternoon');
+    else if (hour >= 19 || hour < 5) greeting = I18nService.t('good_evening');
     return `${greeting}, ${name}`;
   }
 

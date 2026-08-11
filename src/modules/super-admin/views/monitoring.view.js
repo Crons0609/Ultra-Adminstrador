@@ -8,45 +8,46 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { Chart } from '../../../components/data/chart.js';
 import { db } from '../../../config/firebase.config.js';
 import { ref, get } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class MonitoringView extends Component {
   constructor(params = {}) {
     super(params);
     this.layout = new PageLayout({
-      title: 'Monitoreo de Infraestructura y Telemetría',
-      subtitle: 'Estado y latencia en tiempo real de la base de datos Firebase RTDB y servicios en la nube.',
-      actionHTML: `<button type="button" id="btn-ping-mon" class="btn btn-secondary btn-sm">⚡ Probar Latencia</button>`,
+      title: I18nService.t('mon_title'),
+      subtitle: 'Real-time telemetry and database connection latency monitoring.',
+      actionHTML: `<button type="button" id="btn-ping-mon" class="btn btn-secondary btn-sm">⚡ ${I18nService.t('refresh')}</button>`,
       contentHTML: `
         <div class="grid-stats">
           <div class="card p-4">
-            <span class="text-sm text-secondary">Estado de Firebase RTDB</span>
-            <h3 id="mon-db-status" class="text-2xl font-bold mt-1 text-primary">Conectando...</h3>
-            <span id="mon-db-badge" class="text-xs text-success font-semibold">● Operacional</span>
+            <span class="text-sm text-secondary">${I18nService.t('mon_db_status')}</span>
+            <h3 id="mon-db-status" class="text-2xl font-bold mt-1 text-primary">${I18nService.t('loading')}</h3>
+            <span id="mon-db-badge" class="text-xs text-success font-semibold">● ${I18nService.t('mon_online')}</span>
           </div>
           <div class="card p-4">
-            <span class="text-sm text-secondary">Latencia de Conexión</span>
+            <span class="text-sm text-secondary">Connection Latency</span>
             <h3 id="mon-latency-val" class="text-2xl font-bold mt-1 text-primary">-- ms</h3>
-            <span id="mon-latency-quality" class="text-xs text-success font-semibold">● Midiendo...</span>
+            <span id="mon-latency-quality" class="text-xs text-success font-semibold">● Measuring...</span>
           </div>
           <div class="card p-4">
-            <span class="text-sm text-secondary">Nodos en Base de Datos</span>
+            <span class="text-sm text-secondary">Database Nodes</span>
             <h3 id="mon-total-nodes" class="text-2xl font-bold mt-1 text-primary">0</h3>
-            <span id="mon-nodes-sub" class="text-xs text-secondary">Escaneando raíz...</span>
+            <span id="mon-nodes-sub" class="text-xs text-secondary">Scanning root...</span>
           </div>
         </div>
 
         <div class="grid-responsive mt-6">
           <div class="col-8 card p-5">
-            <h3 class="text-lg font-semibold mb-4">Latencia Reciente de Respuesta (ms)</h3>
+            <h3 class="text-lg font-semibold mb-4">Response Latency History (ms)</h3>
             <div id="monitoring-chart-container" style="width: 100%; height: 280px;"></div>
           </div>
           <div class="col-4 card p-5">
-            <h3 class="text-lg font-semibold mb-4">Servicios del Sistema</h3>
+            <h3 class="text-lg font-semibold mb-4">System Services</h3>
             <ul style="list-style: none; padding: 0;" class="d-flex flex-column gap-3 text-sm">
-              <li class="d-flex justify-content-between"><span>Firebase Authentication</span> <span id="srv-auth" class="text-success">Activo</span></li>
-              <li class="d-flex justify-content-between"><span>Realtime Database (RTDB)</span> <span id="srv-rtdb" class="text-success">Activo</span></li>
-              <li class="d-flex justify-content-between"><span>Service Worker Cache</span> <span id="srv-sw" class="text-success">Online</span></li>
-              <li class="d-flex justify-content-between"><span>Auditoría e Historial</span> <span id="srv-audit" class="text-success font-semibold">Activo</span></li>
+              <li class="d-flex justify-content-between"><span>Firebase Authentication</span> <span id="srv-auth" class="text-success">${I18nService.t('active')}</span></li>
+              <li class="d-flex justify-content-between"><span>Realtime Database (RTDB)</span> <span id="srv-rtdb" class="text-success">${I18nService.t('active')}</span></li>
+              <li class="d-flex justify-content-between"><span>Service Worker Cache</span> <span id="srv-sw" class="text-success">${I18nService.t('mon_online')}</span></li>
+              <li class="d-flex justify-content-between"><span>Audit Log & History</span> <span id="srv-audit" class="text-success font-semibold">${I18nService.t('active')}</span></li>
             </ul>
           </div>
         </div>
@@ -57,9 +58,9 @@ export class MonitoringView extends Component {
 
     this.chart = new Chart({
       type: 'line',
-      labels: ['-6m', '-5m', '-4m', '-3m', '-2m', '-1m', 'Ahora'],
+      labels: ['-6m', '-5m', '-4m', '-3m', '-2m', '-1m', I18nService.t('dash_today')],
       datasets: [
-        { label: 'Latencia (ms)', data: this.latencyHistory, color: '#34d399' }
+        { label: 'Latency (ms)', data: this.latencyHistory, color: '#34d399' }
       ]
     });
   }

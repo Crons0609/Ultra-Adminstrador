@@ -6,6 +6,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { GlobalStore } from '../../../core/state.js';
 import { ImageDisplay } from '../../../components/ui/image-display.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class UsersView extends Component {
   constructor(params = {}) {
@@ -17,11 +18,11 @@ export class UsersView extends Component {
     this.selectedUser = null;
 
     this.layout = new PageLayout({
-      title: 'Gestión Global de Usuarios',
-      subtitle: 'Administración centralizada de todas las cuentas registradas en la plataforma (Programadores, Dueños, Gerentes, Personal y Clientes).',
+      title: I18nService.t('sa_user_mgmt_title') !== 'sa_user_mgmt_title' ? I18nService.t('sa_user_mgmt_title') : 'Global User Management',
+      subtitle: I18nService.t('sa_user_mgmt_subtitle') !== 'sa_user_mgmt_subtitle' ? I18nService.t('sa_user_mgmt_subtitle') : 'Centralized management of all accounts registered on the platform.',
       actionHTML: `
         <button type="button" id="btn-refresh-users" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:6px;">
-          🔄 Actualizar Lista
+          🔄 ${I18nService.t('refresh')}
         </button>
       `,
       contentHTML: `
@@ -36,7 +37,7 @@ export class UsersView extends Component {
                 type="text"
                 id="search-user-input"
                 class="input input-md"
-                placeholder="🔍 Buscar por nombre, correo, UID, teléfono, rol o negocio..."
+                placeholder="🔍 ${I18nService.t('emp_search')}"
                 style="width: 100%; padding-left: 12px;"
               />
             </div>
@@ -46,27 +47,27 @@ export class UsersView extends Component {
               
               <!-- Role Filter -->
               <select id="filter-role-select" class="input input-md" style="min-width: 140px;">
-                <option value="ALL">Todos los Roles</option>
-                <option value="SUPER_ADMIN">⚡ Programador / SuperAdmin</option>
-                <option value="OWNER">👑 Dueño / Propietario</option>
-                <option value="MANAGER">👔 Gerente / Administrador</option>
-                <option value="CASHIER">💵 Cajero</option>
-                <option value="WAITER">🍽️ Mesero</option>
-                <option value="KITCHEN">👨‍🍳 Cocina</option>
-                <option value="CUSTOMER">👤 Cliente</option>
+                <option value="ALL">${I18nService.t('select_all') !== 'Select All' ? I18nService.t('select_all') : 'All Roles'}</option>
+                <option value="SUPER_ADMIN">⚡ ${I18nService.t('sa_title')}</option>
+                <option value="OWNER">👑 ${I18nService.t('emp_role_owner')}</option>
+                <option value="MANAGER">👔 ${I18nService.t('emp_role_manager')}</option>
+                <option value="CASHIER">💵 ${I18nService.t('emp_role_cashier')}</option>
+                <option value="WAITER">🍽️ ${I18nService.t('emp_role_waiter')}</option>
+                <option value="KITCHEN">👨‍🍳 ${I18nService.t('emp_role_kitchen')}</option>
+                <option value="CUSTOMER">👤 Client</option>
               </select>
 
               <!-- Status Filter -->
               <select id="filter-status-select" class="input input-md" style="min-width: 130px;">
-                <option value="ALL">Todos los Estados</option>
-                <option value="ACTIVE">✅ Activo</option>
-                <option value="SUSPENDED">⏳ Suspendido</option>
-                <option value="DISABLED">🚫 Deshabilitado</option>
+                <option value="ALL">${I18nService.t('select_all') !== 'Select All' ? I18nService.t('select_all') : 'All Statuses'}</option>
+                <option value="ACTIVE">✅ ${I18nService.t('active')}</option>
+                <option value="SUSPENDED">⏳ ${I18nService.t('on_hold')}</option>
+                <option value="DISABLED">🚫 ${I18nService.t('disabled')}</option>
               </select>
 
               <!-- Business Filter -->
               <select id="filter-company-select" class="input input-md" style="min-width: 160px;">
-                <option value="ALL">Todos los Negocios</option>
+                <option value="ALL">${I18nService.t('sa_broadcast_to_all')}</option>
               </select>
 
             </div>
@@ -75,7 +76,7 @@ export class UsersView extends Component {
           <!-- Counter Header -->
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div id="users-count-badge" class="text-xs text-secondary font-semibold" style="font-family: monospace;">
-              Cargando usuarios desde Firebase...
+              ${I18nService.t('loading_data')}
             </div>
           </div>
 
@@ -84,19 +85,19 @@ export class UsersView extends Component {
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--color-border-primary, rgba(255,255,255,0.08)); background: var(--color-bg-secondary, rgba(255,255,255,0.02)); color: var(--color-text-secondary);">
-                  <th style="padding: 12px 16px;">Usuario / Perfil</th>
-                  <th style="padding: 12px 16px;">Correo Electrónico</th>
+                  <th style="padding: 12px 16px;">${I18nService.t('emp_col_employee')}</th>
+                  <th style="padding: 12px 16px;">${I18nService.t('auth_email')}</th>
                   <th style="padding: 12px 16px;">Firebase UID</th>
-                  <th style="padding: 12px 16px;">Rol de Sistema</th>
-                  <th style="padding: 12px 16px;">Negocio Asociado</th>
-                  <th style="padding: 12px 16px;">Estado</th>
-                  <th style="padding: 12px 16px;">Acciones Administrativas</th>
+                  <th style="padding: 12px 16px;">${I18nService.t('emp_role')}</th>
+                  <th style="padding: 12px 16px;">${I18nService.t('sa_company_name')}</th>
+                  <th style="padding: 12px 16px;">${I18nService.t('status')}</th>
+                  <th style="padding: 12px 16px;">${I18nService.t('actions')}</th>
                 </tr>
               </thead>
               <tbody id="users-table-body">
                 <tr>
                   <td colspan="7" style="padding: 32px; text-align: center; color: var(--color-text-tertiary);">
-                    ⏳ Cargando lista global de usuarios desde Firebase...
+                    ⏳ ${I18nService.t('loading_data')}
                   </td>
                 </tr>
               </tbody>
@@ -433,9 +434,9 @@ export class UsersView extends Component {
           <td style="padding: 12px 16px;">${statusBadge}</td>
           <td style="padding: 12px 16px;">
             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button type="button" class="btn-edit-user btn btn-secondary btn-sm" data-uid="${user.uid}" title="Editar perfil y permisos">✏️ Editar</button>
-              <button type="button" class="btn-pass-user btn btn-secondary btn-sm" data-uid="${user.uid}" title="Cambiar contraseña">🔑 Clave</button>
-              <button type="button" class="btn-delete-user btn btn-danger btn-sm" data-uid="${user.uid}" title="Eliminar usuario" style="background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3);">🗑️</button>
+              <button type="button" class="btn-edit-user btn btn-secondary btn-sm" data-uid="${user.uid}" title="${I18nService.t('edit')}">✏️ ${I18nService.t('edit')}</button>
+              <button type="button" class="btn-pass-user btn btn-secondary btn-sm" data-uid="${user.uid}" title="${I18nService.t('settings_change_password')}">🔑 ${I18nService.t('auth_password')}</button>
+              <button type="button" class="btn-delete-user btn btn-danger btn-sm" data-uid="${user.uid}" title="${I18nService.t('delete')}" style="background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3);">🗑️</button>
             </div>
           </td>
         </tr>
@@ -447,7 +448,7 @@ export class UsersView extends Component {
       btn.addEventListener('click', (e) => {
         const uid = e.currentTarget.getAttribute('data-uid');
         navigator.clipboard.writeText(uid);
-        NotificationService.success('UID copiado al portapapeles.');
+        NotificationService.success(I18nService.t('copied'));
       });
     });
 
@@ -475,13 +476,13 @@ export class UsersView extends Component {
 
   getRoleBadgeHTML(role) {
     const roles = {
-      SUPER_ADMIN: { label: '⚡ Programador', bg: 'rgba(139,92,246,0.2)', color: '#c084fc', border: 'rgba(139,92,246,0.4)' },
-      OWNER: { label: '👑 Dueño', bg: 'rgba(234,179,8,0.2)', color: '#fde047', border: 'rgba(234,179,8,0.4)' },
-      MANAGER: { label: '👔 Gerente', bg: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: 'rgba(59,130,246,0.4)' },
-      CASHIER: { label: '💵 Cajero', bg: 'rgba(16,185,129,0.2)', color: '#34d399', border: 'rgba(16,185,129,0.4)' },
-      WAITER: { label: '🍽️ Mesero', bg: 'rgba(249,115,22,0.2)', color: '#fb923c', border: 'rgba(249,115,22,0.4)' },
-      KITCHEN: { label: '👨‍🍳 Cocina', bg: 'rgba(236,72,153,0.2)', color: '#f472b6', border: 'rgba(236,72,153,0.4)' },
-      CUSTOMER: { label: '👤 Cliente', bg: 'rgba(107,114,128,0.2)', color: '#9ca3af', border: 'rgba(107,114,128,0.4)' }
+      SUPER_ADMIN: { label: `⚡ ${I18nService.t('sa_title')}`, bg: 'rgba(139,92,246,0.2)', color: '#c084fc', border: 'rgba(139,92,246,0.4)' },
+      OWNER: { label: `👑 ${I18nService.t('emp_role_owner')}`, bg: 'rgba(234,179,8,0.2)', color: '#fde047', border: 'rgba(234,179,8,0.4)' },
+      MANAGER: { label: `👔 ${I18nService.t('emp_role_manager')}`, bg: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: 'rgba(59,130,246,0.4)' },
+      CASHIER: { label: `💵 ${I18nService.t('emp_role_cashier')}`, bg: 'rgba(16,185,129,0.2)', color: '#34d399', border: 'rgba(16,185,129,0.4)' },
+      WAITER: { label: `🍽️ ${I18nService.t('emp_role_waiter')}`, bg: 'rgba(249,115,22,0.2)', color: '#fb923c', border: 'rgba(249,115,22,0.4)' },
+      KITCHEN: { label: `👨‍🍳 ${I18nService.t('emp_role_kitchen')}`, bg: 'rgba(236,72,153,0.2)', color: '#f472b6', border: 'rgba(236,72,153,0.4)' },
+      CUSTOMER: { label: `👤 Client`, bg: 'rgba(107,114,128,0.2)', color: '#9ca3af', border: 'rgba(107,114,128,0.4)' }
     };
     const r = roles[role] || { label: role, bg: 'rgba(255,255,255,0.1)', color: '#fff', border: 'rgba(255,255,255,0.2)' };
     return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: ${r.bg}; color: ${r.color}; border: 1px solid ${r.border};">${r.label}</span>`;
@@ -489,12 +490,12 @@ export class UsersView extends Component {
 
   getStatusBadgeHTML(status = 'ACTIVE') {
     if (status === 'SUSPENDED') {
-      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.3);">⏳ Suspendido</span>`;
+      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.3);">⏳ ${I18nService.t('on_hold')}</span>`;
     }
     if (status === 'DISABLED') {
-      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">🚫 Inactivo</span>`;
+      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">🚫 ${I18nService.t('disabled')}</span>`;
     }
-    return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">✅ Activo</span>`;
+    return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">✅ ${I18nService.t('active')}</span>`;
   }
 
   openEditUserModal(uid, root) {

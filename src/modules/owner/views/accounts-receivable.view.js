@@ -7,6 +7,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { WhatsAppService } from '../../../services/whatsapp.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class AccountsReceivableView extends Component {
   constructor(params = {}) {
@@ -28,34 +29,34 @@ export class AccountsReceivableView extends Component {
       columns: [
         { 
           key: 'clientName', 
-          label: 'Cliente', 
+          label: I18nService.t('ar_col_client') || 'Cliente', 
           render: (val, row) => `
             <div>
               <span class="font-semibold text-primary">👤 ${val}</span>
-              <div class="text-xs text-secondary" style="font-size: 0.7rem; margin-top:2px;">📅 Cobro: Día ${row.dueDay || 15} de cada mes</div>
+              <div class="text-xs text-secondary" style="font-size: 0.7rem; margin-top:2px;">📅 ${I18nService.t('collection_day', { day: row.dueDay || 15 }) || `Cobro: Día ${row.dueDay || 15} de cada mes`}</div>
             </div>
           ` 
         },
         { 
           key: 'amortizationType', 
-          label: 'Tipo Crédito', 
+          label: I18nService.t('credit_type') || 'Tipo Crédito', 
           render: (val) => val === 'CON_AMORTIZACION' 
-            ? `<span class="badge" style="background-color:rgba(52,211,153,0.15); color:var(--color-success); border:1px solid var(--color-border); padding:2px 8px; border-radius:var(--radius-md); font-size:0.75rem;">📉 Amortizable</span>`
-            : `<span class="badge" style="background-color:rgba(99,102,241,0.15); color:var(--color-accent); border:1px solid var(--color-border); padding:2px 8px; border-radius:var(--radius-md); font-size:0.75rem;">🔒 Interés Fijo</span>`
+            ? `<span class="badge" style="background-color:rgba(52,211,153,0.15); color:var(--color-success); border:1px solid var(--color-border); padding:2px 8px; border-radius:var(--radius-md); font-size:0.75rem;">📉 ${I18nService.t('amortizable') || 'Amortizable'}</span>`
+            : `<span class="badge" style="background-color:rgba(99,102,241,0.15); color:var(--color-accent); border:1px solid var(--color-border); padding:2px 8px; border-radius:var(--radius-md); font-size:0.75rem;">🔒 ${I18nService.t('fixed_interest') || 'Interés Fijo'}</span>`
         },
         {
           key: 'initialAmount',
-          label: 'Monto Inicial',
+          label: I18nService.t('initial_amount') || 'Monto Inicial',
           render: (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)
         },
         {
           key: 'remainingAmount',
-          label: 'Monto Restante',
+          label: I18nService.t('remaining_amount') || 'Monto Restante',
           render: (val) => `<strong style="color: ${Number(val) > 0 ? 'var(--color-danger)' : 'var(--color-success)'};">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>`
         },
         {
           key: 'status',
-          label: 'Estado',
+          label: I18nService.t('ar_col_status') || 'Estado',
           render: (val) => {
             let bg = 'rgba(52,211,153,0.15)', color = 'var(--color-success)';
             if (val === 'VENCIDO') {
@@ -70,14 +71,14 @@ export class AccountsReceivableView extends Component {
         },
         {
           key: 'id',
-          label: 'Acciones',
+          label: I18nService.t('ar_col_actions') || 'Acciones',
           render: (val, row) => `
             <div class="d-flex gap-2">
               ${row.status !== 'PAGADO' ? `
-                <button class="btn btn-primary btn-xs btn-abono" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">💵 Cobrar/Abonar</button>
-                <button class="btn btn-warning btn-xs btn-sim-late" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;" title="Simular atraso de fecha y aplicar recargo de mora del 5% compuesto">⚠️ Simular Mora</button>
+                <button class="btn btn-primary btn-xs btn-abono" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">💵 ${I18nService.t('collect_payment') || 'Cobrar/Abonar'}</button>
+                <button class="btn btn-warning btn-xs btn-sim-late" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;" title="${I18nService.t('simulate_late_title') || 'Simular atraso de fecha y aplicar recargo de mora del 5% compuesto'}">⚠️ ${I18nService.t('simulate_late') || 'Simular Mora'}</button>
               ` : ''}
-              <button class="btn btn-secondary btn-xs btn-receipt" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">📄 Recibo</button>
+              <button class="btn btn-secondary btn-xs btn-receipt" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">📄 ${I18nService.t('receipt') || 'Recibo'}</button>
             </div>
           `
         }
@@ -86,18 +87,18 @@ export class AccountsReceivableView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Sistema de Créditos (Cuentas por Cobrar)',
-      subtitle: 'Administra tus cobros periódicos, amortizaciones y aplica cargos de mora automáticos por atrasos.',
+      title: I18nService.t('nav_accounts_receivable') || 'Sistema de Créditos (Cuentas por Cobrar)',
+      subtitle: I18nService.t('accounts_receivable_subtitle') || 'Administra tus cobros periódicos, amortizaciones y aplica cargos de mora automáticos por atrasos.',
       actionHTML: `
         <div class="d-flex gap-2">
           <a class="btn btn-primary btn-sm" href="#/owner/credit-system">
-            💳 Ir al Sistema de Crédito Completo →
+            💳 ${I18nService.t('full_credit_system') || 'Ir al Sistema de Crédito Completo →'}
           </a>
           <a class="btn btn-secondary btn-sm" href="#/owner/payment-reminders">
-            🔔 Recordatorios de Pago
+            🔔 ${I18nService.t('payment_reminders') || 'Recordatorios de Pago'}
           </a>
           <button class="btn btn-secondary btn-sm" id="btn-new-credit">
-            + Rápido Crédito
+            + ${I18nService.t('quick_credit') || 'Rápido Crédito'}
           </button>
         </div>
       `,
@@ -105,15 +106,15 @@ export class AccountsReceivableView extends Component {
         <!-- KPI summary row -->
         <div class="grid-stats mb-5" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
           <div class="card p-4">
-            <span class="text-sm text-secondary">Total Cartera Activa</span>
+            <span class="text-sm text-secondary">${I18nService.t('total_active_portfolio') || 'Total Cartera Activa'}</span>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="kpi-portfolio">$0.00</h3>
           </div>
           <div class="card p-4">
-            <span class="text-sm text-secondary">Cuentas por Cobrar Pendientes</span>
+            <span class="text-sm text-secondary">${I18nService.t('pending_accounts_receivable') || 'Cuentas por Cobrar Pendientes'}</span>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="kpi-pending-count" style="color: var(--color-warning);">0</h3>
           </div>
           <div class="card p-4">
-            <span class="text-sm text-secondary">Cuentas en Mora / Vencidas</span>
+            <span class="text-sm text-secondary">${I18nService.t('overdue_accounts') || 'Cuentas en Mora / Vencidas'}</span>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="kpi-overdue-count" style="color: var(--color-danger);">0</h3>
           </div>
         </div>

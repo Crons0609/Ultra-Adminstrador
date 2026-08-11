@@ -9,6 +9,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { db } from '../../../config/firebase.config.js';
 import { ref, get, onValue, off } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class LogsView extends Component {
   constructor(params = {}) {
@@ -21,11 +22,11 @@ export class LogsView extends Component {
     this.unsubscribeListener = null;
 
     this.layout = new PageLayout({
-      title: 'Bitácora del Sistema (Audit Logs)',
-      subtitle: 'Registro de auditoría en tiempo real directamente desde Firebase para accesos, modificaciones y mantenimiento del SaaS.',
+      title: I18nService.t('log_title'),
+      subtitle: 'Real-time security and operational audit logs recorded on the platform.',
       actionHTML: `
         <button type="button" id="btn-refresh-logs" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:6px;">
-          🔄 Actualizar Registros
+          🔄 ${I18nService.t('refresh')}
         </button>
       `,
       contentHTML: `
@@ -40,7 +41,7 @@ export class LogsView extends Component {
                 type="text"
                 id="search-logs-input"
                 class="input input-md"
-                placeholder="🔍 Buscar por usuario, email, UID, acción, colección o detalle..."
+                placeholder="🔍 ${I18nService.t('emp_search')}"
                 style="width: 100%; padding-left: 12px;"
               />
             </div>

@@ -11,6 +11,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { BranchService } from '../../../services/branch.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class BranchesView extends Component {
   constructor(props = {}) {
@@ -26,10 +27,10 @@ export class BranchesView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '🏢 Gestión de Sucursales',
-      subtitle: `${this.currentCompany.name || 'Mi Empresa'} — Control operativo, parámetros y locales multi-sucursal.`,
+      title: `🏢 ${I18nService.t('branch_management') || 'Gestión de Sucursales'}`,
+      subtitle: `${this.currentCompany.name || 'Mi Empresa'} — ${I18nService.t('branches_subtitle') || 'Control operativo, parámetros y locales multi-sucursal.'}`,
       actionHTML: `
-        <button class="btn btn-primary btn-sm" id="btn-new-branch">+ Registrar Sucursal</button>
+        <button class="btn btn-primary btn-sm" id="btn-new-branch">+ ${I18nService.t('register_branch') || 'Registrar Sucursal'}</button>
       `,
       contentHTML: `
         <!-- KPIs -->
@@ -38,28 +39,28 @@ export class BranchesView extends Component {
             <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl text-indigo-400">🏢</div>
             <div>
               <div class="text-2xl font-extrabold text-white" id="kpi-total-branches">0</div>
-              <div class="text-xs text-secondary">Sucursales Totales</div>
+              <div class="text-xs text-secondary">${I18nService.t('total_branches') || 'Sucursales Totales'}</div>
             </div>
           </div>
           <div class="card p-4 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl text-emerald-400">✅</div>
             <div>
               <div class="text-2xl font-extrabold text-emerald-400" id="kpi-active-branches">0</div>
-              <div class="text-xs text-secondary">Sucursales Activas</div>
+              <div class="text-xs text-secondary">${I18nService.t('active_branches') || 'Sucursales Activas'}</div>
             </div>
           </div>
           <div class="card p-4 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl text-amber-400">📍</div>
             <div>
               <div class="text-2xl font-extrabold text-amber-400" id="kpi-cities-count">0</div>
-              <div class="text-xs text-secondary">Ciudades Cobertura</div>
+              <div class="text-xs text-secondary">${I18nService.t('coverage_cities') || 'Ciudades Cobertura'}</div>
             </div>
           </div>
           <div class="card p-4 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-xl text-cyan-400">🎯</div>
             <div>
-              <div class="text-2xl font-extrabold text-cyan-400" id="kpi-selected-context">Consolidado</div>
-              <div class="text-xs text-secondary">Contexto Activo</div>
+              <div class="text-2xl font-extrabold text-cyan-400" id="kpi-selected-context">${I18nService.t('consolidated') || 'Consolidado'}</div>
+              <div class="text-xs text-secondary">${I18nService.t('active_context') || 'Contexto Activo'}</div>
             </div>
           </div>
         </div>
@@ -67,24 +68,24 @@ export class BranchesView extends Component {
         <!-- Filters Toolbar -->
         <div class="card p-4 mb-6 flex flex-wrap gap-4 items-center justify-between">
           <div class="flex flex-wrap gap-3 items-center">
-            <input type="text" id="branch-search-input" class="input input-sm" placeholder="🔍 Buscar por nombre, código o ciudad..." style="min-width: 240px;" />
+            <input type="text" id="branch-search-input" class="input input-sm" placeholder="🔍 ${I18nService.t('search_branch_placeholder') || 'Buscar por nombre, código o ciudad...'}" style="min-width: 240px;" />
             <select id="branch-city-filter" class="input input-sm">
-              <option value="">Todas las ciudades</option>
+              <option value="">${I18nService.t('all_cities') || 'Todas las ciudades'}</option>
             </select>
             <select id="branch-status-filter" class="input input-sm">
-              <option value="">Todos los estados</option>
-              <option value="ACTIVA">Activa</option>
-              <option value="INACTIVA">Inactiva</option>
+              <option value="">${I18nService.t('all_statuses') || 'Todos los estados'}</option>
+              <option value="ACTIVA">${I18nService.t('branch_active') || 'Activa'}</option>
+              <option value="INACTIVA">${I18nService.t('branch_inactive') || 'Inactiva'}</option>
             </select>
           </div>
           <div class="text-xs text-secondary" id="branch-count-label">
-            Cargando sucursales...
+            ${I18nService.t('loading_branches') || 'Cargando sucursales...'}
           </div>
         </div>
 
         <!-- Branches Container -->
         <div id="branches-list-container">
-          <p class="text-center py-10 text-secondary">Cargando lista de sucursales...</p>
+          <p class="text-center py-10 text-secondary">${I18nService.t('loading_branches') || 'Cargando lista de sucursales...'}</p>
         </div>
       `
     });

@@ -11,6 +11,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ManagerDashboardView extends Component {
   constructor(params = {}) {
@@ -51,24 +52,24 @@ export class ManagerDashboardView extends Component {
       
       const formattedDate = this.currentCompany.subscriptionExpiresAt.split('-').reverse().join('/');
       if (diffDays <= 7 && diffDays >= 0) {
-        subscriptionNotice = ` <span style="background-color: var(--color-warning-light); color: var(--color-warning); font-size: 0.75rem; margin-left: var(--space-2); border-radius: var(--radius-sm); padding: 2px 8px; font-weight: 600;">⚠️ Vence en ${diffDays} días (${formattedDate})</span>`;
+        subscriptionNotice = ` <span style="background-color: var(--color-warning-light); color: var(--color-warning); font-size: 0.75rem; margin-left: var(--space-2); border-radius: var(--radius-sm); padding: 2px 8px; font-weight: 600;">⚠️ ${I18nService.t('subscription_expires_in', { days: diffDays, date: formattedDate }) || `Vence en ${diffDays} días (${formattedDate})`}</span>`;
       } else if (diffDays > 7) {
-        subscriptionNotice = ` <span style="background-color: var(--color-success-light); color: var(--color-success); font-size: 0.75rem; margin-left: var(--space-2); border-radius: var(--radius-sm); padding: 2px 8px; font-weight: 600;">✅ Suscripción activa hasta ${formattedDate}</span>`;
+        subscriptionNotice = ` <span style="background-color: var(--color-success-light); color: var(--color-success); font-size: 0.75rem; margin-left: var(--space-2); border-radius: var(--radius-sm); padding: 2px 8px; font-weight: 600;">✅ ${I18nService.t('subscription_active_until', { date: formattedDate }) || `Suscripción activa hasta ${formattedDate}`}</span>`;
       }
     }
 
     // Chart configuration
     this.chart = new Chart({
       type: 'line',
-      labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-      datasets: [{ label: 'Ventas ($)', data: [0, 0, 0, 0, 0, 0, 0], color: '#7c75ff' }]
+      labels: [I18nService.t('day_mon'), I18nService.t('day_tue'), I18nService.t('day_wed'), I18nService.t('day_thu'), I18nService.t('day_fri'), I18nService.t('day_sat'), I18nService.t('day_sun')],
+      datasets: [{ label: I18nService.t('dash_sales_label'), data: [0, 0, 0, 0, 0, 0, 0], color: '#7c75ff' }]
     });
 
     const meta = this._getCategoryMeta();
 
     this.layout = new PageLayout({
-      title: `Bienvenido, ${currentUser.displayName?.split(' ')[0] || 'Usuario'}`,
-      subtitle: `Resumen del rendimiento de ${companyDisplayName} en tiempo real.${subscriptionNotice}`,
+      title: `${I18nService.t('welcome')}, ${currentUser.displayName?.split(' ')[0] || I18nService.t('user')}`,
+      subtitle: `${I18nService.t('realtime_performance_of', { company: companyDisplayName }) || `Resumen del rendimiento de ${companyDisplayName} en tiempo real.`}${subscriptionNotice}`,
       actionHTML: '',
       contentHTML: `
         <!-- KPI Cards -->
@@ -86,7 +87,7 @@ export class ManagerDashboardView extends Component {
               <div class="d-flex justify-content-between align-items-center mb-5">
                 <div>
                   <h3 class="text-lg font-semibold" id="chart-main-title">${meta.chartTitle}</h3>
-                  <p class="text-xs text-secondary mt-1" id="chart-sub-title">Tendencia de actividad de la semana en curso</p>
+                  <p class="text-xs text-secondary mt-1" id="chart-sub-title">${I18nService.t('dash_chart_days_label')}</p>
                 </div>
                 <span class="text-xs text-secondary" id="chart-last-update">—</span>
               </div>
@@ -98,11 +99,11 @@ export class ManagerDashboardView extends Component {
             <div class="card p-5" style="height: 100%;">
               <h3 class="text-lg font-semibold mb-4" id="top-list-title">${meta.topLabel}</h3>
               <div class="d-flex flex-column gap-3" id="stat-top-products">
-                <p class="text-xs text-secondary py-6 text-center">Cargando clasificación...</p>
+                <p class="text-xs text-secondary py-6 text-center">${I18nService.t('loading')}...</p>
               </div>
               <div class="mt-5" style="border-top: 1px solid var(--color-border); padding-top: var(--space-4);">
                 <p class="text-xs text-secondary">
-                  Datos en vivo sincronizados con la base de datos de producción.
+                  ${I18nService.t('live_data_synced') || 'Datos en vivo sincronizados con la base de datos de producción.'}
                 </p>
               </div>
             </div>
@@ -112,11 +113,11 @@ export class ManagerDashboardView extends Component {
         <!-- Activity Feed -->
         <div class="card p-5 mt-6">
           <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-lg font-semibold">Operaciones Recientes</h3>
-            <span class="text-xs text-secondary">Últimos movimientos del negocio</span>
+            <h3 class="text-lg font-semibold">${I18nService.t('dash_recent_activity_title')}</h3>
+            <span class="text-xs text-secondary">${I18nService.t('last_business_movements') || 'Últimos movimientos del negocio'}</span>
           </div>
           <div id="activity-feed" class="d-flex flex-column gap-2">
-            <p class="text-xs text-secondary py-4 text-center">Escuchando base de datos...</p>
+            <p class="text-xs text-secondary py-4 text-center">${I18nService.t('listening_database') || 'Escuchando base de datos...'}</p>
           </div>
         </div>
       `
@@ -141,10 +142,11 @@ export class ManagerDashboardView extends Component {
   }
 
   _buildKpiBlockLoading() {
+    const loading = I18nService.t('loading') || 'Cargando';
     return `
-      <div class="kpi-card text-center py-6">Cargando KPI 1...</div>
-      <div class="kpi-card text-center py-6">Cargando KPI 2...</div>
-      <div class="kpi-card text-center py-6">Cargando KPI 3...</div>
+      <div class="kpi-card text-center py-6">${loading}...</div>
+      <div class="kpi-card text-center py-6">${loading}...</div>
+      <div class="kpi-card text-center py-6">${loading}...</div>
     `;
   }
 

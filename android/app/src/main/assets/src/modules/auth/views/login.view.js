@@ -18,6 +18,7 @@ import { APP_CONFIG } from '../../../config/app.config.js';
 import { SavedAccountsService } from '../../../services/saved-accounts.service.js';
 import { getBusinessTypeOptions } from '../../../config/business-types.config.js';
 import { VortexEngine } from '../../../utils/vortex-engine.js';
+import { I18nService } from '../../../services/i18n.service.js';
 import gsap from 'gsap';
 
 /**
@@ -29,18 +30,18 @@ function getFriendlyAuthErrorMessage(error) {
   const code = (error?.code || error?.message || '').toLowerCase();
 
   if (code.includes('invalid-credential') || code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-email')) {
-    return 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+    return I18nService.t('auth_error_invalid_credentials');
   }
   if (code.includes('too-many-requests')) {
-    return 'Demasiados intentos fallidos. Por favor espera unos momentos para intentar de nuevo.';
+    return I18nService.t('auth_error_too_many_requests');
   }
   if (code.includes('user-disabled')) {
-    return 'Esta cuenta ha sido deshabilitada. Contacta al administrador.';
+    return I18nService.t('auth_error_user_disabled');
   }
   if (code.includes('network') || code.includes('unavailable') || code.includes('offline')) {
-    return 'Error de conexión a internet. Verifica tu red e intenta nuevamente.';
+    return I18nService.t('auth_error_network');
   }
-  return 'No se pudo iniciar sesión. Verifica tus credenciales e intenta de nuevo.';
+  return I18nService.t('auth_error_generic');
 }
 
 export class LoginView extends Component {
@@ -85,7 +86,7 @@ export class LoginView extends Component {
               <span class="badge-dot"></span>
               Enterprise Control Platform
             </div>
-            <p class="enterprise-brand-subtitle">Accede a tu panel de administración</p>
+            <p class="enterprise-brand-subtitle">${I18nService.t('auth_access_panel')}</p>
           </div>
 
           <!-- Enterprise Login Form Container (Direct Entrance) -->
@@ -96,7 +97,7 @@ export class LoginView extends Component {
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="color: #818cf8; font-size: 1.1rem;">🔒</span>
                   <span style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; letter-spacing: 0.05em; text-transform: uppercase;">
-                    Autenticación Requerida
+                    ${I18nService.t('auth_required')}
                   </span>
                 </div>
                 <span style="font-size: 0.7rem; color: #64748b; background: rgba(255,255,255,0.04); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);">
@@ -113,14 +114,14 @@ export class LoginView extends Component {
               <form id="login-form" novalidate>
                 <!-- Email Input -->
                 <div class="enterprise-form-group">
-                  <label class="enterprise-input-label" for="login-email">Correo Electrónico</label>
+                  <label class="enterprise-input-label" for="login-email">${I18nService.t('auth_email')}</label>
                   <div class="enterprise-input-wrapper">
                     <span class="enterprise-input-icon">✉️</span>
                     <input
                       type="email"
                       id="login-email"
                       class="enterprise-input"
-                      placeholder="correo@empresa.com"
+                      placeholder="${I18nService.t('auth_email_placeholder')}"
                       autocomplete="email"
                       required
                     />
@@ -131,9 +132,9 @@ export class LoginView extends Component {
                 <!-- Password Input -->
                 <div class="enterprise-form-group">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label class="enterprise-input-label" for="login-password" style="margin-bottom: 0;">Contraseña</label>
+                    <label class="enterprise-input-label" for="login-password" style="margin-bottom: 0;">${I18nService.t('auth_password')}</label>
                     <a href="#/forgot-password" style="font-size: 0.75rem; color: #818cf8; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#a5b4fc'" onmouseout="this.style.color='#818cf8'">
-                      ¿Olvidaste tu contraseña?
+                      ${I18nService.t('auth_forgot_password')}
                     </a>
                   </div>
                   <div class="enterprise-input-wrapper">
@@ -181,7 +182,7 @@ export class LoginView extends Component {
                   class="enterprise-submit-btn"
                   ${loading ? 'disabled' : ''}
                 >
-                  ${loading ? '<span class="animate-spin" style="display:inline-block">⏳</span> Validando credenciales...' : 'Iniciar Sesión'}
+                  ${loading ? `<span class="animate-spin" style="display:inline-block">⏳</span> ${I18nService.t('auth_logging_in')}` : I18nService.t('auth_login_btn')}
                 </button>
               </form>
             </div>
@@ -194,7 +195,7 @@ export class LoginView extends Component {
                 title="Solicitar registro para tu negocio"
               >
                 <span>🏢</span>
-                <span>¿Quieres registrar tu negocio? Solicitar Cuenta</span>
+                <span>${I18nService.t('auth_request_account')}</span>
               </button>
             </div>
 
@@ -206,24 +207,24 @@ export class LoginView extends Component {
                   <span style="font-size: 1.5rem;">🏢</span>
                   <div>
                     <h3 style="margin: 0; font-size: 0.95rem; color: #a5b4fc; font-weight: 700;">
-                      Solicitud de Nuevo Dueño de Negocio
+                      ${I18nService.t('auth_request_title')}
                     </h3>
                     <p style="margin: 2px 0 0 0; font-size: 0.73rem; color: #94a3b8;">
-                      Un programador revisará y aprobará tu registro para activar tu acceso
+                      ${I18nService.t('auth_request_subtitle')}
                     </p>
                   </div>
                 </div>
 
                 <!-- Success Alert -->
                 <div id="owner-req-success-alert" style="display: none; margin-bottom: 16px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 12px; color: #4ade80; font-size: 0.82rem; text-align: center;">
-                  ✅ <strong>¡Solicitud Enviada con Éxito!</strong><br/>
-                  Un programador revisará tus datos y activará tu cuenta pronto.
+                  ✅ <strong>${I18nService.t('auth_request_success').replace('✅ ', '')}<br/>
+                  </strong>
                 </div>
 
                 <form id="owner-request-form" novalidate>
                   <!-- Owner Name -->
                   <div class="enterprise-form-group">
-                    <label class="enterprise-input-label" for="req-owner-name">👤 Nombre Completo del Propietario</label>
+                    <label class="enterprise-input-label" for="req-owner-name">${I18nService.t('auth_owner_name')}</label>
                     <input
                       type="text"
                       id="req-owner-name"
@@ -237,12 +238,12 @@ export class LoginView extends Component {
 
                   <!-- Company Name -->
                   <div class="enterprise-form-group">
-                    <label class="enterprise-input-label" for="req-company-name">🏪 Nombre de la Empresa / Negocio</label>
+                    <label class="enterprise-input-label" for="req-company-name">${I18nService.t('auth_company_name')}</label>
                     <input
                       type="text"
                       id="req-company-name"
                       class="enterprise-input"
-                      placeholder="Ej. RestoBar El Portal"
+                      placeholder="${I18nService.t('auth_company_placeholder')}"
                       style="padding-left: 14px;"
                       required
                     />
@@ -251,7 +252,7 @@ export class LoginView extends Component {
 
                   <!-- Business Type -->
                   <div class="enterprise-form-group">
-                    <label class="enterprise-input-label" for="req-business-type">📌 Tipo de Negocio</label>
+                    <label class="enterprise-input-label" for="req-business-type">${I18nService.t('auth_business_type')}</label>
                     <select
                       id="req-business-type"
                       class="enterprise-input"
@@ -263,7 +264,7 @@ export class LoginView extends Component {
 
                   <!-- Email -->
                   <div class="enterprise-form-group">
-                    <label class="enterprise-input-label" for="req-email">📧 Correo Electrónico</label>
+                    <label class="enterprise-input-label" for="req-email">${I18nService.t('auth_contact_email')}</label>
                     <input
                       type="email"
                       id="req-email"
@@ -278,7 +279,7 @@ export class LoginView extends Component {
 
                   <!-- Phone -->
                   <div class="enterprise-form-group">
-                    <label class="enterprise-input-label" for="req-phone">📞 Teléfono de Contacto</label>
+                    <label class="enterprise-input-label" for="req-phone">${I18nService.t('auth_contact_phone')}</label>
                     <input
                       type="tel"
                       id="req-phone"
@@ -292,7 +293,7 @@ export class LoginView extends Component {
 
                   <!-- Password -->
                   <div class="enterprise-form-group">
-                    <label class="enterprise-input-label" for="req-password">🔑 Contraseña Deseada (mín. 6 caracteres)</label>
+                    <label class="enterprise-input-label" for="req-password">${I18nService.t('auth_desired_password')}</label>
                     <div class="enterprise-input-wrapper">
                       <input
                         type="password"

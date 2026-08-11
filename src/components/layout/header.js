@@ -12,63 +12,72 @@ import { NotificationCenter } from '../notifications/notification-center.js';
 import { PushNotificationsCenterService } from '../../services/push-notifications-center.service.js';
 import { isProgrammerRole } from '../../core/middleware.js';
 import { BranchSelector } from '../ui/branch-selector.js';
+import { I18nService } from '../../services/i18n.service.js';
+import { LanguageSelectorModal } from '../modals/language-selector.modal.js';
 
 export class Header extends Component {
   constructor(props = {}) {
     super(props);
     this.state = GlobalStore.getState();
     this.branchSelectorComponent = new BranchSelector();
+
+    I18nService.subscribe(() => {
+      const headerEl = document.getElementById('main-header');
+      if (headerEl) {
+        window.dispatchEvent(new Event('hashchange'));
+      }
+    });
   }
 
   getCurrentPageTitle() {
     const hash = window.location.hash;
     const pages = {
-      '#/manager/dashboard': 'Dashboard',
-      '#/owner/finance': 'Control Financiero',
-      '#/owner/expenses': 'Gastos Operativos',
-      '#/owner/balance': 'Balance General',
-      '#/owner/projections': 'Proyecciones',
-      '#/manager/employees': 'Empleados',
-      '#/manager/qr-codes': 'Códigos QR',
-      '#/manager/pricing': 'Precios Especiales',
-      '#/manager/reports': 'Reportes',
-      '#/inventory/products': 'Inventario',
-      '#/super-admin/companies': 'Empresas',
-      '#/super-admin/users': 'Gestión Global de Usuarios',
-      '#/super-admin/monitoring': 'Monitoreo',
-      '#/super-admin/plans': 'Planes',
-      '#/super-admin/billing': 'Facturación',
-      '#/super-admin/logs': 'Logs del Sistema',
-      '#/super-admin/settings': 'Ajustes',
-      '#/super-admin/landing': 'Editor de Landing Page',
-      '#/cashier/pos': 'Punto de Venta',
-      '#/cashier/payments': 'Pagos',
-      '#/cashier/cash-register': 'Caja Chica',
-      '#/cashier/invoices': 'Facturación',
-      '#/waiter/tables': 'Mesas',
-      '#/waiter/orders': 'Pedidos',
-      '#/kitchen/kds': 'Kitchen Display',
-      '#/kitchen/stats': 'Estadísticas de Cocina',
-      '#/hr/recruitment': 'Recursos Humanos (RH)',
-      '#/calendar/work-calendar': 'Calendario Laboral',
-      '#/owner/whatsapp': 'WhatsApp Automation',
-      '#/owner/telegram': 'Telegram Automation',
-      '#/owner/branches': 'Sucursales',
-      '#/owner/warehouse': 'Bodega',
-      '#/owner/transfers': 'Traslados de Inventario',
+      '#/manager/dashboard': I18nService.t('nav_dashboard'),
+      '#/owner/finance': I18nService.t('nav_financial_control'),
+      '#/owner/expenses': I18nService.t('nav_expenses'),
+      '#/owner/balance': I18nService.t('nav_balance'),
+      '#/owner/projections': I18nService.t('nav_projections'),
+      '#/manager/employees': I18nService.t('nav_employees'),
+      '#/manager/qr-codes': I18nService.t('nav_qr_codes'),
+      '#/manager/pricing': I18nService.t('nav_special_pricing'),
+      '#/manager/reports': I18nService.t('nav_reports'),
+      '#/inventory/products': I18nService.t('nav_inventory'),
+      '#/super-admin/companies': I18nService.t('nav_companies'),
+      '#/super-admin/users': I18nService.t('nav_user_management'),
+      '#/super-admin/monitoring': I18nService.t('nav_monitoring'),
+      '#/super-admin/plans': I18nService.t('nav_plans'),
+      '#/super-admin/billing': I18nService.t('nav_billing'),
+      '#/super-admin/logs': I18nService.t('nav_system_logs'),
+      '#/super-admin/settings': I18nService.t('nav_settings'),
+      '#/super-admin/landing': I18nService.t('nav_landing_editor'),
+      '#/cashier/pos': I18nService.t('nav_pos'),
+      '#/cashier/payments': I18nService.t('nav_payments'),
+      '#/cashier/cash-register': I18nService.t('nav_cash_register'),
+      '#/cashier/invoices': I18nService.t('nav_invoices'),
+      '#/waiter/tables': I18nService.t('nav_tables'),
+      '#/waiter/orders': I18nService.t('nav_orders'),
+      '#/kitchen/kds': I18nService.t('nav_kitchen_kds'),
+      '#/kitchen/stats': I18nService.t('nav_kitchen_stats'),
+      '#/hr/recruitment': I18nService.t('nav_hr'),
+      '#/calendar/work-calendar': I18nService.t('nav_work_calendar'),
+      '#/owner/whatsapp': I18nService.t('nav_whatsapp'),
+      '#/owner/telegram': I18nService.t('nav_telegram'),
+      '#/owner/branches': I18nService.t('nav_branches'),
+      '#/owner/warehouse': I18nService.t('nav_warehouse'),
+      '#/owner/transfers': I18nService.t('nav_transfers'),
     };
 
     for (const [path, title] of Object.entries(pages)) {
       if (hash === path || hash.startsWith(path + '/')) return title;
     }
-    return 'Panel de Control';
+    return I18nService.t('dashboard');
   }
 
   getGreeting() {
     const hour = TimeService.getHour();
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
+    if (hour < 12) return I18nService.t('good_morning');
+    if (hour < 18) return I18nService.t('good_afternoon');
+    return I18nService.t('good_evening');
   }
 
   render() {
@@ -195,6 +204,22 @@ export class Header extends Component {
               <!-- Saved accounts list (injected dynamically) -->
               <div id="saved-accounts-list"></div>
 
+              <!-- Language Switcher Option -->
+              <div style="padding: 4px 8px; border-top: 1px solid rgba(255,255,255,0.06);">
+                <button id="btn-header-change-lang" style="
+                  width:100%; display:flex; align-items:center; justify-content:space-between;
+                  padding: 9px 12px; border-radius:10px; border:none; cursor:pointer;
+                  background:transparent; color: var(--color-text-primary);
+                  font-size:13px; font-weight:600; transition: background 0.15s;
+                " onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span>🌐</span>
+                    <span>${I18nService.t('change_language')}</span>
+                  </div>
+                  <span style="font-size: 1.1rem;">${I18nService.getCurrentLanguageInfo().flag}</span>
+                </button>
+              </div>
+
               <!-- Divider + Logout -->
               <div style="border-top: 1px solid rgba(255,255,255,0.06); padding: 8px;">
                 <button id="btn-header-logout" style="
@@ -208,7 +233,7 @@ export class Header extends Component {
                     <polyline points="16 17 21 12 16 7"/>
                     <line x1="21" y1="12" x2="9" y2="12"/>
                   </svg>
-                  Cerrar sesión
+                  ${I18nService.t('logout')}
                 </button>
               </div>
             </div>
@@ -227,6 +252,14 @@ export class Header extends Component {
 
     // Check and auto-resume or prompt employee for GPS tracking
     GeolocationService.checkAndPromptGPS();
+
+    // ── Language Switcher in profile dropdown ──
+    this.$('#btn-header-change-lang')?.addEventListener('click', () => {
+      // Close the dropdown first
+      const dropdown = this.$('#user-accounts-dropdown');
+      if (dropdown) dropdown.style.display = 'none';
+      LanguageSelectorModal.open();
+    });
 
     // ── Sync & Offline Status Indicator ──
     const updateSyncBadge = (detail = {}) => {

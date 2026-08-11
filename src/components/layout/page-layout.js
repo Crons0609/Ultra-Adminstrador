@@ -7,6 +7,7 @@ import { Component } from '../../core/component.js';
 import { Sidebar } from './sidebar.js';
 import { Header } from './header.js';
 import { MobileBottomNav } from './mobile-bottom-nav.js';
+import { I18nService } from '../../services/i18n.service.js';
 
 export class PageLayout extends Component {
   /**
@@ -85,6 +86,9 @@ export class PageLayout extends Component {
     if (mobileBottomNavContainer) {
       mobileBottomNavContainer.appendChild(this.mobileBottomNavComponent.mount());
     }
+
+    // 4. Translate DOM elements automatically
+    I18nService.translateDOM(document);
   }
 
   unmount() {

@@ -14,6 +14,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TelegramService } from '../../../services/telegram.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class TelegramHubView extends Component {
   constructor(params = {}) {
@@ -39,13 +40,13 @@ export class TelegramHubView extends Component {
     this._dragIdx = null;
 
     this.layout = new PageLayout({
-      title: '✈️ Telegram Automation Hub',
-      subtitle: 'Gestiona mensajes en tiempo real, automatiza respuestas, configura tarjetas del bot y lanza campañas de marketing, todo aislado por negocio.',
+      title: `✈️ ${I18nService.t('nav_telegram') || 'Telegram Automation Hub'}`,
+      subtitle: I18nService.t('tg_subtitle') || 'Gestiona mensajes en tiempo real, automatiza respuestas, configura tarjetas del bot y lanza campañas de marketing, todo aislado por negocio.',
       actionHTML: `
         <div class="d-flex gap-2 align-items-center">
           <div id="tg-connection-status" style="display:flex; align-items:center; gap:8px; padding:4px 12px; border-radius:var(--radius-xl); background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); font-size:0.8rem; color:var(--color-success);">
             <span style="width:8px; height:8px; border-radius:50%; background:var(--color-success); display:inline-block; animation: tg-pulse 2s infinite;"></span>
-            <span id="tg-bot-label">Bot Conectado</span>
+            <span id="tg-bot-label">${I18nService.t('bot_connected') || 'Bot Conectado'}</span>
           </div>
         </div>
       `,

@@ -5,6 +5,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class RecurringClientsView extends Component {
   constructor(params = {}) {
@@ -21,31 +22,31 @@ export class RecurringClientsView extends Component {
     // Initialize DataTable
     this.table = new DataTable({
       columns: [
-        { key: 'name', label: 'Nombre Cliente', render: (val) => `<span class="font-semibold text-primary">👤 ${val}</span>` },
-        { key: 'phone', label: 'Teléfono', render: (val) => val || '<span class="text-secondary">N/D</span>' },
-        { key: 'email', label: 'Correo', render: (val) => val || '<span class="text-secondary">N/D</span>' },
+        { key: 'name', label: I18nService.t('rc_col_name') || 'Nombre Cliente', render: (val) => `<span class="font-semibold text-primary">👤 ${val}</span>` },
+        { key: 'phone', label: I18nService.t('col_phone') || 'Teléfono', render: (val) => val || '<span class="text-secondary">N/D</span>' },
+        { key: 'email', label: I18nService.t('col_email') || 'Correo', render: (val) => val || '<span class="text-secondary">N/D</span>' },
         {
           key: 'creditLimit',
-          label: 'Límite de Crédito',
+          label: I18nService.t('rc_col_credit_limit') || 'Límite de Crédito',
           render: (val) => `<span style="font-weight: 500;">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</span>`
         },
         {
           key: 'currentDebt',
-          label: 'Deuda Actual',
-          render: (val) => `<strong style="color: ${Number(val) > 0 ? 'var(--color-danger)' : 'var(--color-success)'};">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>`
+          label: I18nService.t('rc_col_debt') || 'Deuda Actual',
+          render: (val) => `<strong style="color: ${Number(val) > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>`
         },
         {
           key: 'status',
-          label: 'Estado',
+          label: I18nService.t('col_status') || 'Estado',
           render: (val) => `<span class="badge" style="background-color: ${val === 'SUSPENDIDO' ? 'var(--color-bg-tertiary)' : 'rgba(52,211,153,0.15)'}; color: ${val === 'SUSPENDIDO' ? 'var(--color-danger)' : 'var(--color-success)'}; border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-md); font-size: 0.75rem;">${val || 'ACTIVO'}</span>`
         },
         {
           key: 'id',
-          label: 'Acciones',
+          label: I18nService.t('col_actions') || 'Acciones',
           render: (val, row) => `
             <div class="d-flex gap-2">
-              <button class="btn btn-secondary btn-xs btn-edit-client" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">✏️ Editar</button>
-              <button class="btn btn-danger btn-xs btn-delete-client" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">🗑️ Eliminar</button>
+              <button class="btn btn-secondary btn-xs btn-edit-client" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">✏️ ${I18nService.t('edit') || 'Editar'}</button>
+              <button class="btn btn-danger btn-xs btn-delete-client" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">🗑️ ${I18nService.t('delete') || 'Eliminar'}</button>
             </div>
           `
         }
@@ -54,8 +55,8 @@ export class RecurringClientsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Clientes Recurrentes',
-      subtitle: 'Administración y control de límites de crédito para tus clientes frecuentes.',
+      title: I18nService.t('nav_recurring_clients') || 'Clientes Recurrentes',
+      subtitle: I18nService.t('rc_subtitle') || 'Administración y control de límites de crédito para tus clientes frecuentes.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-client">
           + Agregar Cliente

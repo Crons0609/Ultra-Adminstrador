@@ -16,6 +16,7 @@ import { ref, get, update, push, set, remove, onValue } from 'https://www.gstati
 import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { generateQRToken } from '../../../utils/helpers.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class QRCodesView extends Component {
   constructor(params = {}) {
@@ -80,15 +81,15 @@ export class QRCodesView extends Component {
     this.maps = {};
 
     this.layout = new PageLayout({
-      title: 'Generador de Códigos QR',
+      title: I18nService.t('qr_title') || 'Generador de Códigos QR',
       subtitle: this.isRestaurantMode 
-        ? 'Genera y guarda códigos QR permanentes para cada mesa. Los QR persisten en la base de datos.'
-        : 'Genera códigos QR únicos para cada unidad de tu inventario, asocia números de serie, administra garantías y analiza escaneos.',
+        ? (I18nService.t('qr_subtitle_restaurant') || 'Genera y guarda códigos QR permanentes para cada mesa. Los QR persisten en la base de datos.')
+        : (I18nService.t('qr_subtitle') || 'Genera códigos QR únicos para cada unidad de tu inventario, asocia números de serie, administra garantías y analiza escaneos.'),
       actionHTML: this.isRestaurantMode 
         ? `
-          <button class="btn btn-secondary btn-sm" id="btn-print-all">🖨️ Imprimir Todo</button>
-          <button class="btn btn-success btn-sm" id="btn-save-qrs" style="background:#34d399;border:none;color:#000;font-weight:700;">💾 Guardar QR en DB</button>
-          <button class="btn btn-primary btn-sm" id="btn-generate-qr">⚡ Generar QR</button>
+          <button class="btn btn-secondary btn-sm" id="btn-print-all">🖨️ ${I18nService.t('print_all') || 'Imprimir Todo'}</button>
+          <button class="btn btn-success btn-sm" id="btn-save-qrs" style="background:#34d399;border:none;color:#000;font-weight:700;">💾 ${I18nService.t('save_qr') || 'Guardar QR en DB'}</button>
+          <button class="btn btn-primary btn-sm" id="btn-generate-qr">⚡ ${I18nService.t('qr_generate') || 'Generar QR'}</button>
         `
         : '',
       contentHTML: `<div id="qr-module-view-container"></div>`

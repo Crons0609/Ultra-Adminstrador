@@ -13,6 +13,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { CreditService } from '../../../services/credit.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class CreditSystemView extends Component {
   constructor(params = {}) {
@@ -38,22 +39,22 @@ export class CreditSystemView extends Component {
     this.modalInstance = null;
 
     this.layout = new PageLayout({
-      title: '💳 Sistema de Crédito',
-      subtitle: 'Administra créditos a clientes, calendarios de cuotas, mora automática y documentos de cobro.',
+      title: `💳 ${I18nService.t('nav_credit_system') || 'Sistema de Crédito'}`,
+      subtitle: I18nService.t('cs_subtitle') || 'Administra créditos a clientes, calendarios de cuotas, mora automática y documentos de cobro.',
       actionHTML: `
         <div class="d-flex gap-2">
-          <a class="btn btn-secondary btn-sm" href="#/owner/accounts-receivable">📋 Cuentas por Cobrar</a>
-          <a class="btn btn-secondary btn-sm" href="#/owner/payment-reminders">🔔 Recordatorios</a>
+          <a class="btn btn-secondary btn-sm" href="#/owner/accounts-receivable">📋 ${I18nService.t('nav_receivable') || 'Cuentas por Cobrar'}</a>
+          <a class="btn btn-secondary btn-sm" href="#/owner/payment-reminders">🔔 ${I18nService.t('nav_payment_reminders') || 'Recordatorios'}</a>
         </div>
       `,
       contentHTML: `
         <!-- ── Tabs ─────────────────────────────────────────── -->
         <div class="credit-tabs-bar" style="display:flex; gap:4px; border-bottom:2px solid var(--color-border); margin-bottom:var(--space-5); overflow-x:auto; padding-bottom:0;">
-          ${this._tabBtn('new-credit',    '📝 Nuevo Crédito',     true)}
-          ${this._tabBtn('portfolio',     '💳 Cartera Activa')}
-          ${this._tabBtn('calendar',      '📅 Calendario')}
-          ${this._tabBtn('reports',       '📊 Reportes')}
-          ${this._tabBtn('history',       '📜 Historial')}
+          ${this._tabBtn('new-credit',    `📝 ${I18nService.t('cs_tab_new') || 'Nuevo Crédito'}`,     true)}
+          ${this._tabBtn('portfolio',     `💳 ${I18nService.t('cs_tab_portfolio') || 'Cartera Activa'}`)}
+          ${this._tabBtn('calendar',      `📅 ${I18nService.t('cs_tab_calendar') || 'Calendario'}`)}
+          ${this._tabBtn('reports',       `📊 ${I18nService.t('cs_tab_reports') || 'Reportes'}`)}
+          ${this._tabBtn('history',       `📜 ${I18nService.t('cs_tab_history') || 'Historial'}`)}
         </div>
 
         <!-- ── Tab Panels ─────────────────────────────────────── -->

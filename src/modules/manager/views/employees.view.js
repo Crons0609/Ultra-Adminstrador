@@ -16,6 +16,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { WaiterAssignmentService } from '../../../services/waiter-assignment.service.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { ImageDisplay } from '../../../components/ui/image-display.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class EmployeesView extends Component {
   constructor(params = {}) {
@@ -48,7 +49,7 @@ export class EmployeesView extends Component {
       columns: [
         {
           key: 'displayName',
-          label: 'Empleado',
+          label: I18nService.t('emp_col_employee'),
           render: (val, row) => `
             <div style="display:flex;align-items:center;gap:10px;">
               ${ImageDisplay.renderTag(row.imageId || null, `https://ui-avatars.com/api/?name=${encodeURIComponent(val || 'E')}&background=6366f1&color=fff&size=40`, 'width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--color-border);')}
@@ -59,67 +60,67 @@ export class EmployeesView extends Component {
             </div>
           `
         },
-        { key: 'email', label: 'Correo Electrónico' },
+        { key: 'email', label: I18nService.t('auth_email') },
         { 
           key: 'customRole', 
-          label: 'Puesto / Cargo',
+          label: I18nService.t('emp_col_role'),
           render: (val, row) => {
             if (val) return `<span class="badge" style="background-color: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-md); font-weight: 500;">${val}</span>`;
             
             const roleLabels = {
-              MANAGER: 'Gerente',
-              CASHIER: 'Cajero',
-              WAITER: 'Mesero',
-              KITCHEN: 'Cocinero'
+              MANAGER: I18nService.t('emp_role_manager'),
+              CASHIER: I18nService.t('emp_role_cashier'),
+              WAITER: I18nService.t('emp_role_waiter'),
+              KITCHEN: I18nService.t('emp_role_kitchen')
             };
             return `<span style="color: var(--color-text-secondary);">${roleLabels[row.role] || row.role}</span>`;
           }
         },
         { 
           key: 'role', 
-          label: 'Permisos del Sistema',
+          label: I18nService.t('emp_col_permissions'),
           render: (val) => {
             const roleLabels = {
-              MANAGER: 'Acceso Total (Gerente)',
-              CASHIER: 'Caja Registradora',
-              WAITER: 'Toma de Pedidos (Mesero)',
-              KITCHEN: 'Pantalla de Cocina (Chef)'
+              MANAGER: I18nService.t('emp_role_manager'),
+              CASHIER: I18nService.t('emp_role_cashier'),
+              WAITER: I18nService.t('emp_role_waiter'),
+              KITCHEN: I18nService.t('emp_role_kitchen')
             };
             return `<span style="font-size: 0.8rem; color: var(--color-accent); font-weight: 500;">${roleLabels[val] || val}</span>`;
           }
         },
         { 
           key: 'status', 
-          label: 'Estado',
-          render: () => `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-success-light);color:var(--color-success);">Activo</span>`
+          label: I18nService.t('status'),
+          render: () => `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-success-light);color:var(--color-success);">${I18nService.t('active')}</span>`
         },
         {
           key: 'locationStatus',
-          label: 'GPS',
+          label: I18nService.t('gps_label') || 'GPS',
           render: (_, row) => {
             const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
-            if (!location) return '<span class="text-xs text-secondary">Sin ubicación</span>';
-            return `<span class="text-xs text-secondary">${location.status || 'Disponible'} · ${TimeService.formatDate(location.updatedAt?.epochMs || location.updatedAt, true)}</span>`;
+            if (!location) return `<span class="text-xs text-secondary">${I18nService.t('no_location') || 'Sin ubicación'}</span>`;
+            return `<span class="text-xs text-secondary">${location.status || I18nService.t('available')} · ${TimeService.formatDate(location.updatedAt?.epochMs || location.updatedAt, true)}</span>`;
           }
         },
         {
           key: 'locationLink',
-          label: 'Mapa',
+          label: I18nService.t('map_label') || 'Mapa',
           render: (_, row) => {
             const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
             if (!location?.latitude || !location?.longitude) return '';
-            return `<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${location.latitude},${location.longitude}">Ver</a>`;
+            return `<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${location.latitude},${location.longitude}">${I18nService.t('view')}</a>`;
           }
         },
         {
           key: 'actions',
-          label: 'Acciones',
+          label: I18nService.t('ap_col_actions') || 'Acciones',
           render: (_, row) => {
-            if (this.currentUser.role !== 'OWNER') return '<span class="text-xs text-secondary">Solo Dueño</span>';
+            if (this.currentUser.role !== 'OWNER') return `<span class="text-xs text-secondary">${I18nService.t('owner_only') || 'Solo Dueño'}</span>`;
             return `
               <div style="display:flex; gap:4px;">
-                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="Editar">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="Baja">Baja</button>
+                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="${I18nService.t('edit')}">${I18nService.t('edit')}</button>
+                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="${I18nService.t('remove')}">${I18nService.t('remove')}</button>
               </div>
             `;
           }
@@ -130,17 +131,17 @@ export class EmployeesView extends Component {
 
     // PageLayout setup
     this.layout = new PageLayout({
-      title: 'Gestión de Empleados',
-      subtitle: 'Administración del personal de tu local. Registra meseros, cocineros, cajeros y gerentes.',
+      title: I18nService.t('emp_title') || 'Gestión de Empleados',
+      subtitle: I18nService.t('emp_subtitle') || 'Administración del personal de tu local. Registra meseros, cocineros, cajeros y gerentes.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-employee">
-          <span style="margin-right: var(--space-1);">+</span> Agregar Trabajador
+          <span style="margin-right: var(--space-1);">+</span> ${I18nService.t('emp_add_button') || 'Agregar Trabajador'}
         </button>
       `,
       contentHTML: `
         <div class="card p-5 mb-5">
           <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h3 class="text-lg font-semibold">Listado de Personal</h3>
+            <h3 class="text-lg font-semibold">${I18nService.t('staff_list') || 'Listado de Personal'}</h3>
           </div>
           <!-- Table Wrapper -->
           <div id="employees-table-wrapper"></div>
@@ -150,10 +151,10 @@ export class EmployeesView extends Component {
         <div class="card p-5 mb-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-              <h3 class="text-md font-bold" style="margin:0;">Mapa de Ubicaciones GPS</h3>
-              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Posición en tiempo real de los empleados que compartieron su ubicación.</p>
+              <h3 class="text-md font-bold" style="margin:0;">${I18nService.t('gps_map_title') || 'Mapa de Ubicaciones GPS'}</h3>
+              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">${I18nService.t('gps_map_subtitle') || 'Posición en tiempo real de los empleados que compartieron su ubicación.'}</p>
             </div>
-            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">Actualizar</button>
+            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">${I18nService.t('refresh')}</button>
           </div>
           <div id="gps-map-panel">
             <!-- Sidebar + Map split grid layout -->
@@ -169,7 +170,7 @@ export class EmployeesView extends Component {
             
             <!-- Placeholder for no locations or loading -->
             <div id="gps-map-placeholder">
-              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">Cargando ubicaciones GPS...</div>
+              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">${I18nService.t('loading_gps') || 'Cargando ubicaciones GPS...'}</div>
             </div>
           </div>
         </div>

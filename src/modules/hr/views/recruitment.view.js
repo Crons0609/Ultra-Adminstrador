@@ -23,6 +23,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { TimeService } from '../../../services/time.service.js';
 import { ref, set, update } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { db } from '../../../config/firebase.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export const CANDIDATE_STATUSES = {
   NUEVO: { label: 'NUEVO', color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
@@ -61,8 +62,8 @@ export class RecruitmentView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '👥 Recursos Humanos (RH) & Reclutamiento',
-      subtitle: 'Plataforma integral de talento, vacantes, editor de página pública y contratación',
+      title: `👥 ${I18nService.t('hr_recruitment') || 'Recursos Humanos (RH) & Reclutamiento'}`,
+      subtitle: I18nService.t('hr_recruitment_subtitle') || 'Plataforma integral de talento, vacantes, editor de página pública y contratación',
       actionHTML: `
         <div style="display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:6px; padding-bottom:4px; max-width:100%; scroll-snap-type:x mandatory;" id="hr-top-tab-actions">
           <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-dashboard" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📊 Dashboard</button>
@@ -331,7 +332,7 @@ export class RecruitmentView extends Component {
         <!-- Left: Recent Applications Table -->
         <div class="card p-5">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="font-size:1.05rem; font-weight:700; margin:0; color:var(--color-text-primary);">📥 Últimas Postulaciones Recibidas</h3>
+            <h3 style="font-size:1.05rem; font-weight:700; margin:0; color:var(--color-text-primary);">📥 ${I18nService.t('latest_applications') || 'Últimas Postulaciones Recibidas'}</h3>
             <button class="btn btn-secondary btn-xs" onclick="document.querySelector('#btn-tab-candidates').click()">Ver Todos (${total})</button>
           </div>
 

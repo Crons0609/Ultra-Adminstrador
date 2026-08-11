@@ -11,6 +11,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { OCRService } from '../../../services/ocr.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class InvoiceOCRView extends Component {
   constructor(params = {}) {
@@ -67,13 +68,13 @@ export class InvoiceOCRView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Lector Inteligente de Facturas',
-      subtitle: 'Digitalización automática de comprobantes de compra con OCR e integración al inventario',
+      title: I18nService.t('ocr_title') || 'Escáner Inteligente de Facturas (OCR)',
+      subtitle: I18nService.t('ocr_subtitle') || 'Digitalización automática de comprobantes de compra con OCR e integración al inventario',
       actionHTML: `
         <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm" id="hdr-btn-digitize">📄 Digitalizar</button>
-          <button class="btn btn-secondary btn-sm" id="hdr-btn-history">📜 Historial</button>
-          <button class="btn btn-secondary btn-sm" id="hdr-btn-stats">📊 Estadísticas</button>
+          <button class="btn btn-secondary btn-sm" id="hdr-btn-digitize">📄 ${I18nService.t('digitize') || 'Digitalizar'}</button>
+          <button class="btn btn-secondary btn-sm" id="hdr-btn-history">📜 ${I18nService.t('wa_history') || 'Historial'}</button>
+          <button class="btn btn-secondary btn-sm" id="hdr-btn-stats">📊 ${I18nService.t('kds_stats') || 'Estadísticas'}</button>
         </div>
       `,
       contentHTML: `<div id="invoice-ocr-view-container"></div>`

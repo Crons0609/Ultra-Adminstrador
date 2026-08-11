@@ -12,10 +12,17 @@ import { MODULE_REGISTRY, isModuleEnabled } from '../../config/modules.config.js
 import { isProgrammerRole } from '../../core/middleware.js';
 import { db } from '../../config/firebase.config.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { I18nService } from '../../services/i18n.service.js';
 
 export class Sidebar extends Component {
   constructor(props = {}) {
     super(props);
+    I18nService.subscribe(() => {
+      const el = document.getElementById('sidebar');
+      if (el) {
+        window.dispatchEvent(new Event('hashchange'));
+      }
+    });
   }
 
   getMenuConfig(role) {
@@ -68,22 +75,22 @@ export class Sidebar extends Component {
       SUPER_ADMIN: {
         groups: [
           {
-            label: 'Plataforma',
+            label: I18nService.t('nav_platform'),
             items: [
-              { label: 'Empresas', path: '#/super-admin/companies', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>` },
-              { label: 'Usuarios', path: '#/super-admin/users', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
-              { label: 'Monitoreo', path: '#/super-admin/monitoring', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>` },
-              { label: 'Planes', path: '#/super-admin/plans', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>` },
-              { label: 'Facturación', path: '#/super-admin/billing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
-              { label: 'Soporte Clientes', path: '#/super-admin/support', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, badgeId: 'sidebar-support-badge' },
-              { label: 'Landing Page', path: '#/super-admin/landing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>` },
+              { label: I18nService.t('nav_companies'), path: '#/super-admin/companies', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>` },
+              { label: I18nService.t('nav_user_management'), path: '#/super-admin/users', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
+              { label: I18nService.t('nav_monitoring'), path: '#/super-admin/monitoring', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>` },
+              { label: I18nService.t('nav_plans'), path: '#/super-admin/plans', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>` },
+              { label: I18nService.t('nav_billing'), path: '#/super-admin/billing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
+              { label: I18nService.t('nav_support'), path: '#/super-admin/support', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, badgeId: 'sidebar-support-badge' },
+              { label: I18nService.t('nav_landing_editor'), path: '#/super-admin/landing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>` },
             ]
           },
           {
-            label: 'Sistema',
+            label: I18nService.t('nav_system'),
             items: [
-              { label: 'Logs', path: '#/super-admin/logs', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>` },
-              { label: 'Ajustes', path: '#/super-admin/settings', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` },
+              { label: I18nService.t('nav_system_logs'), path: '#/super-admin/logs', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>` },
+              { label: I18nService.t('nav_settings'), path: '#/super-admin/settings', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` },
             ]
           }
         ]
@@ -97,6 +104,12 @@ export class Sidebar extends Component {
 
           // 4 Canonical Accordion Categories Order with Icons
           const categoryOrder = ['General', 'Finanzas', 'Operaciones', 'Automatización'];
+          const categoryLabels = {
+            'General':        I18nService.t('nav_general'),
+            'Finanzas':       I18nService.t('nav_finance'),
+            'Operaciones':    I18nService.t('nav_operations'),
+            'Automatización': I18nService.t('nav_automation'),
+          };
           const categoryIcons = {
             'General': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
             'Finanzas': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
@@ -119,7 +132,7 @@ export class Sidebar extends Component {
 
           return categories
             .map(cat => ({
-              label: cat,
+              label: categoryLabels[cat] || cat,
               icon: categoryIcons[cat] || '📦',
               items: enabledModules
                 .filter(m => m.category === cat)
@@ -134,23 +147,25 @@ export class Sidebar extends Component {
             m.allowedRoles.includes('MANAGER') && isModuleEnabled(currentCompany, m.id)
           );
           const allItems = enabledModules.map(m => ({ label: m.name, path: m.path, icon: m.icon }));
-          return allItems.length > 0 ? [{ label: 'Operaciones', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`, items: allItems }] : [{ label: 'Operaciones', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`, items: [] }];
+          const opsLabel = I18nService.t('nav_operations');
+          const opsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`;
+          return allItems.length > 0 ? [{ label: opsLabel, icon: opsIcon, items: allItems }] : [{ label: opsLabel, icon: opsIcon, items: [] }];
         })()
       },
       CASHIER: {
         groups: [
           {
-            label: 'Caja',
+            label: I18nService.t('pos_title'),
             icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
             items: [
-              { label: 'Punto de Venta', path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` },
-              { label: 'Pagos', path: '#/cashier/payments', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>` },
-              { label: 'Caja Chica', path: '#/cashier/cash-register', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>` },
-              { label: 'Arqueo de Caja', path: '#/cashier/arqueo', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>` },
-              { label: 'Promociones', path: '#/cashier/promotions', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>` },
-              { label: 'Facturación', path: '#/cashier/invoices', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
-              { label: 'Recordatorios de Pago', path: '#/owner/payment-reminders', icon: icons.reminders },
-              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: 'Calendario Laboral', path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
+              { label: I18nService.t('nav_pos'), path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` },
+              { label: I18nService.t('nav_payments'), path: '#/cashier/payments', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>` },
+              { label: I18nService.t('nav_cash_register'), path: '#/cashier/cash-register', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>` },
+              { label: I18nService.t('arqueo_title'), path: '#/cashier/arqueo', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>` },
+              { label: I18nService.t('nav_promotions'), path: '#/cashier/promotions', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>` },
+              { label: I18nService.t('nav_invoices'), path: '#/cashier/invoices', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
+              { label: I18nService.t('nav_payment_reminders'), path: '#/owner/payment-reminders', icon: icons.reminders },
+              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: I18nService.t('nav_work_calendar'), path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
             ]
           }
         ]
@@ -158,14 +173,14 @@ export class Sidebar extends Component {
       WAITER: {
         groups: [
           {
-            label: 'Servicio',
+            label: I18nService.t('nav_operations'),
             icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
             items: [
               ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
-                ? [{ label: 'Mis Clientes Asignados', path: '#/waiter/client-assignments', icon: icons.calendar }]
-                : [{ label: 'Mis Mesas', path: '#/waiter/tables', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>` }]
+                ? [{ label: I18nService.t('ca_my_clients'), path: '#/waiter/client-assignments', icon: icons.calendar }]
+                : [{ label: I18nService.t('waiter_my_tables'), path: '#/waiter/tables', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>` }]
               ),
-              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: 'Calendario Laboral', path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
+              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: I18nService.t('nav_work_calendar'), path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
             ]
           }
         ]
@@ -173,12 +188,12 @@ export class Sidebar extends Component {
       KITCHEN: {
         groups: [
           {
-            label: 'Cocina',
+            label: I18nService.t('kds_stats'),
             icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
             items: [
-              { label: 'KDS – Comandas', path: '#/kitchen/kds', icon: icons.kds },
-              { label: 'Estadísticas', path: '#/kitchen/stats', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>` },
-              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: 'Calendario Laboral', path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
+              { label: I18nService.t('kds_title'), path: '#/kitchen/kds', icon: icons.kds },
+              { label: I18nService.t('kds_stats'), path: '#/kitchen/stats', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>` },
+              ...(isModuleEnabled(currentCompany, 'workCalendar') ? [{ label: I18nService.t('nav_work_calendar'), path: '#/calendar/work-calendar', icon: icons.calendar }] : [])
             ]
           }
         ]
@@ -191,12 +206,12 @@ export class Sidebar extends Component {
 
   getRoleLabel(role) {
     const labels = {
-      SUPER_ADMIN: 'Super Administrador',
-      OWNER: 'Dueño',
-      MANAGER: 'Gerente',
-      CASHIER: 'Cajero',
-      WAITER: 'Mesero',
-      KITCHEN: 'Cocina',
+      SUPER_ADMIN: I18nService.t('sa_title'),
+      OWNER: I18nService.t('emp_role_owner'),
+      MANAGER: I18nService.t('emp_role_manager'),
+      CASHIER: I18nService.t('emp_role_cashier'),
+      WAITER: I18nService.t('emp_role_waiter'),
+      KITCHEN: I18nService.t('emp_role_kitchen'),
     };
     return labels[role] || role;
   }

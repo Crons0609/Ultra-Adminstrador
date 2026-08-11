@@ -18,6 +18,7 @@ import { AppearanceService } from './appearance.service.js';
 import { SavedAccountsService } from './saved-accounts.service.js';
 import { LocalStorageDBService } from './local-storage-db.service.js';
 import { PushNotificationsService } from './push-notifications.service.js';
+import { I18nService } from './i18n.service.js';
 
 // Firebase Auth modular imports (CDN v12.16.0)
 import {
@@ -158,6 +159,9 @@ export class AuthService {
         activeRole: userSession.role,
         isAuthenticated: true
       });
+
+      // Initialize per-user language preference
+      I18nService.initUserLanguage(userProfile);
 
       // Initialize FCM Push Notifications for this device & user
       PushNotificationsService.init(userSession).catch(e => console.warn('[AuthService] Could not init push notifications:', e));

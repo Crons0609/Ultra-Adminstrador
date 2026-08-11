@@ -10,6 +10,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { db } from '../../../config/firebase.config.js';
 import { ref, get } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class BillingView extends Component {
   constructor(params = {}) {
@@ -41,11 +42,11 @@ export class BillingView extends Component {
     this.transactions = [];
 
     this.layout = new PageLayout({
-      title: 'Facturación Global y Finanzas SaaS',
-      subtitle: 'Métricas financieras en tiempo real, suscripciones activas y pasarela de cobros calculadas directamente desde Firebase.',
+      title: I18nService.t('bill_title'),
+      subtitle: 'Real-time financial metrics, active subscriptions, and SaaS revenue analytics.',
       actionHTML: `
         <button type="button" id="btn-refresh-billing" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:6px;">
-          🔄 Actualizar Métricas
+          🔄 ${I18nService.t('refresh')}
         </button>
       `,
       contentHTML: `
@@ -55,9 +56,9 @@ export class BillingView extends Component {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
             
             <div class="card p-4" style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.02)); border: 1px solid rgba(16,185,129,0.3);">
-              <span class="text-xs text-secondary font-semibold">💰 Ingresos Totales Acumulados</span>
+              <span class="text-xs text-secondary font-semibold">💰 ${I18nService.t('fin_total_income')}</span>
               <h3 id="stat-total-revenue" class="text-2xl font-bold mt-1" style="color: #34d399;">$0.00</h3>
-              <span id="stat-growth-rate" class="text-xs text-success font-semibold">↑ 0% Suscripciones Activas</span>
+              <span id="stat-growth-rate" class="text-xs text-success font-semibold">↑ 0% ${I18nService.t('active')}</span>
             </div>
 
             <div class="card p-4">

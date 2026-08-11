@@ -16,6 +16,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class FinanceView extends Component {
   constructor(params = {}) {
@@ -35,25 +36,25 @@ export class FinanceView extends Component {
       type: 'bar',
       labels: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'],
       datasets: [
-        { label: 'Ingresos ($)', data: [0, 0, 0, 0, 0, 0, 0], color: '#34d399' },
-        { label: 'Egresos ($)',  data: [0, 0, 0, 0, 0, 0, 0], color: '#f87171' }
+        { label: `${I18nService.t('fin_income')} ($)`, data: [0, 0, 0, 0, 0, 0, 0], color: '#34d399' },
+        { label: `${I18nService.t('fin_expenses')} ($)`,  data: [0, 0, 0, 0, 0, 0, 0], color: '#f87171' }
       ]
     });
 
     this.layout = new PageLayout({
-      title: 'Control Financiero',
-      subtitle: 'Administración de ingresos, egresos y utilidad neta en tiempo real.',
+      title: I18nService.t('fin_title'),
+      subtitle: 'Real-time financial management, income, expenses, and net profit.',
       actionHTML: ``,
       contentHTML: `
         <!-- Financial KPI cards -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-4);">
           <div class="card p-4 hover-lift">
             <div class="d-flex justify-between align-items-start">
-              <span class="text-sm text-secondary">Ingresos Totales</span>
+              <span class="text-sm text-secondary">${I18nService.t('fin_total_income')}</span>
               <span style="font-size: 1.2rem; color: var(--color-success);">📈</span>
             </div>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="val-total-income">$0.00</h3>
-            <span class="text-xs text-secondary">Ventas registradas en la base de datos</span>
+            <span class="text-xs text-secondary">${I18nService.t('pos_sale_completed')}</span>
           </div>
 
           <div class="card p-4 hover-lift">
