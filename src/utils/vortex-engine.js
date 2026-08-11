@@ -100,6 +100,11 @@ export class VortexEngine {
     this.canvas.style.opacity = '1';
     if (this.statusEl) {
       this.statusEl.style.opacity = '1';
+      this.statusEl.style.top = '50%';
+      this.statusEl.style.left = '50%';
+      this.statusEl.style.transform = 'translate(-50%, -50%)';
+      this.statusEl.style.justifyContent = 'center';
+      this.statusEl.style.textAlign = 'center';
       this.statusEl.style.color = isError ? '#f87171' : '#f1f5f9';
       this.statusEl.style.textShadow = isError 
         ? '0 0 25px rgba(239, 68, 68, 0.9)' 
