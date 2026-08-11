@@ -20,7 +20,7 @@ export const APP_CONFIG = {
   copyright: '© 2026 Ultra Administrador by ProLine System. Todos los derechos reservados.',
 
   /** Application version — bump on each release */
-  version: '1.4.2',
+  version: '1.4.7',
 
   /** Default theme class on HTML body. Options: 'theme-dark' | 'theme-light' */
   defaultTheme: 'theme-dark',

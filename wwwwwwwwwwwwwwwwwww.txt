@@ -2,4 +2,4 @@ ahora quiero que cuandio este cambiando de apartados no exista un retraso. ya qu
 
 el inicio de secion no es persistente ya que cuando actualizo la pagina web saas tengo que agregar nuevamente el correo y contraseña para poder entrar al sistema
 
-haz una pagina web de ventas para promocionar el sistema con descripcion de todos los modulo como treinta o shopify asi podre conpartir la pagina web de los dos sistemas y las personas veran de que se trata y si les puede servir en su negocio. ademas tiene mas de 41 modulos y mejores funcionalidades que shopify y treita ademas de que es mas intuitivo
+hay un problema a veces cuando hago algunas mejoras y las subo a render no se aplican a la app movil tengo que crear nuevamente la app para que tenga las actualizacioes pero hay veces que no se apican las mejoras aun cuando vuelvo a hacer la apk
