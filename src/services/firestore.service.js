@@ -1496,6 +1496,53 @@ export class FirestoreService {
     console.log('[FirestoreService] ✅ SaaS config updated at global/saas_config');
   }
 
+  /**
+   * Read the global Landing configuration object from Firebase RTDB.
+   * Stored at the path: global/landing_config
+   *
+   * @returns {Promise<Object|null>}
+   */
+  static async getLandingConfig() {
+    const path = 'global/landing_config';
+    if (navigator.onLine && db) {
+      try {
+        const configRef = ref(db, path);
+        const snap = await Promise.race([
+          get(configRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snap.exists()) {
+          const val = snap.val();
+          await LocalStorageDBService.setCache(path, val);
+          return val;
+        }
+      } catch (err) {
+        console.warn('[FirestoreService] getLandingConfig failed:', err.message);
+      }
+    }
+    return LocalStorageDBService.getCache(path);
+  }
+
+  /**
+   * Write / merge fields into the global Landing configuration object.
+   * Stored at the path: global/landing_config
+   *
+   * @param {Object} data - Fields to merge into the config node.
+   * @returns {Promise<void>}
+   */
+  static async updateLandingConfig(data = {}) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const configRef = ref(db, 'global/landing_config');
+    // Strip undefined values to avoid Firebase errors
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
+    const payload = { ...clean, updatedAtLocal: TimeService.timestamp() };
+    await update(configRef, payload);
+    await LocalStorageDBService.setCache('global/landing_config', payload);
+    console.log('[FirestoreService] ✅ Landing config updated at global/landing_config');
+  }
+
   static async listPlans() {
     const plans = await this.queryGlobal('saas_plans');
     return plans.sort((a, b) => Number(a.order || 0) - Number(b.order || 0));

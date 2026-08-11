@@ -104,6 +104,7 @@ const getSuperAdminLogsView = () => import('../modules/super-admin/views/logs.vi
 const getSuperAdminSettingsView = () => import('../modules/super-admin/views/settings.view.js').then(m => m.SettingsView);
 const getSuperAdminUsersView = () => import('../modules/super-admin/views/users.view.js').then(m => m.UsersView);
 const getSuperAdminSupportView = () => import('../modules/super-admin/views/support-center.view.js').then(m => m.SupportCenterView);
+const getSuperAdminLandingView = () => import('../modules/super-admin/views/landing.view.js').then(m => m.LandingView);
 
 // ─── Lazy Route Adapter ───────────────────────────────────────────────────────
 /**
@@ -235,6 +236,7 @@ export const ROUTES = [
   { path: '/super-admin/billing', view: lazyView(getSuperAdminBillingView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/logs', view: lazyView(getSuperAdminLogsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/settings', view: lazyView(getSuperAdminSettingsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
+  { path: '/super-admin/landing', view: lazyView(getSuperAdminLandingView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
 
 
   // Public Catalog dynamic wildcard route (Keep at the very bottom)

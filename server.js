@@ -47,10 +47,17 @@ app.use((req, res, next) => {
 });
 
 // Serve static assets from public, assets, and src directories
+app.use('/landing', express.static(path.join(__dirname, 'public', 'landing')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/src', express.static(path.join(__dirname, 'src')));
+
+// ── Landing page route ─────────────────────────────────────────
+app.get(['/landing', '/landing/', '/landing/index.html', '/public/landing', '/public/landing/index.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing', 'index.html'));
+});
 
 // SPA fallback: redirect all other requests to index.html
 app.get('*', (req, res) => {

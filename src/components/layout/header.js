@@ -40,6 +40,7 @@ export class Header extends Component {
       '#/super-admin/billing': 'Facturación',
       '#/super-admin/logs': 'Logs del Sistema',
       '#/super-admin/settings': 'Ajustes',
+      '#/super-admin/landing': 'Editor de Landing Page',
       '#/cashier/pos': 'Punto de Venta',
       '#/cashier/payments': 'Pagos',
       '#/cashier/cash-register': 'Caja Chica',
