@@ -40,7 +40,9 @@ export const AnimationService = {
 
     function raf(time) {
       if (lenisInstance) {
-        lenisInstance.raf(time);
+        if (!document.hidden) {
+          lenisInstance.raf(time);
+        }
         requestAnimationFrame(raf);
       }
     }
@@ -181,9 +183,9 @@ export const AnimationService = {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 55;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
@@ -198,7 +200,7 @@ export const AnimationService = {
     activeRenderer = renderer;
 
     // 2. Generate Interactive Particles
-    const particleCount = 650;
+    const particleCount = 300;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const initialPositions = [];

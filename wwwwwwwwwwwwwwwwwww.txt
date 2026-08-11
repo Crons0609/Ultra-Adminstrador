@@ -1,1 +1,5 @@
 ahora quiero que cuandio este cambiando de apartados no exista un retraso. ya que hace un parpedeo y hay retraso al cargar el modulo que quiero abrir, necesito qe no haya un retraso para que la web saas o la apk se vea premiun y fluida sin ningun tipo de retraso ni parpedeos.
+
+el inicio de secion no es persistente ya que cuando actualizo la pagina web saas tengo que agregar nuevamente el correo y contraseña para poder entrar al sistema
+
+haz una pagina web de ventas para promocionar el sistema con descripcion de todos los modulo como treinta o shopify asi podre conpartir la pagina web de los dos sistemas y las personas veran de que se trata y si les puede servir en su negocio. ademas tiene mas de 41 modulos y mejores funcionalidades que shopify y treita ademas de que es mas intuitivo

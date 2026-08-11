@@ -681,34 +681,39 @@ export class LoginView extends Component {
       const user = await AuthService.login(email, password);
       this.clearLockoutState(email);
 
-      // Prompt / Save account details
-      const isApk = !!(window.AndroidApp && typeof window.AndroidApp.isAndroidApp === 'function' && window.AndroidApp.isAndroidApp());
-      const existing = SavedAccountsService.getByEmail(email);
+      // Save account details non-blockingly (no synchronous confirm modal)
       const companyName = GlobalStore.getState()?.currentCompany?.name || '';
-
-      if (!existing?._enc) {
-        const promptMsg = isApk
-          ? '📱 ¿Deseas guardar los datos de este inicio de sesión en la aplicación para cambiar rápidamente entre tus perfiles?'
-          : '🌐 ¿Deseas guardar la contraseña para cambiar automáticamente a esta cuenta desde el menú de usuario?';
-        const savePassword = confirm(promptMsg);
-        SavedAccountsService.save(user, savePassword ? password : null, companyName);
-      } else {
-        SavedAccountsService.save(user, password, companyName);
-      }
+      SavedAccountsService.save(user, password, companyName);
 
       // ── 4. SUCCESS: NORMAL VORTEX -> DASHBOARD ───────────────────────────
+      let redirected = false;
+      const proceedToDashboard = () => {
+        if (redirected) return;
+        redirected = true;
+        if (this.vortexEngine) {
+          this.vortexEngine.stop();
+        }
+        NotificationService.success(`Bienvenido, ${user.displayName || user.email}`);
+        redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
+      };
+
+      // Failsafe timer: Guarantee redirection within 2.2 seconds maximum
+      const failsafeTimer = setTimeout(() => {
+        proceedToDashboard();
+      }, 2200);
+
       if (this.vortexEngine) {
         this.vortexEngine.startTransition({
           mode: 'success',
-          durationMs: 1800,
+          durationMs: 1600,
           onComplete: () => {
-            NotificationService.success(`Bienvenido, ${user.displayName || user.email}`);
-            redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
+            clearTimeout(failsafeTimer);
+            proceedToDashboard();
           }
         });
       } else {
-        NotificationService.success(`Bienvenido, ${user.displayName || user.email}`);
-        redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
+        clearTimeout(failsafeTimer);
+        proceedToDashboard();
       }
 
     } catch (error) {

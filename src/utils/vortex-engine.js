@@ -33,7 +33,7 @@ export class VortexEngine {
 
   createParticles(mode = 'success') {
     this.particles = [];
-    const count = 60;
+    const count = 35;
     const isError = mode === 'error';
 
     const successColors = ['#6366f1', '#06b6d4', '#818cf8', '#38bdf8', '#c084fc'];
@@ -60,14 +60,12 @@ export class VortexEngine {
     if (isError) {
       this.rings = [
         { radius: 25, maxRadius: Math.max(this.width, this.height) * 0.7, speed: 15, alpha: 0.9, width: 2.5, color: '#f87171' },
-        { radius: 12, maxRadius: Math.max(this.width, this.height) * 0.6, speed: 11, alpha: 0.8, width: 2.0, color: '#ef4444' },
-        { radius: 6,  maxRadius: Math.max(this.width, this.height) * 0.5, speed: 8,  alpha: 0.6, width: 1.5, color: '#b91c1c' }
+        { radius: 12, maxRadius: Math.max(this.width, this.height) * 0.6, speed: 11, alpha: 0.8, width: 2.0, color: '#ef4444' }
       ];
     } else {
       this.rings = [
         { radius: 20, maxRadius: Math.max(this.width, this.height) * 0.7, speed: 12, alpha: 0.9, width: 2.0, color: '#38bdf8' },
-        { radius: 10, maxRadius: Math.max(this.width, this.height) * 0.6, speed: 9,  alpha: 0.7, width: 1.5, color: '#818cf8' },
-        { radius: 5,  maxRadius: Math.max(this.width, this.height) * 0.5, speed: 6,  alpha: 0.5, width: 1.0, color: '#c084fc' }
+        { radius: 10, maxRadius: Math.max(this.width, this.height) * 0.6, speed: 9,  alpha: 0.7, width: 1.5, color: '#818cf8' }
       ];
     }
   }
@@ -235,11 +233,15 @@ export class VortexEngine {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
     }
+    if (this.ctx && this.width && this.height) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
     if (this.canvas) {
       this.canvas.style.opacity = '0';
     }
     if (this.statusEl) {
       this.statusEl.style.opacity = '0';
+      this.statusEl.innerHTML = '';
     }
   }
 }
