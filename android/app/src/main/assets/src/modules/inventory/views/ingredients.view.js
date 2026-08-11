@@ -5,6 +5,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class IngredientsView extends Component {
   constructor(params = {}) {
@@ -25,17 +26,17 @@ export class IngredientsView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: 'Insumo / Materia Prima',
+          label: I18nService.t('ing_name'),
           render: (val, row) => `
             <div style="display: flex; flex-direction: column;">
               <span class="font-semibold text-primary">${val}</span>
-              <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">🏷️ ${row.category || 'Otros'}</span>
+              <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">🏷️ ${row.category || I18nService.t('inv_category_others')}</span>
             </div>
           `
         },
         { 
           key: 'stock', 
-          label: 'Stock Actual',
+          label: I18nService.t('inv_stock'),
           render: (val, row) => `
             <span class="font-medium ${Number(val) === 0 ? 'text-danger font-bold' : (Number(val) <= Number(row.minStock || 0) ? 'text-warning font-semibold' : 'text-success')}">
               ${val} ${row.unit || 'kg'}
@@ -44,13 +45,13 @@ export class IngredientsView extends Component {
         },
         { 
           key: 'minStock', 
-          label: 'Stock Mínimo',
+          label: I18nService.t('inv_min_stock'),
           render: (val, row) => `<span class="text-secondary">${val} ${row.unit || 'kg'}</span>`
         },
-        { key: 'supplierName', label: 'Proveedor' },
+        { key: 'supplierName', label: I18nService.t('inv_supplier') },
         { 
           key: 'expiryDate', 
-          label: 'Vencimiento',
+          label: I18nService.t('ing_expiry'),
           render: (val) => {
             if (!val) return '<span class="text-secondary">—</span>';
             const expDate = new Date(val);
@@ -58,16 +59,16 @@ export class IngredientsView extends Component {
             const daysLeft = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
             
             if (daysLeft < 0) {
-              return `<span class="badge" style="background-color: var(--color-danger-light); color: var(--color-danger); font-size: 0.7rem; padding: 2px 6px;">Vencido</span>`;
+              return `<span class="badge" style="background-color: var(--color-danger-light); color: var(--color-danger); font-size: 0.7rem; padding: 2px 6px;">${I18nService.t('ing_expired')}</span>`;
             } else if (daysLeft <= 7) {
-              return `<span class="badge" style="background-color: var(--color-warning-light); color: var(--color-warning); font-size: 0.7rem; padding: 2px 6px;">Próximo (${daysLeft}d)</span>`;
+              return `<span class="badge" style="background-color: var(--color-warning-light); color: var(--color-warning); font-size: 0.7rem; padding: 2px 6px;">${I18nService.t('ing_expiring_soon', { days: daysLeft })}</span>`;
             }
             return `<span class="text-secondary" style="font-size: 0.8rem;">${expDate.toLocaleDateString()}</span>`;
           }
         },
         {
           key: 'id',
-          label: 'Acciones',
+          label: I18nService.t('actions'),
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-ingredient" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -80,11 +81,11 @@ export class IngredientsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Materia Prima e Insumos',
-      subtitle: 'Monitorea ingredientes, insumos base de producción, unidades de medida y vencimientos.',
+      title: I18nService.t('ing_title'),
+      subtitle: I18nService.t('ing_subtitle'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-ingredient">
-          + Registrar Insumo
+          ${I18nService.t('ing_add')}
         </button>
       `,
       contentHTML: `
@@ -92,29 +93,29 @@ export class IngredientsView extends Component {
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Insumos Registrados</span>
+              <span class="kpi-label">${I18nService.t('ing_total_kpi')}</span>
               <div class="kpi-icon kpi-icon-accent">🌱</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-ings">0</h3>
-            <span class="text-xs text-secondary">Materias primas activas</span>
+            <span class="text-xs text-secondary">${I18nService.t('ing_active_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Stock Crítico (Bajos/Agotados)</span>
+              <span class="kpi-label">${I18nService.t('ing_critical_stock')}</span>
               <div class="kpi-icon kpi-icon-danger">⚠️</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-critical-ings">0</h3>
-            <span class="text-xs text-secondary">Requieren orden de reabastecimiento</span>
+            <span class="text-xs text-secondary">${I18nService.t('ing_critical_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Próximos a Vencer</span>
+              <span class="kpi-label">${I18nService.t('ing_expiring_soon_kpi')}</span>
               <div class="kpi-icon kpi-icon-warning">⏰</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-expiring-ings">0</h3>
-            <span class="text-xs text-secondary">Vencen en los próximos 7 días</span>
+            <span class="text-xs text-secondary">${I18nService.t('ing_expiring_soon_desc')}</span>
           </div>
         </div>
 
@@ -123,11 +124,11 @@ export class IngredientsView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-ing" class="input input-md" placeholder="Buscar insumos..." />
+              <input type="text" id="inp-search-ing" class="input input-md" placeholder="${I18nService.t('ing_search_placeholder')}" />
             </div>
 
             <select id="sel-filter-ing-cat" class="inv-filter-select">
-              <option value="">Todas las categorías</option>
+              <option value="">${I18nService.t('inv_all_categories')}</option>
             </select>
           </div>
         </div>
@@ -199,13 +200,13 @@ export class IngredientsView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-ingredient');
         if (deleteBtn) {
           const ingId = deleteBtn.getAttribute('data-id');
-          if (confirm('¿Estás seguro de que deseas eliminar este insumo?')) {
+          if (confirm(I18nService.t('ing_confirm_delete'))) {
             try {
               await FirestoreService.delete('insumos', ingId);
-              NotificationService.success('Insumo eliminado del catálogo.');
+              NotificationService.success(I18nService.t('ing_deleted_success'));
             } catch (err) {
               console.error('[IngredientsView] Error deleting:', err);
-              NotificationService.error('Error al eliminar el insumo.');
+              NotificationService.error(I18nService.t('ing_delete_error'));
             }
           }
         }
@@ -242,7 +243,7 @@ export class IngredientsView extends Component {
     const dropdown = element.querySelector('#sel-filter-ing-cat');
     if (dropdown) {
       const selected = this.state.selectedCategory;
-      dropdown.innerHTML = `<option value="">Todas las categorías</option>` +
+      dropdown.innerHTML = `<option value="">${I18nService.t('inv_all_categories')}</option>` +
         categories.map(cat => `<option value="${cat}" ${cat === selected ? 'selected' : ''}>${cat}</option>`).join('');
     }
   }
@@ -295,48 +296,48 @@ export class IngredientsView extends Component {
     const formHTML = `
       <form id="ingredient-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div class="form-group">
-          <label class="form-label" for="ing-name">Nombre del Insumo</label>
-          <input type="text" id="ing-name" class="input input-md" placeholder="Ej. Harina de Trigo, Queso Mozzarella" value="${isEdit ? ing.name : ''}" required />
+          <label class="form-label" for="ing-name">${I18nService.t('ing_name_label')}</label>
+          <input type="text" id="ing-name" class="input input-md" placeholder="${I18nService.t('ing_name_placeholder')}" value="${isEdit ? ing.name : ''}" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="ing-category">Categoría</label>
-            <input type="text" id="ing-category" class="input input-md" placeholder="Ej. Lácteos, Carnes, Verduras" value="${isEdit ? (ing.category || '') : ''}" required />
+            <label class="form-label" for="ing-category">${I18nService.t('inv_category')}</label>
+            <input type="text" id="ing-category" class="input input-md" placeholder="${I18nService.t('ing_category_placeholder')}" value="${isEdit ? (ing.category || '') : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="ing-unit">Unidad de Medida</label>
+            <label class="form-label" for="ing-unit">${I18nService.t('inv_unit')}</label>
             <select id="ing-unit" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="kg" ${isEdit && ing.unit === 'kg' ? 'selected' : ''}>Kilogramos (kg)</option>
-              <option value="L" ${isEdit && ing.unit === 'L' ? 'selected' : ''}>Litros (L)</option>
-              <option value="uds" ${isEdit && ing.unit === 'uds' ? 'selected' : ''}>Unidades (uds)</option>
-              <option value="g" ${isEdit && ing.unit === 'g' ? 'selected' : ''}>Gramos (g)</option>
-              <option value="paq" ${isEdit && ing.unit === 'paq' ? 'selected' : ''}>Paquete (paq)</option>
+              <option value="kg" ${isEdit && ing.unit === 'kg' ? 'selected' : ''}>${I18nService.t('inv_unit_kg')}</option>
+              <option value="L" ${isEdit && ing.unit === 'L' ? 'selected' : ''}>${I18nService.t('inv_unit_liters')}</option>
+              <option value="uds" ${isEdit && ing.unit === 'uds' ? 'selected' : ''}>${I18nService.t('inv_unit_units')}</option>
+              <option value="g" ${isEdit && ing.unit === 'g' ? 'selected' : ''}>${I18nService.t('inv_unit_grams')}</option>
+              <option value="paq" ${isEdit && ing.unit === 'paq' ? 'selected' : ''}>${I18nService.t('inv_unit_package')}</option>
             </select>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="ing-stock">Stock Actual</label>
+            <label class="form-label" for="ing-stock">${I18nService.t('inv_stock')}</label>
             <input type="number" id="ing-stock" class="input input-md" min="0" step="any" placeholder="0" value="${isEdit ? ing.stock : '0'}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="ing-min-stock">Stock Mínimo (Alerta)</label>
+            <label class="form-label" for="ing-min-stock">${I18nService.t('inv_min_stock')}</label>
             <input type="number" id="ing-min-stock" class="input input-md" min="0" step="any" placeholder="5" value="${isEdit ? (ing.minStock || '5') : '5'}" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="ing-supplier">Proveedor Principal</label>
+            <label class="form-label" for="ing-supplier">${I18nService.t('ing_supplier_label')}</label>
             <select id="ing-supplier" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="">Ninguno...</option>
+              <option value="">${I18nService.t('none')}...</option>
               ${supplierOptionsHTML}
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="ing-expiry">Fecha de Vencimiento (Opcional)</label>
+            <label class="form-label" for="ing-expiry">${I18nService.t('ing_expiry_label')}</label>
             <input type="date" id="ing-expiry" class="input input-md" value="${isEdit && ing.expiryDate ? ing.expiryDate : ''}" />
           </div>
         </div>
@@ -344,12 +345,12 @@ export class IngredientsView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Insumo'}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('ing_add')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? 'Editar Insumo de Producción' : 'Registrar Nuevo Insumo',
+      title: isEdit ? I18nService.t('ing_edit_title') : I18nService.t('ing_add_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -375,11 +376,11 @@ export class IngredientsView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando...';
+      submitBtn.textContent = I18nService.t('saving');
     }
 
     const name = this.modalInstance.$('#ing-name').value.trim();
-    const category = this.modalInstance.$('#ing-category').value.trim() || 'Otros';
+    const category = this.modalInstance.$('#ing-category').value.trim() || I18nService.t('inv_category_others');
     const unit = this.modalInstance.$('#ing-unit').value;
     const stock = Number(this.modalInstance.$('#ing-stock').value);
     const minStock = Number(this.modalInstance.$('#ing-min-stock').value);
@@ -400,19 +401,19 @@ export class IngredientsView extends Component {
     try {
       if (ing) {
         await FirestoreService.update('insumos', ing.id, payload);
-        NotificationService.success('Insumo actualizado correctamente.');
+        NotificationService.success(I18nService.t('ing_updated_success'));
       } else {
         payload.createdAt = Date.now();
         await FirestoreService.create('insumos', payload);
-        NotificationService.success('Insumo registrado correctamente.');
+        NotificationService.success(I18nService.t('ing_saved_success'));
       }
       this.modalInstance.close();
     } catch (err) {
       console.error('[IngredientsView] Error saving ingredient:', err);
-      alert(`Error al registrar el insumo: ${err.message}`);
+      alert(I18nService.t('ing_save_error', { error: err.message }));
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = ing ? 'Guardar Cambios' : 'Registrar Insumo';
+        submitBtn.textContent = ing ? I18nService.t('save_changes') : I18nService.t('ing_add');
       }
     }
   }

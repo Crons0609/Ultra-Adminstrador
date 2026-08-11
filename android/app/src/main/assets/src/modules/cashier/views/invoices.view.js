@@ -2,6 +2,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class InvoicesView extends Component {
   constructor(params = {}) {
@@ -9,10 +10,10 @@ export class InvoicesView extends Component {
     this.state = { sales: [], search: '' };
 
     this.layout = new PageLayout({
-      title: 'Comprobantes de Venta',
-      subtitle: 'Consulta y descarga los recibos de todas las ventas procesadas.',
+      title: I18nService.t('ri_title'),
+      subtitle: I18nService.t('ri_subtitle'),
       actionHTML: `
-        <input type="text" id="inv-search" class="input input-sm" placeholder="Buscar por vendedor o monto..." style="min-width:240px;"/>
+        <input type="text" id="inv-search" class="input input-sm" placeholder="${I18nService.t('ri_search_placeholder')}" style="min-width:240px;"/>
       `,
       contentHTML: `
         <style>
@@ -37,7 +38,7 @@ export class InvoicesView extends Component {
         </style>
 
         <div id="invoices-container" class="animate-fade-in">
-          <p class="text-center py-10 text-secondary">Cargando comprobantes...</p>
+          <p class="text-center py-10 text-secondary">${I18nService.t('ri_loading')}</p>
         </div>
       `
     });
@@ -83,8 +84,8 @@ export class InvoicesView extends Component {
       container.innerHTML = `
         <div class="card p-10 text-center text-secondary">
           <div style="font-size:3rem; margin-bottom:12px;">🧾</div>
-          <h4 class="font-bold">Sin comprobantes registrados</h4>
-          <p class="text-xs mt-1">Los comprobantes se generan automáticamente al completar una venta desde el Punto de Venta (POS).</p>
+          <h4 class="font-bold">${I18nService.t('ri_empty')}</h4>
+          <p class="text-xs mt-1">${I18nService.t('ri_empty_desc')}</p>
         </div>
       `;
       return;
@@ -103,14 +104,14 @@ export class InvoicesView extends Component {
             <div class="inv-folio">${ts}</div>
           </div>
           <div>
-            <div class="text-xs font-medium" style="margin-bottom:4px;">Vendedor: ${s.sellerName || 'Cajero'}</div>
-            <div class="inv-items-list">${items || 'Sin detalle de artículos'}</div>
+            <div class="text-xs font-medium" style="margin-bottom:4px;">${I18nService.t('ri_seller_label')} ${s.sellerName || I18nService.t('pos_cashier')}</div>
+            <div class="inv-items-list">${items || I18nService.t('ri_no_items_detail')}</div>
           </div>
           <div>
             <div class="inv-amount">$${Number(s.total || 0).toFixed(2)}</div>
             <div class="inv-folio" style="margin-top:4px;">${method}</div>
           </div>
-          <button class="inv-print-btn" data-id="${s.id}" onclick="this.textContent='🖨️ Enviado!'; setTimeout(()=>this.textContent='🖨️ Imprimir',2000);">🖨️ Imprimir</button>
+          <button class="inv-print-btn" data-id="${s.id}" onclick="this.textContent='${I18nService.t('ri_print_sent')}'; setTimeout(()=>this.textContent='🖨️ ${I18nService.t('print')}',2000);">🖨️ ${I18nService.t('print')}</button>
         </div>
       `;
     }).join('');

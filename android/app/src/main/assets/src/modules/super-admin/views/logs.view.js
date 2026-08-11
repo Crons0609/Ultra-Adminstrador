@@ -23,7 +23,7 @@ export class LogsView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('log_title'),
-      subtitle: 'Real-time security and operational audit logs recorded on the platform.',
+      subtitle: I18nService.t('sa_logs_subtitle'),
       actionHTML: `
         <button type="button" id="btn-refresh-logs" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:6px;">
           🔄 ${I18nService.t('refresh')}
@@ -51,26 +51,26 @@ export class LogsView extends Component {
               
               <!-- Action Filter -->
               <select id="filter-action-select" class="input input-md" style="min-width: 160px;">
-                <option value="ALL">Todas las Acciones</option>
-                <option value="PRODUCTION_RESET">💥 Reinicio de Producción</option>
-                <option value="LOGIN">🔑 Inicio de Sesión</option>
-                <option value="LOGOUT">🚪 Cierre de Sesión</option>
-                <option value="ADMIN_UPDATE_USER">✏️ Edición de Usuario</option>
-                <option value="ADMIN_RESET_PASSWORD">🔒 Cambio de Clave</option>
-                <option value="ADMIN_DELETE_USER">🔥 Borrado de Usuario</option>
-                <option value="GLOBAL_CONFIG">⚙️ Configuración Global</option>
+                <option value="ALL">${I18nService.t('sa_logs_filter_all_actions')}</option>
+                <option value="PRODUCTION_RESET">${I18nService.t('sa_logs_action_prod_reset')}</option>
+                <option value="LOGIN">${I18nService.t('sa_logs_action_login')}</option>
+                <option value="LOGOUT">${I18nService.t('sa_logs_action_logout')}</option>
+                <option value="ADMIN_UPDATE_USER">${I18nService.t('sa_logs_action_edit_user')}</option>
+                <option value="ADMIN_RESET_PASSWORD">${I18nService.t('sa_logs_action_change_pass')}</option>
+                <option value="ADMIN_DELETE_USER">${I18nService.t('sa_logs_action_delete_user')}</option>
+                <option value="GLOBAL_CONFIG">${I18nService.t('sa_logs_action_global_config')}</option>
               </select>
 
               <!-- Status Filter -->
               <select id="filter-status-select" class="input input-md" style="min-width: 140px;">
-                <option value="ALL">Todos los Estados</option>
-                <option value="SUCCESS">✅ Éxito</option>
-                <option value="ERROR">❌ Error</option>
+                <option value="ALL">${I18nService.t('sa_logs_filter_all_statuses')}</option>
+                <option value="SUCCESS">✅ ${I18nService.t('success')}</option>
+                <option value="ERROR">❌ ${I18nService.t('error')}</option>
               </select>
 
               <!-- Date Filter -->
               <input type="date" id="filter-date-input" class="input input-md" style="min-width: 140px;" />
-              <button type="button" id="btn-clear-date" class="btn btn-secondary btn-sm" title="Limpiar Fecha">✖</button>
+              <button type="button" id="btn-clear-date" class="btn btn-secondary btn-sm" title="${I18nService.t('sa_logs_clear_date')}">✖</button>
 
             </div>
           </div>
@@ -78,10 +78,10 @@ export class LogsView extends Component {
           <!-- Audit Stats & Count Badge -->
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div id="logs-count-badge" class="text-xs text-secondary font-semibold" style="font-family: monospace;">
-              Consultando auditoría en Firebase RTDB...
+              ${I18nService.t('sa_logs_querying_audit')}
             </div>
             <div id="logs-pagination-summary" class="text-xs text-secondary" style="font-family: monospace;">
-              Página 1
+              ${I18nService.t('sa_logs_page_label', { page: 1 })}
             </div>
           </div>
 
@@ -90,19 +90,19 @@ export class LogsView extends Component {
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem;">
               <thead>
                 <tr style="border-bottom: 1px solid var(--color-border-primary, rgba(255,255,255,0.08)); background: var(--color-bg-secondary, rgba(255,255,255,0.02)); color: var(--color-text-secondary);">
-                  <th style="padding: 12px 14px;">Fecha / Hora</th>
-                  <th style="padding: 12px 14px;">Usuario Autor</th>
+                  <th style="padding: 12px 14px;">${I18nService.t('log_date')}</th>
+                  <th style="padding: 12px 14px;">${I18nService.t('sa_logs_col_user')}</th>
                   <th style="padding: 12px 14px;">UID</th>
-                  <th style="padding: 12px 14px;">Acción Ejecutada</th>
-                  <th style="padding: 12px 14px;">Colección / Destino</th>
-                  <th style="padding: 12px 14px;">Estado</th>
-                  <th style="padding: 12px 14px;">Detalles de la Operación</th>
+                  <th style="padding: 12px 14px;">${I18nService.t('sa_logs_col_action')}</th>
+                  <th style="padding: 12px 14px;">${I18nService.t('sa_logs_col_target')}</th>
+                  <th style="padding: 12px 14px;">${I18nService.t('status')}</th>
+                  <th style="padding: 12px 14px;">${I18nService.t('sa_logs_col_details')}</th>
                 </tr>
               </thead>
               <tbody id="logs-table-body">
                 <tr>
                   <td colspan="7" style="padding: 32px; text-align: center; color: var(--color-text-tertiary);">
-                    ⏳ Cargando registros de auditoría desde Firebase...
+                    ⏳ ${I18nService.t('sa_logs_loading_wait')}
                   </td>
                 </tr>
               </tbody>
@@ -112,7 +112,7 @@ export class LogsView extends Component {
           <!-- Pagination Footer controls -->
           <div class="card p-3" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="text-xs text-secondary">Mostrar por página:</span>
+              <span class="text-xs text-secondary">${I18nService.t('sa_logs_per_page')}</span>
               <select id="select-page-size" class="input input-sm" style="width: 70px;">
                 <option value="15" selected>15</option>
                 <option value="30">30</option>
@@ -122,9 +122,9 @@ export class LogsView extends Component {
             </div>
 
             <div style="display: flex; align-items: center; gap: 8px;">
-              <button type="button" id="btn-prev-page" class="btn btn-secondary btn-sm" disabled>◀ Anterior</button>
-              <span id="page-num-label" class="text-xs font-semibold" style="font-family: monospace;">Página 1</span>
-              <button type="button" id="btn-next-page" class="btn btn-secondary btn-sm" disabled>Siguiente ▶</button>
+              <button type="button" id="btn-prev-page" class="btn btn-secondary btn-sm" disabled>◀ ${I18nService.t('previous')}</button>
+              <span id="page-num-label" class="text-xs font-semibold" style="font-family: monospace;">${I18nService.t('sa_logs_page_label', { page: 1 })}</span>
+              <button type="button" id="btn-next-page" class="btn btn-secondary btn-sm" disabled>${I18nService.t('next')} ▶</button>
             </div>
           </div>
 
@@ -233,13 +233,13 @@ export class LogsView extends Component {
     if (!db) return;
     try {
       const countBadge = root.querySelector('#logs-count-badge');
-      if (countBadge) countBadge.textContent = '⏳ Consultando auditoría en Firebase...';
+      if (countBadge) countBadge.textContent = I18nService.t('sa_logs_querying_audit');
 
       const snapshot = await get(ref(db, 'audit_logs'));
       this.processSnapshot(snapshot, root);
     } catch (err) {
       console.error('[LogsView] Error al consultar auditoría:', err);
-      NotificationService.error(`Error al cargar auditoría: ${err.message || err}`);
+      NotificationService.error(I18nService.t('sa_logs_error_load', { error: err.message || err }));
     }
   }
 
@@ -251,11 +251,11 @@ export class LogsView extends Component {
         const val = childSnap.val() || {};
         rawList.push({
           id: key,
-          action: val.action || 'OPERACIÓN',
-          programmerEmail: val.programmerEmail || val.user || val.email || 'Sistema',
+          action: val.action || I18nService.t('sa_logs_op_fallback'),
+          programmerEmail: val.programmerEmail || val.user || val.email || I18nService.t('sa_logs_system_user'),
           programmerUid: val.programmerUid || val.targetUid || val.uid || '—',
           programmerName: val.programmerName || '',
-          details: val.details || val.description || val.message || 'Sin detalle especificado.',
+          details: val.details || val.description || val.message || I18nService.t('sa_logs_no_detail'),
           timestamp: val.timestamp || val.createdAt || Date.now(),
           isoDate: val.isoDate || (val.timestamp ? new Date(val.timestamp).toISOString() : ''),
           status: val.status || (val.isError ? 'ERROR' : 'ÉXITO'),
@@ -332,14 +332,14 @@ export class LogsView extends Component {
     if (this.currentPage < 1) this.currentPage = 1;
 
     if (countBadge) {
-      countBadge.textContent = `📋 Total de Registros: ${totalLogs} ${totalLogs !== this.allLogs.length ? `(Filtrado de ${this.allLogs.length})` : ''}`;
+      countBadge.textContent = `${I18nService.t('sa_logs_total_records', { total: totalLogs })} ${totalLogs !== this.allLogs.length ? I18nService.t('sa_logs_filtered_from', { all: this.allLogs.length }) : ''}`;
     }
 
     if (paginationSummary) {
-      paginationSummary.textContent = `Mostrando página ${this.currentPage} de ${totalPages}`;
+      paginationSummary.textContent = I18nService.t('sa_logs_showing_page', { current: this.currentPage, total: totalPages });
     }
 
-    if (pageNumLabel) pageNumLabel.textContent = `Página ${this.currentPage} de ${totalPages}`;
+    if (pageNumLabel) pageNumLabel.textContent = I18nService.t('sa_logs_page_label', { page: this.currentPage });
     if (prevBtn) prevBtn.disabled = this.currentPage <= 1;
     if (nextBtn) nextBtn.disabled = this.currentPage >= totalPages;
 
@@ -349,7 +349,7 @@ export class LogsView extends Component {
       tbody.innerHTML = `
         <tr>
           <td colspan="7" style="padding: 32px; text-align: center; color: var(--color-text-tertiary);">
-            🔍 No se encontraron registros de auditoría con los filtros seleccionados.
+            🔍 ${I18nService.t('sa_logs_not_found')}
           </td>
         </tr>
       `;
@@ -363,14 +363,14 @@ export class LogsView extends Component {
       const dateFormatted = log.timestamp ? TimeService.formatDate(log.timestamp, true) : '—';
       const isError = (log.status || '').toUpperCase().includes('ERR');
       const statusBadge = isError
-        ? `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">❌ ERROR</span>`
-        : `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">✅ ÉXITO</span>`;
+        ? `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">❌ ${I18nService.t('error').toUpperCase()}</span>`
+        : `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">✅ ${I18nService.t('success').toUpperCase()}</span>`;
 
       let actionBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);">${log.action}</span>`;
       if (log.action === 'PRODUCTION_RESET') {
-        actionBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: rgba(239,68,68,0.25); color: #f87171; border: 1px solid rgba(239,68,68,0.4);">💥 REINICIO PRODUCCIÓN</span>`;
+        actionBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: rgba(239,68,68,0.25); color: #f87171; border: 1px solid rgba(239,68,68,0.4);">${I18nService.t('sa_logs_badge_prod_reset')}</span>`;
       } else if (log.action === 'LOGIN') {
-        actionBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(16,185,129,0.15); color: #34d399;">🔑 LOGIN</span>`;
+        actionBadge = `<span style="padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(16,185,129,0.15); color: #34d399;">${I18nService.t('sa_logs_badge_login')}</span>`;
       }
 
       return `

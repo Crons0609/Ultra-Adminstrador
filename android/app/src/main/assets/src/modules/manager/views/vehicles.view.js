@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class VehiclesView extends Component {
   constructor(params = {}) {
@@ -32,39 +33,39 @@ export class VehiclesView extends Component {
       columns: [
         { 
           key: 'brand', 
-          label: 'Vehículo',
+          label: I18nService.t('nav_vehicles'),
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               <div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🚗</div>
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val} ${row.model || ''}</span>
-                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">Año: ${row.year || 'N/A'}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">${I18nService.t('veh_year')}: ${row.year || 'N/A'}</span>
               </div>
             </div>
           `
         },
-        { key: 'plate', label: 'Placa' },
+        { key: 'plate', label: I18nService.t('veh_plate') },
         { 
           key: 'code', 
-          label: 'Código de Barra/QR',
-          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : '<span class="text-xs text-secondary">Sin asignar</span>'
+          label: I18nService.t('pos_barcode_label'),
+          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : `<span class="text-xs text-secondary">${I18nService.t('unassigned')}</span>`
         },
         { 
           key: 'category', 
-          label: 'Categoría',
-          render: (val) => `<span class="text-secondary">${val || 'General'}</span>`
+          label: I18nService.t('category'),
+          render: (val) => `<span class="text-secondary">${val || I18nService.t('nav_general')}</span>`
         },
         { 
           key: 'status', 
-          label: 'Estado',
+          label: I18nService.t('status'),
           render: (val) => {
-            let label = 'Disponible';
+            let label = I18nService.t('cal_available');
             let badgeClass = 'stock-ok';
             if (val === 'ALQUILADO') {
-              label = 'En Alquiler';
+              label = I18nService.t('rent_active_kpi');
               badgeClass = 'stock-low';
             } else if (val === 'MANTENIMIENTO') {
-              label = 'Mantenimiento';
+              label = I18nService.t('ass_status_maintenance');
               badgeClass = 'stock-out';
             }
             return `<span class="stock-badge ${badgeClass}">${label}</span>`;
@@ -72,7 +73,7 @@ export class VehiclesView extends Component {
         },
         {
           key: 'id',
-          label: 'Acciones',
+          label: I18nService.t('actions'),
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-vehicle" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -85,11 +86,11 @@ export class VehiclesView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Catálogo de Vehículos',
-      subtitle: 'Administra la flota de vehículos, estados de disponibilidad y códigos de barra o placa.',
+      title: I18nService.t('veh_title'),
+      subtitle: I18nService.t('veh_subtitle'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-vehicle">
-          + Agregar Vehículo
+          ${I18nService.t('veh_add')}
         </button>
       `,
       contentHTML: `
@@ -97,38 +98,38 @@ export class VehiclesView extends Component {
         <div class="grid-stats animate-fade-in" id="vehicles-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Total Vehículos</span>
+              <span class="kpi-label">${I18nService.t('veh_total_kpi')}</span>
               <div class="kpi-icon kpi-icon-accent">🚘</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-vehicles">0</h3>
-            <span class="text-xs text-secondary">Registrados en flota</span>
+            <span class="text-xs text-secondary">${I18nService.t('veh_total_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Disponibles</span>
+              <span class="kpi-label">${I18nService.t('cal_available')}</span>
               <div class="kpi-icon kpi-icon-success">✅</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-available-vehicles">0</h3>
-            <span class="text-xs text-secondary">Listos para alquilar</span>
+            <span class="text-xs text-secondary">${I18nService.t('veh_available_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">En Alquiler</span>
+              <span class="kpi-label">${I18nService.t('rent_active_kpi')}</span>
               <div class="kpi-icon kpi-icon-warning">🔑</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-rented-vehicles">0</h3>
-            <span class="text-xs text-secondary">Alquilados actualmente</span>
+            <span class="text-xs text-secondary">${I18nService.t('veh_rented_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Mantenimiento</span>
+              <span class="kpi-label">${I18nService.t('ass_status_maintenance')}</span>
               <div class="kpi-icon kpi-icon-danger">🔧</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-maintenance-vehicles">0</h3>
-            <span class="text-xs text-secondary">En taller / no disponibles</span>
+            <span class="text-xs text-secondary">${I18nService.t('veh_maintenance_desc')}</span>
           </div>
         </div>
 
@@ -137,14 +138,14 @@ export class VehiclesView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-vehicle" class="input input-md" placeholder="Buscar por marca, modelo, placa o código..." />
+              <input type="text" id="inp-search-vehicle" class="input input-md" placeholder="${I18nService.t('veh_search_placeholder')}" />
             </div>
 
             <select id="sel-filter-status" class="inv-filter-select">
-              <option value="">Todos los estados</option>
-              <option value="DISPONIBLE">Disponibles</option>
-              <option value="ALQUILADO">En Alquiler</option>
-              <option value="MANTENIMIENTO">Mantenimiento</option>
+              <option value="">${I18nService.t('inv_all_statuses')}</option>
+              <option value="DISPONIBLE">${I18nService.t('cal_available')}</option>
+              <option value="ALQUILADO">${I18nService.t('rent_active_kpi')}</option>
+              <option value="MANTENIMIENTO">${I18nService.t('ass_status_maintenance')}</option>
             </select>
           </div>
         </div>
@@ -217,13 +218,13 @@ export class VehiclesView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-vehicle');
         if (deleteBtn) {
           const vehId = deleteBtn.getAttribute('data-id');
-          if (confirm('¿Estás seguro de que deseas eliminar este vehículo de la flota?')) {
+          if (confirm(I18nService.t('veh_confirm_delete'))) {
             try {
               await FirestoreService.delete('vehiculos', vehId);
-              NotificationService.success('Vehículo eliminado de la flota.');
+              NotificationService.success(I18nService.t('veh_deleted_success'));
             } catch (err) {
               console.error('[VehiclesView] Error deleting:', err);
-              NotificationService.error('Error al eliminar el vehículo.');
+              NotificationService.error(I18nService.t('veh_delete_error'));
             }
           }
         }
@@ -305,42 +306,42 @@ export class VehiclesView extends Component {
       <form id="vehicle-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="veh-brand">Marca</label>
-            <input type="text" id="veh-brand" class="input input-md" placeholder="Ej. Toyota" value="${isEdit ? vehicle.brand : ''}" required />
+            <label class="form-label" for="veh-brand">${I18nService.t('veh_brand_label')}</label>
+            <input type="text" id="veh-brand" class="input input-md" placeholder="${I18nService.t('veh_brand_placeholder')}" value="${isEdit ? vehicle.brand : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="veh-model">Modelo</label>
-            <input type="text" id="veh-model" class="input input-md" placeholder="Ej. Hilux" value="${isEdit ? vehicle.model : ''}" required />
+            <label class="form-label" for="veh-model">${I18nService.t('veh_model')}</label>
+            <input type="text" id="veh-model" class="input input-md" placeholder="${I18nService.t('veh_model_placeholder')}" value="${isEdit ? vehicle.model : ''}" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="veh-plate">Placa / Matrícula</label>
-            <input type="text" id="veh-plate" class="input input-md" placeholder="Ej. M 123456" value="${isEdit ? vehicle.plate : ''}" required />
+            <label class="form-label" for="veh-plate">${I18nService.t('veh_plate')}</label>
+            <input type="text" id="veh-plate" class="input input-md" placeholder="${I18nService.t('veh_plate_placeholder')}" value="${isEdit ? vehicle.plate : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="veh-year">Año</label>
-            <input type="number" id="veh-year" class="input input-md" placeholder="Ej. 2024" value="${isEdit ? vehicle.year : ''}" />
+            <label class="form-label" for="veh-year">${I18nService.t('veh_year')}</label>
+            <input type="number" id="veh-year" class="input input-md" placeholder="${I18nService.t('veh_year_placeholder')}" value="${isEdit ? vehicle.year : ''}" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Asociar Código de Barras / QR para escaneo</label>
+          <label class="form-label">${I18nService.t('veh_barcode_label')}</label>
           <div id="veh-barcode-container"></div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="veh-category">Categoría</label>
-            <input type="text" id="veh-category" class="input input-md" placeholder="Ej. Sedán, Camioneta" value="${isEdit ? (vehicle.category || '') : ''}" />
+            <label class="form-label" for="veh-category">${I18nService.t('category')}</label>
+            <input type="text" id="veh-category" class="input input-md" placeholder="${I18nService.t('veh_category_placeholder')}" value="${isEdit ? (vehicle.category || '') : ''}" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="veh-status">Estado inicial</label>
+            <label class="form-label" for="veh-status">${I18nService.t('veh_status_label')}</label>
             <select id="veh-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="DISPONIBLE" ${isEdit && vehicle.status === 'DISPONIBLE' ? 'selected' : ''}>Disponible</option>
-              <option value="ALQUILADO" ${isEdit && vehicle.status === 'ALQUILADO' ? 'selected' : ''}>En Alquiler</option>
-              <option value="MANTENIMIENTO" ${isEdit && vehicle.status === 'MANTENIMIENTO' ? 'selected' : ''}>Mantenimiento</option>
+              <option value="DISPONIBLE" ${isEdit && vehicle.status === 'DISPONIBLE' ? 'selected' : ''}>${I18nService.t('cal_available')}</option>
+              <option value="ALQUILADO" ${isEdit && vehicle.status === 'ALQUILADO' ? 'selected' : ''}>${I18nService.t('rent_active_kpi')}</option>
+              <option value="MANTENIMIENTO" ${isEdit && vehicle.status === 'MANTENIMIENTO' ? 'selected' : ''}>${I18nService.t('ass_status_maintenance')}</option>
             </select>
           </div>
         </div>
@@ -348,12 +349,12 @@ export class VehiclesView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Vehículo'}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('veh_add')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? 'Editar Vehículo' : 'Registrar Vehículo en Flota',
+      title: isEdit ? I18nService.t('veh_edit_title') : I18nService.t('veh_add_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md',
@@ -373,7 +374,7 @@ export class VehiclesView extends Component {
       this.modalBarcodeInput = new BarcodeInput({
         id: 'veh-code',
         compact: true,
-        placeholder: 'Escanea código de barra o QR...',
+        placeholder: I18nService.t('pos_scan_placeholder_short'),
         value: isEdit ? (vehicle.code || '') : '',
         onScan: (code) => {
           this.modalBarcodeInput.setValue(code);
@@ -400,7 +401,7 @@ export class VehiclesView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando...';
+      submitBtn.textContent = I18nService.t('saving');
     }
 
     const brand = this.modalInstance.$('#veh-brand').value.trim();
@@ -438,7 +439,7 @@ export class VehiclesView extends Component {
     try {
       if (vehicle) {
         await FirestoreService.update('vehiculos', vehicle.id, payload);
-        NotificationService.success('Vehículo actualizado correctamente.');
+        NotificationService.success(I18nService.t('veh_updated_success'));
         if (code) {
           await BarcodeRegistryService.associateCode(code, vehicle.id, 'vehiculo', `${brand} ${model}`).catch(() => {});
         }
@@ -446,7 +447,7 @@ export class VehiclesView extends Component {
         payload.createdAt = Date.now();
         payload.createdAtLocal = TimeService.timestamp();
         const newId = await FirestoreService.create('vehiculos', payload);
-        NotificationService.success('Vehículo agregado a la flota.');
+        NotificationService.success(I18nService.t('veh_saved_success'));
         if (code && newId) {
           await BarcodeRegistryService.associateCode(code, newId, 'vehiculo', `${brand} ${model}`).catch(() => {});
         }
@@ -454,10 +455,10 @@ export class VehiclesView extends Component {
       this.modalInstance.close();
     } catch (err) {
       console.error('[VehiclesView] Error saving vehicle:', err);
-      alert(`Error al guardar: ${err.message}`);
+      alert(I18nService.t('error_occurred') + ': ' + err.message);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = vehicle ? 'Guardar Cambios' : 'Registrar Vehículo';
+        submitBtn.textContent = vehicle ? I18nService.t('save_changes') : I18nService.t('veh_add');
       }
     }
   }

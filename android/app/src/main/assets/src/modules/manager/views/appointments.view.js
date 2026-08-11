@@ -10,14 +10,15 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 // Statuses with colors
 const STATUS_CONFIG = {
-  PENDIENTE:   { label: 'Pendiente',    color: '#f59e0b', bg: '#f59e0b22' },
-  CONFIRMADA:  { label: 'Confirmada',   color: '#3b82f6', bg: '#3b82f622' },
-  EN_PROCESO:  { label: 'En Proceso',   color: '#8b5cf6', bg: '#8b5cf622' },
-  COMPLETADA:  { label: 'Completada',   color: '#10b981', bg: '#10b98122' },
-  CANCELADA:   { label: 'Cancelada',    color: '#ef4444', bg: '#ef444422' },
+  PENDIENTE:   { label: I18nService.t('pending'),    color: '#f59e0b', bg: '#f59e0b22' },
+  CONFIRMADA:  { label: I18nService.t('approved'),   color: '#3b82f6', bg: '#3b82f622' },
+  EN_PROCESO:  { label: I18nService.t('in_progress'),   color: '#8b5cf6', bg: '#8b5cf622' },
+  COMPLETADA:  { label: I18nService.t('completed'),   color: '#10b981', bg: '#10b98122' },
+  CANCELADA:   { label: I18nService.t('cancelled'),    color: '#ef4444', bg: '#ef444422' },
 };
 
 export class AppointmentsView extends Component {
@@ -38,11 +39,11 @@ export class AppointmentsView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '📅 Citas y Reservas',
-      subtitle: `${this.currentCompany.name || 'Mi Barbería'} — Gestión completa de citas y servicios.`,
+      title: I18nService.t('apt_title'),
+      subtitle: `${this.currentCompany.name || I18nService.t('nav_companies')}${I18nService.t('apt_subtitle_desc')}`,
       actionHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-view-toggle">🗓 Vista Calendario</button>
-        <button class="btn btn-primary btn-sm" id="btn-new-appointment">+ Nueva Cita</button>
+        <button class="btn btn-secondary btn-sm" id="btn-view-toggle">${I18nService.t('apt_calendar_view')}</button>
+        <button class="btn btn-primary btn-sm" id="btn-new-appointment">${I18nService.t('apt_add')}</button>
       `,
       contentHTML: `
         <style>
@@ -93,41 +94,41 @@ export class AppointmentsView extends Component {
         <div class="appt-kpis animate-fade-in">
           <div class="appt-kpi" style="border-top:4px solid #f59e0b;">
             <div class="appt-kpi-icon">⏳</div>
-            <div><div class="appt-kpi-val text-warning" id="kpi-pending">0</div><div class="appt-kpi-label">Pendientes Hoy</div></div>
+            <div><div class="appt-kpi-val text-warning" id="kpi-pending">0</div><div class="appt-kpi-label">${I18nService.t('apt_pending_today_kpi')}</div></div>
           </div>
           <div class="appt-kpi" style="border-top:4px solid #3b82f6;">
             <div class="appt-kpi-icon">✅</div>
-            <div><div class="appt-kpi-val" style="color:#3b82f6;" id="kpi-confirmed">0</div><div class="appt-kpi-label">Confirmadas Hoy</div></div>
+            <div><div class="appt-kpi-val" style="color:#3b82f6;" id="kpi-confirmed">0</div><div class="appt-kpi-label">${I18nService.t('apt_confirmed_today_kpi')}</div></div>
           </div>
           <div class="appt-kpi" style="border-top:4px solid #10b981;">
             <div class="appt-kpi-icon">🎉</div>
-            <div><div class="appt-kpi-val text-success" id="kpi-completed">0</div><div class="appt-kpi-label">Completadas Hoy</div></div>
+            <div><div class="appt-kpi-val text-success" id="kpi-completed">0</div><div class="appt-kpi-label">${I18nService.t('apt_completed_today_kpi')}</div></div>
           </div>
           <div class="appt-kpi" style="border-top:4px solid var(--color-accent);">
             <div class="appt-kpi-icon">📆</div>
-            <div><div class="appt-kpi-val" style="color:var(--color-accent);" id="kpi-week">0</div><div class="appt-kpi-label">Esta Semana</div></div>
+            <div><div class="appt-kpi-val" style="color:var(--color-accent);" id="kpi-week">0</div><div class="appt-kpi-label">${I18nService.t('dash_this_week')}</div></div>
           </div>
         </div>
 
         <!-- Toolbar -->
         <div class="appt-toolbar card p-4">
           <div class="appt-status-filter" id="appt-status-chips">
-            <span class="appt-status-chip active" data-status="">Todas</span>
-            <span class="appt-status-chip" data-status="PENDIENTE" style="color:#f59e0b; border-color:#f59e0b33;">Pendiente</span>
-            <span class="appt-status-chip" data-status="CONFIRMADA" style="color:#3b82f6; border-color:#3b82f633;">Confirmada</span>
-            <span class="appt-status-chip" data-status="EN_PROCESO" style="color:#8b5cf6; border-color:#8b5cf633;">En Proceso</span>
-            <span class="appt-status-chip" data-status="COMPLETADA" style="color:#10b981; border-color:#10b98133;">Completada</span>
-            <span class="appt-status-chip" data-status="CANCELADA" style="color:#ef4444; border-color:#ef444433;">Cancelada</span>
+            <span class="appt-status-chip active" data-status="">${I18nService.t('all_f')}</span>
+            <span class="appt-status-chip" data-status="PENDIENTE" style="color:#f59e0b; border-color:#f59e0b33;">${I18nService.t('pending')}</span>
+            <span class="appt-status-chip" data-status="CONFIRMADA" style="color:#3b82f6; border-color:#3b82f633;">${I18nService.t('approved')}</span>
+            <span class="appt-status-chip" data-status="EN_PROCESO" style="color:#8b5cf6; border-color:#8b5cf633;">${I18nService.t('in_progress')}</span>
+            <span class="appt-status-chip" data-status="COMPLETADA" style="color:#10b981; border-color:#10b98133;">${I18nService.t('completed')}</span>
+            <span class="appt-status-chip" data-status="CANCELADA" style="color:#ef4444; border-color:#ef444433;">${I18nService.t('cancelled')}</span>
           </div>
           <div style="display:flex; gap:var(--space-2); margin-left:auto; align-items:center;">
-            <label class="text-xs text-secondary">Fecha:</label>
+            <label class="text-xs text-secondary">${I18nService.t('date')}:</label>
             <input type="date" id="appt-date-filter" class="input input-sm" value="${new Date().toISOString().slice(0, 10)}" />
           </div>
         </div>
 
         <!-- Main View Container -->
         <div id="appt-view-container" class="mt-4">
-          <p class="text-center py-10 text-secondary">Cargando citas...</p>
+          <p class="text-center py-10 text-secondary">${I18nService.t('apt_loading')}</p>
         </div>
       `
     });
@@ -165,7 +166,7 @@ export class AppointmentsView extends Component {
     element.querySelector('#btn-view-toggle')?.addEventListener('click', () => {
       this.state.view = this.state.view === 'list' ? 'calendar' : 'list';
       const btn = element.querySelector('#btn-view-toggle');
-      if (btn) btn.textContent = this.state.view === 'list' ? '🗓 Vista Calendario' : '📋 Vista Lista';
+      if (btn) btn.textContent = this.state.view === 'list' ? I18nService.t('apt_calendar_view') : I18nService.t('apt_list_view');
       this.renderView(element);
     });
 
@@ -201,7 +202,7 @@ export class AppointmentsView extends Component {
       if (deleteBtn) {
         const id = deleteBtn.getAttribute('data-id');
         const name = deleteBtn.getAttribute('data-name');
-        if (confirm(`¿Cancelar la cita de "${name}"?`)) {
+        if (confirm(I18nService.t('apt_confirm_cancel', { name }))) {
           this.changeStatus(id, 'CANCELADA');
         }
       }
@@ -249,8 +250,8 @@ export class AppointmentsView extends Component {
       container.innerHTML = `
         <div class="card p-10 text-center text-secondary">
           <div style="font-size:3rem; margin-bottom:12px;">📅</div>
-          <h4 class="font-bold">Sin citas para este filtro</h4>
-          <p class="text-xs mt-1">Ajusta el filtro de estado o la fecha, o crea una nueva cita con el botón "+" superior.</p>
+          <h4 class="font-bold">${I18nService.t('apt_empty_filter')}</h4>
+          <p class="text-xs mt-1">${I18nService.t('apt_empty_filter_desc')}</p>
         </div>
       `;
       return;
@@ -287,11 +288,11 @@ export class AppointmentsView extends Component {
           <div class="appt-time-date">${dateFormatted}</div>
         </div>
         <div>
-          <div class="appt-details-name">✂️ ${appt.clientName || 'Cliente'}</div>
-          <div class="appt-details-service">${appt.service || 'Servicio no especificado'}</div>
+          <div class="appt-details-name">✂️ ${appt.clientName || I18nService.t('apt_client')}</div>
+          <div class="appt-details-service">${appt.service || I18nService.t('apt_no_service')}</div>
           <div class="appt-details-meta">
-            <span>👤 ${appt.employeeName || 'Sin asignar'}</span>
-            <span>⏱ ${appt.duration || 30} min</span>
+            <span>👤 ${appt.employeeName || I18nService.t('unassigned')}</span>
+            <span>⏱ ${appt.duration || 30} ${I18nService.t('minutes_short')}</span>
             ${appt.phone ? `<span>📱 ${appt.phone}</span>` : ''}
           </div>
           <div class="mt-2">
@@ -302,7 +303,7 @@ export class AppointmentsView extends Component {
           ${actionBtns}
           <button class="btn btn-xs btn-appt-delete" data-id="${appt.id}" data-name="${appt.clientName || 'cliente'}"
             style="background:none; border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:4px 8px; font-size:0.72rem; cursor:pointer; color:var(--color-text-secondary);">
-            🗑 Cancelar
+            🗑 ${I18nService.t('cancel')}
           </button>
         </div>
       </div>
@@ -355,9 +356,9 @@ export class AppointmentsView extends Component {
 
     container.innerHTML = `
       <div class="appt-calendar-nav">
-        <button class="btn btn-secondary btn-sm" id="btn-week-prev">← Anterior</button>
+        <button class="btn btn-secondary btn-sm" id="btn-week-prev">← ${I18nService.t('previous')}</button>
         <strong class="text-sm">${weekLabel}</strong>
-        <button class="btn btn-secondary btn-sm" id="btn-week-next">Siguiente →</button>
+        <button class="btn btn-secondary btn-sm" id="btn-week-next">${I18nService.t('next')} →</button>
       </div>
       <div class="appt-calendar-grid animate-fade-in">
         <div class="appt-cal-header"></div>
@@ -382,59 +383,59 @@ export class AppointmentsView extends Component {
     const bodyHTML = `
       <div class="d-flex flex-column gap-4">
         <div class="form-group">
-          <label class="form-label" for="appt-client-name">Nombre del Cliente *</label>
-          <input type="text" id="appt-client-name" class="input input-md" placeholder="Ej. Juan García" required />
+          <label class="form-label" for="appt-client-name">${I18nService.t('apt_client_name_label')}</label>
+          <input type="text" id="appt-client-name" class="input input-md" placeholder="${I18nService.t('apt_client_name_placeholder')}" required />
         </div>
         <div class="form-group">
-          <label class="form-label" for="appt-phone">Teléfono (opcional)</label>
-          <input type="tel" id="appt-phone" class="input input-md" placeholder="+52 55 1234 5678" />
+          <label class="form-label" for="appt-phone">${I18nService.t('apt_phone_label')}</label>
+          <input type="tel" id="appt-phone" class="input input-md" placeholder="${I18nService.t('apt_phone_placeholder')}" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="appt-service">Servicio *</label>
+          <label class="form-label" for="appt-service">${I18nService.t('apt_service')} *</label>
           <select id="appt-service" class="input input-md">
             ${servicesList.map(s => `<option value="${s}">${s}</option>`).join('')}
           </select>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
           <div class="form-group">
-            <label class="form-label" for="appt-date">Fecha *</label>
+            <label class="form-label" for="appt-date">${I18nService.t('date')} *</label>
             <input type="date" id="appt-date" class="input input-md" value="${new Date().toISOString().slice(0, 10)}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="appt-time">Hora *</label>
+            <label class="form-label" for="appt-time">${I18nService.t('time')} *</label>
             <input type="time" id="appt-time" class="input input-md" value="09:00" required />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="appt-duration">Duración (minutos)</label>
+          <label class="form-label" for="appt-duration">${I18nService.t('apt_duration_label')}</label>
           <select id="appt-duration" class="input input-md">
-            <option value="15">15 min</option>
-            <option value="30" selected>30 min</option>
-            <option value="45">45 min</option>
-            <option value="60">60 min</option>
-            <option value="90">90 min</option>
+            <option value="15">15 ${I18nService.t('minutes_short')}</option>
+            <option value="30" selected>30 ${I18nService.t('minutes_short')}</option>
+            <option value="45">45 ${I18nService.t('minutes_short')}</option>
+            <option value="60">60 ${I18nService.t('minutes_short')}</option>
+            <option value="90">90 ${I18nService.t('minutes_short')}</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label" for="appt-employee">Empleado Asignado</label>
+          <label class="form-label" for="appt-employee">${I18nService.t('apt_employee')}</label>
           <select id="appt-employee" class="input input-md">
-            <option value="">Sin asignar</option>
+            <option value="">${I18nService.t('unassigned')}</option>
             ${this.state.employees.map(e => `<option value="${e.displayName || e.email}">${e.displayName || e.email} (${e.customRole || e.role})</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label" for="appt-notes">Notas adicionales</label>
-          <textarea id="appt-notes" class="input input-md" rows="2" placeholder="Instrucciones especiales, alergias, preferencias..."></textarea>
+          <label class="form-label" for="appt-notes">${I18nService.t('apt_notes_label')}</label>
+          <textarea id="appt-notes" class="input input-md" rows="2" placeholder="${I18nService.t('apt_notes_placeholder')}"></textarea>
         </div>
       </div>
     `;
 
     const modal = new Modal({
-      title: '+ Nueva Cita',
+      title: I18nService.t('apt_add'),
       bodyHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-appt-cancel">Cancelar</button>
-        <button class="btn btn-primary btn-sm" id="btn-appt-save">Guardar Cita</button>
+        <button class="btn btn-secondary btn-sm" id="btn-appt-cancel">${I18nService.t('cancel')}</button>
+        <button class="btn btn-primary btn-sm" id="btn-appt-save">${I18nService.t('apt_save_btn')}</button>
       `
     });
 
@@ -448,7 +449,7 @@ export class AppointmentsView extends Component {
       const time = modal.$('#appt-time')?.value;
 
       if (!clientName || !date || !time) {
-        NotificationService.error('Por favor completa: Nombre, Fecha y Hora.');
+        NotificationService.error(I18nService.t('apt_error_required'));
         return;
       }
 
@@ -467,11 +468,11 @@ export class AppointmentsView extends Component {
 
       try {
         await FirestoreService.create('citas', payload);
-        NotificationService.success(`Cita creada para ${clientName} a las ${time}.`);
+        NotificationService.success(I18nService.t('apt_saved_success', { name: clientName, time }));
         modal.close();
       } catch (e) {
         console.error('[AppointmentsView] Error saving appointment:', e);
-        NotificationService.error('Error al guardar la cita.');
+        NotificationService.error(I18nService.t('apt_save_error'));
       }
     });
   }
@@ -480,10 +481,10 @@ export class AppointmentsView extends Component {
     try {
       await FirestoreService.update('citas', id, { status: newStatus });
       const label = STATUS_CONFIG[newStatus]?.label || newStatus;
-      NotificationService.success(`Estado actualizado a: ${label}`);
+      NotificationService.success(I18nService.t('apt_status_updated_success', { label }));
     } catch (e) {
       console.error('[AppointmentsView] Status update failed:', e);
-      NotificationService.error('Error al actualizar el estado.');
+      NotificationService.error(I18nService.t('apt_status_update_error'));
     }
   }
 

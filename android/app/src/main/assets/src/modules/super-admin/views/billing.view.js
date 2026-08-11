@@ -43,7 +43,7 @@ export class BillingView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('bill_title'),
-      subtitle: 'Real-time financial metrics, active subscriptions, and SaaS revenue analytics.',
+      subtitle: I18nService.t('sa_bill_subtitle'),
       actionHTML: `
         <button type="button" id="btn-refresh-billing" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:6px;">
           🔄 ${I18nService.t('refresh')}
@@ -62,21 +62,21 @@ export class BillingView extends Component {
             </div>
 
             <div class="card p-4">
-              <span class="text-xs text-secondary font-semibold">📅 Ingresos del Mes (MRR)</span>
+              <span class="text-xs text-secondary font-semibold">📅 ${I18nService.t('sa_bill_mrr')}</span>
               <h3 id="stat-monthly-revenue" class="text-2xl font-bold mt-1" style="color: #60a5fa;">$0.00</h3>
-              <span id="stat-daily-revenue" class="text-xs text-secondary">Hoy: $0.00</span>
+              <span id="stat-daily-revenue" class="text-xs text-secondary">${I18nService.t('sa_bill_today_label', { amount: '$0.00' })}</span>
             </div>
 
             <div class="card p-4">
-              <span class="text-xs text-secondary font-semibold">🏢 Negocios / Suscripciones Activas</span>
+              <span class="text-xs text-secondary font-semibold">🏢 ${I18nService.t('sa_bill_active_subs')}</span>
               <h3 id="stat-active-subs" class="text-2xl font-bold mt-1" style="color: #a78bfa;">0 / 0</h3>
-              <span id="stat-avg-revenue" class="text-xs text-secondary">Promedio/Negocio: $0.00</span>
+              <span id="stat-avg-revenue" class="text-xs text-secondary">${I18nService.t('sa_bill_avg_per_biz', { amount: '$0.00' })}</span>
             </div>
 
             <div class="card p-4">
-              <span class="text-xs text-secondary font-semibold">🔮 Ingresos Anuales Proyectados (ARR)</span>
+              <span class="text-xs text-secondary font-semibold">🔮 ${I18nService.t('sa_bill_arr')}</span>
               <h3 id="stat-projected-revenue" class="text-2xl font-bold mt-1" style="color: #10b981;">$0.00</h3>
-              <span id="stat-annual-revenue" class="text-xs text-secondary">Recurrente Anual: $0.00</span>
+              <span id="stat-annual-revenue" class="text-xs text-secondary">${I18nService.t('sa_bill_annual_rec', { amount: '$0.00' })}</span>
             </div>
 
           </div>
@@ -85,32 +85,32 @@ export class BillingView extends Component {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3);">
             
             <div class="card p-3" style="text-align: center; border-left: 3px solid #10b981;">
-              <span class="text-xs text-secondary" style="font-size:0.7rem;">🟢 Activas</span>
+              <span class="text-xs text-secondary" style="font-size:0.7rem;">🟢 ${I18nService.t('sa_bill_kpi_active')}</span>
               <h4 id="stat-active-count" class="text-md font-bold mt-1 text-success">0</h4>
             </div>
 
             <div class="card p-3" style="text-align: center; border-left: 3px solid #f59e0b;">
-              <span class="text-xs text-secondary" style="font-size:0.7rem;">⏳ Vencidas</span>
+              <span class="text-xs text-secondary" style="font-size:0.7rem;">⏳ ${I18nService.t('sa_bill_kpi_expired')}</span>
               <h4 id="stat-expired-count" class="text-md font-bold mt-1 text-warning">0</h4>
             </div>
 
             <div class="card p-3" style="text-align: center; border-left: 3px solid #ef4444;">
-              <span class="text-xs text-secondary" style="font-size:0.7rem;">❌ Canceladas / Inactivas</span>
+              <span class="text-xs text-secondary" style="font-size:0.7rem;">❌ ${I18nService.t('sa_bill_kpi_cancelled')}</span>
               <h4 id="stat-cancelled-count" class="text-md font-bold mt-1 text-danger">0</h4>
             </div>
 
             <div class="card p-3" style="text-align: center; border-left: 3px solid #3b82f6;">
-              <span class="text-xs text-secondary" style="font-size:0.7rem;">🔄 Renovaciones</span>
+              <span class="text-xs text-secondary" style="font-size:0.7rem;">🔄 ${I18nService.t('sa_bill_kpi_renewals')}</span>
               <h4 id="stat-renewals-count" class="text-md font-bold mt-1" style="color: #60a5fa;">0</h4>
             </div>
 
             <div class="card p-3" style="text-align: center;">
-              <span class="text-xs text-secondary" style="font-size:0.7rem;">👥 Total Usuarios</span>
+              <span class="text-xs text-secondary" style="font-size:0.7rem;">👥 ${I18nService.t('sa_total_users')}</span>
               <h4 id="stat-total-users" class="text-md font-bold mt-1">0</h4>
             </div>
 
             <div class="card p-3" style="text-align: center;">
-              <span class="text-xs text-secondary" style="font-size:0.7rem;">📦 Productos Catálogo</span>
+              <span class="text-xs text-secondary" style="font-size:0.7rem;">📦 ${I18nService.t('inv_products')}</span>
               <h4 id="stat-total-products" class="text-md font-bold mt-1">0</h4>
             </div>
 
@@ -118,36 +118,36 @@ export class BillingView extends Component {
 
           <!-- SaaS Plans Income Distribution Panel -->
           <div class="card p-5 animate-fade-in" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border);">
-            <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color: var(--color-accent);">📊 Distribución de Ingresos y Suscripciones por Plan</h3>
+            <h3 class="text-xs font-bold uppercase tracking-wider mb-4" style="color: var(--color-accent);">📊 ${I18nService.t('sa_bill_dist_title')}</h3>
             <div id="plans-distribution-container" style="display: flex; flex-direction: column; gap: var(--space-3);">
-              <p class="text-secondary text-xs">Cargando distribución de planes...</p>
+              <p class="text-secondary text-xs">${I18nService.t('sa_bill_loading_dist')}</p>
             </div>
           </div>
 
           <!-- Real SaaS Subscriptions & Invoices Table -->
           <div class="card p-5">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h3 class="text-lg font-semibold" style="margin: 0;">Historial de Cobros y Suscripciones SaaS</h3>
-              <span id="billing-table-count" class="text-xs text-secondary" style="font-family: monospace;">Consultando Firebase...</span>
+              <h3 class="text-lg font-semibold" style="margin: 0;">${I18nService.t('sa_bill_history_title')}</h3>
+              <span id="billing-table-count" class="text-xs text-secondary" style="font-family: monospace;">${I18nService.t('sa_bill_querying')}</span>
             </div>
 
             <div style="overflow-x: auto;">
               <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
                 <thead>
                   <tr style="border-bottom: 1px solid var(--color-border-primary, rgba(255,255,255,0.08)); color: var(--color-text-secondary);">
-                    <th style="padding: 10px 14px;">Folio / ID</th>
-                    <th style="padding: 10px 14px;">Empresa / Negocio</th>
-                    <th style="padding: 10px 14px;">Plan Asignado</th>
-                    <th style="padding: 10px 14px;">Monto de Licencia</th>
-                    <th style="padding: 10px 14px;">Fecha Registro</th>
-                    <th style="padding: 10px 14px;">Estado de Pago</th>
-                    <th style="padding: 10px 14px; text-align: right;">Acción</th>
+                    <th style="padding: 10px 14px;">${I18nService.t('sa_bill_col_folio')}</th>
+                    <th style="padding: 10px 14px;">${I18nService.t('sa_company_name')}</th>
+                    <th style="padding: 10px 14px;">${I18nService.t('sa_company_plan')}</th>
+                    <th style="padding: 10px 14px;">${I18nService.t('sa_bill_col_license')}</th>
+                    <th style="padding: 10px 14px;">${I18nService.t('col_created_at')}</th>
+                    <th style="padding: 10px 14px;">${I18nService.t('sa_bill_col_payment_status')}</th>
+                    <th style="padding: 10px 14px; text-align: right;">${I18nService.t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody id="billing-table-body">
                   <tr>
                     <td colspan="7" style="padding: 24px; text-align: center; color: var(--color-text-tertiary);">
-                      ⏳ Calculando facturación global desde Firebase...
+                      ⏳ ${I18nService.t('sa_bill_calculating')}
                     </td>
                   </tr>
                 </tbody>
@@ -205,19 +205,19 @@ export class BillingView extends Component {
 
       // Fallback defaults if saas_plans database node is empty
       const defaultPlans = {
-        BASIC: { id: 'BASIC', name: 'Plan Basic', price: 499, currency: 'NIO', duration: 'Mensual' },
-        PREMIUM: { id: 'PREMIUM', name: 'Plan Premium', price: 999, currency: 'NIO', duration: 'Mensual' },
-        ENTERPRISE: { id: 'ENTERPRISE', name: 'Plan Enterprise', price: 1999, currency: 'NIO', duration: 'Mensual' }
+        BASIC: { id: 'BASIC', name: I18nService.t('plan_name') + ' Basic', price: 499, currency: 'NIO', duration: I18nService.t('fin_monthly') },
+        PREMIUM: { id: 'PREMIUM', name: I18nService.t('plan_name') + ' Premium', price: 999, currency: 'NIO', duration: I18nService.t('fin_monthly') },
+        ENTERPRISE: { id: 'ENTERPRISE', name: I18nService.t('plan_name') + ' Enterprise', price: 1999, currency: 'NIO', duration: I18nService.t('fin_monthly') }
       };
 
       const finalPlans = { ...defaultPlans };
       Object.entries(plans).forEach(([id, p]) => {
         finalPlans[id] = {
           id,
-          name: p.name || `Plan ${id}`,
+          name: p.name || `${I18nService.t('plan_name')} ${id}`,
           price: Number(p.price || p.monto || 0),
           currency: p.currency || 'NIO',
-          duration: p.duration || 'Mensual'
+          duration: p.duration || I18nService.t('fin_monthly')
         };
       });
 
@@ -310,7 +310,7 @@ export class BillingView extends Component {
         }
 
         // Adjust MRR and ARR depending on yearly vs monthly subscriptions
-        const duration = (plan.duration || 'Mensual').toLowerCase();
+        const duration = (plan.duration || I18nService.t('fin_monthly')).toLowerCase();
         let companyMonthly = 0;
         let companyAnnual = 0;
 
@@ -369,8 +369,8 @@ export class BillingView extends Component {
           taxes,
           totalFacturado,
           createdAt,
-          expiration: cData.subscriptionExpiresAt || 'Sin Vencer',
-          billingPeriod: plan.duration || 'Mensual',
+          expiration: cData.subscriptionExpiresAt || I18nService.t('sa_bill_no_fixed_expiry'),
+          billingPeriod: plan.duration || I18nService.t('fin_monthly'),
           subStatus,
           status: subStatus === 'Activa' ? 'PAGADO' : 'PENDIENTE'
         });
@@ -410,7 +410,7 @@ export class BillingView extends Component {
       console.log('[BillingView] ✅ Métricas globales y pasarela de cobros actualizadas.');
     } catch (err) {
       console.error('[BillingView] Error calculating metrics:', err);
-      NotificationService.error(`Error al cargar la facturación: ${err.message || err}`);
+      NotificationService.error(I18nService.t('sa_bill_error_load', { error: err.message || err }));
     }
   }
 
@@ -440,18 +440,18 @@ export class BillingView extends Component {
 
     if (elTotRev) elTotRev.textContent = fmt(this.metrics.totalRevenue);
     if (elMonthlyRev) elMonthlyRev.textContent = fmt(this.metrics.monthlyRevenue);
-    if (elDailyRev) elDailyRev.textContent = `Hoy: ${fmt(this.metrics.dailyRevenue)}`;
-    if (elGrowthRate) elGrowthRate.textContent = `↑ ${this.metrics.growthRate}% Suscripciones Activas`;
+    if (elDailyRev) elDailyRev.textContent = I18nService.t('sa_bill_today_label', { amount: fmt(this.metrics.dailyRevenue) });
+    if (elGrowthRate) elGrowthRate.textContent = `↑ ${this.metrics.growthRate}% ${I18nService.t('sa_bill_active_subs')}`;
     if (elActiveSubs) elActiveSubs.textContent = `${this.metrics.activeSubscriptions} / ${this.metrics.totalCompanies}`;
-    if (elAvgRev) elAvgRev.textContent = `Promedio/Negocio: ${fmt(this.metrics.avgRevenuePerBusiness)}`;
+    if (elAvgRev) elAvgRev.textContent = I18nService.t('sa_bill_avg_per_biz', { amount: fmt(this.metrics.avgRevenuePerBusiness) });
     if (elTotalOrders) elTotalOrders.textContent = this.metrics.totalOrders.toLocaleString();
-    if (elOrdersBreakdown) elOrdersBreakdown.textContent = `Completados: ${this.metrics.completedOrders} | Cancelados: ${this.metrics.canceledOrders}`;
+    if (elOrdersBreakdown) elOrdersBreakdown.textContent = `${I18nService.t('completed')}: ${this.metrics.completedOrders} | ${I18nService.t('cancelled')}: ${this.metrics.canceledOrders}`;
 
     if (elTotalUsers) elTotalUsers.textContent = this.metrics.totalUsers.toLocaleString();
     if (elTotalProducts) elTotalProducts.textContent = this.metrics.totalProducts.toLocaleString();
     
     if (elProjectedRevenue) elProjectedRevenue.textContent = fmt(this.metrics.projectedRevenue);
-    if (elAnnualRevenue) elAnnualRevenue.textContent = `Recurrente Anual: ${fmt(this.metrics.annualRevenue)}`;
+    if (elAnnualRevenue) elAnnualRevenue.textContent = I18nService.t('sa_bill_annual_rec', { amount: fmt(this.metrics.annualRevenue) });
     
     if (elActiveCount) elActiveCount.textContent = this.metrics.activeSubscriptions;
     if (elExpiredCount) elExpiredCount.textContent = this.metrics.expiredSubscriptions;
@@ -462,7 +462,7 @@ export class BillingView extends Component {
     const tbody = root.querySelector('#billing-table-body');
     const countLabel = root.querySelector('#billing-table-count');
 
-    if (countLabel) countLabel.textContent = `Total Transacciones: ${this.transactions.length}`;
+    if (countLabel) countLabel.textContent = I18nService.t('sa_bill_total_transactions', { count: this.transactions.length });
 
     if (!tbody) return;
 
@@ -470,7 +470,7 @@ export class BillingView extends Component {
       tbody.innerHTML = `
         <tr>
           <td colspan="7" style="padding: 24px; text-align: center; color: var(--color-text-tertiary);">
-            ℹ️ No hay transacciones de negocios registradas en Firebase.
+            ℹ️ ${I18nService.t('sa_bill_no_transactions')}
           </td>
         </tr>
       `;
@@ -481,10 +481,10 @@ export class BillingView extends Component {
       const dateStr = TimeService.formatDate(tx.createdAt, true);
       
       const badge = {
-        Activa: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">PAGADO</span>`,
-        Vencida: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3);">VENCIDO</span>`,
-        Suspendida: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">SUSPENDIDO</span>`,
-        Cancelada: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(156,163,175,0.15); color: #9ca3af; border: 1px solid rgba(156,163,175,0.3);">CANCELADO</span>`
+        Activa: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">${I18nService.t('paid').toUpperCase()}</span>`,
+        Vencida: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3);">${I18nService.t('ap_overdue').toUpperCase()}</span>`,
+        Suspendida: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">${I18nService.t('on_hold').toUpperCase()}</span>`,
+        Cancelada: `<span style="padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: rgba(156,163,175,0.15); color: #9ca3af; border: 1px solid rgba(156,163,175,0.3);">${I18nService.t('cancelled').toUpperCase()}</span>`
       }[tx.subStatus] || `<span class="badge">${tx.subStatus}</span>`;
 
       return `
@@ -496,7 +496,7 @@ export class BillingView extends Component {
           <td style="padding: 10px 14px; font-size: 0.78rem; color: var(--color-text-secondary);">${dateStr}</td>
           <td style="padding: 10px 14px;">${badge}</td>
           <td style="padding: 10px 14px; text-align: right;">
-            <button class="btn btn-secondary btn-xs btn-view-invoice" data-tx-id="${tx.id}" style="padding: 2px 6px;">📂 Detalle</button>
+            <button class="btn btn-secondary btn-xs btn-view-invoice" data-tx-id="${tx.id}" style="padding: 2px 6px;">📂 ${I18nService.t('details')}</button>
           </td>
         </tr>
       `;
@@ -526,7 +526,7 @@ export class BillingView extends Component {
               <span class="text-secondary" style="font-size:0.72rem; margin-left:4px;">(Monto oficial: ${data.currency} ${fmt(data.price)} / ${data.duration})</span>
             </div>
             <div style="text-align:right;">
-              <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--color-text-primary); font-weight:700;">${data.count} suscripción(es)</span>
+              <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--color-text-primary); font-weight:700;">${I18nService.t('sa_bill_subs_count', { count: data.count })}</span>
               <strong style="color:#34d399; margin-left:8px;">${fmt(data.revenue)}</strong>
             </div>
           </div>
@@ -534,12 +534,12 @@ export class BillingView extends Component {
           <div style="width:100%; height:8px; background:rgba(0,0,0,0.2); border-radius:4px; overflow:hidden;">
             <div style="width:${percentage}%; height:100%; background:${accentColor}; border-radius:4px; transition: width 0.5s ease-out;"></div>
           </div>
-          <div style="font-size:0.68rem; color:var(--color-text-secondary); text-align:right; margin-top:2px;">${percentage}% del total facturado</div>
+          <div style="font-size:0.68rem; color:var(--color-text-secondary); text-align:right; margin-top:2px;">${I18nService.t('sa_bill_pct_total', { pct: percentage })}</div>
         </div>
       `;
     }).join('');
 
-    container.innerHTML = distributionHTML || '<p class="text-secondary text-xs">No hay planes activos registrados para calcular la distribución.</p>';
+    container.innerHTML = distributionHTML || `<p class="text-secondary text-xs">${I18nService.t('sa_bill_no_active_plans')}</p>`;
   }
 
   openInvoiceDetailModal(txId) {
@@ -552,10 +552,10 @@ export class BillingView extends Component {
     if (modalOverlay) modalOverlay.remove();
 
     const badgeHTML = {
-      Activa: `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700;">Activa / Al Día</span>`,
-      Vencida: `<span class="badge" style="background:rgba(245,158,11,0.15); color:#fbbf24; font-weight:700;">Vencida por Falta de Pago</span>`,
-      Suspendida: `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-weight:700;">Suspendida</span>`,
-      Cancelada: `<span class="badge" style="background:rgba(156,163,175,0.15); color:#9ca3af; font-weight:700;">Cancelada</span>`
+      Activa: `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700;">${I18nService.t('sa_bill_status_up_to_date')}</span>`,
+      Vencida: `<span class="badge" style="background:rgba(245,158,11,0.15); color:#fbbf24; font-weight:700;">${I18nService.t('sa_bill_status_unpaid')}</span>`,
+      Suspendida: `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-weight:700;">${I18nService.t('on_hold')}</span>`,
+      Cancelada: `<span class="badge" style="background:rgba(156,163,175,0.15); color:#9ca3af; font-weight:700;">${I18nService.t('cancelled')}</span>`
     }[tx.subStatus] || `<span class="badge">${tx.subStatus}</span>`;
 
     const bodyHTML = `
@@ -563,7 +563,7 @@ export class BillingView extends Component {
         
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
           <div>
-            <span style="font-size:0.75rem; color:var(--color-text-secondary); display:block;">Código Folio:</span>
+            <span style="font-size:0.75rem; color:var(--color-text-secondary); display:block;">${I18nService.t('sa_bill_folio_label')}</span>
             <strong style="font-family:monospace; color:#60a5fa; font-size:0.95rem;">${tx.id}</strong>
           </div>
           <div>
@@ -573,42 +573,42 @@ export class BillingView extends Component {
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); padding:10px; border-radius:6px;">
           <div>
-            <span class="text-secondary" style="font-size:0.72rem; display:block;">Negocio Contratante:</span>
+            <span class="text-secondary" style="font-size:0.72rem; display:block;">${I18nService.t('sa_bill_contracting_biz')}</span>
             <strong>${tx.companyName}</strong>
           </div>
           <div>
-            <span class="text-secondary" style="font-size:0.72rem; display:block;">Plan Contratado:</span>
+            <span class="text-secondary" style="font-size:0.72rem; display:block;">${I18nService.t('sa_bill_contracted_plan')}</span>
             <strong style="color:#a78bfa;">${tx.planName}</strong>
           </div>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           <div>
-            <span class="text-secondary" style="font-size:0.72rem; display:block;">Fecha de Registro:</span>
+            <span class="text-secondary" style="font-size:0.72rem; display:block;">${I18nService.t('sa_bill_reg_date')}</span>
             <strong>${TimeService.formatDate(tx.createdAt, true)}</strong>
           </div>
           <div>
-            <span class="text-secondary" style="font-size:0.72rem; display:block;">Próximo Vencimiento:</span>
-            <strong>${tx.expiration === 'Sin Vencer' ? 'Sin Expiración Fija' : TimeService.formatDate(new Date(tx.expiration).getTime())}</strong>
+            <span class="text-secondary" style="font-size:0.72rem; display:block;">${I18nService.t('sa_bill_next_expiry')}</span>
+            <strong>${tx.expiration === I18nService.t('sa_bill_no_fixed_expiry') ? I18nService.t('sa_bill_no_fixed_expiry') : TimeService.formatDate(new Date(tx.expiration).getTime())}</strong>
           </div>
         </div>
 
         <div style="border-top:1px dashed rgba(255,255,255,0.08); margin-top:6px; padding-top:8px;">
-          <h4 class="font-bold text-xs uppercase tracking-wider mb-2" style="color:var(--color-accent);">Desglose del Monto de Licencia</h4>
+          <h4 class="font-bold text-xs uppercase tracking-wider mb-2" style="color:var(--color-accent);">${I18nService.t('sa_bill_breakdown_title')}</h4>
           <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.02);">
-            <span class="text-secondary">Precio Base del Plan (${tx.billingPeriod}):</span>
+            <span class="text-secondary">${I18nService.t('sa_bill_base_price', { period: tx.billingPeriod })}</span>
             <span style="font-family:monospace;">${fmt(tx.planPrice)}</span>
           </div>
           <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.02); color:#f87171;">
-            <span>(-) Descuentos Aplicados:</span>
+            <span>${I18nService.t('sa_bill_discounts')}</span>
             <span style="font-family:monospace;">-${fmt(tx.discount)}</span>
           </div>
           <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); color:#60a5fa;">
-            <span>(+) Impuestos / Cargos Adicionales:</span>
+            <span>${I18nService.t('sa_bill_taxes')}</span>
             <span style="font-family:monospace;">+${fmt(tx.taxes)}</span>
           </div>
           <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:1rem; font-weight:700; color:#34d399;">
-            <span>Total Neto Facturado:</span>
+            <span>${I18nService.t('sa_bill_net_total')}</span>
             <span style="font-family:monospace;">${fmt(tx.totalFacturado)}</span>
           </div>
         </div>
@@ -617,9 +617,9 @@ export class BillingView extends Component {
     `;
 
     const invoiceModal = new Modal({
-      title: '🧾 Desglose de Facturación y Suscripción',
+      title: `🧾 ${I18nService.t('sa_bill_modal_title')}`,
       bodyHTML,
-      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-close-invoice-modal">Cerrar</button>`,
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-close-invoice-modal">${I18nService.t('close')}</button>`,
       size: 'md'
     });
 

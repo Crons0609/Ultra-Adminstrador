@@ -17,23 +17,24 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { GlobalStore } from '../../../core/state.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PromotionsView extends Component {
   constructor(params = {}) {
     super(params);
     const user = GlobalStore.getState().currentUser || {};
     this.companyId = user.companyId || '';
-    this.sellerName = user.name || 'Cajero';
+    this.sellerName = user.name || I18nService.t('pos_cashier');
     this.listeners = [];
     this.state = { promotions: [], products: [] };
 
     this.layout = new PageLayout({
-      title: 'Gestión de Promociones',
-      subtitle: 'Crea y administra promociones activas que aparecen en el menú digital del cliente en tiempo real.',
+      title: I18nService.t('promo_title'),
+      subtitle: I18nService.t('promo_subtitle'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-new-promo" style="display:flex;align-items:center;gap:6px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nueva Promoción
+          ${I18nService.t('promo_add')}
         </button>
       `,
       contentHTML: `
@@ -81,21 +82,21 @@ export class PromotionsView extends Component {
         <div class="grid-stats animate-fade-in" id="promo-stats">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Promociones Activas</span>
+              <span class="kpi-label">${I18nService.t('promo_active_kpi')}</span>
               <div class="kpi-icon kpi-icon-success">🏷️</div>
             </div>
             <h3 class="kpi-value" id="promo-active-count">0</h3>
           </div>
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Lotes en Curso</span>
+              <span class="kpi-label">${I18nService.t('promo_lotes_kpi')}</span>
               <div class="kpi-icon kpi-icon-warning">📦</div>
             </div>
             <h3 class="kpi-value" id="promo-lote-count">0</h3>
           </div>
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Descuento Promedio</span>
+              <span class="kpi-label">${I18nService.t('promo_avg_discount_kpi')}</span>
               <div class="kpi-icon kpi-icon-accent">%</div>
             </div>
             <h3 class="kpi-value" id="promo-avg-disc">0%</h3>
@@ -104,7 +105,7 @@ export class PromotionsView extends Component {
 
         <!-- Promotions grid -->
         <div id="promo-grid" class="promo-grid">
-          <p class="text-secondary text-center py-10" style="grid-column:1/-1;">Cargando promociones...</p>
+          <p class="text-secondary text-center py-10" style="grid-column:1/-1;">${I18nService.t('loading_data')}</p>
         </div>
       `
     });
@@ -148,14 +149,14 @@ export class PromotionsView extends Component {
       grid.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
           <div style="font-size:3rem; margin-bottom:12px;">🏷️</div>
-          <p class="font-semibold text-primary">Sin promociones aún</p>
-          <p class="text-xs text-secondary mt-1">Presiona <strong>Nueva Promoción</strong> para crear la primera oferta del negocio.</p>
+          <p class="font-semibold text-primary">${I18nService.t('promo_no_promos')}</p>
+          <p class="text-xs text-secondary mt-1">${I18nService.t('promo_empty_desc')}</p>
         </div>`;
       return;
     }
 
     const typeColors = { DIA: '#fbbf24', SEMANA: '#34d399', FIN_SEMANA: '#818cf8', LOTE: '#fb923c' };
-    const typeLabels = { DIA: '📅 Del Día', SEMANA: '📆 Semanal', FIN_SEMANA: '🎉 Fin de Semana', LOTE: '📦 Por Lote' };
+    const typeLabels = { DIA: I18nService.t('promo_type_day'), SEMANA: I18nService.t('promo_type_week'), FIN_SEMANA: I18nService.t('promo_type_weekend'), LOTE: I18nService.t('promo_type_batch') };
 
     grid.innerHTML = promos.map(p => {
       const color  = typeColors[p.type] || '#7c75ff';
@@ -163,8 +164,8 @@ export class PromotionsView extends Component {
       const active = p.isActive !== false;
       const loteInfo = p.type === 'LOTE' ? `
         <div class="text-xs text-secondary" style="margin-top:2px;">
-          Lote No. <strong>${p.loteNumber || '—'}</strong> · 
-          Disponible: <strong style="color:${(p.loteCantidad || 0) <= 0 ? 'var(--color-danger)' : 'var(--color-success)'};">${p.loteCantidad ?? '—'}</strong> unidades
+          ${I18nService.t('promo_batch_num_label')} <strong>${p.loteNumber || '—'}</strong> ·
+          ${I18nService.t('status')}: <strong style="color:${(p.loteCantidad || 0) <= 0 ? 'var(--color-danger)' : 'var(--color-success)'};">${p.loteCantidad ?? '—'}</strong> ${I18nService.t('inv_unit_units')}
         </div>` : '';
 
       return `
@@ -173,21 +174,21 @@ export class PromotionsView extends Component {
           <div class="promo-card-body">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
               <span class="promo-type-badge promo-${p.type}">${label}</span>
-              ${!active ? '<span class="badge" style="background:rgba(248,113,113,0.15);color:#f87171;font-size:0.68rem;">INACTIVA</span>' : ''}
+              ${!active ? `<span class="badge" style="background:rgba(248,113,113,0.15);color:#f87171;font-size:0.68rem;">${I18nService.t('inactive')}</span>` : ''}
             </div>
-            <h4 class="font-bold text-md" style="color:var(--color-text-primary);">${p.name || 'Sin nombre'}</h4>
-            <p class="text-xs text-secondary">${p.productName || 'Sin producto vinculado'}</p>
+            <h4 class="font-bold text-md" style="color:var(--color-text-primary);">${p.name || I18nService.t('no_name')}</h4>
+            <p class="text-xs text-secondary">${p.productName || I18nService.t('promo_no_product_linked')}</p>
             ${loteInfo}
             <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-              <span style="font-size:1.5rem;font-weight:800;color:${color};">${p.discount || 0}% OFF</span>
-              <span class="text-xs text-secondary">sobre el precio original</span>
+              <span style="font-size:1.5rem;font-weight:800;color:${color};">${p.discount || 0}% ${I18nService.t('promo_off')}</span>
+              <span class="text-xs text-secondary">${I18nService.t('promo_off_desc')}</span>
             </div>
           </div>
           <div class="promo-card-actions">
-            <button class="btn btn-secondary btn-sm flex-1 btn-edit-promo" data-id="${p.id}" style="font-size:0.78rem;">✏️ Editar</button>
+            <button class="btn btn-secondary btn-sm flex-1 btn-edit-promo" data-id="${p.id}" style="font-size:0.78rem;">✏️ ${I18nService.t('edit')}</button>
             <button class="btn btn-sm flex-1 btn-toggle-promo" data-id="${p.id}" data-active="${active}" 
               style="font-size:0.78rem; background:${active ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)'}; color:${active ? '#f87171' : '#34d399'}; border:1px solid ${active ? '#f8717133' : '#34d39933'};">
-              ${active ? '⏸ Desactivar' : '▶ Activar'}
+              ${active ? `⏸ ${I18nService.t('disabled')}` : `▶ ${I18nService.t('enabled')}`}
             </button>
           </div>
         </div>`;
@@ -205,7 +206,7 @@ export class PromotionsView extends Component {
         const id     = btn.getAttribute('data-id');
         const active = btn.getAttribute('data-active') === 'true';
         await FirestoreService.update('promociones', id, { isActive: !active });
-        NotificationService.success(`Promoción ${active ? 'desactivada' : 'activada'}.`);
+        NotificationService.success(I18nService.t('promo_status_changed_toast', { status: active ? I18nService.t('disabled').toLowerCase() : I18nService.t('enabled').toLowerCase() }));
       });
     });
   }
@@ -222,50 +223,50 @@ export class PromotionsView extends Component {
     const bodyHTML = `
       <div style="display:flex;flex-direction:column;gap:var(--space-4);">
         <div class="form-group">
-          <label class="form-label">Nombre de la Promoción *</label>
-          <input type="text" id="pm-name" class="input input-md" placeholder="Ej. Happy Hour 2x1, Combo del día..." value="${p.name || ''}" />
+          <label class="form-label">${I18nService.t('promo_name_label')}</label>
+          <input type="text" id="pm-name" class="input input-md" placeholder="${I18nService.t('promo_name_placeholder')}" value="${p.name || ''}" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);">
           <div class="form-group">
-            <label class="form-label">Tipo de Promoción *</label>
+            <label class="form-label">${I18nService.t('promo_type_label')}</label>
             <select id="pm-type" class="input input-md" style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-text-primary);padding:0 var(--space-3);">
-              <option value="DIA"       ${p.type === 'DIA'        ? 'selected' : ''}>📅 Del Día</option>
-              <option value="SEMANA"    ${p.type === 'SEMANA'     ? 'selected' : ''}>📆 De la Semana</option>
-              <option value="FIN_SEMANA"${p.type === 'FIN_SEMANA' ? 'selected' : ''}>🎉 Fin de Semana</option>
-              <option value="LOTE"      ${p.type === 'LOTE'       ? 'selected' : ''}>📦 Por Lote (hasta agotar)</option>
+              <option value="DIA"       ${p.type === 'DIA'        ? 'selected' : ''}>${I18nService.t('promo_type_day')}</option>
+              <option value="SEMANA"    ${p.type === 'SEMANA'     ? 'selected' : ''}>${I18nService.t('promo_type_week_long')}</option>
+              <option value="FIN_SEMANA"${p.type === 'FIN_SEMANA' ? 'selected' : ''}>${I18nService.t('promo_type_weekend')}</option>
+              <option value="LOTE"      ${p.type === 'LOTE'       ? 'selected' : ''}>${I18nService.t('promo_type_batch_long')}</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Descuento (%) *</label>
-            <input type="number" id="pm-discount" class="input input-md" min="1" max="99" placeholder="Ej. 20" value="${p.discount || ''}" />
+            <label class="form-label">${I18nService.t('promo_discount_label')}</label>
+            <input type="number" id="pm-discount" class="input input-md" min="1" max="99" placeholder="${I18nService.t('promo_discount_placeholder')}" value="${p.discount || ''}" />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Producto Vinculado</label>
+          <label class="form-label">${I18nService.t('promo_linked_product_label')}</label>
           <select id="pm-product" class="input input-md" style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-text-primary);padding:0 var(--space-3);">
-            <option value="">— Sin producto específico (aplica a todo) —</option>
+            <option value="">${I18nService.t('promo_all_products_option')}</option>
             ${productOptions}
           </select>
         </div>
         <div id="pm-lote-section" style="display:${p.type === 'LOTE' ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:var(--space-3);">
           <div class="form-group">
-            <label class="form-label">Lote No.</label>
-            <input type="text" id="pm-lote-num" class="input input-md" placeholder="Ej. LOT-2025-001" value="${p.loteNumber || ''}" />
+            <label class="form-label">${I18nService.t('promo_batch_num_field')}</label>
+            <input type="text" id="pm-lote-num" class="input input-md" placeholder="${I18nService.t('promo_batch_num_placeholder')}" value="${p.loteNumber || ''}" />
           </div>
           <div class="form-group">
-            <label class="form-label">Cantidad Disponible del Lote</label>
-            <input type="number" id="pm-lote-qty" class="input input-md" min="1" placeholder="Ej. 50" value="${p.loteCantidad ?? ''}" />
+            <label class="form-label">${I18nService.t('promo_batch_qty_label')}</label>
+            <input type="number" id="pm-lote-qty" class="input input-md" min="1" placeholder="${I18nService.t('promo_batch_qty_placeholder')}" value="${p.loteCantidad ?? ''}" />
           </div>
         </div>
       </div>
     `;
 
     const modal = new Modal({
-      title: isEdit ? '✏️ Editar Promoción' : '🏷️ Nueva Promoción',
+      title: isEdit ? I18nService.t('promo_edit_title') : I18nService.t('promo_add_title'),
       bodyHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="pm-cancel">Cancelar</button>
-        <button class="btn btn-primary btn-sm" id="pm-save">${isEdit ? 'Guardar Cambios' : 'Crear Promoción'}</button>
+        <button class="btn btn-secondary btn-sm" id="pm-cancel">${I18nService.t('cancel')}</button>
+        <button class="btn btn-primary btn-sm" id="pm-save">${isEdit ? I18nService.t('save_changes') : I18nService.t('promo_add')}</button>
       `
     });
 
@@ -289,7 +290,7 @@ export class PromotionsView extends Component {
       const productName = productId ? prodSel.options[prodSel.selectedIndex]?.getAttribute('data-name') || '' : '';
 
       if (!name || !type || !discount) {
-        NotificationService.warn('Completa todos los campos obligatorios.');
+        NotificationService.warn(I18nService.t('error_required_fields'));
         return;
       }
 
@@ -318,15 +319,15 @@ export class PromotionsView extends Component {
       try {
         if (isEdit) {
           await FirestoreService.update('promociones', existing.id, payload);
-          NotificationService.success('Promoción actualizada.');
+          NotificationService.success(I18nService.t('promo_updated_success'));
         } else {
           await FirestoreService.create('promociones', payload);
-          NotificationService.success('Promoción creada exitosamente.');
+          NotificationService.success(I18nService.t('promo_saved_success'));
         }
         modal.close();
       } catch (e) {
         console.error(e);
-        NotificationService.error('Error al guardar la promoción.');
+        NotificationService.error(I18nService.t('promo_save_error'));
       }
     });
   }

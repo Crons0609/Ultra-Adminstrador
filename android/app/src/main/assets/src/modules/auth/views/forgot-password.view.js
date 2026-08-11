@@ -9,6 +9,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { db } from '../../../config/firebase.config.js';
 import { ref, set } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ForgotPasswordView extends Component {
   constructor(params = {}) {
@@ -28,19 +29,19 @@ export class ForgotPasswordView extends Component {
         <div class="login-page" style="min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-primary); padding: var(--space-4);">
           <div class="animate-scale-up card" style="max-width: 480px; width: 100%; padding: var(--space-8); text-align: center;">
             <div style="font-size: 3rem; margin-bottom: var(--space-4);">✅</div>
-            <h2 style="font-family: var(--font-display); font-weight: 700; margin-bottom: var(--space-2);">Solicitud Enviada</h2>
+            <h2 style="font-family: var(--font-display); font-weight: 700; margin-bottom: var(--space-2);">${I18nService.t('auth_forgot_request_sent')}</h2>
             <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin-bottom: var(--space-4); line-height: 1.5;">
-              Tu solicitud fue enviada correctamente y será atendida por nuestro equipo de soporte técnico a la brevedad.
+              ${I18nService.t('auth_forgot_request_desc')}
             </p>
             <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--color-border); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
-              <span class="text-secondary" style="font-size:0.75rem; display:block;">Número de Ticket:</span>
+              <span class="text-secondary" style="font-size:0.75rem; display:block;">${I18nService.t('auth_forgot_ticket_num')}</span>
               <strong style="color:var(--color-accent); font-family:monospace; font-size:1.2rem;">${generatedTicketId}</strong>
             </div>
             <p style="font-size: 0.75rem; color: var(--color-text-tertiary); margin-bottom: var(--space-6);">
-              Conserva este número para cualquier consulta de seguimiento. Nos comunicaremos contigo por correo o WhatsApp.
+              ${I18nService.t('auth_forgot_ticket_hint')}
             </p>
             <a href="#/login" class="btn btn-secondary btn-md" style="display: block;">
-              Volver al inicio de sesión
+              ${I18nService.t('auth_forgot_back_btn')}
             </a>
           </div>
         </div>
@@ -51,51 +52,51 @@ export class ForgotPasswordView extends Component {
       <div class="login-page" style="min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-primary); padding: var(--space-4);">
         <div style="width: 100%; max-width: 480px;" class="animate-slide-up">
           <div style="text-align: center; margin-bottom: var(--space-6);">
-            <h1 style="font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: var(--space-2);">Recuperación de Cuenta</h1>
+            <h1 style="font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--color-text-primary); margin-bottom: var(--space-2);">${I18nService.t('auth_forgot_title')}</h1>
             <p style="color: var(--color-text-secondary); font-size: 0.85rem; line-height: 1.4;">
-              Si olvidaste tu contraseña o tienes problemas de acceso, completa el formulario y un programador de soporte te asistirá.
+              ${I18nService.t('auth_forgot_subtitle')}
             </p>
           </div>
           <div class="card" style="padding: var(--space-6);">
             <form id="forgot-form" style="display:flex; flex-direction:column; gap:12px;">
               
               <div class="form-group">
-                <label class="form-label" for="forgot-fullname">Nombre completo</label>
-                <input type="text" id="forgot-fullname" class="input input-md" placeholder="Ej. Juan Pérez" required />
+                <label class="form-label" for="forgot-fullname">${I18nService.t('emp_full_name')}</label>
+                <input type="text" id="forgot-fullname" class="input input-md" placeholder="${I18nService.t('auth_owner_name_placeholder')}" required />
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="forgot-email">Correo electrónico registrado</label>
-                <input type="email" id="forgot-email" class="input input-md" placeholder="correo@empresa.com" required />
+                <label class="form-label" for="forgot-email">${I18nService.t('auth_forgot_registered_email')}</label>
+                <input type="email" id="forgot-email" class="input input-md" placeholder="${I18nService.t('auth_email_placeholder')}" required />
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="forgot-whatsapp">Número de WhatsApp</label>
-                <input type="tel" id="forgot-whatsapp" class="input input-md" placeholder="Ej. +505 8888-8888" required />
+                <label class="form-label" for="forgot-whatsapp">${I18nService.t('auth_forgot_whatsapp')}</label>
+                <input type="tel" id="forgot-whatsapp" class="input input-md" placeholder="${I18nService.t('auth_contact_phone_placeholder')}" required />
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="forgot-type">Tipo de solicitud</label>
+                <label class="form-label" for="forgot-type">${I18nService.t('auth_forgot_request_type')}</label>
                 <select id="forgot-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" required>
-                  <option value="Olvide mi contraseña">Olvidé mi contraseña</option>
-                  <option value="No puedo iniciar sesión">No puedo iniciar sesión</option>
-                  <option value="Problema con mi cuenta">Problema con mi cuenta</option>
-                  <option value="Consulta general">Consulta general</option>
-                  <option value="Otro">Otro</option>
+                  <option value="${I18nService.t('auth_forgot_type_pass')}">${I18nService.t('auth_forgot_type_pass')}</option>
+                  <option value="${I18nService.t('auth_forgot_type_login')}">${I18nService.t('auth_forgot_type_login')}</option>
+                  <option value="${I18nService.t('auth_forgot_type_account')}">${I18nService.t('auth_forgot_type_account')}</option>
+                  <option value="${I18nService.t('auth_forgot_type_general')}">${I18nService.t('auth_forgot_type_general')}</option>
+                  <option value="${I18nService.t('auth_forgot_type_other')}">${I18nService.t('auth_forgot_type_other')}</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="forgot-desc">Detalle del inconveniente</label>
-                <textarea id="forgot-desc" class="input" style="height:80px; padding:10px; font-size:0.85rem;" placeholder="Explica detalladamente tu caso (ej. no recibo el correo, cambié mi teléfono)..." required></textarea>
+                <label class="form-label" for="forgot-desc">${I18nService.t('auth_forgot_issue_detail')}</label>
+                <textarea id="forgot-desc" class="input" style="height:80px; padding:10px; font-size:0.85rem;" placeholder="${I18nService.t('auth_forgot_placeholder_desc')}" required></textarea>
               </div>
 
               <button type="submit" id="forgot-submit-btn" class="btn btn-primary btn-md" style="width: 100%; margin-top:4px;" ${loading ? 'disabled' : ''}>
-                ${loading ? 'Enviando Solicitud...' : 'Enviar Solicitud de Soporte'}
+                ${loading ? I18nService.t('auth_forgot_submitting') : I18nService.t('auth_forgot_submit_btn')}
               </button>
             </form>
             <div style="text-align: center; margin-top: var(--space-4);">
-              <a href="#/login" style="font-size: 0.85rem; color: var(--color-accent); text-decoration: none;">← Volver al inicio</a>
+              <a href="#/login" style="font-size: 0.85rem; color: var(--color-accent); text-decoration: none;">${I18nService.t('auth_forgot_back_link')}</a>
             </div>
           </div>
         </div>
@@ -120,7 +121,7 @@ export class ForgotPasswordView extends Component {
 
       this.setState({ loading: true });
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Enviando...';
+      submitBtn.textContent = I18nService.t('auth_forgot_submitting');
 
       try {
         const ticketId = `TCK-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -158,7 +159,7 @@ export class ForgotPasswordView extends Component {
           description: `El usuario ${fullName} (${email}) envió un ticket de soporte (${ticketId}) de tipo "${requestType}".`
         });
 
-        NotificationService.success('Solicitud enviada correctamente.');
+        NotificationService.success(I18nService.t('auth_forgot_success_toast'));
         this.setState({
           loading: false,
           sent: true,
@@ -167,9 +168,9 @@ export class ForgotPasswordView extends Component {
 
       } catch (error) {
         console.error(error);
-        NotificationService.error('Error al enviar la solicitud.');
+        NotificationService.error(I18nService.t('auth_forgot_error_toast'));
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Enviar Solicitud de Soporte';
+        submitBtn.textContent = I18nService.t('auth_forgot_submit_btn');
         this.setState({ loading: false });
       }
     });

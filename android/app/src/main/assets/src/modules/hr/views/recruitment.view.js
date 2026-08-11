@@ -23,16 +23,17 @@ import { Modal } from '../../../components/ui/modal.js';
 import { TimeService } from '../../../services/time.service.js';
 import { ref, set, update } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 import { db } from '../../../config/firebase.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export const CANDIDATE_STATUSES = {
-  NUEVO: { label: 'NUEVO', color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
-  EN_REVISION: { label: 'En Revisión', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  PRESELECCIONADO: { label: 'Preseleccionado', color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
-  ENTREVISTA: { label: 'Entrevista', color: '#06b6d4', bg: 'rgba(6,182,212,0.15)' },
-  APROBADO: { label: 'Aprobado', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
-  CONTRATADO: { label: 'Contratado', color: '#34d399', bg: 'rgba(52,211,153,0.2)' },
-  RECHAZADO: { label: 'Rechazado', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
-  ARCHIVADO: { label: 'Archivado', color: '#64748b', bg: 'rgba(100,116,139,0.15)' }
+  NUEVO: { label: I18nService.t('hr_status_new'), color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
+  EN_REVISION: { label: I18nService.t('hr_status_in_review'), color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  PRESELECCIONADO: { label: I18nService.t('hr_status_preselected'), color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+  ENTREVISTA: { label: I18nService.t('hr_status_interview'), color: '#06b6d4', bg: 'rgba(6,182,212,0.15)' },
+  APROBADO: { label: I18nService.t('hr_status_approved'), color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+  CONTRATADO: { label: I18nService.t('hr_status_hired'), color: '#34d399', bg: 'rgba(52,211,153,0.2)' },
+  RECHAZADO: { label: I18nService.t('hr_status_rejected'), color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+  ARCHIVADO: { label: I18nService.t('hr_status_archived'), color: '#64748b', bg: 'rgba(100,116,139,0.15)' }
 };
 
 export class RecruitmentView extends Component {
@@ -61,17 +62,17 @@ export class RecruitmentView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '👥 Recursos Humanos (RH) & Reclutamiento',
-      subtitle: 'Plataforma integral de talento, vacantes, editor de página pública y contratación',
+      title: I18nService.t('hr_recruitment_title'),
+      subtitle: I18nService.t('hr_recruitment_subtitle'),
       actionHTML: `
         <div style="display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:6px; padding-bottom:4px; max-width:100%; scroll-snap-type:x mandatory;" id="hr-top-tab-actions">
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-dashboard" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📊 Dashboard</button>
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-candidates" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">👥 Candidatos</button>
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-vacancies" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">💼 Vacantes</button>
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-page-editor" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">🎨 Editor Web</button>
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-qr" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📲 Código QR</button>
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-form-builder" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📝 Formularios</button>
-          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-documents" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">📄 Documentos</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-dashboard" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_dashboard')}</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-candidates" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_candidates')}</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-vacancies" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_vacancies')}</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-page-editor" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_page_editor')}</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-qr" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_qr')}</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-form-builder" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_form_builder')}</button>
+          <button class="btn btn-secondary btn-xs hr-tab-btn" id="btn-tab-documents" style="font-weight:600; flex-shrink:0; scroll-snap-align:start; min-height:36px; padding:6px 12px; white-space:nowrap;">${I18nService.t('hr_tab_documents')}</button>
         </div>
       `,
       contentHTML: `<div id="hr-recruitment-view-root" style="overflow-x:auto;"></div>`
@@ -194,11 +195,11 @@ export class RecruitmentView extends Component {
     try {
       const raw = await FirestoreService.readPath(`${this.companyId}/hr_requested_documents`);
       this.state.requestedDocuments = raw ? Object.values(raw) : [
-        { id: 'dni', name: 'Documento de Identidad (Cédula/DNI)', required: true },
-        { id: 'police_record', name: 'Récord Policial', required: true },
-        { id: 'cv', name: 'Curriculum Vitae (CV PDF)', required: true },
-        { id: 'diploma', name: 'Títulos o Diplomas', required: false },
-        { id: 'driver_license', name: 'Licencia de Conducir', required: false }
+        { id: 'dni', name: I18nService.t('hr_doc_id'), required: true },
+        { id: 'police_record', name: I18nService.t('hr_doc_police'), required: true },
+        { id: 'cv', name: I18nService.t('hr_doc_cv'), required: true },
+        { id: 'diploma', name: I18nService.t('hr_doc_diploma'), required: false },
+        { id: 'driver_license', name: I18nService.t('hr_doc_license'), required: false }
       ];
     } catch (e) {}
   }
@@ -300,27 +301,27 @@ export class RecruitmentView extends Component {
       <!-- KPI Row -->
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
         <div class="card p-3 text-center" style="border-left:4px solid #6366f1;">
-          <span style="font-size:0.75rem; color:var(--color-text-secondary);">Postulaciones</span>
+          <span style="font-size:0.75rem; color:var(--color-text-secondary);">${I18nService.t('hr_kpi_applications')}</span>
           <h3 style="font-size:1.4rem; font-weight:800; margin:4px 0 0; color:#6366f1;">${total}</h3>
         </div>
         <div class="card p-3 text-center" style="border-left:4px solid #38bdf8;">
-          <span style="font-size:0.75rem; color:var(--color-text-secondary);">Nuevas</span>
+          <span style="font-size:0.75rem; color:var(--color-text-secondary);">${I18nService.t('hr_kpi_new')}</span>
           <h3 style="font-size:1.4rem; font-weight:800; margin:4px 0 0; color:#38bdf8;">${nuevos}</h3>
         </div>
         <div class="card p-3 text-center" style="border-left:4px solid #f59e0b;">
-          <span style="font-size:0.75rem; color:var(--color-text-secondary);">En Revisión</span>
+          <span style="font-size:0.75rem; color:var(--color-text-secondary);">${I18nService.t('hr_kpi_in_review')}</span>
           <h3 style="font-size:1.4rem; font-weight:800; margin:4px 0 0; color:#f59e0b;">${revision}</h3>
         </div>
         <div class="card p-3 text-center" style="border-left:4px solid #06b6d4;">
-          <span style="font-size:0.75rem; color:var(--color-text-secondary);">Entrevistas</span>
+          <span style="font-size:0.75rem; color:var(--color-text-secondary);">${I18nService.t('hr_kpi_interviews')}</span>
           <h3 style="font-size:1.4rem; font-weight:800; margin:4px 0 0; color:#06b6d4;">${entrevistas}</h3>
         </div>
         <div class="card p-3 text-center" style="border-left:4px solid #10b981;">
-          <span style="font-size:0.75rem; color:var(--color-text-secondary);">Contratados</span>
+          <span style="font-size:0.75rem; color:var(--color-text-secondary);">${I18nService.t('hr_kpi_hired')}</span>
           <h3 style="font-size:1.4rem; font-weight:800; margin:4px 0 0; color:#10b981;">${contratados}</h3>
         </div>
         <div class="card p-3 text-center" style="border-left:4px solid #8b5cf6;">
-          <span style="font-size:0.75rem; color:var(--color-text-secondary);">Vacantes Activas</span>
+          <span style="font-size:0.75rem; color:var(--color-text-secondary);">${I18nService.t('hr_kpi_active_vacancies')}</span>
           <h3 style="font-size:1.4rem; font-weight:800; margin:4px 0 0; color:#8b5cf6;">${vacantesActivas}</h3>
         </div>
       </div>
@@ -331,25 +332,25 @@ export class RecruitmentView extends Component {
         <!-- Left: Recent Applications Table -->
         <div class="card p-5">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="font-size:1.05rem; font-weight:700; margin:0; color:var(--color-text-primary);">📥 Últimas Postulaciones Recibidas</h3>
-            <button class="btn btn-secondary btn-xs" onclick="document.querySelector('#btn-tab-candidates').click()">Ver Todos (${total})</button>
+            <h3 style="font-size:1.05rem; font-weight:700; margin:0; color:var(--color-text-primary);">${I18nService.t('hr_recent_applications_title')}</h3>
+            <button class="btn btn-secondary btn-xs" onclick="document.querySelector('#btn-tab-candidates').click()">${I18nService.t('hr_view_all', { count: total })}</button>
           </div>
 
-          ${loading ? `<div class="text-center py-6 text-secondary">Cargando datos...</div>` : recentCandidates.length === 0 ? `
+          ${loading ? `<div class="text-center py-6 text-secondary">${I18nService.t('loading_data')}</div>` : recentCandidates.length === 0 ? `
             <div class="text-center py-8 text-secondary">
               <span style="font-size:2.5rem; display:block; margin-bottom:8px;">📥</span>
-              <p style="font-size:0.85rem;">No hay postulaciones recientes. Comparte tu Código QR para comenzar a recibir solicitudes.</p>
+              <p style="font-size:0.85rem;">${I18nService.t('hr_no_recent_applications')}</p>
             </div>
           ` : `
             <div style="overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
                 <thead>
                   <tr style="border-bottom:1px solid var(--color-border); text-align:left; color:var(--color-text-secondary);">
-                    <th style="padding:8px;">Candidato</th>
-                    <th style="padding:8px;">Puesto</th>
-                    <th style="padding:8px;">Estado</th>
-                    <th style="padding:8px;">Fecha</th>
-                    <th style="padding:8px; text-align:right;">Acción</th>
+                    <th style="padding:8px;">${I18nService.t('hr_col_candidate')}</th>
+                    <th style="padding:8px;">${I18nService.t('hr_col_position')}</th>
+                    <th style="padding:8px;">${I18nService.t('hr_col_status')}</th>
+                    <th style="padding:8px;">${I18nService.t('hr_col_date')}</th>
+                    <th style="padding:8px; text-align:right;">${I18nService.t('hr_col_action')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -358,11 +359,11 @@ export class RecruitmentView extends Component {
                     return `
                       <tr style="border-bottom:1px solid var(--color-border);">
                         <td style="padding:10px 8px; font-weight:600; color:var(--color-text-primary);">${c.displayName}</td>
-                        <td style="padding:10px 8px; color:var(--color-accent);">${c.position || 'General'}</td>
+                        <td style="padding:10px 8px; color:var(--color-accent);">${c.position || I18nService.t('inv_category_others')}</td>
                         <td style="padding:10px 8px;"><span class="badge" style="background:${st.bg}; color:${st.color}; font-size:0.7rem; padding:2px 8px; border-radius:10px;">${st.label}</span></td>
                         <td style="padding:10px 8px; color:var(--color-text-tertiary); font-size:0.75rem;">${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}</td>
                         <td style="padding:10px 8px; text-align:right;">
-                          <button class="btn btn-secondary btn-xs btn-view-candidate" data-id="${c.id}">👁️ Ver</button>
+                          <button class="btn btn-secondary btn-xs btn-view-candidate" data-id="${c.id}">👁️ ${I18nService.t('view')}</button>
                         </td>
                       </tr>
                     `;
@@ -377,22 +378,22 @@ export class RecruitmentView extends Component {
         <div style="display:flex; flex-direction:column; gap:16px;">
           <div class="card p-5 text-center" style="background:var(--color-bg-tertiary);">
             <span style="font-size:2rem; display:block; margin-bottom:6px;">📲</span>
-            <h4 style="font-size:0.95rem; font-weight:700; margin:0 0 6px; color:var(--color-text-primary);">Página Pública de Reclutamiento</h4>
-            <p style="font-size:0.78rem; color:var(--color-text-secondary); margin:0 0 12px;">Los postulantes escanean tu QR o entran al enlace directo.</p>
+            <h4 style="font-size:0.95rem; font-weight:700; margin:0 0 6px; color:var(--color-text-primary);">${I18nService.t('hr_public_page_title')}</h4>
+            <p style="font-size:0.78rem; color:var(--color-text-secondary); margin:0 0 12px;">${I18nService.t('hr_public_page_desc')}</p>
             
-            <a href="${this.publicApplyUrl}" target="_blank" class="btn btn-primary btn-xs" style="width:100%; font-weight:700; margin-bottom:8px;">🌐 Abrir Página Pública</a>
-            <button class="btn btn-secondary btn-xs" id="dash-btn-copy-link" style="width:100%;">📋 Copiar Enlace Directo</button>
+            <a href="${this.publicApplyUrl}" target="_blank" class="btn btn-primary btn-xs" style="width:100%; font-weight:700; margin-bottom:8px;">${I18nService.t('hr_open_public_page')}</a>
+            <button class="btn btn-secondary btn-xs" id="dash-btn-copy-link" style="width:100%;">${I18nService.t('hr_copy_direct_link')}</button>
           </div>
 
           <div class="card p-5">
-            <h4 style="font-size:0.95rem; font-weight:700; margin:0 0 10px; color:var(--color-text-primary);">💼 Vacantes Activas (${vacantesActivas})</h4>
+            <h4 style="font-size:0.95rem; font-weight:700; margin:0 0 10px; color:var(--color-text-primary);">💼 ${I18nService.t('hr_kpi_active_vacancies')} (${vacantesActivas})</h4>
             ${vacancies.slice(0, 3).map(v => `
               <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--color-border); font-size:0.8rem;">
                 <span style="font-weight:600; color:var(--color-text-primary);">${v.title}</span>
-                <span class="badge" style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:#34d399;">${v.department || 'General'}</span>
+                <span class="badge" style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:#34d399;">${v.department || I18nService.t('inv_category_others')}</span>
               </div>
             `).join('')}
-            <button class="btn btn-secondary btn-xs mt-3" style="width:100%;" onclick="document.querySelector('#btn-tab-vacancies').click()">+ Gestionar Vacantes</button>
+            <button class="btn btn-secondary btn-xs mt-3" style="width:100%;" onclick="document.querySelector('#btn-tab-vacancies').click()">${I18nService.t('hr_manage_vacancies')}</button>
           </div>
         </div>
 
@@ -402,7 +403,7 @@ export class RecruitmentView extends Component {
 
   bindDashboardEvents(container) {
     container.querySelector('#dash-btn-copy-link')?.addEventListener('click', () => {
-      navigator.clipboard.writeText(this.publicApplyUrl).then(() => NotificationService.success('¡Enlace público copiado!'));
+      navigator.clipboard.writeText(this.publicApplyUrl).then(() => NotificationService.success(I18nService.t('hr_public_link_copied')));
     });
 
     container.querySelectorAll('.btn-view-candidate').forEach(btn => {
@@ -423,12 +424,12 @@ export class RecruitmentView extends Component {
       <!-- Search & Filters Bar -->
       <div class="card p-4 mb-4" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
         <div style="display:flex; gap:8px; flex:1; min-width:260px;">
-          <input type="text" id="hr-search-input" class="input input-md" placeholder="🔍 Buscar candidato por nombre, puesto, cédula, habilidades..." value="${searchQuery}" style="flex:1;" />
+          <input type="text" id="hr-search-input" class="input input-md" placeholder="${I18nService.t('hr_search_candidates_placeholder')}" value="${searchQuery}" style="flex:1;" />
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <label style="font-size:0.8rem; font-weight:600;">Filtrar Estado:</label>
+          <label style="font-size:0.8rem; font-weight:600;">${I18nService.t('hr_filter_status')}</label>
           <select id="hr-status-filter" class="input input-md" style="background:var(--color-bg-secondary); border:1px solid var(--color-border); color:var(--color-text-primary);">
-            <option value="ALL" ${statusFilter === 'ALL' ? 'selected' : ''}>Todos (${candidates.length})</option>
+            <option value="ALL" ${statusFilter === 'ALL' ? 'selected' : ''}>${I18nService.t('pos_category_all')} (${candidates.length})</option>
             ${Object.keys(CANDIDATE_STATUSES).map(st => `
               <option value="${st}" ${statusFilter === st ? 'selected' : ''}>${CANDIDATE_STATUSES[st].label}</option>
             `).join('')}
@@ -437,11 +438,11 @@ export class RecruitmentView extends Component {
       </div>
 
       <!-- Candidates Cards Grid -->
-      ${loading ? `<div class="text-center py-12 text-secondary">Cargando candidatos...</div>` : filteredCandidates.length === 0 ? `
+      ${loading ? `<div class="text-center py-12 text-secondary">${I18nService.t('hr_loading_candidates')}</div>` : filteredCandidates.length === 0 ? `
         <div class="card p-12 text-center text-secondary">
           <span style="font-size:3rem; display:block; margin-bottom:12px;">📁</span>
-          <h3 style="font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin-bottom:6px;">No hay candidatos registrados</h3>
-          <p style="font-size:0.85rem; max-width:440px; margin:0 auto 16px;">Comparte el enlace público o Código QR de reclutamiento para recibir solicitudes.</p>
+          <h3 style="font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin-bottom:6px;">${I18nService.t('hr_no_candidates')}</h3>
+          <p style="font-size:0.85rem; max-width:440px; margin:0 auto 16px;">${I18nService.t('hr_no_candidates_desc')}</p>
         </div>
       ` : `
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px;">
@@ -468,8 +469,8 @@ export class RecruitmentView extends Component {
                 <h4 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--color-text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${c.displayName}</h4>
                 <span class="badge" style="background:${stConfig.bg}; color:${stConfig.color}; font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px;">${stConfig.label}</span>
               </div>
-              <span style="font-size:0.78rem; font-weight:600; color:var(--color-accent); display:block; margin-top:2px;">💼 ${c.position || 'Sin puesto'}</span>
-              <span style="font-size:0.72rem; color:var(--color-text-tertiary);">📍 ${c.city || 'Nicaragua'} · 🎂 ${c.age ? c.age + ' años' : ''}</span>
+              <span style="font-size:0.78rem; font-weight:600; color:var(--color-accent); display:block; margin-top:2px;">💼 ${c.position || I18nService.t('inv_category_others')}</span>
+              <span style="font-size:0.72rem; color:var(--color-text-tertiary);">📍 ${c.city || 'Nicaragua'} · 🎂 ${c.age ? c.age + ` ${I18nService.t('dash_months')[11].toLowerCase()}s` : ''}</span>
             </div>
           </div>
 
@@ -480,11 +481,11 @@ export class RecruitmentView extends Component {
         </div>
 
         <div style="display:flex; gap:6px; border-top:1px solid var(--color-border); padding-top:10px;">
-          <button class="btn btn-secondary btn-xs btn-view-candidate" data-id="${c.id}" style="flex:1; font-weight:600;">👁️ Expediente</button>
+          <button class="btn btn-secondary btn-xs btn-view-candidate" data-id="${c.id}" style="flex:1; font-weight:600;">${I18nService.t('hr_view_dossier')}</button>
           ${phoneClean ? `
             <a href="https://wa.me/${phoneClean}?text=${encodeURIComponent(`Hola ${c.firstName}, te saludamos de ${this.currentCompany.name || 'nuestra empresa'} con respecto a tu solicitud de empleo para ${c.position}.`)}" target="_blank" class="btn btn-success btn-xs" style="background:#25D366; border:none; color:#fff;" title="Chat por WhatsApp">💬</a>
           ` : ''}
-          <button class="btn btn-primary btn-xs btn-hire-candidate" data-id="${c.id}" style="background:var(--color-success); border:none; font-weight:700;" title="Contratar candidato">💼 Contratar</button>
+          <button class="btn btn-primary btn-xs btn-hire-candidate" data-id="${c.id}" style="background:var(--color-success); border:none; font-weight:700;" title="${I18nService.t('hr_hire_btn')}">${I18nService.t('hr_hire_btn')}</button>
         </div>
       </div>
     `;
@@ -527,17 +528,17 @@ export class RecruitmentView extends Component {
       <div style="display:flex; flex-direction:column; gap:20px;">
         <div class="card p-5" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--color-text-primary);">💼 Vacantes y Ofertas Laborales</h3>
-            <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:2px 0 0;">Publica puestos disponibles para que los postulantes apliquen directamente.</p>
+            <h3 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--color-text-primary);">${I18nService.t('hr_vacancies_title')}</h3>
+            <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:2px 0 0;">${I18nService.t('hr_vacancies_subtitle')}</p>
           </div>
-          <button id="btn-create-vacancy" class="btn btn-primary btn-sm" style="font-weight:700;">+ Nueva Vacante</button>
+          <button id="btn-create-vacancy" class="btn btn-primary btn-sm" style="font-weight:700;">${I18nService.t('hr_new_vacancy')}</button>
         </div>
 
         <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px;">
           ${vacancies.length === 0 ? `
             <div class="card p-8 text-center text-secondary" style="grid-column:1/-1;">
               <span style="font-size:2.5rem; display:block; margin-bottom:8px;">💼</span>
-              <p>No tienes vacantes activas publicadas. Presiona "+ Nueva Vacante" para agregar una.</p>
+              <p>${I18nService.t('hr_no_vacancies')}</p>
             </div>
           ` : vacancies.map(v => `
             <div class="card p-4 hover-lift" style="display:flex; flex-direction:column; justify-space-between; border-left:4px solid ${v.status === 'ACTIVA' ? '#10b981' : '#64748b'};">
@@ -546,13 +547,13 @@ export class RecruitmentView extends Component {
                   <h4 style="font-size:1rem; font-weight:700; margin:0; color:var(--color-text-primary);">${v.title}</h4>
                   <span class="badge" style="background:${v.status === 'ACTIVA' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)'}; color:${v.status === 'ACTIVA' ? '#34d399' : '#94a3b8'}; font-size:0.68rem;">${v.status || 'ACTIVA'}</span>
                 </div>
-                <span style="font-size:0.78rem; color:var(--color-accent); font-weight:600;">🏢 ${v.department || 'General'} · ⏱️ ${v.shift || 'Tiempo Completo'}</span>
-                <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:8px 0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${v.description || 'Sin descripción'}</p>
-                ${v.salary ? `<span style="font-size:0.78rem; font-weight:700; color:#34d399;">💵 Salario: ${v.salary}</span>` : ''}
+                <span style="font-size:0.78rem; color:var(--color-accent); font-weight:600;">🏢 ${v.department || I18nService.t('inv_category_others')} · ⏱️ ${v.shift || I18nService.t('hr_shift_full_time')}</span>
+                <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:8px 0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${v.description || I18nService.t('sh_not_associated')}</p>
+                ${v.salary ? `<span style="font-size:0.78rem; font-weight:700; color:#34d399;">💵 ${I18nService.t('hr_vacancy_salary_label')}: ${v.salary}</span>` : ''}
               </div>
 
               <div style="display:flex; gap:6px; margin-top:12px; border-top:1px solid var(--color-border); padding-top:10px;">
-                <button class="btn btn-secondary btn-xs btn-edit-vacancy" data-id="${v.id}" style="flex:1;">✏️ Editar</button>
+                <button class="btn btn-secondary btn-xs btn-edit-vacancy" data-id="${v.id}" style="flex:1;">✏️ ${I18nService.t('edit')}</button>
                 <button class="btn btn-danger btn-xs btn-delete-vacancy" data-id="${v.id}">🗑️</button>
               </div>
             </div>
@@ -576,9 +577,9 @@ export class RecruitmentView extends Component {
     container.querySelectorAll('.btn-delete-vacancy').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!confirm('¿Eliminar esta vacante?')) return;
+        if (!confirm(I18nService.t('hr_confirm_delete_vacancy'))) return;
         await FirestoreService.removePath(`${this.companyId}/hr_vacancies/${id}`);
-        NotificationService.success('Vacante eliminada.');
+        NotificationService.success(I18nService.t('hr_vacancy_deleted'));
       });
     });
   }
@@ -588,50 +589,50 @@ export class RecruitmentView extends Component {
     const formHTML = `
       <form id="form-vacancy" style="display:flex; flex-direction:column; gap:12px;">
         <div>
-          <label class="form-label">Nombre / Título de la Vacante</label>
+          <label class="form-label">${I18nService.t('hr_vacancy_title_label')}</label>
           <input type="text" id="vac-title" class="input input-md" value="${isEdit ? vac.title : ''}" required placeholder="Ej. Cajero de Turno Nocturno" />
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div>
-            <label class="form-label">Área / Departamento</label>
+            <label class="form-label">${I18nService.t('hr_vacancy_dept_label')}</label>
             <input type="text" id="vac-department" class="input input-md" value="${isEdit ? (vac.department || '') : ''}" placeholder="Ej. Operaciones, Ventas" />
           </div>
           <div>
-            <label class="form-label">Jornada Laboral</label>
+            <label class="form-label">${I18nService.t('hr_vacancy_shift_label')}</label>
             <select id="vac-shift" class="input input-md" style="background:var(--color-bg-secondary); border:1px solid var(--color-border); color:var(--color-text-primary);">
-              <option value="TIEMPO_COMPLETO" ${isEdit && vac.shift === 'TIEMPO_COMPLETO' ? 'selected' : ''}>Tiempo Completo</option>
-              <option value="MEDIO_TIEMPO" ${isEdit && vac.shift === 'MEDIO_TIEMPO' ? 'selected' : ''}>Medio Tiempo</option>
-              <option value="FINES_DE_SEMANA" ${isEdit && vac.shift === 'FINES_DE_SEMANA' ? 'selected' : ''}>Fines de Semana</option>
-              <option value="NOCTURNO" ${isEdit && vac.shift === 'NOCTURNO' ? 'selected' : ''}>Nocturno</option>
+              <option value="TIEMPO_COMPLETO" ${isEdit && vac.shift === 'TIEMPO_COMPLETO' ? 'selected' : ''}>${I18nService.t('hr_shift_full_time')}</option>
+              <option value="MEDIO_TIEMPO" ${isEdit && vac.shift === 'MEDIO_TIEMPO' ? 'selected' : ''}>${I18nService.t('hr_shift_part_time')}</option>
+              <option value="FINES_DE_SEMANA" ${isEdit && vac.shift === 'FINES_DE_SEMANA' ? 'selected' : ''}>${I18nService.t('hr_shift_weekends')}</option>
+              <option value="NOCTURNO" ${isEdit && vac.shift === 'NOCTURNO' ? 'selected' : ''}>${I18nService.t('hr_shift_night')}</option>
             </select>
           </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div>
-            <label class="form-label">Salario (opcional)</label>
+            <label class="form-label">${I18nService.t('hr_vacancy_salary_label')}</label>
             <input type="text" id="vac-salary" class="input input-md" value="${isEdit ? (vac.salary || '') : ''}" placeholder="Ej. C$ 10,000 / A convenir" />
           </div>
           <div>
-            <label class="form-label">Estado de la Vacante</label>
+            <label class="form-label">${I18nService.t('hr_vacancy_status_label')}</label>
             <select id="vac-status" class="input input-md" style="background:var(--color-bg-secondary); border:1px solid var(--color-border); color:var(--color-text-primary);">
-              <option value="ACTIVA" ${!isEdit || vac.status === 'ACTIVA' ? 'selected' : ''}>ACTIVA (Publicada)</option>
-              <option value="INACTIVA" ${isEdit && vac.status === 'INACTIVA' ? 'selected' : ''}>INACTIVA (Oculta)</option>
+              <option value="ACTIVA" ${!isEdit || vac.status === 'ACTIVA' ? 'selected' : ''}>${I18nService.t('hr_status_active_pub')}</option>
+              <option value="INACTIVA" ${isEdit && vac.status === 'INACTIVA' ? 'selected' : ''}>${I18nService.t('hr_status_inactive_hid')}</option>
             </select>
           </div>
         </div>
         <div>
-          <label class="form-label">Descripción y Requisitos del Puesto</label>
+          <label class="form-label">${I18nService.t('hr_vacancy_desc_label')}</label>
           <textarea id="vac-description" class="input input-md" rows="4" style="resize:vertical;" placeholder="Describe las responsabilidades, funciones y requisitos...">${isEdit ? (vac.description || '') : ''}</textarea>
         </div>
       </form>
     `;
 
     const modal = new Modal({
-      title: isEdit ? 'Editar Vacante' : 'Crear Nueva Vacante de Empleo',
+      title: isEdit ? I18nService.t('hr_edit_vacancy') : I18nService.t('hr_create_vacancy'),
       bodyHTML: formHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="modal-cancel-vac">Cancelar</button>
-        <button class="btn btn-primary btn-sm" id="modal-save-vac" style="font-weight:700;">${isEdit ? 'Guardar Cambios' : 'Publicar Vacante'}</button>
+        <button class="btn btn-secondary btn-sm" id="modal-cancel-vac">${I18nService.t('cancel')}</button>
+        <button class="btn btn-primary btn-sm" id="modal-save-vac" style="font-weight:700;">${isEdit ? I18nService.t('save_changes') : I18nService.t('hr_publish_vacancy')}</button>
       `,
       size: 'md'
     });
@@ -656,7 +657,7 @@ export class RecruitmentView extends Component {
       };
 
       await set(ref(db, `${this.companyId}/hr_vacancies/${payload.id}`), payload);
-      NotificationService.success(isEdit ? 'Vacante actualizada.' : 'Vacante publicada exitosamente.');
+      NotificationService.success(isEdit ? I18nService.t('hr_vacancy_updated') : I18nService.t('hr_vacancy_published'));
       modal.close();
     });
   }
@@ -669,56 +670,56 @@ export class RecruitmentView extends Component {
     return `
       <div style="max-width:840px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
         <div class="card p-5">
-          <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 6px; color:var(--color-text-primary);">🎨 Editor Visual de la Página de Reclutamiento</h3>
-          <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:0;">Personaliza la apariencia, eslogan, cultura y secciones visibles de tu portal de empleo público sin necesidad de programar.</p>
+          <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 6px; color:var(--color-text-primary);">${I18nService.t('hr_page_editor_title')}</h3>
+          <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:0;">${I18nService.t('hr_page_editor_subtitle')}</p>
         </div>
 
         <form id="form-hr-page-editor" class="card p-5" style="display:flex; flex-direction:column; gap:16px;">
-          <h4 style="font-size:0.95rem; font-weight:700; color:var(--color-accent); margin:0; border-bottom:1px solid var(--color-border); padding-bottom:8px;">1. Encabezado y Presentación</h4>
+          <h4 style="font-size:0.95rem; font-weight:700; color:var(--color-accent); margin:0; border-bottom:1px solid var(--color-border); padding-bottom:8px;">${I18nService.t('hr_pe_section1')}</h4>
           
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
             <div>
-              <label class="form-label">Eslogan / Frase Principal</label>
-              <input type="text" id="pe-slogan" class="input input-md" value="${p.slogan || '¡Únete a nuestro equipo de trabajo!'}" placeholder="Ej. Construye tu futuro con nosotros" />
+              <label class="form-label">${I18nService.t('hr_pe_slogan_label')}</label>
+              <input type="text" id="pe-slogan" class="input input-md" value="${p.slogan || I18nService.t('hr_pe_slogan_label')}" placeholder="Ej. Construye tu futuro con nosotros" />
             </div>
             <div>
-              <label class="form-label">Texto de Bienvenida</label>
-              <input type="text" id="pe-welcome" class="input input-md" value="${p.welcomeText || 'Buscamos talento para crecer juntos.'}" />
+              <label class="form-label">${I18nService.t('hr_pe_welcome_label')}</label>
+              <input type="text" id="pe-welcome" class="input input-md" value="${p.welcomeText || I18nService.t('hr_pe_welcome_label')}" />
             </div>
           </div>
 
-          <h4 style="font-size:0.95rem; font-weight:700; color:var(--color-accent); margin:12px 0 0; border-bottom:1px solid var(--color-border); padding-bottom:8px;">2. Cultura y Beneficios de la Empresa</h4>
+          <h4 style="font-size:0.95rem; font-weight:700; color:var(--color-accent); margin:12px 0 0; border-bottom:1px solid var(--color-border); padding-bottom:8px;">${I18nService.t('hr_pe_section2')}</h4>
           
           <div>
-            <label class="form-label">Historia / Quiénes Somos</label>
+            <label class="form-label">${I18nService.t('hr_pe_story_label')}</label>
             <textarea id="pe-story" class="input input-md" rows="3" style="resize:vertical;" placeholder="Describe brevemente la trayectoria de la empresa...">${p.story || ''}</textarea>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
             <div>
-              <label class="form-label">Misión</label>
+              <label class="form-label">${I18nService.t('hr_pe_mission_label')}</label>
               <textarea id="pe-mission" class="input input-md" rows="2" style="resize:vertical;">${p.mission || ''}</textarea>
             </div>
             <div>
-              <label class="form-label">Visión</label>
+              <label class="form-label">${I18nService.t('hr_pe_vision_label')}</label>
               <textarea id="pe-vision" class="input input-md" rows="2" style="resize:vertical;">${p.vision || ''}</textarea>
             </div>
           </div>
 
           <div>
-            <label class="form-label">Beneficios de Trabajar con Nosotros</label>
+            <label class="form-label">${I18nService.t('hr_pe_benefits_label')}</label>
             <textarea id="pe-benefits" class="input input-md" rows="3" style="resize:vertical;" placeholder="Ej. Seguro médico, capacitaciones, excelente ambiente laboral...">${p.benefits || ''}</textarea>
           </div>
 
-          <h4 style="font-size:0.95rem; font-weight:700; color:var(--color-accent); margin:12px 0 0; border-bottom:1px solid var(--color-border); padding-bottom:8px;">3. Secciones Visibles en la Página Pública</h4>
+          <h4 style="font-size:0.95rem; font-weight:700; color:var(--color-accent); margin:12px 0 0; border-bottom:1px solid var(--color-border); padding-bottom:8px;">${I18nService.t('hr_pe_section3')}</h4>
           
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
             ${[
-              { id: 'secStory', label: '☑ Quiénes Somos / Historia' },
-              { id: 'secBenefits', label: '☑ Beneficios de Empresa' },
-              { id: 'secVacancies', label: '☑ Lista de Vacantes Activas' },
-              { id: 'secForm', label: '☑ Formulario de Postulación' },
-              { id: 'secFAQ', label: '☑ Preguntas Frecuentes' }
+              { id: 'secStory', label: I18nService.t('hr_pe_sec_story') },
+              { id: 'secBenefits', label: I18nService.t('hr_pe_sec_benefits') },
+              { id: 'secVacancies', label: I18nService.t('hr_pe_sec_vacancies') },
+              { id: 'secForm', label: I18nService.t('hr_pe_sec_form') },
+              { id: 'secFAQ', label: I18nService.t('hr_pe_sec_faq') }
             ].map(sec => `
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85rem;">
                 <input type="checkbox" id="pe-${sec.id}" ${p[sec.id] !== false ? 'checked' : ''} style="accent-color:var(--color-accent);" />
@@ -728,7 +729,7 @@ export class RecruitmentView extends Component {
           </div>
 
           <div style="margin-top:16px; text-align:right;">
-            <button type="submit" class="btn btn-primary btn-md" style="font-weight:700;">💾 Guardar Configuración Web</button>
+            <button type="submit" class="btn btn-primary btn-md" style="font-weight:700;">${I18nService.t('hr_save_web_config')}</button>
           </div>
         </form>
       </div>
@@ -756,7 +757,7 @@ export class RecruitmentView extends Component {
 
       await set(ref(db, `${this.companyId}/hr_page_config`), payload);
       this.state.pageConfig = payload;
-      NotificationService.success('Página pública de reclutamiento actualizada correctamente.');
+      NotificationService.success(I18nService.t('hr_page_updated'));
     });
   }
 
@@ -769,10 +770,10 @@ export class RecruitmentView extends Component {
       <div style="max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
         <div class="card p-6 text-center" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
           <h3 style="font-size:1.3rem; font-weight:800; color:var(--color-text-primary); margin:0;">
-            📱 Código QR de Reclutamiento
+            ${I18nService.t('hr_qr_title')}
           </h3>
           <p style="font-size:0.85rem; color:var(--color-text-secondary); max-width:540px; margin:0;">
-            Escanea para acceder directamente a la página pública de empleo de <strong>${this.currentCompany.name || 'tu negocio'}</strong>.
+            ${I18nService.t('hr_qr_desc', { company: this.currentCompany.name || I18nService.t('ii_official_business') })}
           </p>
 
           <div style="background:#fff; padding:16px; border-radius:16px; border:2px solid var(--color-border); box-shadow:0 10px 25px rgba(0,0,0,0.2);">
@@ -783,15 +784,15 @@ export class RecruitmentView extends Component {
             <span style="font-family:monospace; font-size:0.78rem; color:var(--color-accent); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
               ${this.publicApplyUrl}
             </span>
-            <button id="btn-copy-public-apply-url" class="btn btn-secondary btn-xs" style="font-weight:700; flex-shrink:0;">📋 Copiar Enlace</button>
+            <button id="btn-copy-public-apply-url" class="btn btn-secondary btn-xs" style="font-weight:700; flex-shrink:0;">${I18nService.t('hr_copy_link')}</button>
           </div>
 
           <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:8px;">
             <a href="${qrImgUrl}" download="QR_Reclutamiento_${this.companyId}.png" target="_blank" class="btn btn-primary btn-sm" style="font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-              📥 Descargar Imagen QR (PNG)
+              ${I18nService.t('hr_download_qr_png')}
             </a>
             <button id="btn-print-hr-poster" class="btn btn-success btn-sm" style="font-weight:700; background:var(--color-success); border:none; color:#fff; display:inline-flex; align-items:center; gap:6px;">
-              🖨️ Imprimir Cartel de Reclutamiento
+              ${I18nService.t('hr_print_poster')}
             </button>
           </div>
         </div>
@@ -801,7 +802,7 @@ export class RecruitmentView extends Component {
 
   bindQRTabEvents(container) {
     container.querySelector('#btn-copy-public-apply-url')?.addEventListener('click', () => {
-      navigator.clipboard.writeText(this.publicApplyUrl).then(() => NotificationService.success('¡Enlace copiado!'));
+      navigator.clipboard.writeText(this.publicApplyUrl).then(() => NotificationService.success(I18nService.t('hr_link_copied')));
     });
 
     container.querySelector('#btn-print-hr-poster')?.addEventListener('click', () => this.printHRPoster());
@@ -816,7 +817,7 @@ export class RecruitmentView extends Component {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Cartel de Reclutamiento - ${compName}</title>
+        <title>${I18nService.t('hr_print_poster')} - ${compName}</title>
         <style>
           @page { size: A4 portrait; margin: 0; }
           body { margin:0; padding:40px; font-family:sans-serif; text-align:center; background:#fff; color:#1e293b; display:flex; flex-direction:column; align-items:center; justify-content:space-between; height:90vh; }
@@ -858,17 +859,17 @@ export class RecruitmentView extends Component {
       <div style="max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
         <div class="card p-5" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--color-text-primary);">📝 Constructor Dinámico de Formularios</h3>
-            <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:2px 0 0;">Agrega bloques de preguntas adicionales para personalizar tu formulario de empleo.</p>
+            <h3 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--color-text-primary);">${I18nService.t('hr_form_builder_title')}</h3>
+            <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:2px 0 0;">${I18nService.t('hr_form_builder_subtitle')}</p>
           </div>
-          <button id="btn-add-form-field" class="btn btn-primary btn-sm" style="font-weight:700;">+ Agregar Campo</button>
+          <button id="btn-add-form-field" class="btn btn-primary btn-sm" style="font-weight:700;">${I18nService.t('hr_add_field')}</button>
         </div>
 
         <div class="card p-5">
           ${customFormFields.length === 0 ? `
             <div class="text-center py-8 text-secondary">
               <span style="font-size:2rem; display:block; margin-bottom:8px;">🛠️</span>
-              <p style="font-size:0.85rem;">No has agregado campos personalizados. Los candidatos responderán el formulario base.</p>
+              <p style="font-size:0.85rem;">${I18nService.t('hr_no_custom_fields')}</p>
             </div>
           ` : `
             <div style="display:flex; flex-direction:column; gap:12px;">
@@ -876,7 +877,7 @@ export class RecruitmentView extends Component {
                 <div style="display:flex; align-items:center; justify-content:space-between; background:var(--color-bg-tertiary); padding:12px 16px; border-radius:10px; border:1px solid var(--color-border);">
                   <div>
                     <span style="font-size:0.85rem; font-weight:700; color:var(--color-text-primary);">${idx + 1}. ${f.label} ${f.required ? '<span style="color:var(--color-danger);">*</span>' : ''}</span>
-                    <span style="font-size:0.72rem; color:var(--color-text-tertiary); display:block;">Tipo: ${f.type}</span>
+                    <span style="font-size:0.72rem; color:var(--color-text-tertiary); display:block;">${I18nService.t('hr_field_type')}: ${f.type}</span>
                   </div>
                   <button class="btn btn-danger btn-xs btn-del-field" data-id="${f.id}">🗑️</button>
                 </div>
@@ -897,7 +898,7 @@ export class RecruitmentView extends Component {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
         await FirestoreService.removePath(`${this.companyId}/hr_form_fields/${id}`);
-        NotificationService.success('Campo eliminado.');
+        NotificationService.success(I18nService.t('hr_field_deleted'));
         await this.loadFormFields();
         this.renderActiveTabUI();
       });
@@ -908,32 +909,32 @@ export class RecruitmentView extends Component {
     const formHTML = `
       <form id="form-add-field" style="display:flex; flex-direction:column; gap:12px;">
         <div>
-          <label class="form-label">Etiqueta del Campo / Pregunta</label>
+          <label class="form-label">${I18nService.t('hr_field_label')}</label>
           <input type="text" id="ff-label" class="input input-md" placeholder="Ej. ¿Cuenta con vehículo propio?" required />
         </div>
         <div>
-          <label class="form-label">Tipo de Campo</label>
+          <label class="form-label">${I18nService.t('hr_field_type')}</label>
           <select id="ff-type" class="input input-md" style="background:var(--color-bg-secondary); border:1px solid var(--color-border); color:var(--color-text-primary);">
-            <option value="text">Texto Corto</option>
-            <option value="textarea">Área de Texto (Largo)</option>
-            <option value="yes_no">Sí / No</option>
-            <option value="number">Número</option>
-            <option value="date">Fecha</option>
+            <option value="text">${I18nService.t('hr_type_text')}</option>
+            <option value="textarea">${I18nService.t('hr_type_textarea')}</option>
+            <option value="yes_no">${I18nService.t('hr_type_yes_no')}</option>
+            <option value="number">${I18nService.t('hr_type_number')}</option>
+            <option value="date">${I18nService.t('hr_type_date')}</option>
           </select>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <input type="checkbox" id="ff-required" checked style="accent-color:var(--color-accent);" />
-          <label for="ff-required" style="font-size:0.85rem;">Campo obligatorio</label>
+          <label for="ff-required" style="font-size:0.85rem;">${I18nService.t('hr_field_required')}</label>
         </div>
       </form>
     `;
 
     const modal = new Modal({
-      title: 'Agregar Campo al Formulario',
+      title: I18nService.t('hr_add_field_modal_title'),
       bodyHTML: formHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="modal-cancel-ff">Cancelar</button>
-        <button class="btn btn-primary btn-sm" id="modal-save-ff" style="font-weight:700;">Guardar Campo</button>
+        <button class="btn btn-secondary btn-sm" id="modal-cancel-ff">${I18nService.t('cancel')}</button>
+        <button class="btn btn-primary btn-sm" id="modal-save-ff" style="font-weight:700;">${I18nService.t('hr_save_field')}</button>
       `,
       size: 'sm'
     });
@@ -960,7 +961,7 @@ export class RecruitmentView extends Component {
         createdAt: new Date().toISOString()
       });
 
-      NotificationService.success('Campo agregado al formulario.');
+      NotificationService.success(I18nService.t('hr_field_added'));
       modal.close();
       await this.loadFormFields();
       this.renderActiveTabUI();
@@ -975,8 +976,8 @@ export class RecruitmentView extends Component {
     return `
       <div style="max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
         <div class="card p-5">
-          <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 6px; color:var(--color-text-primary);">📄 Documentos Solicitados a Candidatos</h3>
-          <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:0;">Selecciona qué documentos deberán adjuntar las personas al postularse.</p>
+          <h3 style="font-size:1.1rem; font-weight:700; margin:0 0 6px; color:var(--color-text-primary);">${I18nService.t('hr_docs_title')}</h3>
+          <p style="font-size:0.8rem; color:var(--color-text-secondary); margin:0;">${I18nService.t('hr_docs_subtitle')}</p>
         </div>
 
         <form id="form-hr-docs" class="card p-5" style="display:flex; flex-direction:column; gap:14px;">
@@ -985,13 +986,13 @@ export class RecruitmentView extends Component {
               <span style="font-weight:600; font-size:0.88rem;">${doc.name}</span>
               <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem;">
                 <input type="checkbox" class="doc-req-cb" data-id="${doc.id}" ${doc.required ? 'checked' : ''} style="accent-color:var(--color-accent);" />
-                <span>Obligatorio</span>
+                <span>${I18nService.t('hr_required_check')}</span>
               </label>
             </div>
           `).join('')}
 
           <div style="margin-top:16px; text-align:right;">
-            <button type="submit" class="btn btn-primary btn-md" style="font-weight:700;">💾 Guardar Lista de Documentos</button>
+            <button type="submit" class="btn btn-primary btn-md" style="font-weight:700;">${I18nService.t('hr_save_docs_list')}</button>
           </div>
         </form>
       </div>
@@ -1015,7 +1016,7 @@ export class RecruitmentView extends Component {
 
       await set(ref(db, `${this.companyId}/hr_requested_documents`), docsObj);
       this.state.requestedDocuments = list;
-      NotificationService.success('Lista de documentos requeridos actualizada.');
+      NotificationService.success(I18nService.t('hr_docs_updated'));
     });
   }
 
@@ -1036,17 +1037,17 @@ export class RecruitmentView extends Component {
             </div>
           `;
         }).join('')
-      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">No hay documentos adjuntos.</span>';
+      : `<span style="font-size:0.8rem; color:var(--color-text-tertiary);">${I18nService.t('hr_no_docs')}</span>`;
 
     const experiencesHTML = (cand.experiences && cand.experiences.length > 0)
       ? cand.experiences.map(e => `
           <div style="font-size:0.8rem; padding:8px 0; border-bottom:1px solid var(--color-border);">
-            <strong style="color:var(--color-text-primary);">${e.position || 'Puesto'}</strong> en <span>${e.company || 'Empresa'}</span>
+            <strong style="color:var(--color-text-primary);">${e.position || I18nService.t('hr_col_position')}</strong> en <span>${e.company || I18nService.t('bill_company')}</span>
             ${e.period ? `<span style="color:var(--color-text-tertiary); font-size:0.75rem; display:block;">⏱️ ${e.period}</span>` : ''}
             ${e.desc ? `<p style="font-size:0.78rem; color:var(--color-text-secondary); margin:4px 0 0;">${e.desc}</p>` : ''}
           </div>
         `).join('')
-      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">Sin experiencia agregada.</span>';
+      : `<span style="font-size:0.8rem; color:var(--color-text-tertiary);">${I18nService.t('hr_no_exp')}</span>`;
 
     const educationHTML = (cand.education && cand.education.length > 0)
       ? cand.education.map(e => `
@@ -1055,7 +1056,7 @@ export class RecruitmentView extends Component {
             <span style="color:var(--color-text-secondary); display:block; font-size:0.78rem;">🏫 ${e.institution || 'Institución'}</span>
           </div>
         `).join('')
-      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">Sin educación agregada.</span>';
+      : `<span style="font-size:0.8rem; color:var(--color-text-tertiary);">${I18nService.t('hr_no_edu')}</span>`;
 
     const customAnsHTML = (cand.customAnswers && Object.keys(cand.customAnswers).length > 0)
       ? Object.entries(cand.customAnswers).map(([fid, val]) => {
@@ -1063,7 +1064,7 @@ export class RecruitmentView extends Component {
           const label = fDef ? fDef.label : fid;
           return `<div style="font-size:0.8rem;"><strong>${label}:</strong> <span style="color:var(--color-accent);">${val || 'N/R'}</span></div>`;
         }).join('')
-      : '<span style="font-size:0.8rem; color:var(--color-text-tertiary);">Sin preguntas adicionales.</span>';
+      : `<span style="font-size:0.8rem; color:var(--color-text-tertiary);">${I18nService.t('hr_no_extra_ans')}</span>`;
 
     const bodyHTML = `
       <div style="display:flex; flex-direction:column; gap:16px;">
@@ -1074,77 +1075,77 @@ export class RecruitmentView extends Component {
               <h3 style="font-size:1.1rem; font-weight:800; margin:0; color:var(--color-text-primary);">${cand.displayName}</h3>
               <span class="badge" style="background:${stConfig.bg}; color:${stConfig.color}; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:12px;">${stConfig.label}</span>
             </div>
-            <p style="font-size:0.85rem; font-weight:600; color:var(--color-accent); margin:2px 0 4px;">💼 ${cand.position || 'Sin puesto'}</p>
+            <p style="font-size:0.85rem; font-weight:600; color:var(--color-accent); margin:2px 0 4px;">💼 ${cand.position || I18nService.t('inv_category_others')}</p>
             <p style="font-size:0.75rem; color:var(--color-text-tertiary); margin:0;">
-              🆔 ${cand.expCode || 'EXP-RH'} · 🎂 Fecha Nac: ${cand.birthDate || 'N/D'} (${cand.age ? cand.age + ' años' : ''})
+              🆔 ${cand.expCode || 'EXP-RH'} · 🎂 ${I18nService.t('hr_col_date')} Nac: ${cand.birthDate || 'N/D'} (${cand.age ? cand.age + ` ${I18nService.t('dash_months')[11].toLowerCase()}s` : ''})
             </p>
           </div>
         </div>
 
         <div style="display:flex; align-items:center; gap:12px; background:var(--color-bg-secondary); padding:12px; border-radius:10px; border:1px solid var(--color-border);">
-          <label style="font-weight:600; font-size:0.85rem;">Estado del Proceso:</label>
+          <label style="font-weight:600; font-size:0.85rem;">${I18nService.t('hr_update_status')}:</label>
           <select id="cand-modal-status-select" class="input input-sm" style="flex:1; background:var(--color-bg-primary); color:var(--color-text-primary); border:1px solid var(--color-border); border-radius:6px; font-weight:600;">
             ${Object.keys(CANDIDATE_STATUSES).map(st => `
               <option value="${st}" ${cand.status === st ? 'selected' : ''}>${CANDIDATE_STATUSES[st].label}</option>
             `).join('')}
           </select>
-          <button id="cand-modal-btn-update-status" class="btn btn-primary btn-xs" style="font-weight:700;">Actualizar Estado</button>
+          <button id="cand-modal-btn-update-status" class="btn btn-primary btn-xs" style="font-weight:700;">${I18nService.t('hr_update_status')}</button>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
           <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">📱 Contacto</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">📱 ${I18nService.t('sup_col_contact')}</h5>
               <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:4px;">
-                <span>📧 <strong>Email:</strong> ${cand.email || 'N/D'}</span>
-                <span>💬 <strong>WhatsApp:</strong> ${cand.whatsapp || 'N/D'}</span>
-                <span>📞 <strong>Tel. Alt:</strong> ${cand.phoneAlt || 'N/D'}</span>
-                <span>🚨 <strong>Emergencia:</strong> ${cand.emergencyName || 'N/D'} (${cand.emergencyPhone || ''})</span>
+                <span>📧 <strong>${I18nService.t('hr_email_label')}</strong> ${cand.email || 'N/D'}</span>
+                <span>💬 <strong>${I18nService.t('hr_whatsapp_label')}</strong> ${cand.whatsapp || 'N/D'}</span>
+                <span>📞 <strong>${I18nService.t('hr_phone_alt_label')}</strong> ${cand.phoneAlt || 'N/D'}</span>
+                <span>🚨 <strong>${I18nService.t('hr_emergency_label')}</strong> ${cand.emergencyName || 'N/D'} (${cand.emergencyPhone || ''})</span>
               </div>
             </div>
 
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🆔 Datos Personales</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🆔 ${I18nService.t('settings_company_data')}</h5>
               <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:4px;">
-                <span>🪪 <strong>Cédula:</strong> ${cand.idNumber || 'N/D'}</span>
-                <span>🇳🇮 <strong>Nacionalidad:</strong> ${cand.nationality || 'Nicaragüense'}</span>
-                <span>📍 <strong>Ubicación:</strong> ${cand.municipality || ''}, ${cand.department || ''}, ${cand.country || ''}</span>
-                <span>🏠 <strong>Dirección:</strong> ${cand.address || 'N/D'}</span>
+                <span>🪪 <strong>${I18nService.t('hr_id_number_label')}</strong> ${cand.idNumber || 'N/D'}</span>
+                <span>🇳🇮 <strong>${I18nService.t('hr_nationality_label')}</strong> ${cand.nationality || 'Nicaragüense'}</span>
+                <span>📍 <strong>${I18nService.t('hr_location_label')}</strong> ${cand.municipality || ''}, ${cand.department || ''}, ${cand.country || ''}</span>
+                <span>🏠 <strong>${I18nService.t('hr_address_label')}</strong> ${cand.address || 'N/D'}</span>
               </div>
             </div>
 
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🛠️ Experiencia Laboral</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🛠️ ${I18nService.t('hr_no_exp').replace('Sin ', '').replace(' agregada.', '')}</h5>
               ${experiencesHTML}
             </div>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">💼 Aspiración Laboral</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">💼 ${I18nService.t('hr_shift_label').replace(':', '')}</h5>
               <div style="font-size:0.8rem; display:flex; flex-direction:column; gap:4px;">
-                <span>⏱️ <strong>Jornada:</strong> ${cand.shift || 'Tiempo Completo'}</span>
-                <span>💵 <strong>Salario:</strong> ${cand.desiredSalary || 'A convenir'}</span>
-                <span>📅 <strong>Disponible:</strong> ${cand.startDate || 'De inmediato'}</span>
+                <span>⏱️ <strong>${I18nService.t('hr_shift_label')}</strong> ${cand.shift || I18nService.t('hr_shift_full_time')}</span>
+                <span>💵 <strong>${I18nService.t('hr_desired_salary_label')}</strong> ${cand.desiredSalary || 'A convenir'}</span>
+                <span>📅 <strong>${I18nService.t('hr_available_from_label')}</strong> ${cand.startDate || 'De inmediato'}</span>
               </div>
             </div>
 
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🎓 Educación</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">🎓 ${I18nService.t('hr_no_edu').replace('Sin ', '').replace(' agregada.', '')}</h5>
               ${educationHTML}
             </div>
 
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">⚡ Habilidades</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">${I18nService.t('hr_skills_title')}</h5>
               <div style="display:flex; flex-wrap:wrap; gap:4px;">
                 ${(cand.skills || []).length > 0 ? cand.skills.map(s => `
                   <span style="font-size:0.72rem; background:var(--color-bg-secondary); color:var(--color-text-primary); padding:2px 8px; border-radius:4px;">${s}</span>
-                `).join('') : '<span style="font-size:0.78rem; color:var(--color-text-tertiary);">Sin habilidades.</span>'}
+                `).join('') : `<span style="font-size:0.78rem; color:var(--color-text-tertiary);">${I18nService.t('hr_no_skills')}</span>`}
               </div>
             </div>
 
             <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">❓ Respuestas Adicionales</h5>
+              <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">${I18nService.t('hr_extra_answers_title')}</h5>
               <div style="display:flex; flex-direction:column; gap:4px;">
                 ${customAnsHTML}
               </div>
@@ -1153,24 +1154,24 @@ export class RecruitmentView extends Component {
         </div>
 
         <div style="background:var(--color-bg-tertiary); padding:14px; border-radius:10px; border:1px solid var(--color-border);">
-          <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">📄 Documentación Adjunta</h5>
+          <h5 style="font-size:0.85rem; font-weight:700; color:var(--color-accent); margin:0 0 8px;">${I18nService.t('hr_docs_attached_title')}</h5>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
             ${docsHTML}
           </div>
         </div>
 
         <div style="display:flex; gap:10px; background:var(--color-bg-secondary); padding:12px; border-radius:10px;">
-          <button id="modal-btn-hire-now" class="btn btn-success btn-sm" style="flex:1; font-weight:700; background:var(--color-success); color:#fff; border:none;">💼 CONTRATAR CANDIDATO</button>
+          <button id="modal-btn-hire-now" class="btn btn-success btn-sm" style="flex:1; font-weight:700; background:var(--color-success); color:#fff; border:none;">${I18nService.t('hr_hire_candidate_btn')}</button>
           <a href="https://wa.me/${(cand.whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${cand.firstName}, te saludamos de ${this.currentCompany.name || 'nuestra empresa'}. Quisiéramos agendar una entrevista contigo para el puesto de ${cand.position}.`)}" target="_blank" class="btn btn-sm" style="background:#25D366; color:#fff; font-weight:700; border:none; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">💬 WhatsApp</a>
-          <button id="modal-btn-delete-cand" class="btn btn-danger btn-sm" style="font-weight:600;">🗑️ Eliminar</button>
+          <button id="modal-btn-delete-cand" class="btn btn-danger btn-sm" style="font-weight:600;">🗑️ ${I18nService.t('delete')}</button>
         </div>
       </div>
     `;
 
     this.modalInstance = new Modal({
-      title: `Expediente: ${cand.displayName}`,
+      title: I18nService.t('hr_dossier_title', { name: cand.displayName }),
       bodyHTML: bodyHTML,
-      footerHTML: `<button class="btn btn-secondary btn-sm" id="modal-close-dossier">Cerrar Expediente</button>`,
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="modal-close-dossier">${I18nService.t('hr_close_dossier')}</button>`,
       size: 'lg'
     });
 
@@ -1190,9 +1191,9 @@ export class RecruitmentView extends Component {
     });
 
     this.modalInstance.$('#modal-btn-delete-cand')?.addEventListener('click', async () => {
-      if (!confirm(`¿Eliminar el expediente de ${cand.displayName}?`)) return;
+      if (!confirm(I18nService.t('hr_confirm_delete_dossier', { name: cand.displayName }))) return;
       await FirestoreService.removePath(`${this.companyId}/hr_candidates/${cand.id}`);
-      NotificationService.success('Expediente eliminado.');
+      NotificationService.success(I18nService.t('hr_dossier_deleted'));
       this.modalInstance.close();
     });
   }
@@ -1203,9 +1204,9 @@ export class RecruitmentView extends Component {
         status: newStatus,
         updatedAt: new Date().toISOString()
       });
-      NotificationService.success(`Estado actualizado a "${CANDIDATE_STATUSES[newStatus]?.label || newStatus}".`);
+      NotificationService.success(I18nService.t('hr_status_updated', { status: CANDIDATE_STATUSES[newStatus]?.label || newStatus }));
     } catch (e) {
-      NotificationService.error('Error al actualizar estado.');
+      NotificationService.error(I18nService.t('hr_status_update_error'));
     }
   }
 
@@ -1213,43 +1214,43 @@ export class RecruitmentView extends Component {
     const formHTML = `
       <form id="hr-hire-form" style="display:flex; flex-direction:column; gap:12px;">
         <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:10px 14px; border-radius:8px; font-size:0.82rem;">
-          🎉 Se creará automáticamente la cuenta de empleado para <strong>${cand.displayName}</strong>.
+          ${I18nService.t('hr_hire_success_msg', { name: cand.displayName })}
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div>
-            <label class="form-label">Nombre Completo</label>
+            <label class="form-label">${I18nService.t('emp_full_name')}</label>
             <input type="text" id="hire-name" class="input input-md" value="${cand.displayName}" required />
           </div>
           <div>
-            <label class="form-label">Correo Electrónico</label>
+            <label class="form-label">${I18nService.t('emp_email')}</label>
             <input type="email" id="hire-email" class="input input-md" value="${cand.email}" required />
           </div>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div>
-            <label class="form-label">Rol en el Sistema</label>
+            <label class="form-label">${I18nService.t('hr_system_role_label')}</label>
             <select id="hire-role" class="input input-md" style="background:var(--color-bg-secondary); border:1px solid var(--color-border); color:var(--color-text-primary);">
-              <option value="CASHIER">Cajero</option>
-              <option value="WAITER">Mesero / Atendedor</option>
-              <option value="KITCHEN">Cocinero / Chef</option>
-              <option value="MANAGER">Gerente de Área</option>
+              <option value="CASHIER">${I18nService.t('hr_role_cashier')}</option>
+              <option value="WAITER">${I18nService.t('hr_role_waiter')}</option>
+              <option value="KITCHEN">${I18nService.t('hr_role_kitchen')}</option>
+              <option value="MANAGER">${I18nService.t('hr_role_manager')}</option>
             </select>
           </div>
           <div>
-            <label class="form-label">Puesto / Cargo Oficial</label>
+            <label class="form-label">${I18nService.t('hr_official_position_label')}</label>
             <input type="text" id="hire-custom-role" class="input input-md" value="${cand.position}" required />
           </div>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <div>
-            <label class="form-label">Teléfono de Contacto</label>
+            <label class="form-label">${I18nService.t('sup_phone')}</label>
             <input type="text" id="hire-phone" class="input input-md" value="${cand.whatsapp || cand.phoneAlt || ''}" />
           </div>
           <div>
-            <label class="form-label">Contraseña Inicial</label>
+            <label class="form-label">${I18nService.t('hr_initial_password_label')}</label>
             <input type="text" id="hire-password" class="input input-md" value="Pass1234!" required />
           </div>
         </div>
@@ -1257,11 +1258,11 @@ export class RecruitmentView extends Component {
     `;
 
     const modal = new Modal({
-      title: `Contratar Candidato: ${cand.displayName}`,
+      title: `${I18nService.t('hr_hire_btn')}: ${cand.displayName}`,
       bodyHTML: formHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="modal-cancel-hire">Cancelar</button>
-        <button class="btn btn-success btn-sm" id="modal-confirm-hire" style="font-weight:700; background:var(--color-success); color:#fff; border:none;">✅ Confirmar Contratación</button>
+        <button class="btn btn-secondary btn-sm" id="modal-cancel-hire">${I18nService.t('cancel')}</button>
+        <button class="btn btn-success btn-sm" id="modal-confirm-hire" style="font-weight:700; background:var(--color-success); color:#fff; border:none;">${I18nService.t('hr_confirm_hire_btn')}</button>
       `,
       size: 'md'
     });
@@ -1305,10 +1306,10 @@ export class RecruitmentView extends Component {
           employeeUid: newUid
         });
 
-        NotificationService.success(`🎉 ¡${name} ha sido contratado(a) como nuevo empleado!`);
+        NotificationService.success(I18nService.t('hr_hire_success_toast', { name }));
         modal.close();
       } catch (err) {
-        NotificationService.error('Error al registrar contratación.');
+        NotificationService.error(I18nService.t('hr_hire_error_toast'));
       }
     });
   }

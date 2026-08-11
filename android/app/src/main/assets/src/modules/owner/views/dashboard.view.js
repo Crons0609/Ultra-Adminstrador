@@ -76,10 +76,10 @@ export class OwnerDashboardView extends Component {
   }
 
   _getFormattedDate() {
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const now = new Date();
-    return `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}`;
+    const day = I18nService.t(`day_${['sun','mon','tue','wed','thu','fri','sat'][now.getDay()]}`);
+    const month = I18nService.t(`month_${['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][now.getMonth()]}`);
+    return `${day}, ${now.getDate()} de ${month}`;
   }
 
   _formatMoney(amount) {
@@ -311,10 +311,10 @@ export class OwnerDashboardView extends Component {
 
       score = Math.min(100, Math.max(10, Math.round(profitScore + growthScore + invScore + opsScore)));
 
-      if (score >= 85) scoreLabel = 'Excelente rendimiento';
-      else if (score >= 72) scoreLabel = 'Buen rendimiento';
-      else if (score >= 58) scoreLabel = 'Rendimiento estable';
-      else scoreLabel = 'Requiere atención';
+      if (score >= 85) scoreLabel = I18nService.t('dash_score_excellent');
+      else if (score >= 72) scoreLabel = I18nService.t('dash_score_good');
+      else if (score >= 58) scoreLabel = I18nService.t('dash_score_average');
+      else scoreLabel = I18nService.t('dash_score_low');
     }
 
     // Tendencias comparativas
@@ -334,7 +334,7 @@ export class OwnerDashboardView extends Component {
     if (!root) return;
 
     if (this.state.loading) {
-      root.innerHTML = `<div style="text-align:center;padding:48px;color:var(--color-text-secondary)">⏳ Analizando métricas de tu negocio...</div>`;
+      root.innerHTML = `<div style="text-align:center;padding:48px;color:var(--color-text-secondary)">${I18nService.t('dash_analyzing_metrics')}</div>`;
       return;
     }
 
@@ -342,32 +342,32 @@ export class OwnerDashboardView extends Component {
     const companyName = this.currentCompany?.name || 'Mi Negocio';
     const { selectedBranchId, selectedBranchMode, currentBranch } = GlobalStore.getState();
     const branchLabel = selectedBranchMode === 'all'
-      ? 'Todas las Sucursales'
-      : `${currentBranch?.name || 'Sucursal Principal'}`;
+      ? I18nService.t('dash_branch_all')
+      : `${currentBranch?.name || I18nService.t('branch_main')}`;
     const branchSubLabel = selectedBranchMode === 'all'
       ? `Vista consolidada de ${GlobalStore.getState().branches?.length || 1} sucursal(es)`
-      : `${currentBranch?.city || currentBranch?.address || 'Sucursal'}`;
+      : `${currentBranch?.city || currentBranch?.address || I18nService.t('branch_title')}`;
 
 
     // Alerts logic
     const alerts = [];
     if (m.lowStockCount > 0 && isModuleEnabled(this.currentCompany, 'inventory')) {
-      alerts.push({ text: `${m.lowStockCount} producto${m.lowStockCount > 1 ? 's tienen' : ' tiene'} stock bajo`, path: '#/inventory/alerts', color: '#f59e0b' });
+      alerts.push({ text: `${m.lowStockCount} ${m.lowStockCount > 1 ? I18nService.t('inv_products') : I18nService.t('inv_product_name')} ${m.lowStockCount > 1 ? I18nService.t('ale_low_stock') : I18nService.t('ale_low_stock')}`, path: '#/inventory/alerts', color: '#f59e0b' });
     }
     if (m.payableOverdue > 0 && isModuleEnabled(this.currentCompany, 'accountsPayable')) {
-      alerts.push({ text: `${m.payableOverdue} cuenta${m.payableOverdue > 1 ? 's están' : ' está'} vencida${m.payableOverdue > 1 ? 's' : ''}`, path: '#/owner/accounts-payable', color: '#ef4444' });
+      alerts.push({ text: `${m.payableOverdue} ${m.payableOverdue > 1 ? I18nService.t('ap_title') : I18nService.t('ap_title')} ${I18nService.t('ap_overdue')}`, path: '#/owner/accounts-payable', color: '#ef4444' });
     }
     if (m.pendingRequests > 0 && isModuleEnabled(this.currentCompany, 'serviceRequests')) {
-      alerts.push({ text: `${m.pendingRequests} solicitud${m.pendingRequests > 1 ? 'es pendientes' : ' pendiente'} de revisión`, path: '#/manager/service-requests', color: '#6366f1' });
+      alerts.push({ text: `${m.pendingRequests} ${I18nService.t('dash_pending_requests')}`, path: '#/manager/service-requests', color: '#6366f1' });
     }
 
     const alertsHTML = alerts.length > 0
       ? alerts.map(a => `<div class="odb-alert-item" onclick="window.location.hash='${a.path}'">
           <span style="font-weight:600;">${a.text}</span>
-          <span style="color:var(--color-accent);font-weight:700">Ver →</span>
+          <span style="color:var(--color-accent);font-weight:700">${I18nService.t('view')} →</span>
         </div>`).join('')
       : `<div style="padding:14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-md);color:#10b981;font-weight:600;font-size:0.85rem">
-          No hay problemas críticos en la operación
+          ${I18nService.t('dash_stable_operation_desc')}
         </div>`;
 
     // Area scores
@@ -379,11 +379,11 @@ export class OwnerDashboardView extends Component {
 
     // Quick Actions buttons (max 5)
     const quickActions = [];
-    if (isModuleEnabled(this.currentCompany, 'pos')) quickActions.push({ label: '+ Nueva Venta', path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` });
-    if (isModuleEnabled(this.currentCompany, 'recurringClients')) quickActions.push({ label: '+ Nuevo Cliente', path: '#/owner/recurring-clients', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>` });
-    if (isModuleEnabled(this.currentCompany, 'inventory')) quickActions.push({ label: '+ Producto', path: '#/inventory/products', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>` });
-    if (isModuleEnabled(this.currentCompany, 'expenses')) quickActions.push({ label: '+ Registrar Gasto', path: '#/owner/expenses', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>` });
-    if (isModuleEnabled(this.currentCompany, 'serviceRequests')) quickActions.push({ label: '+ Pedido / Servicio', path: '#/manager/service-requests', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'pos')) quickActions.push({ label: I18nService.t('dash_new_sale'), path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'recurringClients')) quickActions.push({ label: I18nService.t('dash_new_client_btn'), path: '#/owner/recurring-clients', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'inventory')) quickActions.push({ label: I18nService.t('dash_new_product_btn'), path: '#/inventory/products', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'expenses')) quickActions.push({ label: I18nService.t('dash_register_expense_btn'), path: '#/owner/expenses', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'serviceRequests')) quickActions.push({ label: I18nService.t('dash_new_order_btn'), path: '#/manager/service-requests', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>` });
 
     const actionsHTML = quickActions.slice(0, 5).map(a => `
       <a href="${a.path}" class="odb-action-btn" style="display:inline-flex;align-items:center;gap:8px;">
@@ -394,8 +394,8 @@ export class OwnerDashboardView extends Component {
 
     // Recent activity list
     const recentActivity = [
-      ...this.state.ventas.slice(0, 3).map(v => ({ text: `Venta registrada por ${this._formatMoney(v.total || v.monto || 0)}`, time: 'Reciente', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>` })),
-      ...this.state.gastos.slice(0, 2).map(g => ({ text: `Gasto registrado: ${g.description || g.notes || 'Operativo'} (${this._formatMoney(g.amount || 0)})`, time: 'Reciente', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>` }))
+      ...this.state.ventas.slice(0, 3).map(v => ({ text: I18nService.t('dash_sale_registered_by', { amount: this._formatMoney(v.total || v.monto || 0) }), time: 'Reciente', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>` })),
+      ...this.state.gastos.slice(0, 2).map(g => ({ text: I18nService.t('dash_expense_registered', { desc: g.description || g.notes || I18nService.t('fin_expenses'), amount: this._formatMoney(g.amount || 0) }), time: 'Reciente', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>` }))
     ].slice(0, 4);
 
     const activityHTML = recentActivity.length > 0
@@ -405,7 +405,7 @@ export class OwnerDashboardView extends Component {
             <div style="flex:1;font-size:0.83rem">${act.text}</div>
           </div>
         `).join('')
-      : `<div style="font-size:0.82rem;color:var(--color-text-secondary);text-align:center;padding:16px">Sin movimientos recientes registrados.</div>`;
+      : `<div style="font-size:0.82rem;color:var(--color-text-secondary);text-align:center;padding:16px">${I18nService.t('dash_no_recent_activity')}</div>`;
 
     root.innerHTML = `
       ${this._styles()}
@@ -418,7 +418,7 @@ export class OwnerDashboardView extends Component {
             <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:2px;">${branchSubLabel} · ${this._getFormattedDate()}</div>
           </div>
           <div class="odb-status-badge ${alerts.length > 0 ? 'warning' : 'stable'}">
-            ${alerts.length > 0 ? 'Requiere atención' : '● Operación estable'}
+            ${alerts.length > 0 ? I18nService.t('dash_attention_needed') : I18nService.t('dash_stable_operation')}
           </div>
         </div>
 
@@ -426,84 +426,84 @@ export class OwnerDashboardView extends Component {
         <!-- 2. RESUMEN GENERAL (KPI CARDS) -->
         <div class="odb-kpi-grid">
           <div class="odb-kpi-card" style="border-left:4px solid var(--color-accent)">
-            <div class="odb-kpi-lbl">Ventas de Hoy</div>
+            <div class="odb-kpi-lbl">${I18nService.t('dash_sales_today')}</div>
             <div class="odb-kpi-val" style="color:var(--color-accent)">${this._formatMoney(m.ventasHoy)}</div>
-            <div class="odb-kpi-sub">Día en curso</div>
+            <div class="odb-kpi-sub">${I18nService.t('dash_day_in_progress')}</div>
           </div>
 
           <div class="odb-kpi-card" style="border-left:4px solid #34d399">
-            <div class="odb-kpi-lbl">Ventas del Mes</div>
+            <div class="odb-kpi-lbl">${I18nService.t('dash_sales_month')}</div>
             <div class="odb-kpi-val" style="color:#10b981">${this._formatMoney(m.ventasMes)}</div>
-            <div class="odb-kpi-sub">${m.salesTrend !== 0 ? `<span class="odb-trend-badge ${m.salesTrend >= 0 ? 'odb-trend-up' : 'odb-trend-down'}">${m.salesTrend >= 0 ? '↑' : '↓'} ${Math.abs(m.salesTrend)}% vs mes ant.</span>` : 'Mes en curso'}</div>
+            <div class="odb-kpi-sub">${m.salesTrend !== 0 ? `<span class="odb-trend-badge ${m.salesTrend >= 0 ? 'odb-trend-up' : 'odb-trend-down'}">${m.salesTrend >= 0 ? '↑' : '↓'} ${Math.abs(m.salesTrend)}% ${I18nService.t('dash_vs_last_month')}</span>` : I18nService.t('dash_this_month')}</div>
           </div>
 
           ${isModuleEnabled(this.currentCompany, 'expenses') ? `
             <div class="odb-kpi-card" style="border-left:4px solid #ef4444">
-              <div class="odb-kpi-lbl">Gastos del Mes</div>
+              <div class="odb-kpi-lbl">${I18nService.t('dash_expenses_month')}</div>
               <div class="odb-kpi-val" style="color:#ef4444">${this._formatMoney(m.gastosMes)}</div>
-              <div class="odb-kpi-sub">Costos operacionales</div>
+              <div class="odb-kpi-sub">${I18nService.t('dash_operational_costs')}</div>
             </div>
           ` : ''}
 
           ${isModuleEnabled(this.currentCompany, 'financialControl') ? `
             <div class="odb-kpi-card" style="border-left:4px solid #6366f1">
-              <div class="odb-kpi-lbl">Utilidad Estimada</div>
+              <div class="odb-kpi-lbl">${I18nService.t('dash_estimated_profit')}</div>
               <div class="odb-kpi-val" style="color:#6366f1">${this._formatMoney(m.utilidadMes)}</div>
-              <div class="odb-kpi-sub">${m.profitTrend !== 0 ? `<span class="odb-trend-badge ${m.profitTrend >= 0 ? 'odb-trend-up' : 'odb-trend-down'}">${m.profitTrend >= 0 ? '↑' : '↓'} ${Math.abs(m.profitTrend)}% vs mes ant.</span>` : 'Margen neto'}</div>
+              <div class="odb-kpi-sub">${m.profitTrend !== 0 ? `<span class="odb-trend-badge ${m.profitTrend >= 0 ? 'odb-trend-up' : 'odb-trend-down'}">${m.profitTrend >= 0 ? '↑' : '↓'} ${Math.abs(m.profitTrend)}% ${I18nService.t('dash_vs_last_month')}</span>` : I18nService.t('dash_net_margin')}</div>
             </div>
           ` : ''}
 
           <div class="odb-kpi-card" style="border-left:4px solid #f59e0b">
-            <div class="odb-kpi-lbl">Clientes Totales</div>
+            <div class="odb-kpi-lbl">${I18nService.t('dash_total_clients')}</div>
             <div class="odb-kpi-val" style="color:#f59e0b">${m.totalClientes}</div>
-            <div class="odb-kpi-sub">Registrados</div>
+            <div class="odb-kpi-sub">${I18nService.t('dash_registered')}</div>
           </div>
         </div>
 
         <!-- 3. SCORE DE RENDIMIENTO GENERAL -->
         <div class="odb-score-card">
           <div class="odb-score-circle">
-            <div style="font-size:0.75rem;color:var(--color-text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:6px">Rendimiento General</div>
+            <div style="font-size:0.75rem;color:var(--color-text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:6px">${I18nService.t('dash_overall_performance')}</div>
             ${m.hasData ? `
               <div class="odb-score-num">${m.score}</div>
-              <div style="font-size:0.75rem;color:var(--color-text-secondary)">de 100</div>
+              <div style="font-size:0.75rem;color:var(--color-text-secondary)">${I18nService.t('dash_out_of_100')}</div>
               <div class="odb-score-lbl" style="color:var(--color-accent);margin-top:6px">${m.scoreLabel}</div>
             ` : `
-              <div style="font-size:1.1rem;font-weight:700;color:var(--color-text-secondary);margin:12px 0">Analizando...</div>
-              <div style="font-size:0.75rem;color:var(--color-text-secondary)">Aún no hay suficientes datos para calcular el puntaje de rendimiento.</div>
+              <div style="font-size:1.1rem;font-weight:700;color:var(--color-text-secondary);margin:12px 0">${I18nService.t('dash_analyzing')}</div>
+              <div style="font-size:0.75rem;color:var(--color-text-secondary)">${I18nService.t('dash_not_enough_data_score')}</div>
             `}
           </div>
 
           <div class="odb-area-list">
-            <div style="font-size:0.83rem;font-weight:700;margin-bottom:6px">Rendimiento por Área</div>
+            <div style="font-size:0.83rem;font-weight:700;margin-bottom:6px">${I18nService.t('dash_performance_by_area')}</div>
 
             ${areaVentas !== null ? `
               <div class="odb-area-row">
-                <div class="odb-area-hdr"><span>Ventas</span><span>${areaVentas}%</span></div>
+                <div class="odb-area-hdr"><span>${I18nService.t('pos_title')}</span><span>${areaVentas}%</span></div>
                 <div class="odb-progress-bg"><div class="odb-progress-fill" style="width:${areaVentas}%;background:#6366f1"></div></div>
               </div>` : ''}
 
             ${areaFinanzas !== null ? `
               <div class="odb-area-row">
-                <div class="odb-area-hdr"><span>Finanzas</span><span>${areaFinanzas}%</span></div>
+                <div class="odb-area-hdr"><span>${I18nService.t('fin_title')}</span><span>${areaFinanzas}%</span></div>
                 <div class="odb-progress-bg"><div class="odb-progress-fill" style="width:${areaFinanzas}%;background:#34d399"></div></div>
               </div>` : ''}
 
             ${areaInventario !== null ? `
               <div class="odb-area-row">
-                <div class="odb-area-hdr"><span>Inventario</span><span>${areaInventario}%</span></div>
+                <div class="odb-area-hdr"><span>${I18nService.t('inv_title')}</span><span>${areaInventario}%</span></div>
                 <div class="odb-progress-bg"><div class="odb-progress-fill" style="width:${areaInventario}%;background:#f59e0b"></div></div>
               </div>` : ''}
 
             ${areaClientes !== null ? `
               <div class="odb-area-row">
-                <div class="odb-area-hdr"><span>Clientes</span><span>${areaClientes}%</span></div>
+                <div class="odb-area-hdr"><span>${I18nService.t('dash_clients')}</span><span>${areaClientes}%</span></div>
                 <div class="odb-progress-bg"><div class="odb-progress-fill" style="width:${areaClientes}%;background:#06b6d4"></div></div>
               </div>` : ''}
 
             ${areaProductividad !== null ? `
               <div class="odb-area-row">
-                <div class="odb-area-hdr"><span>Productividad Equipo</span><span>${areaProductividad}%</span></div>
+                <div class="odb-area-hdr"><span>${I18nService.t('dash_team_productivity')}</span><span>${areaProductividad}%</span></div>
                 <div class="odb-progress-bg"><div class="odb-progress-fill" style="width:${areaProductividad}%;background:#8b5cf6"></div></div>
               </div>` : ''}
           </div>
@@ -519,14 +519,14 @@ export class OwnerDashboardView extends Component {
             <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
                 <div>
-                  <h3 style="font-size:0.95rem;font-weight:700;margin:0">📈 Rendimiento Operativo</h3>
-                  <p style="font-size:0.75rem;color:var(--color-text-secondary);margin:2px 0 0" id="odb-chart-sub-label">Horas con mayor movimiento y flujo de ventas</p>
+                  <h3 style="font-size:0.95rem;font-weight:700;margin:0">${I18nService.t('dash_operational_performance')}</h3>
+                  <p style="font-size:0.75rem;color:var(--color-text-secondary);margin:2px 0 0" id="odb-chart-sub-label">${I18nService.t('dash_most_active_hours')}</p>
                 </div>
                 <!-- Time Breakdown Buttons -->
                 <div style="display:flex;gap:4px;background:var(--color-bg-tertiary);padding:3px;border-radius:18px;border:1px solid var(--color-border)" id="odb-chart-mode-toggle">
-                  <button class="odb-cmp-btn ${this.chartMode === 'HOURS' ? 'active' : ''}" data-mode="HOURS" style="padding:4px 10px;font-size:0.72rem">⏰ Por Horas</button>
-                  <button class="odb-cmp-btn ${this.chartMode === 'DAYS' || !this.chartMode ? 'active' : ''}" data-mode="DAYS" style="padding:4px 10px;font-size:0.72rem">🗓️ Días (Semana)</button>
-                  <button class="odb-cmp-btn ${this.chartMode === 'MONTHS' ? 'active' : ''}" data-mode="MONTHS" style="padding:4px 10px;font-size:0.72rem">📆 Meses</button>
+                  <button class="odb-cmp-btn ${this.chartMode === 'HOURS' ? 'active' : ''}" data-mode="HOURS" style="padding:4px 10px;font-size:0.72rem">${I18nService.t('dash_by_hours')}</button>
+                  <button class="odb-cmp-btn ${this.chartMode === 'DAYS' || !this.chartMode ? 'active' : ''}" data-mode="DAYS" style="padding:4px 10px;font-size:0.72rem">${I18nService.t('dash_days_week_btn')}</button>
+                  <button class="odb-cmp-btn ${this.chartMode === 'MONTHS' ? 'active' : ''}" data-mode="MONTHS" style="padding:4px 10px;font-size:0.72rem">${I18nService.t('dash_months_btn')}</button>
                 </div>
               </div>
               <div id="odb-chart-container" style="width:100%;height:220px;"></div>
@@ -534,7 +534,7 @@ export class OwnerDashboardView extends Component {
 
             <!-- Recent Activity -->
             <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px">
-              <h3 style="font-size:0.95rem;font-weight:700;margin:0 0 10px">Actividad Reciente</h3>
+              <h3 style="font-size:0.95rem;font-weight:700;margin:0 0 10px">${I18nService.t('dash_recent_activity')}</h3>
               ${activityHTML}
             </div>
 
@@ -545,35 +545,35 @@ export class OwnerDashboardView extends Component {
 
             <!-- Critical Alerts -->
             <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px">
-              <h3 style="font-size:0.95rem;font-weight:700;margin:0 0 12px">⚠️ Requiere Atención</h3>
+              <h3 style="font-size:0.95rem;font-weight:700;margin:0 0 12px">⚠️ ${I18nService.t('dash_attention_needed')}</h3>
               <div style="display:flex;flex-direction:column;gap:8px">${alertsHTML}</div>
             </div>
 
             <!-- Team Performance -->
             <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                <h3 style="font-size:0.95rem;font-weight:700;margin:0">👥 Rendimiento del Equipo</h3>
-                <a href="#/manager/employees" style="font-size:0.75rem;color:var(--color-accent);font-weight:600;text-decoration:none">Ver rendimiento completo →</a>
+                <h3 style="font-size:0.95rem;font-weight:700;margin:0">👥 ${I18nService.t('dash_team_performance')}</h3>
+                <a href="#/manager/employees" style="font-size:0.75rem;color:var(--color-accent);font-weight:600;text-decoration:none">${I18nService.t('dash_view_full_performance')}</a>
               </div>
               <div style="display:flex;flex-direction:column;gap:10px">
                 <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--color-text-secondary)">
-                  <span>Empleados activos: <strong>${this.state.employees.length || 1}</strong></span>
-                  <span>Cumplimiento: <strong style="color:#10b981">88%</strong></span>
+                  <span>${I18nService.t('dash_active_staff_count', { count: this.state.employees.length || 1 })}</span>
+                  <span>${I18nService.t('dash_compliance')}: <strong style="color:#10b981">88%</strong></span>
                 </div>
                 ${this.state.employees.slice(0, 3).map(e => `
                   <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.8rem;background:var(--color-bg-tertiary);padding:8px 10px;border-radius:var(--radius-md)">
-                    <span style="font-weight:600">${e.displayName || e.email || 'Empleado'}</span>
+                    <span style="font-weight:600">${e.displayName || e.email || I18nService.t('emp_col_employee')}</span>
                     <span style="color:var(--color-accent);font-weight:700">85%</span>
                   </div>
                 `).join('') || `
-                  <div style="font-size:0.78rem;color:var(--color-text-secondary);text-align:center;padding:8px">No hay empleados asignados aún.</div>
+                  <div style="font-size:0.78rem;color:var(--color-text-secondary);text-align:center;padding:8px">${I18nService.t('dash_no_employees_assigned')}</div>
                 `}
               </div>
             </div>
 
             <!-- Quick Actions -->
             <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px">
-              <h3 style="font-size:0.95rem;font-weight:700;margin:0 0 12px">⚡ Acciones Rápidas</h3>
+              <h3 style="font-size:0.95rem;font-weight:700;margin:0 0 12px">⚡ ${I18nService.t('dash_quick_actions')}</h3>
               <div class="odb-actions-grid">${actionsHTML}</div>
             </div>
 
@@ -612,7 +612,7 @@ export class OwnerDashboardView extends Component {
     let subLabel = '';
 
     if (mode === 'HOURS') {
-      subLabel = '⚡ Horas del día con mayor pico de movimiento y ventas';
+      subLabel = I18nService.t('dash_chart_hours_active');
       labels = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
       const salesByHour = [0, 0, 0, 0, 0, 0, 0, 0, 0];
       const opsByHour = [0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -629,12 +629,12 @@ export class OwnerDashboardView extends Component {
       });
 
       datasets = [
-        { label: 'Ventas por Hora ($)', data: salesByHour, color: '#6366f1' },
-        { label: 'Movimiento / Transacciones', data: opsByHour, color: '#34d399' }
+        { label: I18nService.t('dash_chart_sales_hour'), data: salesByHour, color: '#6366f1' },
+        { label: I18nService.t('dash_chart_movement'), data: opsByHour, color: '#34d399' }
       ];
     } else if (mode === 'DAYS') {
-      subLabel = '🗓️ Comparativa por día de la semana (Lunes a Domingo)';
-      labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      subLabel = I18nService.t('dash_chart_days_active');
+      labels = [I18nService.t('day_mon'), I18nService.t('day_tue'), I18nService.t('day_wed'), I18nService.t('day_thu'), I18nService.t('day_fri'), I18nService.t('day_sat'), I18nService.t('day_sun')];
       const salesByDay = [0, 0, 0, 0, 0, 0, 0];
       const expensesByDay = [0, 0, 0, 0, 0, 0, 0];
 
@@ -655,12 +655,12 @@ export class OwnerDashboardView extends Component {
       });
 
       datasets = [
-        { label: 'Ventas ($)', data: salesByDay, color: '#6366f1' },
-        { label: 'Gastos ($)', data: expensesByDay, color: '#ef4444' }
+        { label: I18nService.t('dash_total_sales'), data: salesByDay, color: '#6366f1' },
+        { label: I18nService.t('fin_expenses'), data: expensesByDay, color: '#ef4444' }
       ];
     } else if (mode === 'MONTHS') {
-      subLabel = '📆 Rendimiento mensual del año en curso';
-      labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      subLabel = I18nService.t('dash_chart_months_active');
+      labels = [I18nService.t('month_jan').substring(0,3), I18nService.t('month_feb').substring(0,3), I18nService.t('month_mar').substring(0,3), I18nService.t('month_apr').substring(0,3), I18nService.t('month_may').substring(0,3), I18nService.t('month_jun').substring(0,3), I18nService.t('month_jul').substring(0,3), I18nService.t('month_aug').substring(0,3), I18nService.t('month_sep').substring(0,3), I18nService.t('month_oct').substring(0,3), I18nService.t('month_nov').substring(0,3), I18nService.t('month_dec').substring(0,3)];
       const salesByMonth = new Array(12).fill(0);
       const expensesByMonth = new Array(12).fill(0);
 
@@ -679,8 +679,8 @@ export class OwnerDashboardView extends Component {
       });
 
       datasets = [
-        { label: 'Ventas ($)', data: salesByMonth, color: '#6366f1' },
-        { label: 'Gastos ($)', data: expensesByMonth, color: '#ef4444' }
+        { label: I18nService.t('dash_total_sales'), data: salesByMonth, color: '#6366f1' },
+        { label: I18nService.t('fin_expenses'), data: expensesByMonth, color: '#ef4444' }
       ];
     }
 

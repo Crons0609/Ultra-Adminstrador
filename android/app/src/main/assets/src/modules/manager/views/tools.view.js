@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ToolsView extends Component {
   constructor(params = {}) {
@@ -32,35 +33,35 @@ export class ToolsView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: 'Herramienta',
+          label: I18nService.t('tool_title'),
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               <div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🔧</div>
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val}</span>
-                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">Condición: ${row.condition || 'Buena'}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">${I18nService.t('tool_condition')}: ${I18nService.t('tool_cond_' + (row.condition || 'good').toLowerCase())}</span>
               </div>
             </div>
           `
         },
         { 
           key: 'code', 
-          label: 'Código de Barra/QR',
-          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : '<span class="text-xs text-secondary">Sin asignar</span>'
+          label: I18nService.t('pos_barcode_label'),
+          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : `<span class="text-xs text-secondary">${I18nService.t('unassigned')}</span>`
         },
-        { key: 'category', label: 'Categoría' },
-        { key: 'location', label: 'Ubicación' },
+        { key: 'category', label: I18nService.t('category') },
+        { key: 'location', label: I18nService.t('qr_location') },
         { 
           key: 'status', 
-          label: 'Estado',
+          label: I18nService.t('status'),
           render: (val) => {
-            let label = 'Disponible';
+            let label = I18nService.t('cal_available');
             let badgeClass = 'stock-ok';
             if (val === 'EN_USO') {
-              label = 'En Uso';
+              label = I18nService.t('tool_status_in_use');
               badgeClass = 'stock-low';
             } else if (val === 'MANTENIMIENTO') {
-              label = 'Mantenimiento';
+              label = I18nService.t('ass_status_maintenance');
               badgeClass = 'stock-out';
             }
             return `<span class="stock-badge ${badgeClass}">${label}</span>`;
@@ -68,7 +69,7 @@ export class ToolsView extends Component {
         },
         {
           key: 'id',
-          label: 'Acciones',
+          label: I18nService.t('actions'),
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-tool" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -81,11 +82,11 @@ export class ToolsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Control de Herramientas',
-      subtitle: 'Gestiona las herramientas de trabajo del negocio, asignaciones de uso, ubicaciones y control de daño.',
+      title: I18nService.t('tool_title'),
+      subtitle: I18nService.t('tool_subtitle'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-tool">
-          + Agregar Herramienta
+          ${I18nService.t('tool_add')}
         </button>
       `,
       contentHTML: `
@@ -93,38 +94,38 @@ export class ToolsView extends Component {
         <div class="grid-stats animate-fade-in" id="tools-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Herramientas Totales</span>
+              <span class="kpi-label">${I18nService.t('tool_total_kpi')}</span>
               <div class="kpi-icon kpi-icon-accent">🔧</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-tools">0</h3>
-            <span class="text-xs text-secondary">Herramientas registradas</span>
+            <span class="text-xs text-secondary">${I18nService.t('tool_total_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Disponibles</span>
+              <span class="kpi-label">${I18nService.t('cal_available')}</span>
               <div class="kpi-icon kpi-icon-success">✅</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-available-tools">0</h3>
-            <span class="text-xs text-secondary">Listas para su uso</span>
+            <span class="text-xs text-secondary">${I18nService.t('tool_available_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">En Uso</span>
+              <span class="kpi-label">${I18nService.t('tool_status_in_use')}</span>
               <div class="kpi-icon kpi-icon-warning">👷</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-used-tools">0</h3>
-            <span class="text-xs text-secondary">Asignadas a operarios</span>
+            <span class="text-xs text-secondary">${I18nService.t('tool_used_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Dañadas / Taller</span>
+              <span class="kpi-label">${I18nService.t('tool_damaged_kpi')}</span>
               <div class="kpi-icon kpi-icon-danger">⚠️</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-damaged-tools">0</h3>
-            <span class="text-xs text-secondary">No utilizables actualmente</span>
+            <span class="text-xs text-secondary">${I18nService.t('tool_damaged_desc')}</span>
           </div>
         </div>
 
@@ -133,14 +134,14 @@ export class ToolsView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-tool" class="input input-md" placeholder="Buscar por nombre, código de barra, categoría..." />
+              <input type="text" id="inp-search-tool" class="input input-md" placeholder="${I18nService.t('tool_search_placeholder')}" />
             </div>
 
             <select id="sel-filter-status" class="inv-filter-select">
-              <option value="">Todos los estados</option>
-              <option value="DISPONIBLE">Disponibles</option>
-              <option value="EN_USO">En Uso</option>
-              <option value="MANTENIMIENTO">En Mantenimiento</option>
+              <option value="">${I18nService.t('inv_all_statuses')}</option>
+              <option value="DISPONIBLE">${I18nService.t('cal_available')}</option>
+              <option value="EN_USO">${I18nService.t('tool_status_in_use')}</option>
+              <option value="MANTENIMIENTO">${I18nService.t('ass_status_maintenance')}</option>
             </select>
           </div>
         </div>
@@ -213,13 +214,13 @@ export class ToolsView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-tool');
         if (deleteBtn) {
           const toolId = deleteBtn.getAttribute('data-id');
-          if (confirm('¿Estás seguro de que deseas eliminar esta herramienta definitivamente?')) {
+          if (confirm(I18nService.t('tool_confirm_delete'))) {
             try {
               await FirestoreService.delete('herramientas', toolId);
-              NotificationService.success('Herramienta eliminada.');
+              NotificationService.success(I18nService.t('tool_deleted_success'));
             } catch (err) {
               console.error('[ToolsView] Error deleting:', err);
-              NotificationService.error('Error al eliminar la herramienta.');
+              NotificationService.error(I18nService.t('tool_delete_error'));
             }
           }
         }
@@ -301,54 +302,54 @@ export class ToolsView extends Component {
       <form id="tool-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="tol-name">Nombre de la Herramienta</label>
-            <input type="text" id="tol-name" class="input input-md" placeholder="Ej. Taladro Percutor 20V" value="${isEdit ? tool.name : ''}" required />
+            <label class="form-label" for="tol-name">${I18nService.t('tool_name_label')}</label>
+            <input type="text" id="tol-name" class="input input-md" placeholder="${I18nService.t('tool_name_placeholder')}" value="${isEdit ? tool.name : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="tol-condition">Condición Física</label>
+            <label class="form-label" for="tol-condition">${I18nService.t('tool_condition')}</label>
             <select id="tol-condition" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="EXCELENTE" ${isEdit && tool.condition === 'EXCELENTE' ? 'selected' : ''}>Excelente</option>
-              <option value="BUENO" ${isEdit && tool.condition === 'BUENO' ? 'selected' : ''}>Bueno</option>
-              <option value="REGULAR" ${isEdit && tool.condition === 'REGULAR' ? 'selected' : ''}>Regular</option>
-              <option value="DAÑADO" ${isEdit && tool.condition === 'DAÑADO' ? 'selected' : ''}>Dañado</option>
+              <option value="EXCELENTE" ${isEdit && tool.condition === 'EXCELENTE' ? 'selected' : ''}>${I18nService.t('tool_cond_excellent')}</option>
+              <option value="BUENO" ${isEdit && tool.condition === 'BUENO' ? 'selected' : ''}>${I18nService.t('tool_cond_good')}</option>
+              <option value="REGULAR" ${isEdit && tool.condition === 'REGULAR' ? 'selected' : ''}>${I18nService.t('tool_cond_regular')}</option>
+              <option value="DAÑADO" ${isEdit && tool.condition === 'DAÑADO' ? 'selected' : ''}>${I18nService.t('tool_cond_damaged')}</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Asociar Código de Barras / QR (Etiqueta de Herramienta)</label>
+          <label class="form-label">${I18nService.t('tool_barcode_label')}</label>
           <div id="tol-barcode-container"></div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="tol-category">Categoría</label>
-            <input type="text" id="tol-category" class="input input-md" placeholder="Ej. Carpintería, Eléctrica" value="${isEdit ? (tool.category || '') : ''}" />
+            <label class="form-label" for="tol-category">${I18nService.t('category')}</label>
+            <input type="text" id="tol-category" class="input input-md" placeholder="${I18nService.t('tool_category_placeholder')}" value="${isEdit ? (tool.category || '') : ''}" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="tol-location">Ubicación de Resguardo</label>
-            <input type="text" id="tol-location" class="input input-md" placeholder="Ej. Caja 2, Bodega Este" value="${isEdit ? (tool.location || '') : ''}" />
+            <label class="form-label" for="tol-location">${I18nService.t('tool_location_label')}</label>
+            <input type="text" id="tol-location" class="input input-md" placeholder="${I18nService.t('tool_location_placeholder')}" value="${isEdit ? (tool.location || '') : ''}" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="tol-status">Estado Operativo</label>
+          <label class="form-label" for="tol-status">${I18nService.t('tool_status_label')}</label>
           <select id="tol-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-            <option value="DISPONIBLE" ${isEdit && tool.status === 'DISPONIBLE' ? 'selected' : ''}>Disponible / En Bodega</option>
-            <option value="EN_USO" ${isEdit && tool.status === 'EN_USO' ? 'selected' : ''}>En Uso / Asignada</option>
-            <option value="MANTENIMIENTO" ${isEdit && tool.status === 'MANTENIMIENTO' ? 'selected' : ''}>En Mantenimiento</option>
+            <option value="DISPONIBLE" ${isEdit && tool.status === 'DISPONIBLE' ? 'selected' : ''}>${I18nService.t('tool_status_available_desc')}</option>
+            <option value="EN_USO" ${isEdit && tool.status === 'EN_USO' ? 'selected' : ''}>${I18nService.t('tool_status_used_desc')}</option>
+            <option value="MANTENIMIENTO" ${isEdit && tool.status === 'MANTENIMIENTO' ? 'selected' : ''}>${I18nService.t('ass_status_maintenance')}</option>
           </select>
         </div>
       </form>
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Herramienta'}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('tool_add')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? 'Editar Herramienta' : 'Registrar Nueva Herramienta',
+      title: isEdit ? I18nService.t('tool_edit_title') : I18nService.t('tool_add_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md',
@@ -368,7 +369,7 @@ export class ToolsView extends Component {
       this.modalBarcodeInput = new BarcodeInput({
         id: 'tol-code',
         compact: true,
-        placeholder: 'Escanea el código de la herramienta...',
+        placeholder: I18nService.t('tool_scan_placeholder'),
         value: isEdit ? (tool.code || '') : '',
         onScan: (code) => {
           this.modalBarcodeInput.setValue(code);
@@ -395,7 +396,7 @@ export class ToolsView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando...';
+      submitBtn.textContent = I18nService.t('saving');
     }
 
     const name = this.modalInstance.$('#tol-name').value.trim();
@@ -431,7 +432,7 @@ export class ToolsView extends Component {
     try {
       if (tool) {
         await FirestoreService.update('herramientas', tool.id, payload);
-        NotificationService.success('Herramienta actualizada correctamente.');
+        NotificationService.success(I18nService.t('tool_updated_success'));
         if (code) {
           await BarcodeRegistryService.associateCode(code, tool.id, 'herramienta', name).catch(() => {});
         }
@@ -439,7 +440,7 @@ export class ToolsView extends Component {
         payload.createdAt = Date.now();
         payload.createdAtLocal = TimeService.timestamp();
         const newId = await FirestoreService.create('herramientas', payload);
-        NotificationService.success('Herramienta registrada correctamente.');
+        NotificationService.success(I18nService.t('tool_saved_success'));
         if (code && newId) {
           await BarcodeRegistryService.associateCode(code, newId, 'herramienta', name).catch(() => {});
         }
@@ -447,10 +448,10 @@ export class ToolsView extends Component {
       this.modalInstance.close();
     } catch (err) {
       console.error('[ToolsView] Error saving tool:', err);
-      alert(`Error al guardar: ${err.message}`);
+      alert(I18nService.t('error_occurred') + ': ' + err.message);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = tool ? 'Guardar Cambios' : 'Registrar Herramienta';
+        submitBtn.textContent = tool ? I18nService.t('save_changes') : I18nService.t('tool_add');
       }
     }
   }

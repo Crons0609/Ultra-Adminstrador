@@ -49,7 +49,7 @@ export class POSView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('pos_title'),
-      subtitle: 'Process sales, direct checkout, table orders, and receipts.',
+      subtitle: I18nService.t('pos_subtitle'),
       actionHTML: `
         <button id="btn-reopen-last-receipt" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
           🧾 ${I18nService.t('pos_receipt')}
@@ -245,8 +245,8 @@ export class POSView extends Component {
             <!-- Cover & Capacity Tracker (Only for Bars/Clubs) -->
             <div id="pos-aforo-panel" style="display:${this.isBar ? 'block' : 'none'}; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 6px; padding: 6px 10px; margin-bottom: 4px;">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="text-xs font-bold" style="color:#a855f7;">🕺 Aforo: <strong id="pos-aforo-count">0 / 300</strong></span>
-                <button class="btn btn-xs btn-primary font-semibold" id="pos-btn-cover" style="background:#a855f7; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">+ Cover ($100)</button>
+                <span class="text-xs font-bold" style="color:#a855f7;">${I18nService.t('pos_capacity')}<strong id="pos-aforo-count">0 / 300</strong></span>
+                <button class="btn btn-xs btn-primary font-semibold" id="pos-btn-cover" style="background:#a855f7; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">${I18nService.t('pos_cover_btn')}</button>
               </div>
               <div class="kpi-progress-bar" style="background:rgba(255,255,255,0.06); height:4px;">
                 <div id="pos-aforo-bar" class="kpi-progress-fill" style="width: 0%; background:#a855f7; transition:width 0.4s;"></div>
@@ -257,7 +257,7 @@ export class POSView extends Component {
             <div id="pos-bill-requests-panel" style="display:none; background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.3); border-radius: 6px; padding: 8px; margin-bottom: 4px;">
               <div class="d-flex align-items-center gap-2 mb-1">
                 <span style="font-size:0.9rem;">🧾</span>
-                <span class="font-bold" style="font-size:0.78rem; color:#fb923c;">Solicitudes de Cuenta</span>
+                <span class="font-bold" style="font-size:0.78rem; color:#fb923c;">${I18nService.t('pos_bill_requests')}</span>
                 <span id="pos-bill-requests-count" class="badge animate-pulse" style="background:#fb923c; color:#000; font-weight:800; font-size:0.65rem; margin-left:auto; padding:1px 6px;">0</span>
               </div>
               <div id="pos-bill-requests-list" style="display:flex; flex-direction:column; gap:4px;"></div>
@@ -266,24 +266,24 @@ export class POSView extends Component {
             <!-- Selector de Mesa / Comanda Activa -->
             <div style="display:flex; flex-direction:column; gap: 4px;">
               <div>
-                <label class="form-label font-semibold" style="font-size: 0.75rem; margin-bottom: 2px; display: block;">📥 Cargar ${this.isBar ? 'VIP / Área / Barra' : 'Mesa / Pedido Activo'}</label>
+                <label class="form-label font-semibold" style="font-size: 0.75rem; margin-bottom: 2px; display: block;">${I18nService.t('pos_load_order')}${this.isBar ? I18nService.t('pos_load_bar') : I18nService.t('pos_load_table')}</label>
                 <select id="pos-table-selector" class="input input-sm w-full" style="height:32px; font-size:0.8rem; font-weight:600;">
-                  <option value="">-- Venta Directa (Sin Mesa) --</option>
+                  <option value="">${I18nService.t('pos_direct_sale_option')}</option>
                 </select>
               </div>
 
               <!-- Client Selector for Separated Bills -->
               <div id="pos-client-selector-group" style="display:none; background:rgba(124,117,255,0.06); border:1px solid rgba(124,117,255,0.2); border-radius:6px; padding:6px 8px;">
-                <label class="form-label font-semibold" style="font-size:0.72rem; margin-bottom: 2px; display: block; color:var(--color-accent);">👤 Cliente (Cuenta Separada):</label>
+                <label class="form-label font-semibold" style="font-size:0.72rem; margin-bottom: 2px; display: block; color:var(--color-accent);">${I18nService.t('pos_separate_account_label')}</label>
                 <select id="pos-client-selector" class="input input-sm w-full" style="height:30px; font-size:0.78rem; font-weight:700;">
-                  <option value="">-- Seleccionar Cliente --</option>
+                  <option value="">${I18nService.t('pos_select_client_option')}</option>
                 </select>
               </div>
 
               <!-- Barcode scanner input -->
               <div>
                 <label class="form-label font-semibold" style="font-size: 0.72rem; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                  <span>⚡</span> Código de Barras
+                  <span>⚡</span> ${I18nService.t('pos_barcode_label')}
                 </label>
                 <div id="pos-scan-container"></div>
               </div>
@@ -291,37 +291,37 @@ export class POSView extends Component {
 
             <!-- Header Informativo del Ticket Activo -->
             <div class="pos-ticket-header" id="pos-ticket-header">
-              <span class="font-bold text-xs" style="color:var(--color-text-secondary);" id="pos-ticket-title">🛒 Venta Directa</span>
-              <span class="text-xs text-secondary" id="pos-ticket-items-count">0 ítems</span>
+              <span class="font-bold text-xs" style="color:var(--color-text-secondary);" id="pos-ticket-title">🛒 ${I18nService.t('pos_direct_sale_title')}</span>
+              <span class="text-xs text-secondary" id="pos-ticket-items-count">0 ${I18nService.t('ri_items')}</span>
             </div>
 
             <!-- Cart Items List -->
             <div class="pos-ticket-container" id="pos-ticket-container">
               <div class="pos-ticket-empty" style="text-align:center; padding:12px 0;">
                 <div class="pos-ticket-empty-icon" style="font-size:1.6rem; margin-bottom:2px;">🛒</div>
-                <h4 class="font-semibold text-xs">El ticket está vacío</h4>
-                <p class="text-xs text-secondary mt-1" style="font-size:0.7rem;">Carga una mesa, escanea o haz clic en el catálogo.</p>
+                <h4 class="font-semibold text-xs">${I18nService.t('pos_empty_cart')}</h4>
+                <p class="text-xs text-secondary mt-1" style="font-size:0.7rem;">${I18nService.t('pos_empty_cart_desc')}</p>
               </div>
             </div>
 
             <!-- Summary & Payment -->
             <div class="pos-billing-summary" style="background:rgba(0,0,0,0.15); border:1px solid var(--color-border); border-radius:6px; padding:8px 10px;">
               <div class="pos-calc-row" style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
-                <span class="text-secondary">Subtotal: <span id="pos-summary-subtotal" class="font-semibold" style="color:var(--color-text-primary);">$0.00</span></span>
-                <span class="text-secondary">IVA (15%): <span id="pos-summary-tax" class="font-semibold" style="color:var(--color-text-primary);">$0.00</span></span>
+                <span class="text-secondary">${I18nService.t('subtotal')}: <span id="pos-summary-subtotal" class="font-semibold" style="color:var(--color-text-primary);">$0.00</span></span>
+                <span class="text-secondary">${I18nService.t('tax')} (15%): <span id="pos-summary-tax" class="font-semibold" style="color:var(--color-text-primary);">$0.00</span></span>
               </div>
               <div class="pos-calc-row" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:4px; margin-bottom:6px;">
-                <span class="font-bold text-xs">Total a Pagar:</span>
+                <span class="font-bold text-xs">${I18nService.t('pos_total_to_pay')}</span>
                 <span class="pos-calc-total" id="pos-summary-total" style="font-size:1.2rem; font-weight:800; color:#10b981;">$0.00</span>
               </div>
 
               <!-- Payment Method Selection -->
               <div>
-                <span class="form-label font-semibold" style="font-size: 0.7rem;">Método de Pago:</span>
+                <span class="form-label font-semibold" style="font-size: 0.7rem;">${I18nService.t('pos_payment_method_label')}</span>
                 <div class="pos-payment-selector" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-top:2px;">
-                  <button type="button" class="pos-payment-btn active" data-method="EFECTIVO" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">💵 Efectivo</button>
-                  <button type="button" class="pos-payment-btn" data-method="TARJETA" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">💳 Tarjeta</button>
-                  <button type="button" class="pos-payment-btn" data-method="TRANSFERENCIA" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">🏦 Transf.</button>
+                  <button type="button" class="pos-payment-btn active" data-method="EFECTIVO" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">${I18nService.t('pos_cash_method')}</button>
+                  <button type="button" class="pos-payment-btn" data-method="TARJETA" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">${I18nService.t('pos_card_method')}</button>
+                  <button type="button" class="pos-payment-btn" data-method="TRANSFERENCIA" style="padding:4px; font-size:0.72rem; font-weight:700; border-radius:4px;">${I18nService.t('pos_transfer_method')}</button>
                 </div>
               </div>
 
@@ -329,18 +329,18 @@ export class POSView extends Component {
               <div id="pos-cash-details" class="form-group" style="margin-top:6px; background:rgba(255,255,255,0.02); border:1px solid var(--color-border); border-radius:6px; padding:6px;">
                 <div style="display: flex; gap: var(--space-2); align-items: center;">
                   <div style="flex: 1;">
-                    <label class="form-label font-semibold" style="font-size: 0.68rem; margin-bottom: 1px; display:block;" for="pos-cash-paid">Efectivo Recibido ($):</label>
+                    <label class="form-label font-semibold" style="font-size: 0.68rem; margin-bottom: 1px; display:block;" for="pos-cash-paid">${I18nService.t('pos_cash_received_label')}</label>
                     <input type="number" id="pos-cash-paid" class="input input-sm" placeholder="0.00" min="0" step="any" style="width:100%; height:28px; font-weight:800; font-size:0.85rem; color:#10b981; padding:2px 6px;" />
                   </div>
                   <div style="flex: 1; text-align: right;">
-                    <span class="form-label font-semibold" style="font-size: 0.68rem; display: block; margin-bottom: 1px;">Cambio / Vuelto:</span>
+                    <span class="form-label font-semibold" style="font-size: 0.68rem; display: block; margin-bottom: 1px;">${I18nService.t('pos_change_label')}</span>
                     <strong class="text-success" id="pos-cash-change" style="font-size:1rem; font-weight:800;">$0.00</strong>
                   </div>
                 </div>
 
                 <!-- Billetes Rápidos -->
                 <div class="quick-cash-row" id="pos-quick-cash-row">
-                  <button type="button" class="quick-cash-btn" data-val="exact">Exacto</button>
+                  <button type="button" class="quick-cash-btn" data-val="exact">${I18nService.t('pos_exact_btn')}</button>
                   <button type="button" class="quick-cash-btn" data-val="50">+$50</button>
                   <button type="button" class="quick-cash-btn" data-val="100">+$100</button>
                   <button type="button" class="quick-cash-btn" data-val="200">+$200</button>
@@ -350,9 +350,9 @@ export class POSView extends Component {
 
               <!-- Checkout Actions -->
               <div style="display: flex; gap: 6px; margin-top: 6px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="pos-clear-cart" style="flex: 1; height:36px; font-weight:600; font-size:0.75rem;">Vaciar</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="pos-clear-cart" style="flex: 1; height:36px; font-weight:600; font-size:0.75rem;">${I18nService.t('pos_clear_btn')}</button>
                 <button type="button" class="btn btn-primary btn-sm pos-checkout-btn" id="pos-complete-checkout" style="flex: 2; height:36px; font-weight:800; font-size:0.85rem; background:#10b981; border:none; ${this.isBar ? 'background:#a855f7;' : ''}">
-                  💳 Completar y Cobrar
+                  ${I18nService.t('pos_checkout_btn')}
                 </button>
               </div>
             </div>
@@ -363,18 +363,18 @@ export class POSView extends Component {
             <!-- Search toolbar -->
             <div class="pos-catalog-toolbar" style="margin-bottom:6px;">
               <div class="inv-search" style="margin: 0;">
-                <input type="text" id="pos-catalog-search" class="input input-md" placeholder="🔍 Buscar producto..." style="height:34px; font-size:0.8rem;" />
+                <input type="text" id="pos-catalog-search" class="input input-md" placeholder="🔍 ${I18nService.t('pos_search_product')}" style="height:34px; font-size:0.8rem;" />
               </div>
             </div>
 
             <!-- Categories Tabs -->
             <div class="pos-categories-bar" id="pos-categories-bar">
-              <span class="pos-category-tab active" data-category="">Todos</span>
+              <span class="pos-category-tab active" data-category="">${I18nService.t('all')}</span>
             </div>
 
             <!-- Products Grid -->
             <div class="pos-catalog-grid" id="pos-catalog-grid">
-              <p class="text-xs text-secondary text-center py-5" style="grid-column: 1 / -1;">Cargando catálogo...</p>
+              <p class="text-xs text-secondary text-center py-5" style="grid-column: 1 / -1;">${I18nService.t('pos_loading_catalog')}</p>
             </div>
           </div>
         </div>
@@ -409,7 +409,7 @@ export class POSView extends Component {
       this.scanInputComponent = new BarcodeInput({
         id: 'pos-barcode-scanner',
         compact: true,
-        placeholder: 'Escanea códigos...',
+        placeholder: I18nService.t('pos_scan_placeholder_short'),
         onScan: (code, format) => this._handleBarcodeScan(code, format)
       });
       scanContainer.appendChild(this.scanInputComponent.mount());
@@ -562,7 +562,7 @@ export class POSView extends Component {
           isEditable: true
         });
       } else {
-        NotificationService.info('Aún no se ha generado ningún comprobante en esta sesión.');
+        NotificationService.info(I18nService.t('pos_no_receipt_yet'));
       }
     });
   }
@@ -631,7 +631,7 @@ export class POSView extends Component {
   async registerQuickCover() {
     try {
       const salePayload = {
-        items: [{ productId: 'cover', name: 'Entrada Cover Club', price: 100, qty: 1, total: 100 }],
+        items: [{ productId: 'cover', name: I18nService.t('pos_cover_name'), price: 100, qty: 1, total: 100 }],
         subtotal: 86.95,
         tax: 13.05,
         total: 100,
@@ -651,10 +651,10 @@ export class POSView extends Component {
         limite: this.state.aforo.limite || 300
       });
 
-      NotificationService.success('Entrada de cover registrada. Aforo incrementado.');
+      NotificationService.success(I18nService.t('pos_cover_success_toast'));
     } catch (e) {
       console.error('[POSView] Quick cover sale error:', e);
-      NotificationService.error('Error al registrar cover.');
+      NotificationService.error(I18nService.t('pos_cover_error_toast'));
     }
   }
 
@@ -676,7 +676,7 @@ export class POSView extends Component {
     if (countBadge) countBadge.textContent = billOrders.length;
 
     list.innerHTML = billOrders.map(o => {
-      const tableName = o.tableName || `Mesa ${o.tableId.replace(/^mesa-/i, '')}`;
+      const tableName = o.tableName || `${I18nService.t('waiter_table_number')} ${o.tableId.replace(/^mesa-/i, '')}`;
       const clientInfo = o.clientName ? ` · ${o.clientName}` : (o.accountType === 'SEPARADO' ? ` · Comensal` : '');
       const orderLabel = `${tableName}${clientInfo}`;
 
@@ -684,14 +684,14 @@ export class POSView extends Component {
         <div class="pos-bill-request-card">
           <div style="display:flex; flex-direction:column;">
             <span class="font-bold" style="color:#fb923c; font-size:0.82rem;">${orderLabel}</span>
-            <span class="text-xs text-secondary">${o.items ? o.items.length : 0} artículos</span>
+            <span class="text-xs text-secondary">${o.items ? o.items.length : 0} ${I18nService.t('ri_items')}</span>
           </div>
           <span class="font-bold text-sm" style="color:#10b981;">$${Number(o.total || 0).toFixed(2)}</span>
           <button class="btn btn-xs btn-primary pos-btn-load-bill" 
                   data-table-id="${o.tableId}" 
                   data-order-id="${o.id}"
                   style="background:#fb923c; color:#000; border:none; padding:4px 12px; border-radius:6px; cursor:pointer; font-weight:800; font-size:0.75rem;">
-            Cargar 📥
+            ${I18nService.t('pos_load_btn')}
           </button>
         </div>
       `;
@@ -728,9 +728,9 @@ export class POSView extends Component {
       if (clientGroup) clientGroup.style.display = 'block';
       if (clientSelector) {
         clientSelector.innerHTML = `
-          <option value="">-- Seleccionar Cliente --</option>
+          <option value="">${I18nService.t('pos_select_client_option')}</option>
           ${tableOrders.map(o => {
-          const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
+          const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `${I18nService.t('pos_order_num')}${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
           return `<option value="${o.id}" ${o.id === orderId ? 'selected' : ''}>${label}</option>`;
         }).join('')}
         `;
@@ -742,8 +742,8 @@ export class POSView extends Component {
 
     this.renderTicket();
     this.recalculateTotals();
-    const nameInfo = targetOrder.clientName ? `${targetOrder.tableName || `Mesa ${tableId}`} (${targetOrder.clientName})` : (targetOrder.tableName || `Mesa ${tableId}`);
-    NotificationService.success(`Cuenta de ${nameInfo} cargada.`);
+    const nameInfo = targetOrder.clientName ? `${targetOrder.tableName || `${I18nService.t('waiter_table_number')} ${tableId}`} (${targetOrder.clientName})` : (targetOrder.tableName || `${I18nService.t('waiter_table_number')} ${tableId}`);
+    NotificationService.success(I18nService.t('pos_account_loaded_toast', { name: nameInfo }));
   }
 
   mergeTablesAndPopulateSelector(element) {
@@ -758,7 +758,7 @@ export class POSView extends Component {
       if (id && !tableMap.has(id)) {
         tableMap.set(id, {
           id,
-          name: qr.label || `Mesa ${id.replace(/\D/g, '')}`,
+          name: qr.label || `${I18nService.t('waiter_table_number')} ${id.replace(/\D/g, '')}`,
           status: 'FREE',
           activeOrderId: null,
           type: qr.type || 'mesa'
@@ -779,11 +779,11 @@ export class POSView extends Component {
 
     const previousVal = selector.value;
     selector.innerHTML = `
-      <option value="">-- Venta Directa (Sin Mesa) --</option>
+      <option value="">${I18nService.t('pos_direct_sale_option')}</option>
       ${occupiedTables.map(t => {
       const tableOrders = this.state.orders.filter(o => o.tableId === t.id && o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
       const isBillRequested = tableOrders.some(o => o.status === 'ESPERANDO_PAGO');
-      const label = isBillRequested ? `⚠️ ${t.name} (Pidió Cuenta)` : `● ${t.name} (En servicio)`;
+      const label = isBillRequested ? `⚠️ ${t.name} ${I18nService.t('pos_table_requested_bill')}` : `● ${t.name} ${I18nService.t('pos_table_in_service')}`;
       return `<option value="${t.id}">${label}</option>`;
     }).join('')}
     `;
@@ -812,7 +812,7 @@ export class POSView extends Component {
     const tableOrders = this.state.orders.filter(o => o.tableId === tableId && o.status !== 'COMPLETED' && o.status !== 'CANCELADA');
 
     if (tableOrders.length === 0) {
-      NotificationService.info('Esta mesa no posee comandas activas.');
+      NotificationService.info(I18nService.t('pos_table_no_orders'));
       this.clearCart();
       if (clientGroup) clientGroup.style.display = 'none';
       return;
@@ -824,9 +824,9 @@ export class POSView extends Component {
       if (clientGroup) clientGroup.style.display = 'block';
       if (clientSelector) {
         clientSelector.innerHTML = `
-          <option value="">-- Seleccionar Cliente --</option>
+          <option value="">${I18nService.t('pos_select_client_option')}</option>
           ${tableOrders.map(o => {
-          const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `Comanda #${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
+          const label = o.clientName ? `${o.clientName} ($${Number(o.total || 0).toFixed(2)})` : `${I18nService.t('pos_order_num')}${o.id.slice(-4).toUpperCase()} ($${Number(o.total || 0).toFixed(2)})`;
           return `<option value="${o.id}">${label}</option>`;
         }).join('')}
         `;
@@ -840,7 +840,7 @@ export class POSView extends Component {
       this.state.cart = JSON.parse(JSON.stringify(singleOrder.items || []));
       this.renderTicket();
       this.recalculateTotals();
-      NotificationService.success(`Comanda cargada.`);
+      NotificationService.success(I18nService.t('pos_order_loaded_toast'));
     }
   }
 
@@ -856,7 +856,7 @@ export class POSView extends Component {
       this.state.cart = JSON.parse(JSON.stringify(selectedOrder.items || []));
       this.renderTicket();
       this.recalculateTotals();
-      NotificationService.success(`Cuenta de comensal cargada.`);
+      NotificationService.success(I18nService.t('pos_client_loaded_toast'));
     }
   }
 
@@ -867,7 +867,7 @@ export class POSView extends Component {
 
     const currentSelected = this.state.selectedCategory;
     const tabsHTML = `
-      <span class="pos-category-tab ${!currentSelected ? 'active' : ''}" data-category="">Todos</span>
+      <span class="pos-category-tab ${!currentSelected ? 'active' : ''}" data-category="">${I18nService.t('all')}</span>
       ${this.state.categories.map(cat => `
         <span class="pos-category-tab ${currentSelected === cat ? 'active' : ''}" data-category="${cat}">${cat}</span>
       `).join('')}
@@ -894,7 +894,7 @@ export class POSView extends Component {
     });
 
     if (filtered.length === 0) {
-      grid.innerHTML = `<p class="text-xs text-secondary text-center py-5" style="grid-column: 1 / -1;">No se encontraron artículos.</p>`;
+      grid.innerHTML = `<p class="text-xs text-secondary text-center py-5" style="grid-column: 1 / -1;">${I18nService.t('pos_no_items_found')}</p>`;
       return;
     }
 
@@ -905,14 +905,14 @@ export class POSView extends Component {
       const formattedPrice = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(p.price || 0);
       const stockColor = stock === 0 ? '#ef4444' : (isLow ? '#f59e0b' : '#94a3b8');
       const emoji = isBar ? '🍹' : '🍽️';
-      const productName = p.name || p.nombre || p.title || 'Producto';
+      const productName = p.name || p.nombre || p.title || I18nService.t('inv_product_name');
 
       const iconHtml = p.image
         ? `<img src="${p.image}" style="width:26px;height:26px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>';" />`
         : `<span style="font-size:1.1rem;line-height:1;flex-shrink:0;">${emoji}</span>`;
 
       return `
-        <div class="pos-catalog-item" data-id="${p.id}" title="Agregar ${productName}">
+        <div class="pos-catalog-item" data-id="${p.id}" title="${I18nService.t('pos_add_btn')} ${productName}">
           <div class="pos-catalog-item-main">
             ${iconHtml}
             <span class="pos-catalog-item-title">${productName}</span>
@@ -920,7 +920,7 @@ export class POSView extends Component {
           <div class="pos-catalog-item-side">
             <span style="font-size:0.72rem;font-weight:600;color:${stockColor};">${stock}&nbsp;${p.unit || 'uds'}</span>
             <span style="font-size:0.85rem;font-weight:800;color:#10b981;">${formattedPrice}</span>
-            <span class="pos-catalog-item-add">+ Agregar</span>
+            <span class="pos-catalog-item-add">${I18nService.t('pos_add_btn')}</span>
           </div>
         </div>
       `;
@@ -938,7 +938,7 @@ export class POSView extends Component {
     const targetQty = (existing ? existing.qty : 0) + qty;
 
     if (targetQty > Number(product.stock || 0)) {
-      NotificationService.warning(`Stock insuficiente para "${product.name}". Disponible: ${product.stock}`);
+      NotificationService.warning(I18nService.t('pos_insufficient_stock', { name: product.name, stock: product.stock }));
       return;
     }
 
@@ -959,7 +959,7 @@ export class POSView extends Component {
 
     this.renderTicket();
     this.recalculateTotals();
-    NotificationService.success(`Agregado al ticket: ${product.name}`);
+    NotificationService.success(I18nService.t('pos_item_added_toast', { name: product.name }));
   }
 
   updateItemQty(productId, change) {
@@ -976,7 +976,7 @@ export class POSView extends Component {
     }
 
     if (newQty > Number(product.stock || 0)) {
-      NotificationService.warning(`Stock máximo alcanzado para "${product.name}".`);
+      NotificationService.warning(I18nService.t('pos_max_stock_reached', { name: product.name }));
       return;
     }
 
@@ -991,7 +991,7 @@ export class POSView extends Component {
     this.state.cart = this.state.cart.filter(item => item.productId !== productId);
     this.renderTicket();
     this.recalculateTotals();
-    NotificationService.info('Artículo quitado del ticket.');
+    NotificationService.info(I18nService.t('pos_item_removed_toast'));
   }
 
   clearCart() {
@@ -1011,20 +1011,20 @@ export class POSView extends Component {
     const countEl = root?.querySelector('#pos-ticket-items-count');
 
     const totalQty = this.state.cart.reduce((sum, i) => sum + (i.qty || 1), 0);
-    if (countEl) countEl.textContent = `${totalQty} artículos`;
+    if (countEl) countEl.textContent = I18nService.t('pos_items_count', { count: totalQty });
 
     // Actualizar encabezado del ticket
     if (titleEl) {
       if (this.state.loadedOrderId) {
         const order = this.state.orders.find(o => o.id === this.state.loadedOrderId);
-        const tableName = order?.tableName || `Mesa ${this.state.loadedTableId.replace(/^mesa-/i, '')}`;
-        const client = order?.clientName ? ` · Cliente: ${order.clientName}` : '';
+        const tableName = order?.tableName || `${I18nService.t('waiter_table_number')} ${this.state.loadedTableId.replace(/^mesa-/i, '')}`;
+        const client = order?.clientName ? ` · ${I18nService.t('pos_client')}: ${order.clientName}` : '';
         titleEl.innerHTML = `<span style="color:#fb923c; font-weight:800;">🧾 ${tableName}${client}</span>`;
       } else if (this.state.loadedTableId) {
         const table = this.state.tables.find(t => t.id === this.state.loadedTableId);
-        titleEl.innerHTML = `<span style="color:#a855f7; font-weight:800;">📌 ${table?.name || `Mesa ${this.state.loadedTableId}`}</span>`;
+        titleEl.innerHTML = `<span style="color:#a855f7; font-weight:800;">📌 ${table?.name || `${I18nService.t('waiter_table_number')} ${this.state.loadedTableId}`}</span>`;
       } else {
-        titleEl.innerHTML = `<span class="font-bold">🛒 Venta Directa (Mostrador)</span>`;
+        titleEl.innerHTML = `<span class="font-bold">${I18nService.t('pos_counter_sale')}</span>`;
       }
     }
 
@@ -1034,8 +1034,8 @@ export class POSView extends Component {
       container.innerHTML = `
         <div class="pos-ticket-empty" style="text-center py-6">
           <div class="pos-ticket-empty-icon" style="font-size:2.2rem; margin-bottom:6px;">🛒</div>
-          <h4 class="font-semibold text-sm">El ticket está vacío</h4>
-          <p class="text-xs text-secondary mt-1">Carga una mesa ocupada, escanea un artículo o haz clic en los productos del catálogo.</p>
+          <h4 class="font-semibold text-sm">${I18nService.t('pos_empty_cart')}</h4>
+          <p class="text-xs text-secondary mt-1">${I18nService.t('pos_empty_cart_hint')}</p>
         </div>
       `;
       return;
@@ -1045,7 +1045,7 @@ export class POSView extends Component {
       <div class="pos-ticket-item animate-slide-up">
         <div>
           <div class="pos-item-name font-bold" title="${item.name}">${item.name}</div>
-          <span class="text-xs text-secondary" style="font-size:0.7rem;">$${Number(item.price).toFixed(2)} c/u</span>
+          <span class="text-xs text-secondary" style="font-size:0.7rem;">$${Number(item.price).toFixed(2)} ${I18nService.t('pos_each_short')}</span>
         </div>
         <div class="d-flex align-items-center gap-1">
           <button class="pos-qty-btn" data-id="${item.productId}" data-change="-1">-</button>
@@ -1056,7 +1056,7 @@ export class POSView extends Component {
           $${Number(item.total).toFixed(2)}
         </div>
         <div>
-          <button class="pos-item-delete" data-id="${item.productId}" title="Quitar artículo">🗑️</button>
+          <button class="pos-item-delete" data-id="${item.productId}" title="${I18nService.t('pos_remove_title')}">🗑️</button>
         </div>
       </div>
     `).join('');
@@ -1131,7 +1131,7 @@ export class POSView extends Component {
     if (product) {
       this.addToCart(product.id, 1);
     } else {
-      NotificationService.warning(`Código "${code}" no registrado en tu catálogo.`);
+      NotificationService.warning(I18nService.t('pos_code_not_registered', { code }));
     }
 
     // Clear field and refocus
@@ -1147,7 +1147,7 @@ export class POSView extends Component {
 
   async submitCheckout() {
     if (this.state.cart.length === 0) {
-      NotificationService.error('El ticket de venta está vacío.');
+      NotificationService.error(I18nService.t('pos_error_empty_ticket'));
       return;
     }
 
@@ -1158,7 +1158,7 @@ export class POSView extends Component {
     // Cash payment validation
     if (this.state.paymentMethod === 'EFECTIVO' && this.state.amountPaid) {
       if (Number(this.state.amountPaid) < total) {
-        NotificationService.error('El efectivo recibido es menor al total a pagar.');
+        NotificationService.error(I18nService.t('pos_error_insufficient_cash'));
         return;
       }
     }
@@ -1166,7 +1166,7 @@ export class POSView extends Component {
     const checkoutBtn = this.layout.$('#pos-complete-checkout');
     if (checkoutBtn) {
       checkoutBtn.disabled = true;
-      checkoutBtn.textContent = 'Procesando...';
+      checkoutBtn.textContent = I18nService.t('processing');
     }
 
     try {
@@ -1253,7 +1253,7 @@ export class POSView extends Component {
             waiterName: null,
             orderTotal: null
           });
-          NotificationService.success('Venta completada. Mesa liberada.');
+          NotificationService.success(I18nService.t('pos_sale_completed_table_free'));
         } else {
           const newTableTotal = remaining.reduce((sum, o) => sum + Number(o.total || 0), 0);
           const remainingIds = remaining.map(o => o.id);
@@ -1263,10 +1263,10 @@ export class POSView extends Component {
             activeOrderIds: remainingIds,
             orderTotal: newTableTotal
           });
-          NotificationService.success('Venta completada. Cuenta de comensal liquidada.');
+          NotificationService.success(I18nService.t('pos_sale_completed_client_free'));
         }
       } else {
-        NotificationService.success(`Venta completada — Comprobante Nº ${numeroComprobante}`);
+        NotificationService.success(I18nService.t('pos_sale_completed_msg', { num: numeroComprobante }));
       }
 
       // Reset loaded states & clear cart
@@ -1286,11 +1286,11 @@ export class POSView extends Component {
       });
     } catch (err) {
       console.error('[POSView] Error processing checkout:', err);
-      alert(`Error al registrar la venta: ${err.message}`);
+      alert(I18nService.t('pos_save_error', { error: err.message }));
     } finally {
       if (checkoutBtn) {
         checkoutBtn.disabled = false;
-        checkoutBtn.textContent = 'Completar Venta';
+        checkoutBtn.textContent = I18nService.t('pos_complete_sale_btn');
       }
     }
   }

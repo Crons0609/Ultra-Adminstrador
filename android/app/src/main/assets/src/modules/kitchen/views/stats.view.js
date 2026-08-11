@@ -2,6 +2,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { Chart } from '../../../components/data/chart.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class KitchenStatsView extends Component {
   constructor(params = {}) {
@@ -11,12 +12,12 @@ export class KitchenStatsView extends Component {
     this.chart = new Chart({
       type: 'bar',
       labels: [],
-      datasets: [{ label: 'Platos preparados', data: [], color: '#fb923c' }]
+      datasets: [{ label: I18nService.t('ks_label_prepared'), data: [], color: '#fb923c' }]
     });
 
     this.layout = new PageLayout({
-      title: 'Estadísticas de Cocina',
-      subtitle: 'Rendimiento del área, tiempo promedio de preparación y platos más demandados.',
+      title: I18nService.t('ks_title'),
+      subtitle: I18nService.t('ks_subtitle'),
       contentHTML: `
         <style>
           .kitchen-kpis { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:var(--space-4); margin-bottom:var(--space-6); }
@@ -28,34 +29,34 @@ export class KitchenStatsView extends Component {
         <div class="kitchen-kpis animate-fade-in">
           <div class="kitchen-kpi">
             <div class="kitchen-kpi-val" id="ks-total-orders">0</div>
-            <div class="kitchen-kpi-label">Comandas Completadas Hoy</div>
+            <div class="kitchen-kpi-label">${I18nService.t('ks_kpi_completed')}</div>
           </div>
           <div class="kitchen-kpi" style="border-top-color:var(--color-accent);">
             <div class="kitchen-kpi-val" style="color:var(--color-accent);" id="ks-avg-time">—</div>
-            <div class="kitchen-kpi-label">Tiempo Promedio de Preparación</div>
+            <div class="kitchen-kpi-label">${I18nService.t('ks_kpi_avg_time')}</div>
           </div>
           <div class="kitchen-kpi" style="border-top-color:var(--color-success);">
             <div class="kitchen-kpi-val" style="color:var(--color-success);" id="ks-efficiency">0%</div>
-            <div class="kitchen-kpi-label">Comandas en tiempo (&lt; 15 min)</div>
+            <div class="kitchen-kpi-label">${I18nService.t('ks_kpi_efficiency')}</div>
           </div>
           <div class="kitchen-kpi" style="border-top-color:var(--color-warning);">
             <div class="kitchen-kpi-val" style="color:var(--color-warning);" id="ks-pending">0</div>
-            <div class="kitchen-kpi-label">En Preparación Ahora</div>
+            <div class="kitchen-kpi-label">${I18nService.t('ks_kpi_pending')}</div>
           </div>
         </div>
 
         <div class="grid-responsive">
           <div class="col-8">
             <div class="card p-5">
-              <h3 class="text-lg font-semibold mb-4">Platos Más Pedidos (Hoy)</h3>
+              <h3 class="text-lg font-semibold mb-4">${I18nService.t('ks_chart_title')}</h3>
               <div id="kitchen-chart-container" style="width:100%;height:260px;"></div>
             </div>
           </div>
           <div class="col-4">
             <div class="card p-5">
-              <h3 class="text-lg font-semibold mb-4">Top 5 Platos</h3>
+              <h3 class="text-lg font-semibold mb-4">${I18nService.t('ks_top_title')}</h3>
               <div id="kitchen-top-list" class="d-flex flex-column gap-2">
-                <p class="text-xs text-secondary py-4 text-center">Sin datos disponibles aún.</p>
+                <p class="text-xs text-secondary py-4 text-center">${I18nService.t('ks_no_data')}</p>
               </div>
             </div>
           </div>
@@ -95,7 +96,7 @@ export class KitchenStatsView extends Component {
     const withTimes = completed.filter(o => o.readyAt && o.createdAt);
     if (withTimes.length > 0) {
       const totalMs = withTimes.reduce((sum, o) => sum + (o.readyAt - o.createdAt), 0);
-      avgMins = `${Math.round(totalMs / withTimes.length / 60000)} min`;
+      avgMins = `${Math.round(totalMs / withTimes.length / 60000)} ${I18nService.t('minutes_short')}`;
     }
 
     // Efficiency (under 15 min)
@@ -120,7 +121,7 @@ export class KitchenStatsView extends Component {
     if (sorted.length > 0) {
       this.chart.updateData(
         sorted.map(([name]) => name),
-        [{ label: 'Platos preparados', data: sorted.map(([, c]) => c), color: '#fb923c' }]
+        [{ label: I18nService.t('ks_label_prepared'), data: sorted.map(([, c]) => c), color: '#fb923c' }]
       );
 
       const topList = q('#kitchen-top-list');

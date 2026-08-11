@@ -29,10 +29,10 @@ export class CompaniesView extends Component {
             const city = row.city || row.municipio || '';
             const state = row.state || row.estado || '';
             const locationParts = [city, state, country].filter(Boolean).join(', ');
-            const typeStr = row.businessType || 'Restaurante';
+            const typeStr = row.businessType || I18nService.t('auth_business_type');
             return `
               <div>
-                <div style="font-weight: 700; color: var(--color-text-primary); font-size: 0.88rem;">${val || 'Sin Nombre'}</div>
+                <div style="font-weight: 700; color: var(--color-text-primary); font-size: 0.88rem;">${val || I18nService.t('sa_no_name')}</div>
                 <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                   <span style="color: #a78bfa; font-weight: 600; background: rgba(167, 139, 250, 0.1); padding: 1px 6px; border-radius: 4px;">${typeStr}</span>
                   <span style="opacity: 0.7;">📍 ${locationParts}</span>
@@ -69,7 +69,7 @@ export class CompaniesView extends Component {
           label: I18nService.t('sa_company_owner'),
           render: (val, row) => `
             <div>
-              <div style="font-weight: 600; font-size: 0.84rem;">${val || row.ownerEmail || 'Sin Asignar'}</div>
+              <div style="font-weight: 600; font-size: 0.84rem;">${val || row.ownerEmail || I18nService.t('sa_not_assigned')}</div>
               ${row.ownerPhone ? `<div style="font-size: 0.73rem; color: var(--color-text-secondary); margin-top:2px;">📞 ${row.ownerPhone}</div>` : ''}
             </div>
           `
@@ -110,7 +110,7 @@ export class CompaniesView extends Component {
     // PageLayout setup
     this.layout = new PageLayout({
       title: I18nService.t('sa_companies'),
-      subtitle: 'Administration and module management for companies registered on the platform.',
+      subtitle: I18nService.t('sa_companies_subtitle'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-company">
           <span style="margin-right: var(--space-1);">+</span> ${I18nService.t('sa_add_company')}
@@ -126,7 +126,7 @@ export class CompaniesView extends Component {
 
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h3 class="text-lg font-semibold">Registros de Clientes Activos</h3>
+            <h3 class="text-lg font-semibold">${I18nService.t('sa_active_customers_title')}</h3>
           </div>
           <!-- Table container -->
           <div id="companies-table-wrapper"></div>
@@ -150,9 +150,9 @@ export class CompaniesView extends Component {
       let plans = await FirestoreService.listPlans();
       if (!plans || !plans.length) {
         const defaults = [
-          { id: 'BASIC', name: 'Plan Basic', price: 499, currency: 'NIO', duration: 'Mensual', description: 'Ideal para cafeterías pequeñas o un solo local.', benefits: '1 Sucursal, 3 Usuarios activos, Menú Digital QR', userLimit: 3, employeeLimit: 5, storageGb: 1, branchLimit: 1, productLimit: 100, status: 'ACTIVO', color: '#64748b', icon: 'store', order: 1, enabledFeatures: 'menu_qr,inventario' },
-          { id: 'PREMIUM', name: 'Plan Premium', price: 999, currency: 'NIO', duration: 'Mensual', description: 'El más popular para restaurantes en crecimiento.', benefits: '3 Sucursales, Usuarios ilimitados, Módulo KDS e Inventario', userLimit: 20, employeeLimit: 50, storageGb: 5, branchLimit: 3, productLimit: 1000, status: 'ACTIVO', color: '#7c75ff', icon: 'crown', order: 2, enabledFeatures: 'menu_qr,inventario,kds,reportes' },
-          { id: 'ENTERPRISE', name: 'Plan Enterprise', price: 1999, currency: 'NIO', duration: 'Mensual', description: 'Para franquicias y grandes cadenas de comida.', benefits: 'Sucursales ilimitadas, Soporte prioritario 24/7, API abierta e informes avanzados', userLimit: 0, employeeLimit: 0, storageGb: 25, branchLimit: 0, productLimit: 0, status: 'ACTIVO', color: '#16a34a', icon: 'building', order: 3, enabledFeatures: 'menu_qr,inventario,kds,reportes,api,soporte_prioritario' }
+          { id: 'BASIC', name: I18nService.t('plan_name') + ' Basic', price: 499, currency: 'NIO', duration: I18nService.t('fin_monthly'), description: I18nService.t('sa_plan_basic_desc'), benefits: I18nService.t('sa_plan_basic_benefits'), userLimit: 3, employeeLimit: 5, storageGb: 1, branchLimit: 1, productLimit: 100, status: 'ACTIVO', color: '#64748b', icon: 'store', order: 1, enabledFeatures: 'menu_qr,inventario' },
+          { id: 'PREMIUM', name: I18nService.t('plan_name') + ' Premium', price: 999, currency: 'NIO', duration: I18nService.t('fin_monthly'), description: I18nService.t('sa_plan_premium_desc'), benefits: I18nService.t('sa_plan_premium_benefits'), userLimit: 20, employeeLimit: 50, storageGb: 5, branchLimit: 3, productLimit: 1000, status: 'ACTIVO', color: '#7c75ff', icon: 'crown', order: 2, enabledFeatures: 'menu_qr,inventario,kds,reportes' },
+          { id: 'ENTERPRISE', name: I18nService.t('plan_name') + ' Enterprise', price: 1999, currency: 'NIO', duration: I18nService.t('fin_monthly'), description: I18nService.t('sa_plan_enterprise_desc'), benefits: I18nService.t('sa_plan_enterprise_benefits'), userLimit: 0, employeeLimit: 0, storageGb: 25, branchLimit: 0, productLimit: 0, status: 'ACTIVO', color: '#16a34a', icon: 'building', order: 3, enabledFeatures: 'menu_qr,inventario,kds,reportes,api,soporte_prioritario' }
         ];
         await Promise.all(defaults.map(plan => FirestoreService.savePlan(plan.id, plan)));
         plans = defaults;
@@ -165,7 +165,7 @@ export class CompaniesView extends Component {
 
     } catch (e) {
       console.error('[CompaniesView] Fallo al leer de la base de datos:', e);
-      NotificationService.error('Error al sincronizar con la base de datos remota.');
+      NotificationService.error(I18nService.t('sa_error_sync'));
     }
   }
 
@@ -439,21 +439,21 @@ export class CompaniesView extends Component {
     const formHTML = `
       <form id="add-company-form" class="d-flex flex-column gap-4" style="color: var(--color-text-primary); max-height: 75vh; overflow-y: auto; padding-right: 4px;">
         <div class="form-group mb-0">
-          <label class="form-label" for="comp-name">Nombre de la Empresa / Local</label>
+          <label class="form-label" for="comp-name">${I18nService.t('sa_company_name_label')}</label>
           <input type="text" id="comp-name" class="input input-md" placeholder="Ej. Pizzería San Pedro" required />
         </div>
 
         <!-- OWNER CREDENTIALS -->
         <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
-          <label class="form-label mb-3" style="font-weight: 600; color: var(--color-accent); display: block;">🔑 Credenciales del Dueño (Owner)</label>
+          <label class="form-label mb-3" style="font-weight: 600; color: var(--color-accent); display: block;">${I18nService.t('sa_owner_creds_title')}</label>
           <div class="form-grid-2">
             <div class="form-group mb-0">
-              <label class="form-label" for="owner-email">Correo Electrónico</label>
+              <label class="form-label" for="owner-email">${I18nService.t('auth_email')}</label>
               <input type="email" id="owner-email" class="input input-md" placeholder="dueno@negocio.com" required />
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="owner-password">Contraseña de Acceso</label>
-              <input type="password" id="owner-password" class="input input-md" placeholder="Mín. 6 caracteres" minlength="6" required />
+              <label class="form-label" for="owner-password">${I18nService.t('sa_access_pass_label')}</label>
+              <input type="password" id="owner-password" class="input input-md" placeholder="${I18nService.t('sa_pass_min_chars')}" minlength="6" required />
             </div>
           </div>
         </div>
@@ -461,25 +461,25 @@ export class CompaniesView extends Component {
         <!-- UBICACIÓN DEL ESTABLECIMIENTO / LOCAL -->
         <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
           <label class="form-label mb-3" style="font-weight: 600; color: var(--color-accent); display: flex; align-items: center; gap: 6px;">
-            📍 Ubicación del Establecimiento / Local
+            ${I18nService.t('sa_location_title')}
           </label>
           <div class="form-grid-2" style="margin-bottom: var(--space-3);">
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-country">País</label>
+              <label class="form-label" for="comp-country">${I18nService.t('sa_country_label')}</label>
               <input type="text" id="comp-country" class="input input-md" placeholder="Ej. Nicaragua" value="Nicaragua" required />
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-state">Estado / Departamento</label>
+              <label class="form-label" for="comp-state">${I18nService.t('sa_state_label')}</label>
               <input type="text" id="comp-state" class="input input-md" placeholder="Ej. Managua" required />
             </div>
           </div>
           <div class="form-grid-2">
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-city">Municipio / Ciudad</label>
+              <label class="form-label" for="comp-city">${I18nService.t('sa_city_label')}</label>
               <input type="text" id="comp-city" class="input input-md" placeholder="Ej. Managua" required />
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-zip">Código Postal (Opcional)</label>
+              <label class="form-label" for="comp-zip">${I18nService.t('sa_zip_label')}</label>
               <input type="text" id="comp-zip" class="input input-md" placeholder="Ej. 11001" />
             </div>
           </div>
@@ -489,13 +489,13 @@ export class CompaniesView extends Component {
         <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3);">
           <div class="form-grid-2">
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-type">Tipo de Negocio</label>
+              <label class="form-label" for="comp-type">${I18nService.t('sa_biz_type_label')}</label>
               <select id="comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 ${getBusinessTypeOptions()}
               </select>
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-plan">Plan SaaS</label>
+              <label class="form-label" for="comp-plan">${I18nService.t('sa_saas_plan_label')}</label>
               <select id="comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 ${planOptionsHTML}
               </select>
@@ -507,43 +507,43 @@ export class CompaniesView extends Component {
         <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
           <div class="form-grid-2">
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-status">Estado del Negocio</label>
+              <label class="form-label" for="comp-status">${I18nService.t('sa_biz_status_label')}</label>
               <select id="comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                <option value="ACTIVO">Activo (Cuenta normal)</option>
-                <option value="INACTIVO">Inactivo (Suspendido)</option>
-                <option value="FALTA_PAGO">Falta de Pago (Bloqueo)</option>
+                <option value="ACTIVO">${I18nService.t('sa_status_active_desc')}</option>
+                <option value="INACTIVO">${I18nService.t('sa_status_inactive_desc')}</option>
+                <option value="FALTA_PAGO">${I18nService.t('sa_status_unpaid_desc')}</option>
               </select>
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="comp-expiration">📅 Fecha Límite de Suscripción</label>
+              <label class="form-label" for="comp-expiration">${I18nService.t('sa_sub_expiry_label')}</label>
               <input type="date" id="comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" />
-              <small style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 4px; display: block;">Dejar vacío si no tiene vencimiento</small>
+              <small style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 4px; display: block;">${I18nService.t('sa_expiry_hint')}</small>
             </div>
           </div>
         </div>
 
         <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-3);">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-3);">
-            <label class="form-label mb-0" style="font-weight: 700; color: var(--color-text-primary); font-size: 0.95rem;">🧩 Módulos del Sistema</label>
+            <label class="form-label mb-0" style="font-weight: 700; color: var(--color-text-primary); font-size: 0.95rem;">${I18nService.t('sa_modules_title')}</label>
             <div style="display:flex; gap:8px;">
-              <button type="button" id="modules-enable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-accent); background:transparent; color:var(--color-accent); cursor:pointer; transition:all 0.2s;">✓ Todos</button>
-              <button type="button" id="modules-disable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-border); background:transparent; color:var(--color-text-secondary); cursor:pointer; transition:all 0.2s;">✗ Ninguno</button>
+              <button type="button" id="modules-enable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-accent); background:transparent; color:var(--color-accent); cursor:pointer; transition:all 0.2s;">✓ ${I18nService.t('select_all').replace(' Seleccionar Todo', 'Todos')}</button>
+              <button type="button" id="modules-disable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-border); background:transparent; color:var(--color-text-secondary); cursor:pointer; transition:all 0.2s;">✗ ${I18nService.t('deselect_all').replace(' Deseleccionar Todo', 'Ninguno')}</button>
             </div>
           </div>
-          <p style="color:var(--color-text-secondary); font-size:0.78rem; margin-bottom:var(--space-3);">Selecciona únicamente los módulos que este negocio necesita. El dueño solo verá los módulos activados.</p>
+          <p style="color:var(--color-text-secondary); font-size:0.78rem; margin-bottom:var(--space-3);">${I18nService.t('sa_modules_desc')}</p>
           ${this._renderModuleCheckboxes(getDefaultModuleConfig())}
         </div>
       </form>
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">Guardar Empresa</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${I18nService.t('sa_save_company_btn')}</button>
     `;
 
     // Instantiate Modal Component
     this.modalInstance = new Modal({
-      title: 'Registrar y Configurar Nuevo Negocio',
+      title: I18nService.t('sa_add_company_modal_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'lg'
@@ -587,7 +587,7 @@ export class CompaniesView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando en la nube...';
+      submitBtn.textContent = I18nService.t('sa_saving_cloud');
     }
 
     const name = this.modalInstance.$('#comp-name').value.trim();
@@ -613,10 +613,10 @@ export class CompaniesView extends Component {
     const newCompanyId = FirestoreService.sanitiseKey(name);
 
     if (!newCompanyId) {
-      alert('El nombre del negocio contiene caracteres no válidos. Usa letras y números.');
+      alert(I18nService.t('sa_invalid_name_error'));
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar Empresa';
+        submitBtn.textContent = I18nService.t('sa_save_company_btn');
       }
       return;
     }
@@ -661,19 +661,19 @@ export class CompaniesView extends Component {
 
     } catch (error) {
       console.error('[CompaniesView] Error en el registro completo del negocio:', error);
-      alert(`Error al registrar el negocio: ${error.message || error}`);
+      alert(I18nService.t('sa_register_error', { error: error.message || error }));
       
       // Reset button state on error
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar Empresa';
+        submitBtn.textContent = I18nService.t('sa_save_company_btn');
       }
     }
   }
 
   openCredentialsModal(company) {
     if (company) {
-      this.showOwnerCredentialsModal(company.name, company.ownerEmail || 'Sin correo', company.ownerPassword || '••••••••');
+      this.showOwnerCredentialsModal(company.name, company.ownerEmail || I18nService.t('sa_not_assigned'), company.ownerPassword || '••••••••');
     }
   }
 
@@ -688,41 +688,41 @@ export class CompaniesView extends Component {
       <div class="d-flex flex-column gap-4" style="color: var(--color-text-primary);">
         <div style="text-align: center; font-size: 2.5rem;">🎉</div>
         <div style="text-align: center;">
-          <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;">Negocio registrado exitosamente</h3>
-          <p style="font-size: 0.875rem; color: var(--color-text-secondary);">Envíale al dueño las siguientes credenciales para acceder a su panel.</p>
+          <h3 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;">${I18nService.t('sa_register_success_title')}</h3>
+          <p style="font-size: 0.875rem; color: var(--color-text-secondary);">${I18nService.t('sa_register_success_desc')}</p>
         </div>
 
         <!-- Credentials Card -->
         <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4);">
-          <p style="font-size: 0.75rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-2);">DATOS DE ACCESO DEL DUEÑO</p>
+          <p style="font-size: 0.75rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-2);">${I18nService.t('sa_owner_access_data')}</p>
           <div style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 0.875rem;">
-            <div><span style="color: var(--color-text-secondary);">Empresa:</span> <strong>${name}</strong></div>
-            <div><span style="color: var(--color-text-secondary);">Correo:</span> <strong>${ownerEmail}</strong></div>
-            <div><span style="color: var(--color-text-secondary);">Contraseña inicial:</span> <strong>${ownerPassword}</strong></div>
+            <div><span style="color: var(--color-text-secondary);">${I18nService.t('ri_invoice_num').replace('Factura', 'Empresa')}:</span> <strong>${name}</strong></div>
+            <div><span style="color: var(--color-text-secondary);">${I18nService.t('sup_email')}:</span> <strong>${ownerEmail}</strong></div>
+            <div><span style="color: var(--color-text-secondary);">${I18nService.t('sa_initial_pass_label')}</span> <strong>${ownerPassword}</strong></div>
           </div>
         </div>
 
         <!-- Access URL -->
         <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4);">
-          <p style="font-size: 0.75rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-2);">ENLACE DE ACCESO AL PANEL</p>
+          <p style="font-size: 0.75rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-2);">${I18nService.t('sa_panel_access_link')}</p>
           <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
             <code id="owner-url-display" style="font-size: 0.75rem; word-break: break-all; flex: 1; color: var(--color-text-primary);">${ownerLoginUrl}</code>
-            <button class="btn btn-primary btn-sm" id="btn-copy-owner-url">📋 Copiar URL</button>
+            <button class="btn btn-primary btn-sm" id="btn-copy-owner-url">📋 ${I18nService.t('copy_url_btn').replace('📋 Copiar URL', 'Copiar URL')}</button>
           </div>
         </div>
 
         <p style="font-size: 0.75rem; color: var(--color-text-tertiary); text-align: center;">
-          💡 Guarda estas credenciales de manera segura. La contraseña puede ser cambiada más adelante.
+          ${I18nService.t('sa_save_creds_hint')}
         </p>
       </div>
     `;
 
     const confirmFooterHTML = `
-      <button class="btn btn-primary btn-md" id="modal-confirm-close-btn">✓ Entendido</button>
+      <button class="btn btn-primary btn-md" id="modal-confirm-close-btn">${I18nService.t('sa_understood_btn')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: 'Credenciales del Nuevo Negocio',
+      title: I18nService.t('sa_owner_creds_modal_title'),
       bodyHTML: confirmHTML,
       footerHTML: confirmFooterHTML,
       size: 'md'
@@ -776,7 +776,7 @@ export class CompaniesView extends Component {
       console.warn('[CompaniesView] Could not load company employees:', e.message);
     }
 
-    const roleLabel = { OWNER: 'Dueño', MANAGER: 'Manager', CASHIER: 'Cajero', WAITER: 'Mesero', BARTENDER: 'Bartender', KITCHEN: 'Cocina' };
+    const roleLabel = { OWNER: I18nService.t('emp_role_owner'), MANAGER: I18nService.t('emp_role_manager'), CASHIER: I18nService.t('emp_role_cashier'), WAITER: I18nService.t('emp_role_waiter'), BARTENDER: 'Bartender', KITCHEN: I18nService.t('emp_role_kitchen') };
 
     const usersListHTML = companyUsers.length > 0
       ? companyUsers.map(u => `
@@ -784,14 +784,14 @@ export class CompaniesView extends Component {
             <div style="display: flex; align-items: center; gap: var(--space-2);">
               <span style="width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;">${(u.displayName || u.email || '?')[0].toUpperCase()}</span>
               <div>
-                <div style="font-weight: 600; color: var(--color-text-primary);">${u.displayName || 'Sin nombre'}</div>
+                <div style="font-weight: 600; color: var(--color-text-primary);">${u.displayName || I18nService.t('sa_no_name')}</div>
                 <div style="color: var(--color-text-secondary); font-size: 0.7rem;">${u.email || ''}</div>
               </div>
             </div>
             <span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-accent-muted, rgba(99,102,241,.15)); color: var(--color-accent);">${roleLabel[u.role] || u.role}</span>
           </div>
         `).join('')
-      : `<p style="font-size: 0.8rem; color: var(--color-text-secondary); text-align: center; padding: var(--space-3) 0;">No hay usuarios registrados para este negocio.</p>`;
+      : `<p style="font-size: 0.8rem; color: var(--color-text-secondary); text-align: center; padding: var(--space-3) 0;">${I18nService.t('sa_no_users_found')}</p>`;
 
     const formHTML = `
       <div style="display: flex; flex-direction: column; gap: var(--space-4); max-height: 75vh; overflow-y: auto; padding-right: 4px;">
@@ -799,32 +799,32 @@ export class CompaniesView extends Component {
         <!-- Company Settings -->
         <form id="edit-company-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
           <div class="form-group mb-0">
-            <label class="form-label" for="edit-comp-name">Nombre de la Empresa</label>
+            <label class="form-label" for="edit-comp-name">${I18nService.t('sa_company_name_label')}</label>
             <input type="text" id="edit-comp-name" class="input input-md" value="${row.name}" required />
           </div>
 
           <!-- UBICACIÓN DEL ESTABLECIMIENTO / LOCAL -->
           <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-3); margin-top: var(--space-2);">
             <label class="form-label mb-3" style="font-weight: 600; color: var(--color-accent); display: flex; align-items: center; gap: 6px;">
-              📍 Ubicación del Establecimiento / Local
+              ${I18nService.t('sa_location_title')}
             </label>
             <div class="form-grid-2" style="margin-bottom: var(--space-3);">
               <div class="form-group mb-0">
-                <label class="form-label" for="edit-comp-country">País</label>
+                <label class="form-label" for="edit-comp-country">${I18nService.t('sa_country_label')}</label>
                 <input type="text" id="edit-comp-country" class="input input-md" placeholder="Ej. Nicaragua" value="${row.country || 'Nicaragua'}" required />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label" for="edit-comp-state">Estado / Departamento</label>
+                <label class="form-label" for="edit-comp-state">${I18nService.t('sa_state_label')}</label>
                 <input type="text" id="edit-comp-state" class="input input-md" placeholder="Ej. Managua" value="${row.state || row.estado || ''}" required />
               </div>
             </div>
             <div class="form-grid-2">
               <div class="form-group mb-0">
-                <label class="form-label" for="edit-comp-city">Municipio / Ciudad</label>
+                <label class="form-label" for="edit-comp-city">${I18nService.t('sa_city_label')}</label>
                 <input type="text" id="edit-comp-city" class="input input-md" placeholder="Ej. Managua" value="${row.city || row.municipio || ''}" required />
               </div>
               <div class="form-group mb-0">
-                <label class="form-label" for="edit-comp-zip">Código Postal (Opcional)</label>
+                <label class="form-label" for="edit-comp-zip">${I18nService.t('sa_zip_label')}</label>
                 <input type="text" id="edit-comp-zip" class="input input-md" placeholder="Ej. 11001" value="${row.postalCode || row.codigoPostal || ''}" />
               </div>
             </div>
@@ -832,13 +832,13 @@ export class CompaniesView extends Component {
 
           <div class="form-grid-2">
             <div class="form-group mb-0">
-              <label class="form-label" for="edit-comp-type">Tipo de Negocio</label>
+              <label class="form-label" for="edit-comp-type">${I18nService.t('sa_biz_type_label')}</label>
               <select id="edit-comp-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 ${getBusinessTypeOptions(row.businessType)}
               </select>
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="edit-comp-plan">Plan SaaS</label>
+              <label class="form-label" for="edit-comp-plan">${I18nService.t('sa_saas_plan_label')}</label>
               <select id="edit-comp-plan" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                 ${plans.length > 0
                   ? plans.map(p => `<option value="${p.id}" ${row.plan === p.id ? 'selected' : ''}>${p.name} (${p.currency || 'NIO'} $${p.price}/${p.duration || 'mes'})</option>`).join('\n')
@@ -854,30 +854,30 @@ export class CompaniesView extends Component {
 
           <div class="form-grid-2">
             <div class="form-group mb-0">
-              <label class="form-label" for="edit-comp-status">Estado del Negocio</label>
+              <label class="form-label" for="edit-comp-status">${I18nService.t('sa_biz_status_label')}</label>
               <select id="edit-comp-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>Activo (Acceso normal habilitado)</option>
-                <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>Inactivo / Suspendido</option>
-                <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>Falta de Pago (Bloquear acceso al panel)</option>
-                <option value="SUSPENDIDO" ${row.status === 'SUSPENDIDO' ? 'selected' : ''}>Suspendido temporalmente</option>
-                <option value="ELIMINADO" ${row.status === 'ELIMINADO' ? 'selected' : ''}>Papelera (eliminación lógica)</option>
+                <option value="ACTIVO" ${row.status === 'ACTIVO' ? 'selected' : ''}>${I18nService.t('sa_status_active_full')}</option>
+                <option value="INACTIVO" ${row.status === 'INACTIVO' ? 'selected' : ''}>${I18nService.t('sa_status_inactive_full')}</option>
+                <option value="FALTA_PAGO" ${row.status === 'FALTA_PAGO' ? 'selected' : ''}>${I18nService.t('sa_status_unpaid_full')}</option>
+                <option value="SUSPENDIDO" ${row.status === 'SUSPENDIDO' ? 'selected' : ''}>${I18nService.t('sa_status_suspended_full')}</option>
+                <option value="ELIMINADO" ${row.status === 'ELIMINADO' ? 'selected' : ''}>${I18nService.t('sa_status_trash_full')}</option>
               </select>
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="edit-comp-expiration">Fecha Límite de Suscripción (Opcional)</label>
+              <label class="form-label" for="edit-comp-expiration">${I18nService.t('sa_sub_expiry_label')} (${I18nService.t('optional').toLowerCase()})</label>
               <input type="date" id="edit-comp-expiration" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" value="${row.subscriptionExpiresAt || ''}" />
             </div>
           </div>
 
           <div style="border-top: 1px solid var(--color-border); margin-top: var(--space-2); padding-top: var(--space-3);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-3);">
-              <label class="form-label mb-0" style="font-weight: 700; color: var(--color-text-primary); font-size: 0.95rem;">🧩 Módulos del Sistema</label>
+              <label class="form-label mb-0" style="font-weight: 700; color: var(--color-text-primary); font-size: 0.95rem;">${I18nService.t('sa_modules_title')}</label>
               <div style="display:flex; gap:8px;">
-                <button type="button" id="edit-modules-enable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-accent); background:transparent; color:var(--color-accent); cursor:pointer;">✓ Todos</button>
-                <button type="button" id="edit-modules-disable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-border); background:transparent; color:var(--color-text-secondary); cursor:pointer;">✗ Ninguno</button>
+                <button type="button" id="edit-modules-enable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-accent); background:transparent; color:var(--color-accent); cursor:pointer;">✓ ${I18nService.t('select_all').replace(' Seleccionar Todo', 'Todos')}</button>
+                <button type="button" id="edit-modules-disable-all" style="font-size:0.72rem; padding:3px 10px; border-radius:20px; border:1px solid var(--color-border); background:transparent; color:var(--color-text-secondary); cursor:pointer;">✗ ${I18nService.t('deselect_all').replace(' Deseleccionar Todo', 'Ninguno')}</button>
               </div>
             </div>
-            <p style="color:var(--color-text-secondary); font-size:0.78rem; margin-bottom:var(--space-3);">Activa o desactiva módulos para este negocio. Los cambios se reflejan de inmediato.</p>
+            <p style="color:var(--color-text-secondary); font-size:0.78rem; margin-bottom:var(--space-3);">${I18nService.t('sa_modules_edit_desc')}</p>
             ${this._renderModuleCheckboxes(row.modules || row.config?.modules || {}, 'edit-')}
           </div>
         </form>
@@ -886,10 +886,10 @@ export class CompaniesView extends Component {
         <div style="border-top: 2px solid var(--color-border); padding-top: var(--space-4);">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3);">
             <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-primary); margin: 0;">
-              👥 Usuarios de este Negocio
-              <span style="font-size: 0.75rem; font-weight: 400; color: var(--color-text-secondary); margin-left: 6px;">(${companyUsers.length} registrado${companyUsers.length !== 1 ? 's' : ''})</span>
+              ${I18nService.t('sa_biz_users_title')}
+              <span style="font-size: 0.75rem; font-weight: 400; color: var(--color-text-secondary); margin-left: 6px;">(${companyUsers.length} ${I18nService.t('dash_registered').toLowerCase()}${companyUsers.length !== 1 ? 's' : ''})</span>
             </h4>
-            <button class="btn btn-primary btn-sm" id="btn-toggle-add-user" style="font-size: 0.75rem; padding: 4px 12px;">+ Agregar Usuario</button>
+            <button class="btn btn-primary btn-sm" id="btn-toggle-add-user" style="font-size: 0.75rem; padding: 4px 12px;">${I18nService.t('sa_add_user_btn')}</button>
           </div>
 
           <!-- User List -->
@@ -899,34 +899,34 @@ export class CompaniesView extends Component {
 
           <!-- Add User Form (hidden by default) -->
           <div id="add-user-panel" style="display: none; border: 1px dashed var(--color-accent); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-bg-tertiary);">
-            <p style="font-size: 0.8rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-3);">➕ Nuevo Usuario para: ${row.name}</p>
+            <p style="font-size: 0.8rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-3);">${I18nService.t('sa_new_user_for', { name: row.name })}</p>
             <form id="add-user-form" style="display: flex; flex-direction: column; gap: var(--space-3);">
               <div class="form-group">
-                <label class="form-label" style="font-size: 0.8rem;">Nombre Completo</label>
+                <label class="form-label" style="font-size: 0.8rem;">${I18nService.t('emp_full_name')}</label>
                 <input type="text" id="new-user-name" class="input input-md" placeholder="Ej. Juan Pérez" required />
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
                 <div class="form-group">
-                  <label class="form-label" style="font-size: 0.8rem;">Correo Electrónico</label>
+                  <label class="form-label" style="font-size: 0.8rem;">${I18nService.t('emp_email')}</label>
                   <input type="email" id="new-user-email" class="input input-md" placeholder="usuario@negocio.com" required />
                 </div>
                 <div class="form-group">
-                  <label class="form-label" style="font-size: 0.8rem;">Contraseña</label>
-                  <input type="password" id="new-user-password" class="input input-md" placeholder="Mín. 6 caracteres" minlength="6" required />
+                  <label class="form-label" style="font-size: 0.8rem;">${I18nService.t('auth_password')}</label>
+                  <input type="password" id="new-user-password" class="input input-md" placeholder="${I18nService.t('sa_pass_min_chars')}" minlength="6" required />
                 </div>
               </div>
               <div class="form-group">
-                <label class="form-label" style="font-size: 0.8rem;">Rol / Puesto</label>
+                <label class="form-label" style="font-size: 0.8rem;">${I18nService.t('sa_biz_type_label').replace('Negocio', 'Rol / Puesto')}</label>
                 <select id="new-user-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                  <option value="MANAGER">Manager (Administrador del local)</option>
-                  <option value="CASHIER">Cajero</option>
-                  <option value="WAITER">Mesero</option>
+                  <option value="MANAGER">${I18nService.t('sa_manager_role_desc')}</option>
+                  <option value="CASHIER">${I18nService.t('emp_role_cashier')}</option>
+                  <option value="WAITER">${I18nService.t('emp_role_waiter')}</option>
                   <option value="BARTENDER">Bartender</option>
-                  <option value="KITCHEN">Personal de Cocina</option>
+                  <option value="KITCHEN">${I18nService.t('sa_kitchen_role_desc')}</option>
                 </select>
               </div>
               <button type="submit" id="btn-save-new-user" class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--space-1);">
-                💾 Guardar Usuario en Firebase
+                ${I18nService.t('sa_save_user_firebase')}
               </button>
               <p id="add-user-error" style="display:none; color: var(--color-danger, #ef4444); font-size: 0.78rem; text-align: center;"></p>
             </form>
@@ -937,12 +937,12 @@ export class CompaniesView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-save-btn">Guardar Cambios</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-save-btn">${I18nService.t('save_changes')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: `Administrar Negocio: ${row.name}`,
+      title: I18nService.t('sa_admin_biz_title', { name: row.name }),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'lg'
@@ -1010,7 +1010,7 @@ export class CompaniesView extends Component {
     if (!displayName || !email || !password) return;
 
     if (errorEl) errorEl.style.display = 'none';
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando en Firebase...'; }
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = I18nService.t('sa_saving_cloud'); }
 
     try {
       const newUid = await AuthService.createUser(email, password, {
@@ -1021,7 +1021,7 @@ export class CompaniesView extends Component {
       });
 
       console.log(`[CompaniesView] ✅ User "${email}" (${role}) added to company ${companyId}. UID: ${newUid}`);
-      NotificationService.success(`Usuario "${displayName}" registrado exitosamente en ${companyName}.`);
+      NotificationService.success(I18nService.t('sa_changes_applied_toast', { name: displayName }) + ` (${companyName})`);
 
       // Update the users count in GlobalStore
       const companies = GlobalStore.getState().companies || [];
@@ -1042,10 +1042,10 @@ export class CompaniesView extends Component {
     } catch (err) {
       console.error('[CompaniesView] Error adding user to company:', err);
       if (errorEl) {
-        errorEl.textContent = err.message || 'Error desconocido al registrar el usuario.';
+        errorEl.textContent = err.message || I18nService.t('error_generic');
         errorEl.style.display = 'block';
       }
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Guardar Usuario en Firebase'; }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = I18nService.t('sa_save_user_firebase'); }
     }
   }
 
@@ -1060,7 +1060,7 @@ export class CompaniesView extends Component {
     const saveBtn = this.modalInstance.$('#modal-save-btn');
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.textContent = 'Actualizando nube...';
+      saveBtn.textContent = I18nService.t('sa_updating_cloud');
     }
 
     const name        = this.modalInstance.$('#edit-comp-name').value.trim();
@@ -1103,14 +1103,14 @@ export class CompaniesView extends Component {
       // 3. Reload companies from RTDB
       await this.loadCompanies();
 
-      NotificationService.success(`Cambios aplicados en la nube para "${name}".`);
+      NotificationService.success(I18nService.t('sa_changes_applied_toast', { name }));
       this.modalInstance.close();
     } catch (e) {
       console.error('[CompaniesView] Error updating company:', e);
-      alert(`Error al actualizar el negocio en Firebase: ${e.message || e}`);
+      alert(I18nService.t('sa_update_error', { error: e.message || e }));
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Guardar Cambios';
+        saveBtn.textContent = I18nService.t('save_changes');
       }
     }
   }
@@ -1118,45 +1118,45 @@ export class CompaniesView extends Component {
   async handleCompanyAction(companyId, action) {
     const company = (GlobalStore.getState().companies || []).find(c => c.id === companyId);
     const companyName = company?.name || companyId;
-    const reason = prompt(`Motivo para ${this.getCompanyActionLabel(action)} "${companyName}":`, '');
+    const reason = prompt(I18nService.t('sa_action_reason_prompt', { action: this.getCompanyActionLabel(action), name: companyName }), '');
     if (reason === null) return;
 
     try {
       if (action === 'deactivate') {
         await FirestoreService.setCompanyLifecycle(companyId, 'INACTIVO', reason);
-        NotificationService.success('Empresa desactivada temporalmente.');
+        NotificationService.success(I18nService.t('sa_deactivated_toast'));
       } else if (action === 'suspend') {
         await FirestoreService.setCompanyLifecycle(companyId, 'SUSPENDIDO', reason);
-        NotificationService.success('Empresa suspendida.');
+        NotificationService.success(I18nService.t('sa_suspended_toast'));
       } else if (action === 'trash') {
-        if (!confirm(`¿Mover "${companyName}" a la papelera? La empresa podrá restaurarse más adelante.`)) return;
+        if (!confirm(I18nService.t('sa_trash_confirm', { name: companyName }))) return;
         await FirestoreService.setCompanyLifecycle(companyId, 'ELIMINADO', reason);
-        NotificationService.success('Empresa enviada a papelera.');
+        NotificationService.success(I18nService.t('sa_trashed_toast'));
       } else if (action === 'restore') {
         await FirestoreService.setCompanyLifecycle(companyId, 'ACTIVO', reason || 'Restauración desde papelera');
-        NotificationService.success('Empresa restaurada.');
+        NotificationService.success(I18nService.t('sa_restored_toast'));
       } else if (action === 'hard-delete') {
-        const confirmation = prompt(`Para eliminar definitivamente "${companyName}" y todos sus datos, escribe ELIMINAR:`);
+        const confirmation = prompt(I18nService.t('sa_hard_delete_prompt', { name: companyName }));
         if (confirmation !== 'ELIMINAR') return;
         await FirestoreService.permanentlyDeleteCompany(companyId, reason);
-        NotificationService.success('Empresa eliminada definitivamente.');
+        NotificationService.success(I18nService.t('sa_hard_deleted_toast'));
       }
       await this.loadCompanies();
     } catch (error) {
       console.error('[CompaniesView] Error changing lifecycle:', error);
-      NotificationService.error(error.message || 'No se pudo cambiar el estado de la empresa.');
+      NotificationService.error(error.message || I18nService.t('error_occurred'));
     }
   }
 
   getCompanyActionLabel(action) {
     const labels = {
-      deactivate: 'desactivar',
-      suspend: 'suspender',
-      trash: 'enviar a papelera',
+      deactivate: I18nService.t('inactive').toLowerCase(),
+      suspend: I18nService.t('on_hold').toLowerCase(),
+      trash: I18nService.t('delete').toLowerCase(),
       restore: 'restaurar',
-      'hard-delete': 'eliminar definitivamente'
+      'hard-delete': I18nService.t('sa_hard_deleted_toast').replace(' eliminada definitivamente.', '').toLowerCase()
     };
-    return labels[action] || 'actualizar';
+    return labels[action] || I18nService.t('update').toLowerCase();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1179,7 +1179,7 @@ export class CompaniesView extends Component {
       this.renderPendingRequests(pendingList);
     } catch (err) {
       console.error('[CompaniesView] Error loading pending owner requests:', err);
-      container.innerHTML = `<p style="color:var(--color-danger); font-size:0.85rem;">Error al cargar las solicitudes pendientes.</p>`;
+      container.innerHTML = `<p style="color:var(--color-danger); font-size:0.85rem;">${I18nService.t('sa_pending_requests_error')}</p>`;
     }
   }
 
@@ -1190,7 +1190,7 @@ export class CompaniesView extends Component {
     if (!requests || requests.length === 0) {
       container.innerHTML = `
         <div style="padding: var(--space-4); text-align: center; color: var(--color-text-tertiary); font-size: 0.85rem;">
-          ✨ No hay solicitudes de dueños pendientes de aprobación en este momento.
+          ${I18nService.t('sa_no_pending_requests')}
         </div>
       `;
       return;
@@ -1201,12 +1201,12 @@ export class CompaniesView extends Component {
         <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
           <thead>
             <tr style="border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary);">
-              <th style="padding: 8px 12px;">Fecha</th>
-              <th style="padding: 8px 12px;">Dueño / Propietario</th>
-              <th style="padding: 8px 12px;">Empresa / Negocio</th>
-              <th style="padding: 8px 12px;">Tipo</th>
-              <th style="padding: 8px 12px;">Contacto</th>
-              <th style="padding: 8px 12px; text-align: right;">Acciones del Programador</th>
+              <th style="padding: 8px 12px;">${I18nService.t('col_date')}</th>
+              <th style="padding: 8px 12px;">${I18nService.t('sa_company_owner')}</th>
+              <th style="padding: 8px 12px;">${I18nService.t('sa_company_name')}</th>
+              <th style="padding: 8px 12px;">${I18nService.t('col_type')}</th>
+              <th style="padding: 8px 12px;">${I18nService.t('sup_col_contact')}</th>
+              <th style="padding: 8px 12px; text-align: right;">${I18nService.t('sa_programmer_actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -1222,7 +1222,7 @@ export class CompaniesView extends Component {
                   🏪 ${req.companyName || '—'}
                 </td>
                 <td style="padding: 10px 12px; color: var(--color-text-secondary);">
-                  ${req.businessType || 'Restaurante'}
+                  ${req.businessType || I18nService.t('auth_business_type')}
                 </td>
                 <td style="padding: 10px 12px;">
                   <div>📧 ${req.email || '—'}</div>
@@ -1236,7 +1236,7 @@ export class CompaniesView extends Component {
                       data-id="${req.id}"
                       style="background-color: #16a34a; color: white; border: none; padding: 4px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;"
                     >
-                      ✓ Aceptar y Registrar
+                      ${I18nService.t('sa_approve_register_btn')}
                     </button>
                     <button
                       type="button"
@@ -1244,7 +1244,7 @@ export class CompaniesView extends Component {
                       data-id="${req.id}"
                       style="background-color: #ef4444; color: white; border: none; padding: 4px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;"
                     >
-                      ✕ Rechazar
+                      ✕ ${I18nService.t('rejected')}
                     </button>
                   </div>
                 </td>
@@ -1275,22 +1275,22 @@ export class CompaniesView extends Component {
     const req = (this.pendingRequests || []).find(r => r.id === requestId);
     if (!req) return;
 
-    const confirmApprove = confirm(`¿Confirmas la aprobación y registro del negocio "${req.companyName}" para el dueño "${req.ownerName}" (${req.email})?`);
+    const confirmApprove = confirm(I18nService.t('sa_approve_confirm', { company: req.companyName, owner: req.ownerName, email: req.email }));
     if (!confirmApprove) return;
 
     if (btnElement) {
       btnElement.disabled = true;
-      btnElement.textContent = '⏳ Registrando...';
+      btnElement.textContent = I18nService.t('sa_registering_wait');
     }
 
     const companyName = req.companyName.trim();
     const newCompanyId = FirestoreService.sanitiseKey(companyName);
 
     if (!newCompanyId) {
-      alert('El nombre del negocio contiene caracteres no válidos.');
+      alert(I18nService.t('sa_invalid_name_error'));
       if (btnElement) {
         btnElement.disabled = false;
-        btnElement.textContent = '✓ Aceptar y Registrar';
+        btnElement.textContent = I18nService.t('sa_approve_register_btn');
       }
       return;
     }
@@ -1300,7 +1300,7 @@ export class CompaniesView extends Component {
       console.log('[CompaniesView] Aprobando solicitud de dueño. Creando rama empresa:', newCompanyId);
       await FirestoreService.createCompanyBranch(newCompanyId, {
         name: companyName,
-        businessType: req.businessType || 'Restaurante',
+        businessType: req.businessType || I18nService.t('auth_business_type'),
         plan: 'PREMIUM',
         status: 'ACTIVO',
         ownerEmail: req.email,
@@ -1312,7 +1312,7 @@ export class CompaniesView extends Component {
       // 2. Create owner user in Firebase Auth
       console.log('[CompaniesView] Creando usuario dueño para:', req.email);
       const ownerUid = await AuthService.createUser(req.email, req.password, {
-        displayName: req.ownerName || `Dueño - ${companyName}`,
+        displayName: req.ownerName || `${I18nService.t('emp_role_owner')} - ${companyName}`,
         role: 'OWNER',
         companyId: newCompanyId,
         branchId: 'main'
@@ -1327,7 +1327,7 @@ export class CompaniesView extends Component {
         approvedCompanyId: newCompanyId
       });
 
-      NotificationService.success(`✅ Empresa "${companyName}" y dueño "${req.ownerName}" aprobados y registrados exitosamente.`);
+      NotificationService.success(I18nService.t('sa_approved_success_toast', { company: companyName, owner: req.ownerName }));
 
       // 5. Reload companies & pending requests
       await this.loadCompanies();
@@ -1338,10 +1338,10 @@ export class CompaniesView extends Component {
 
     } catch (err) {
       console.error('[CompaniesView] Error al aprobar solicitud:', err);
-      NotificationService.error(`Error al aprobar solicitud: ${err.message || err}`);
+      NotificationService.error(I18nService.t('sa_approve_error', { error: err.message || err }));
       if (btnElement) {
         btnElement.disabled = false;
-        btnElement.textContent = '✓ Aceptar y Registrar';
+        btnElement.textContent = I18nService.t('sa_approve_register_btn');
       }
     }
   }
@@ -1350,12 +1350,12 @@ export class CompaniesView extends Component {
     const req = (this.pendingRequests || []).find(r => r.id === requestId);
     if (!req) return;
 
-    const confirmReject = confirm(`¿Estás seguro de rechazar la solicitud de registro para "${req.companyName}" (${req.ownerName})?`);
+    const confirmReject = confirm(I18nService.t('sa_reject_confirm', { company: req.companyName, owner: req.ownerName }));
     if (!confirmReject) return;
 
     if (btnElement) {
       btnElement.disabled = true;
-      btnElement.textContent = '⏳ Rechazando...';
+      btnElement.textContent = I18nService.t('sa_rejecting_wait');
     }
 
     try {
@@ -1363,14 +1363,14 @@ export class CompaniesView extends Component {
         rejectedAt: Date.now()
       });
 
-      NotificationService.info(`Solicitud de "${req.companyName}" fue rechazada.`);
+      NotificationService.info(I18nService.t('sa_rejected_toast', { company: req.companyName }));
       await this.loadPendingRequests();
     } catch (err) {
       console.error('[CompaniesView] Error al rechazar solicitud:', err);
-      NotificationService.error(`Error al rechazar: ${err.message || err}`);
+      NotificationService.error(I18nService.t('sa_reject_error', { error: err.message || err }));
       if (btnElement) {
         btnElement.disabled = false;
-        btnElement.textContent = '✕ Rechazar';
+        btnElement.textContent = `✕ ${I18nService.t('rejected')}`;
       }
     }
   }

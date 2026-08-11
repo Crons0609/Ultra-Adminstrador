@@ -11,13 +11,14 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { GlobalStore } from '../../../core/state.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ArqueoView extends Component {
   constructor(params = {}) {
     super(params);
     const user = GlobalStore.getState().currentUser || {};
     this.companyId  = user.companyId || '';
-    this.cashierName = user.name || 'Cajero';
+    this.cashierName = user.name || I18nService.t('pos_cashier');
 
     this.listeners = [];
     this.state = {
@@ -28,11 +29,11 @@ export class ArqueoView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Arqueo de Caja',
-      subtitle: 'Registra los movimientos del día, cuadra la caja y envía el reporte al dueño para su aprobación.',
+      title: I18nService.t('arqueo_title'),
+      subtitle: I18nService.t('arq_subtitle'),
       actionHTML: `
         <button class="btn btn-success btn-sm" id="btn-arqueo-send" style="display:flex;align-items:center;gap:6px;background:#34d399;border:none;color:#000;font-weight:700;">
-          ✅ Listo para Enviar
+          ${I18nService.t('arqueo_close')}
         </button>
       `,
       contentHTML: `
@@ -55,72 +56,72 @@ export class ArqueoView extends Component {
         <div class="arqueo-grid">
           <!-- Left: Registro de movimientos -->
           <div class="arqueo-section">
-            <h3>📋 Movimientos del Día</h3>
+            <h3>${I18nService.t('arq_daily_movements')}</h3>
 
             <div class="form-group mb-4">
-              <label class="form-label" for="arq-fondo-inicial">💰 Fondo Inicial en Caja ($)</label>
+              <label class="form-label" for="arq-fondo-inicial">${I18nService.t('arq_opening_fund_label')}</label>
               <input type="number" id="arq-fondo-inicial" class="input input-md" min="0" step="0.01" placeholder="0.00" value="0" />
-              <p class="text-xs text-secondary mt-1">Dinero físico con el que inicia la jornada.</p>
+              <p class="text-xs text-secondary mt-1">${I18nService.t('arq_opening_fund_desc')}</p>
             </div>
 
             <div class="form-group mb-4">
-              <label class="form-label" for="arq-efectivo-contado">🧾 Efectivo Físico Contado al Cierre ($)</label>
+              <label class="form-label" for="arq-efectivo-contado">${I18nService.t('arq_closing_cash_label')}</label>
               <input type="number" id="arq-efectivo-contado" class="input input-md" min="0" step="0.01" placeholder="0.00" value="0" />
-              <p class="text-xs text-secondary mt-1">Total de efectivo que hay físicamente en caja ahora.</p>
+              <p class="text-xs text-secondary mt-1">${I18nService.t('arq_closing_cash_desc')}</p>
             </div>
 
             <div class="form-group">
-              <label class="form-label">➖ Registrar Retiro de Caja</label>
+              <label class="form-label">${I18nService.t('arq_register_withdrawal')}</label>
               <div style="display:grid;grid-template-columns:100px 1fr auto;gap:var(--space-2);align-items:end;">
                 <div>
-                  <label class="form-label" style="font-size:0.72rem;">Monto ($)</label>
+                  <label class="form-label" style="font-size:0.72rem;">${I18nService.t('amount')} ($)</label>
                   <input type="number" id="arq-retiro-monto" class="input input-md" min="0" step="0.01" placeholder="0.00" />
                 </div>
                 <div>
-                  <label class="form-label" style="font-size:0.72rem;">Razón del Retiro</label>
-                  <input type="text" id="arq-retiro-razon" class="input input-md" placeholder="Ej. Pago a proveedor, gastos de limpieza..." />
+                  <label class="form-label" style="font-size:0.72rem;">${I18nService.t('arq_withdrawal_reason')}</label>
+                  <input type="text" id="arq-retiro-razon" class="input input-md" placeholder="${I18nService.t('arq_withdrawal_reason_placeholder')}" />
                 </div>
-                <button class="btn btn-secondary btn-sm" id="btn-add-retiro" style="white-space:nowrap;">+ Agregar</button>
+                <button class="btn btn-secondary btn-sm" id="btn-add-retiro" style="white-space:nowrap;">${I18nService.t('add')}</button>
               </div>
             </div>
 
             <div id="retiros-list" style="margin-top:var(--space-3);">
-              <p class="text-xs text-secondary" id="retiros-empty">Sin retiros registrados aún.</p>
+              <p class="text-xs text-secondary" id="retiros-empty">${I18nService.t('arq_no_withdrawals')}</p>
             </div>
           </div>
 
           <!-- Right: Totales automáticos y cuadre -->
           <div class="arqueo-section">
-            <h3>📊 Resumen Automático del Sistema</h3>
+            <h3>${I18nService.t('arq_system_summary')}</h3>
 
             <div class="arqueo-row">
-              <span class="arqueo-row-label">Fondo Inicial</span>
+              <span class="arqueo-row-label">${I18nService.t('cash_opening_amount')}</span>
               <span class="arqueo-row-value" id="arq-disp-fondo">$0.00</span>
             </div>
             <div class="arqueo-row">
-              <span class="arqueo-row-label">💵 Pagos en Efectivo (sistema)</span>
+              <span class="arqueo-row-label">${I18nService.t('arq_cash_payments_sys')}</span>
               <span class="arqueo-row-value text-success" id="arq-disp-efectivo">$0.00</span>
             </div>
             <div class="arqueo-row">
-              <span class="arqueo-row-label">💳 Pagos con POS / Tarjeta</span>
+              <span class="arqueo-row-label">${I18nService.t('arq_card_payments_sys')}</span>
               <span class="arqueo-row-value" style="color:#818cf8;" id="arq-disp-tarjeta">$0.00</span>
             </div>
             <div class="arqueo-row">
-              <span class="arqueo-row-label">📈 Total Ingresos Sistema</span>
+              <span class="arqueo-row-label">${I18nService.t('arq_total_income_sys')}</span>
               <span class="arqueo-row-value" id="arq-disp-total">$0.00</span>
             </div>
             <div class="arqueo-row">
-              <span class="arqueo-row-label">➖ Total Retiros del Día</span>
+              <span class="arqueo-row-label">${I18nService.t('arq_total_withdrawals')}</span>
               <span class="arqueo-row-value" style="color:#f87171;" id="arq-disp-retiros">$0.00</span>
             </div>
 
             <div style="margin: var(--space-4) 0; border-top: 2px dashed var(--color-border); padding-top: var(--space-4);">
               <div class="arqueo-row" style="font-size:1rem;">
-                <span style="font-weight:700;">💼 Esperado en Caja Física</span>
+                <span style="font-weight:700;">${I18nService.t('arq_expected_in_box')}</span>
                 <span class="arqueo-row-value" id="arq-disp-esperado" style="font-size:1.1rem;">$0.00</span>
               </div>
               <div class="arqueo-row" style="font-size:1rem;">
-                <span style="font-weight:700;">🧾 Contado Físicamente</span>
+                <span style="font-weight:700;">${I18nService.t('arq_counted_physically')}</span>
                 <span class="arqueo-row-value" id="arq-disp-contado" style="font-size:1.1rem;">$0.00</span>
               </div>
             </div>
@@ -129,23 +130,25 @@ export class ArqueoView extends Component {
             <div id="cuadre-indicator" style="background:var(--color-bg-tertiary);border-radius:var(--radius-md);padding:var(--space-4);text-align:center;margin-top:var(--space-3);">
               <div style="font-size:2rem;" id="cuadre-icon">⚖️</div>
               <div style="font-weight:800;font-size:1.4rem;margin-top:4px;" id="cuadre-diff">$0.00</div>
-              <div style="font-size:0.82rem;margin-top:4px;" id="cuadre-label" class="text-secondary">Ingresa los valores para calcular</div>
+              <div style="font-size:0.82rem;margin-top:4px;" id="cuadre-label" class="text-secondary">${I18nService.t('arq_enter_values_to_calc')}</div>
             </div>
 
             <div style="margin-top:var(--space-4);">
-              <label class="form-label" for="arq-observaciones">📝 Observaciones (opcional)</label>
-              <textarea id="arq-observaciones" class="input input-md" rows="2" placeholder="Novedades del turno, incidencias, etc."></textarea>
+              <label class="form-label" for="arq-observaciones">${I18nService.t('arq_observations_label')}</label>
+              <textarea id="arq-observaciones" class="input input-md" rows="2" placeholder="${I18nService.t('arq_observations_placeholder')}"></textarea>
             </div>
           </div>
         </div>
 
         <!-- Transaction breakdown -->
         <div class="card p-5 mt-6">
-          <h3 class="text-lg font-semibold mb-4">📋 Transacciones del Día (Sistema)</h3>
+          <h3 class="text-lg font-semibold mb-4">${I18nService.t('arq_daily_transactions')}</h3>
           <div id="arq-transactions-list">
-            <p class="text-secondary text-center py-6">Cargando transacciones...</p>
+            <p class="text-secondary text-center py-6">${I18nService.t('loading_data')}</p>
           </div>
         </div>
+      `
+    });
       `
     });
   }
@@ -179,7 +182,7 @@ export class ArqueoView extends Component {
       const monto = Number(q('#arq-retiro-monto')?.value || 0);
       const razon = q('#arq-retiro-razon')?.value.trim();
       if (!monto || monto <= 0 || !razon) {
-        NotificationService.warn('Ingresa un monto válido y una razón para el retiro.');
+        NotificationService.warn(I18nService.t('arq_error_invalid_withdrawal'));
         return;
       }
       this.state.retiros.push({ amount: monto, reason: razon, time: Date.now() });
@@ -196,7 +199,7 @@ export class ArqueoView extends Component {
     if (!list) return;
 
     if (this.state.retiros.length === 0) {
-      list.innerHTML = '<p class="text-xs text-secondary" id="retiros-empty">Sin retiros registrados aún.</p>';
+      list.innerHTML = `<p class="text-xs text-secondary" id="retiros-empty">${I18nService.t('arq_no_withdrawals')}</p>`;
       return;
     }
 
@@ -208,7 +211,7 @@ export class ArqueoView extends Component {
         </div>
         <button class="btn btn-sm" data-retiro-idx="${i}" 
           style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2);font-size:0.72rem;padding:3px 8px;">
-          ✕ Quitar
+          ✕ ${I18nService.t('remove')}
         </button>
       </div>
     `).join('');
@@ -258,22 +261,22 @@ export class ArqueoView extends Component {
         icon.textContent  = '⚖️';
         diff.textContent  = '$0.00';
         diff.className    = 'cuadre-ok';
-        label.textContent = 'Ingresa los valores para calcular';
+        label.textContent = I18nService.t('arq_enter_values_to_calc');
       } else if (Math.abs(diferencia) < 0.01) {
         icon.textContent  = '✅';
-        diff.textContent  = '¡Cuadre perfecto!';
+        diff.textContent  = I18nService.t('arq_perfect_balance');
         diff.className    = 'cuadre-ok';
-        label.textContent = 'El efectivo físico coincide exactamente con el sistema.';
+        label.textContent = I18nService.t('arq_perfect_balance_desc');
       } else if (diferencia < 0) {
         icon.textContent  = '🔴';
-        diff.textContent  = `Faltante: ${fmt(Math.abs(diferencia))}`;
+        diff.textContent  = I18nService.t('arq_shortage', { amount: fmt(Math.abs(diferencia)) });
         diff.className    = 'cuadre-neg';
-        label.textContent = 'Hay menos efectivo del esperado. Verifique retiros o cobros no registrados.';
+        label.textContent = I18nService.t('arq_shortage_desc');
       } else {
         icon.textContent  = '🟡';
-        diff.textContent  = `Sobrante: ${fmt(diferencia)}`;
+        diff.textContent  = I18nService.t('arq_surplus', { amount: fmt(diferencia) });
         diff.className    = 'cuadre-pos';
-        label.textContent = 'Hay más efectivo del esperado. Verifique si hay cobros sin registrar en sistema.';
+        label.textContent = I18nService.t('arq_surplus_desc');
       }
     }
 
@@ -286,7 +289,7 @@ export class ArqueoView extends Component {
     if (!list) return;
 
     if (ventas.length === 0) {
-      list.innerHTML = '<p class="text-secondary text-center py-6">No hay transacciones registradas el día de hoy.</p>';
+      list.innerHTML = `<p class="text-secondary text-center py-6">${I18nService.t('cash_no_transactions_today')}</p>`;
       return;
     }
 
@@ -311,7 +314,7 @@ export class ArqueoView extends Component {
               return `
                 <tr style="border-bottom:1px solid var(--color-border);background:${i%2===0 ? 'transparent' : 'var(--color-bg-secondary)'};">
                   <td style="padding:8px 12px;color:var(--color-text-secondary);">${hora}</td>
-                  <td style="padding:8px 12px;">${v.sellerName || 'Cajero'}</td>
+                  <td style="padding:8px 12px;">${v.sellerName || I18nService.t('pos_cashier')}</td>
                   <td style="padding:8px 12px;text-align:center;">
                     <span style="background:${metColor}22;color:${metColor};font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:999px;">${met}</span>
                   </td>
@@ -339,7 +342,7 @@ export class ArqueoView extends Component {
     const observaciones = q('#arq-observaciones')?.value.trim() || '';
 
     const btn = el.querySelector('#btn-arqueo-send');
-    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    if (btn) { btn.disabled = true; btn.textContent = I18nService.t('processing'); }
 
     try {
       const arqueoPayload = {
@@ -372,13 +375,13 @@ export class ArqueoView extends Component {
         prioridad:  diferencia !== 0 ? 'ALTA' : 'NORMAL',
       });
 
-      NotificationService.success('Arqueo enviado al dueño para revisión. ✅');
+      NotificationService.success(I18nService.t('arq_sent_success'));
 
-      if (btn) { btn.disabled = false; btn.textContent = '✅ Listo para Enviar'; }
+      if (btn) { btn.disabled = false; btn.textContent = I18nService.t('arqueo_close'); }
     } catch (e) {
       console.error('[ArqueoView] submit error:', e);
-      NotificationService.error('Error al enviar el arqueo. Intenta de nuevo.');
-      if (btn) { btn.disabled = false; btn.textContent = '✅ Listo para Enviar'; }
+      NotificationService.error(I18nService.t('arq_sent_error'));
+      if (btn) { btn.disabled = false; btn.textContent = I18nService.t('arqueo_close'); }
     }
   }
 

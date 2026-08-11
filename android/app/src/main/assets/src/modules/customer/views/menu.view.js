@@ -9,6 +9,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class MenuView extends Component {
   constructor(params = {}) {
@@ -46,7 +47,7 @@ export class MenuView extends Component {
       categories: [],
       orders: [],
       promotions: [],
-      activeCategory: 'Todos',
+      activeCategory: I18nService.t('pub_cat_all'),
       searchQuery: '',
       loading: true,
       info: null,
@@ -66,9 +67,9 @@ export class MenuView extends Component {
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
           <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
             <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
-            <h3 class="font-bold text-lg">Código QR Inválido</h3>
+            <h3 class="font-bold text-lg">${I18nService.t('menu_invalid_qr_title')}</h3>
             <p class="text-xs text-secondary mt-2">
-              El enlace de acceso es incorrecto o está incompleto. Por favor escanea el código QR del establecimiento nuevamente.
+              ${I18nService.t('menu_invalid_qr_desc')}
             </p>
           </div>
         </div>
@@ -99,7 +100,7 @@ export class MenuView extends Component {
     try {
       root.innerHTML = `
         <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
-          <p class="text-secondary text-sm">Verificando acceso a la mesa…</p>
+          <p class="text-secondary text-sm">${I18nService.t('menu_verifying_access')}</p>
         </div>
       `;
 
@@ -136,10 +137,9 @@ export class MenuView extends Component {
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
         <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
           <div style="font-size: 3rem; margin-bottom: 15px;">🔒</div>
-          <h3 class="font-bold text-lg">Acceso Inválido</h3>
+          <h3 class="font-bold text-lg">${I18nService.t('menu_access_invalid_title')}</h3>
           <p class="text-xs text-secondary mt-2">
-            Este código QR no es válido o ya no está disponible.<br>
-            Por favor escanea el código QR de tu mesa nuevamente.
+            ${I18nService.t('menu_access_invalid_desc')}
           </p>
         </div>
       </div>
@@ -233,37 +233,37 @@ export class MenuView extends Component {
         <div class="setup-card animate-slide-up">
           <div class="text-center">
             <span style="font-size: 3rem;">🍽️</span>
-            <h2 class="font-bold mt-2" style="font-size: 1.4rem; color: var(--pub-text);">¡Bienvenidos!</h2>
-            <p class="text-xs text-secondary mt-1">Mesa/VIP ${this.tableId.replace('mesa-', '')} · Configura tu servicio</p>
+            <h2 class="font-bold mt-2" style="font-size: 1.4rem; color: var(--pub-text);">${I18nService.t('menu_welcome')}</h2>
+            <p class="text-xs text-secondary mt-1">${I18nService.t('menu_setup_subtitle', { table: this.tableId.replace('mesa-', '') })}</p>
           </div>
 
           <div>
-            <label class="form-label" style="font-size: 0.82rem; margin-bottom: var(--space-2); display:block; font-weight:600;">¿Cómo desean ordenar la cuenta?</label>
+            <label class="form-label" style="font-size: 0.82rem; margin-bottom: var(--space-2); display:block; font-weight:600;">${I18nService.t('menu_account_type_query')}</label>
             <div class="d-flex flex-column gap-3">
               <button class="option-button" id="opt-conjunta">
                 <div class="option-icon">🤝</div>
                 <div>
-                  <div class="option-title">Cuenta Conjunta</div>
-                  <div class="option-desc">Una sola cuenta para toda la mesa</div>
+                  <div class="option-title">${I18nService.t('menu_account_joint')}</div>
+                  <div class="option-desc">${I18nService.t('menu_account_joint_desc')}</div>
                 </div>
               </button>
               <button class="option-button" id="opt-separado">
                 <div class="option-icon">👤</div>
                 <div>
-                  <div class="option-title">Cuentas por Separado</div>
-                  <div class="option-desc">Cada comensal ordena y paga lo suyo</div>
+                  <div class="option-title">${I18nService.t('menu_account_separate')}</div>
+                  <div class="option-desc">${I18nService.t('menu_account_separate_desc')}</div>
                 </div>
               </button>
             </div>
           </div>
 
           <div class="name-input-group" id="name-group">
-            <label class="form-label" for="client-name-input" style="font-size: 0.82rem; font-weight:600;">Tu Nombre o Asiento *</label>
-            <input type="text" id="client-name-input" class="input input-md" placeholder="Ej. Juan - Asiento 1" style="background:var(--pub-surface); color:var(--pub-text); border-color:var(--pub-border);" />
+            <label class="form-label" for="client-name-input" style="font-size: 0.82rem; font-weight:600;">${I18nService.t('menu_name_label')}</label>
+            <input type="text" id="client-name-input" class="input input-md" placeholder="${I18nService.t('menu_name_placeholder')}" style="background:var(--pub-surface); color:var(--pub-text); border-color:var(--pub-border);" />
           </div>
 
           <button class="btn btn-primary w-full py-3 font-semibold" id="btn-start-menu" style="background:var(--pub-primary); border:none; border-radius:10px;">
-            Ingresar al Menú Digital
+            ${I18nService.t('menu_enter_btn')}
           </button>
         </div>
       </div>
@@ -344,7 +344,7 @@ export class MenuView extends Component {
           if (p.trackStock === true && typeof p.stock === 'number' && p.stock <= 0) return false;
           return true;
         });
-        this.state.categories = ['Todos', ...new Set(this.state.products.map(p => p.category).filter(Boolean))];
+        this.state.categories = [I18nService.t('pub_cat_all'), ...new Set(this.state.products.map(p => p.category).filter(Boolean))];
         this.state.loading = false;
         this.checkDataLoaded(root);
       });
@@ -410,7 +410,7 @@ export class MenuView extends Component {
     const info = this.state.info || {};
     const companyName = info.nombre || this.companyId.replace(/-/g, ' ');
     const logoURL = info.logo || '';
-    const hours = info.horario || 'Abierto hoy';
+    const hours = info.horario || I18nService.t('menu_open_today');
 
     // Business type category detection
     const category = getBusinessCategory(info.businessType || '');
@@ -435,7 +435,7 @@ export class MenuView extends Component {
     const query = this.state.searchQuery.toLowerCase();
     const filtered = this.state.products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(query) || (p.description || '').toLowerCase().includes(query);
-      const matchesCategory = this.state.activeCategory === 'Todos' || p.category === this.state.activeCategory;
+      const matchesCategory = this.state.activeCategory === I18nService.t('pub_cat_all') || p.category === this.state.activeCategory;
       return matchesSearch && matchesCategory;
     });
 
@@ -541,16 +541,16 @@ export class MenuView extends Component {
           <div class="pub-info-block">
             <h1 class="pub-name">${companyName}</h1>
             <div class="pub-meta-row">
-              <span class="pub-meta-item">📍 ${isServices ? 'Ubicación: General' : `Mesa: ${this.tableId.replace('mesa-', '')}`}</span>
+              <span class="pub-meta-item">📍 ${isServices ? I18nService.t('menu_location_general') : I18nService.t('menu_table_label', { table: this.tableId.replace('mesa-', '') })}</span>
               <span class="pub-meta-item">⏱ ${hours}</span>
               <span class="pub-meta-item pub-account-badge">
-                ● Cuenta: ${this.state.accountType === 'CONJUNTA' ? 'Conjunta' : `Separada (${this.state.clientName})`}
+                ● ${I18nService.t('menu_account_label', { type: this.state.accountType === 'CONJUNTA' ? I18nService.t('menu_account_joint_short') : I18nService.t('menu_account_separate_short', { name: this.state.clientName }) })}
               </span>
             </div>
           </div>
           ${accumulatedTotal > 0 ? `
             <button class="btn btn-secondary btn-sm pub-consumption-btn" id="btn-view-consumption">
-              🧾 Mi Consumo: $${accumulatedTotal.toFixed(2)}
+              ${I18nService.t('menu_my_consumption', { amount: `$${accumulatedTotal.toFixed(2)}` })}
             </button>
           ` : ''}
         </div>
@@ -562,7 +562,7 @@ export class MenuView extends Component {
         <div class="pub-toolbar">
           <div class="pub-search-wrap">
             <svg class="pub-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="menu-search" class="pub-search-input" placeholder="${isBar ? 'Buscar bebidas, tragos, snacks...' : (isServices ? 'Buscar productos o servicios...' : 'Buscar en el catálogo...')}" value="${this.state.searchQuery}" autocomplete="off" />
+            <input type="text" id="menu-search" class="pub-search-input" placeholder="${isBar ? I18nService.t('menu_search_bar') : (isServices ? I18nService.t('menu_search_services') : I18nService.t('menu_search_catalog'))}" value="${this.state.searchQuery}" autocomplete="off" />
           </div>
         </div>
 
@@ -579,13 +579,13 @@ export class MenuView extends Component {
         <div class="pub-menu-grid">
           ${filtered.length === 0 ? `
             <div class="text-center py-10 w-full text-secondary" style="grid-column: 1 / -1;">
-              <p>No se encontraron productos o servicios en esta categoría.</p>
+              <p>${I18nService.t('menu_no_products')}</p>
             </div>
           ` : filtered.map(p => {
             // Support multiple field names the product might use for its image URL
             const rawImage = (p.image || p.imageUrl || p.imagen || p.img || '').toString().trim();
             const hasImage = rawImage.length > 0 && (rawImage.startsWith('http') || rawImage.startsWith('//'));
-            const desc = p.description || (isServices ? 'Servicio / Producto de alta calidad.' : (isBar ? 'Preparado con ingredientes premium en barra.' : 'Producto disponible para pedido.'));
+            const desc = p.description || (isServices ? I18nService.t('menu_desc_services') : (isBar ? I18nService.t('menu_desc_bar') : I18nService.t('menu_desc_default')));
             
             // Happy Hour promotion calculations
             let price = Number(p.price || 0);
@@ -598,7 +598,7 @@ export class MenuView extends Component {
               const oldPrice = price;
               price = oldPrice * 0.80; // 20% Discount
               oldPriceHTML = `<span style="text-decoration: line-through; color: var(--pub-text-sec); font-size: 0.8rem; margin-right:6px;">$${oldPrice.toFixed(2)}</span>`;
-              happyHourBadge = `<span style="position: absolute; top: 10px; left: 10px; background: #a855f7; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); z-index:2;">🎉 Happy Hour 20% OFF</span>`;
+              happyHourBadge = `<span style="position: absolute; top: 10px; left: 10px; background: #a855f7; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); z-index:2;">${I18nService.t('menu_happy_hour')}</span>`;
             }
 
             // ── Active Promotions overlay (from promociones collection) ───────
@@ -623,7 +623,7 @@ export class MenuView extends Component {
               // Mark LOTE as sold out if stock exhausted
               if (activePromo.type === 'LOTE' && (activePromo.loteCantidad ?? 1) <= 0) {
                 p._promoSoldOut = true;
-                promoBadge = `<span style="position:absolute;top:10px;left:10px;background:#f87171;color:#fff;font-size:0.62rem;font-weight:800;padding:4px 8px;border-radius:4px;z-index:2;">📦 Agotado</span>`;
+                promoBadge = `<span style="position:absolute;top:10px;left:10px;background:#f87171;color:#fff;font-size:0.62rem;font-weight:800;padding:4px 8px;border-radius:4px;z-index:2;">${I18nService.t('menu_sold_out')}</span>`;
               }
             }
 
@@ -654,7 +654,7 @@ export class MenuView extends Component {
                     <button class="btn btn-secondary btn-xs btn-add-item" data-id="${p.id}"
                       style="border-radius:6px; padding:6px 12px; font-weight:600; ${isBar ? 'border-color:var(--pub-border);' : ''} ${p._promoSoldOut ? 'opacity:0.45;cursor:not-allowed;' : ''}"
                       ${p._promoSoldOut ? 'disabled' : ''}>
-                      ${p._promoSoldOut ? '❌ Agotado' : '+ Agregar'}
+                      ${p._promoSoldOut ? `❌ ${I18nService.t('inv_out_of_stock')}` : I18nService.t('menu_add_btn')}
                     </button>
                   </div>
                 </div>
@@ -679,11 +679,11 @@ export class MenuView extends Component {
     return `
       <div class="floating-cart-bar">
         <div>
-          <div style="color:#fff; font-weight:700; font-size:0.95rem;">${totalQty} items agregados</div>
+          <div style="color:#fff; font-weight:700; font-size:0.95rem;">${I18nService.t('menu_items_added', { count: totalQty })}</div>
           <div style="color:var(--pub-primary); font-weight:800; font-size:1.1rem; margin-top:2px;">$${totalPrice.toFixed(2)}</div>
         </div>
         <button class="btn btn-primary btn-sm px-6 font-semibold" id="btn-view-cart" style="background:var(--pub-primary); border:none; border-radius:8px;">
-          Ver Carrito 🛒
+          ${I18nService.t('menu_view_cart')}
         </button>
       </div>
     `;
@@ -737,7 +737,7 @@ export class MenuView extends Component {
 
     const bodyHTML = `
       <div class="d-flex flex-column gap-3" style="max-height: 60vh; overflow-y: auto; color: var(--pub-text);">
-        <h4 class="font-bold text-sm mb-2" style="border-bottom:1px solid var(--pub-border); padding-bottom:8px;">Consumo Acumulado — Mesa ${this.tableId.replace('mesa-', '')}</h4>
+        <h4 class="font-bold text-sm mb-2" style="border-bottom:1px solid var(--pub-border); padding-bottom:8px;">${I18nService.t('menu_consumption_title', { table: this.tableId.replace('mesa-', '') })}</h4>
         
         ${activeOrders.map(o => {
           const itemsHTML = (o.items || []).map(i => `
@@ -750,12 +750,12 @@ export class MenuView extends Component {
           return `
             <div class="p-3 mb-2" style="background: rgba(255,255,255,0.01); border: 1px solid var(--pub-border); border-radius:8px;">
               <div class="d-flex justify-content-between font-bold text-xs mb-2">
-                <span>Pedido #${o.id.slice(-6).toUpperCase()}</span>
+                <span>${I18nService.t('os_order_id_label')} ${o.id.slice(-6).toUpperCase()}</span>
                 <span class="badge" style="background:#fb923c22; color:#fb923c; font-size:0.65rem;">${o.status}</span>
               </div>
               ${itemsHTML}
               <div class="d-flex justify-content-between text-xs font-bold mt-2" style="border-top: 1px dotted var(--pub-border); padding-top:4px;">
-                <span>Subtotal Pedido</span>
+                <span>${I18nService.t('os_subtotal_order')}</span>
                 <span style="color:var(--pub-primary);">$${Number(o.total || 0).toFixed(2)}</span>
               </div>
             </div>
@@ -763,16 +763,16 @@ export class MenuView extends Component {
         }).join('')}
 
         <div class="d-flex justify-content-between font-bold text-md mt-3" style="border-top: 1px solid var(--pub-border); padding-top:10px; font-size:1.1rem;">
-          <span>Consumo Total Parcial:</span>
+          <span>${I18nService.t('os_total_partial')}</span>
           <span style="color:var(--pub-primary); font-size:1.25rem;">$${total.toFixed(2)}</span>
         </div>
       </div>
     `;
 
     const consumptionModal = new Modal({
-      title: '🧾 Mi Consumo Acumulado',
+      title: `🧾 ${I18nService.t('os_consumption_modal_title')}`,
       bodyHTML,
-      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-cons-close">Cerrar</button>`
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-cons-close">${I18nService.t('close')}</button>`
     });
 
     document.body.appendChild(consumptionModal.mount());
@@ -810,7 +810,7 @@ export class MenuView extends Component {
     }
 
     sessionStorage.setItem('ua_customer_cart', JSON.stringify(this.state.cart));
-    NotificationService.success(`Agregado: ${prod.name}`);
+    NotificationService.success(I18nService.t('menu_added_toast', { name: prod.name }));
     this.renderMenu(this.element);
   }
 

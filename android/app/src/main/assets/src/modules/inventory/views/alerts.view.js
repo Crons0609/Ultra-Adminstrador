@@ -3,6 +3,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { DataTable } from '../../../components/ui/table.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class AlertsView extends Component {
   constructor(params = {}) {
@@ -22,44 +23,44 @@ export class AlertsView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: 'Articulo / Insumo',
+          label: I18nService.t('ale_product'),
           render: (val, row) => `
             <div style="display: flex; flex-direction: column;">
               <span class="font-semibold text-primary">${val}</span>
               <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">
-                ${row.type === 'PRODUCT' ? '📦 Producto de Venta' : '🌱 Insumo de Producción'}
+                ${row.type === 'PRODUCT' ? I18nService.t('ale_type_product') : I18nService.t('ale_type_ingredient')}
               </span>
             </div>
           `
         },
         { 
           key: 'stock', 
-          label: 'Stock Actual',
+          label: I18nService.t('ale_current_stock'),
           render: (val, row) => `<span class="font-medium">${val} ${row.unit || 'uds'}</span>`
         },
         { 
           key: 'minStock', 
-          label: 'Stock Requerido (Mín.)',
+          label: I18nService.t('ale_min_stock'),
           render: (val, row) => `<span class="text-secondary">${val} ${row.unit || 'uds'}</span>`
         },
         { 
           key: 'severity', 
-          label: 'Gravedad',
+          label: I18nService.t('ale_severity'),
           render: (val) => {
             if (val === 'CRITICAL') {
-              return `<span class="stock-badge stock-out">⚠️ Agotado / Crítico</span>`;
+              return `<span class="stock-badge stock-out">${I18nService.t('ale_status_critical')}</span>`;
             } else if (val === 'EXPIRED') {
-              return `<span class="stock-badge stock-out" style="background-color: var(--color-danger-light); color: var(--color-danger); border: 1px solid var(--color-danger);">📅 Vencido</span>`;
+              return `<span class="stock-badge stock-out" style="background-color: var(--color-danger-light); color: var(--color-danger); border: 1px solid var(--color-danger);">${I18nService.t('ale_status_expired')}</span>`;
             }
-            return `<span class="stock-badge stock-low">📉 Stock Bajo</span>`;
+            return `<span class="stock-badge stock-low">${I18nService.t('ale_low_stock')}</span>`;
           }
         },
         {
           key: 'id',
-          label: 'Acción Rápida',
+          label: I18nService.t('actions'),
           render: () => `
             <a href="#/inventory/purchases" class="btn btn-primary btn-sm py-1 px-3" style="font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
-              🛒 Abastecer
+              ${I18nService.t('ale_restock_btn')}
             </a>
           `
         }
@@ -68,44 +69,44 @@ export class AlertsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Alertas de Inventario',
-      subtitle: 'Vista consolidada de productos agotados, insumos con bajo nivel y materias primas vencidas.',
+      title: I18nService.t('ale_title'),
+      subtitle: I18nService.t('ale_subtitle'),
       contentHTML: `
         <!-- KPI Cards Row -->
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift alert-critical">
             <div class="kpi-card-header">
-              <span class="kpi-label">Alertas Críticas (Agotado)</span>
+              <span class="kpi-label">${I18nService.t('ale_critical_kpi')}</span>
               <div class="kpi-icon kpi-icon-danger">🚨</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-alert-crit">0</h3>
-            <span class="text-xs text-secondary">Artículos con stock cero</span>
+            <span class="text-xs text-secondary">${I18nService.t('ale_critical_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift alert-warning">
             <div class="kpi-card-header">
-              <span class="kpi-label">Advertencias (Bajo Stock)</span>
+              <span class="kpi-label">${I18nService.t('ale_warning_kpi')}</span>
               <div class="kpi-icon kpi-icon-warning">⚠️</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-alert-warn">0</h3>
-            <span class="text-xs text-secondary">Artículos bajo el nivel mínimo</span>
+            <span class="text-xs text-secondary">${I18nService.t('ale_warning_desc')}</span>
           </div>
 
           <div class="kpi-card hover-lift" style="border-left: 4px solid var(--color-info);">
             <div class="kpi-card-header">
-              <span class="kpi-label">Materias Primas Vencidas</span>
+              <span class="kpi-label">${I18nService.t('ale_expired_kpi')}</span>
               <div class="kpi-icon kpi-icon-info">📅</div>
             </div>
             <h3 class="kpi-value text-info" id="kpi-alert-exp">0</h3>
-            <span class="text-xs text-secondary">Insumos caducados</span>
+            <span class="text-xs text-secondary">${I18nService.t('ale_expired_desc')}</span>
           </div>
         </div>
 
         <!-- Alerts Table Container -->
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-lg font-semibold">Lista de Artículos que Requieren Atención</h3>
-            <span class="text-xs text-secondary">Se actualiza automáticamente</span>
+            <h3 class="text-lg font-semibold">${I18nService.t('ale_list_title')}</h3>
+            <span class="text-xs text-secondary">${I18nService.t('ale_auto_update')}</span>
           </div>
           <div id="alerts-table-wrapper"></div>
         </div>

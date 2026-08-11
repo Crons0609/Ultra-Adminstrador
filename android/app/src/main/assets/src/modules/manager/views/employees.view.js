@@ -54,7 +54,7 @@ export class EmployeesView extends Component {
             <div style="display:flex;align-items:center;gap:10px;">
               ${ImageDisplay.renderTag(row.imageId || null, `https://ui-avatars.com/api/?name=${encodeURIComponent(val || 'E')}&background=6366f1&color=fff&size=40`, 'width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--color-border);')}
               <div style="display:flex;flex-direction:column;">
-                <span style="font-weight:600;">${val || 'Sin nombre'}</span>
+                <span style="font-weight:600;">${val || I18nService.t('no_name')}</span>
                 <span style="font-size:0.72rem;color:var(--color-text-secondary);">${row.email || ''}</span>
               </div>
             </div>
@@ -99,28 +99,28 @@ export class EmployeesView extends Component {
           label: 'GPS',
           render: (_, row) => {
             const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
-            if (!location) return '<span class="text-xs text-secondary">Sin ubicación</span>';
-            return `<span class="text-xs text-secondary">${location.status || 'Disponible'} · ${TimeService.formatDate(location.updatedAt?.epochMs || location.updatedAt, true)}</span>`;
+            if (!location) return `<span class="text-xs text-secondary">${I18nService.t('emp_no_location')}</span>`;
+            return `<span class="text-xs text-secondary">${location.status || I18nService.t('cal_available')} · ${TimeService.formatDate(location.updatedAt?.epochMs || location.updatedAt, true)}</span>`;
           }
         },
         {
           key: 'locationLink',
-          label: 'Mapa',
+          label: I18nService.t('map'),
           render: (_, row) => {
             const location = this.state.locations.find(l => l.employeeId === row.uid || l.id === row.uid);
             if (!location?.latitude || !location?.longitude) return '';
-            return `<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${location.latitude},${location.longitude}">Ver</a>`;
+            return `<a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${location.latitude},${location.longitude}">${I18nService.t('view')}</a>`;
           }
         },
         {
           key: 'actions',
-          label: 'Acciones',
+          label: I18nService.t('actions'),
           render: (_, row) => {
-            if (this.currentUser.role !== 'OWNER') return '<span class="text-xs text-secondary">Solo Dueño</span>';
+            if (this.currentUser.role !== 'OWNER') return `<span class="text-xs text-secondary">${I18nService.t('emp_owner_only')}</span>`;
             return `
               <div style="display:flex; gap:4px;">
-                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="Editar">Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="Baja">Baja</button>
+                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="${I18nService.t('edit')}">${I18nService.t('edit')}</button>
+                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="${I18nService.t('emp_terminate')}">${I18nService.t('emp_terminate')}</button>
               </div>
             `;
           }
@@ -131,17 +131,17 @@ export class EmployeesView extends Component {
 
     // PageLayout setup
     this.layout = new PageLayout({
-      title: 'Gestión de Empleados',
-      subtitle: 'Administración del personal de tu local. Registra meseros, cocineros, cajeros y gerentes.',
+      title: I18nService.t('emp_title'),
+      subtitle: I18nService.t('emp_subtitle'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-employee">
-          <span style="margin-right: var(--space-1);">+</span> Agregar Trabajador
+          <span style="margin-right: var(--space-1);">+</span> ${I18nService.t('emp_add')}
         </button>
       `,
       contentHTML: `
         <div class="card p-5 mb-5">
           <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h3 class="text-lg font-semibold">Listado de Personal</h3>
+            <h3 class="text-lg font-semibold">${I18nService.t('emp_list_title')}</h3>
           </div>
           <!-- Table Wrapper -->
           <div id="employees-table-wrapper"></div>
@@ -151,10 +151,10 @@ export class EmployeesView extends Component {
         <div class="card p-5 mb-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-              <h3 class="text-md font-bold" style="margin:0;">Mapa de Ubicaciones GPS</h3>
-              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Posición en tiempo real de los empleados que compartieron su ubicación.</p>
+              <h3 class="text-md font-bold" style="margin:0;">${I18nService.t('emp_gps_map_title')}</h3>
+              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">${I18nService.t('emp_gps_map_desc')}</p>
             </div>
-            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">Actualizar</button>
+            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">${I18nService.t('refresh')}</button>
           </div>
           <div id="gps-map-panel">
             <!-- Sidebar + Map split grid layout -->
@@ -170,7 +170,7 @@ export class EmployeesView extends Component {
             
             <!-- Placeholder for no locations or loading -->
             <div id="gps-map-placeholder">
-              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">Cargando ubicaciones GPS...</div>
+              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">${I18nService.t('emp_gps_loading')}</div>
             </div>
           </div>
         </div>
@@ -180,12 +180,12 @@ export class EmployeesView extends Component {
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-              <h3 class="text-md font-bold" style="margin:0;">Distribución de Mesas</h3>
-              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Carga de trabajo de meseros activos y mesas asignadas.</p>
+              <h3 class="text-md font-bold" style="margin:0;">${I18nService.t('waiter_tables')}</h3>
+              <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">${I18nService.t('emp_table_dist_desc')}</p>
             </div>
           </div>
           <div id="waiter-distribution-panel">
-            <p class="text-secondary" style="font-size:0.85rem;">Cargando datos de distribución...</p>
+            <p class="text-secondary" style="font-size:0.85rem;">${I18nService.t('loading_data')}</p>
           </div>
         </div>
         ` : ''}
@@ -387,10 +387,9 @@ export class EmployeesView extends Component {
       placeholder.innerHTML = `
         <div style="text-align:center; padding: var(--space-6);">
           <div style="font-size:2.5rem; margin-bottom:var(--space-3);">🛰️</div>
-          <p class="font-semibold" style="margin-bottom:6px;">Sin ubicaciones activas</p>
+          <p class="font-semibold" style="margin-bottom:6px;">${I18nService.t('emp_gps_no_locations')}</p>
           <p class="text-secondary" style="font-size:0.82rem; max-width:340px; margin:0 auto;">
-            Ningún empleado ha activado el seguimiento GPS todavía.
-            Al iniciar sesión, el sistema les solicitará permiso de ubicación automáticamente.
+            ${I18nService.t('emp_gps_no_locations_desc')}
           </p>
         </div>
       `;
@@ -421,7 +420,7 @@ export class EmployeesView extends Component {
       const status = loc.status || 'Disponible';
       const lastUpdated = loc.updatedAt?.epochMs || (typeof loc.updatedAt === 'number' ? loc.updatedAt : null);
       const elapsed = lastUpdated ? Math.round((now - lastUpdated) / 60000) : null;
-      const elapsedText = elapsed === null ? '' : elapsed < 1 ? 'Hace un momento' : `Hace ${elapsed} min`;
+      const elapsedText = elapsed === null ? '' : elapsed < 1 ? I18nService.t('just_now') : I18nService.t('minutes_ago', { min: elapsed });
       const accuracy = loc.accuracy ? `~${Math.round(loc.accuracy)}m` : '';
       const statusColor = status === 'DISPONIBLE' || status === 'Disponible'
         ? '#10b981' : status === 'OCUPADO' ? '#f59e0b' : '#6b7280';
@@ -454,20 +453,20 @@ export class EmployeesView extends Component {
         <div style="font-family: inherit; font-size: 0.85rem; padding: 4px; color: var(--color-text-primary);">
           <strong style="display: block; font-size: 0.95rem; margin-bottom: 4px;">${name}</strong>
           <div style="color: var(--color-text-secondary); margin-bottom: 2px;">
-            Cargo: ${employee?.customRole || employee?.role || 'Empleado'}
+            ${I18nService.t('emp_col_role')}: ${employee?.customRole || employee?.role || I18nService.t('emp_col_employee')}
           </div>
           <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
             <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
             <span style="font-weight: 600; color: ${statusColor};">${status}</span>
-            ${isStale ? '<span style="color:#ef4444; font-weight:600; font-size:0.75rem;">(Inactivo)</span>' : ''}
+            ${isStale ? `<span style="color:#ef4444; font-weight:600; font-size:0.75rem;">(${I18nService.t('inactive')})</span>` : ''}
           </div>
           <div style="font-size: 0.75rem; color: var(--color-text-tertiary); margin-bottom: 8px; line-height: 1.3;">
-            ${elapsedText ? `Última conexión: ${elapsedText}<br>` : ''}
-            ${accuracy ? `Precisión: ${accuracy}` : ''}
+            ${elapsedText ? `${I18nService.t('last_connection')} ${elapsedText}<br>` : ''}
+            ${accuracy ? `${I18nService.t('precision')} ${accuracy}` : ''}
           </div>
           <div style="display: flex; gap: 6px;">
             <a class="btn btn-primary btn-xs" href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" rel="noopener" style="text-decoration: none; color: white;">
-              🗺️ Google Maps
+              ${I18nService.t('view_on_google_maps')}
             </a>
           </div>
         </div>
@@ -517,7 +516,7 @@ export class EmployeesView extends Component {
       const status = loc.status || 'Disponible';
       const lastUpdated = loc.updatedAt?.epochMs || (typeof loc.updatedAt === 'number' ? loc.updatedAt : null);
       const elapsed = lastUpdated ? Math.round((now - lastUpdated) / 60000) : null;
-      const elapsedText = elapsed === null ? '' : elapsed < 1 ? 'Hace un momento' : `Hace ${elapsed} min`;
+      const elapsedText = elapsed === null ? '' : elapsed < 1 ? I18nService.t('just_now') : I18nService.t('minutes_ago', { min: elapsed });
       const accuracy = loc.accuracy ? `~${Math.round(loc.accuracy)}m` : '';
       const statusColor = status === 'DISPONIBLE' || status === 'Disponible' ? '#10b981' : status === 'OCUPADO' ? '#f59e0b' : '#6b7280';
       const isStale = elapsed !== null && elapsed > 10;
@@ -527,7 +526,7 @@ export class EmployeesView extends Component {
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
             <strong style="font-size: 0.85rem; color: var(--color-text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 160px;" title="${name}">${name}</strong>
             <span style="font-size: 0.72rem; color: var(--color-text-secondary); background: var(--color-bg-primary); padding: 2px 6px; border-radius: var(--radius-md); border: 1px solid var(--color-border); white-space: nowrap;">
-              ${employee?.customRole || employee?.role || 'Empleado'}
+              ${employee?.customRole || employee?.role || I18nService.t('emp_col_employee')}
             </span>
           </div>
           
@@ -537,19 +536,19 @@ export class EmployeesView extends Component {
               ${status}
             </span>
             ${elapsedText ? `<span class="text-secondary" style="font-size: 0.7rem;">${elapsedText}</span>` : ''}
-            ${isStale ? `<span style="color: #ef4444; font-size: 0.7rem; font-weight: 600;">⚠️ Inactivo</span>` : ''}
+            ${isStale ? `<span style="color: #ef4444; font-size: 0.7rem; font-weight: 600;">⚠️ ${I18nService.t('inactive')}</span>` : ''}
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 6px;">
             <span style="font-size: 0.68rem; color: var(--color-text-tertiary);">
-              ${accuracy ? `📡 Precisión: ${accuracy}` : ''}
+              ${accuracy ? `📡 ${I18nService.t('precision')} ${accuracy}` : ''}
             </span>
             <div style="display: flex; gap: 4px;">
               <button class="btn btn-secondary btn-xs btn-center-map" data-lat="${loc.latitude}" data-lng="${loc.longitude}" data-employee-id="${employeeId}">
-                📍 Centrar
+                ${I18nService.t('center')}
               </button>
               <a href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" rel="noopener" class="btn btn-secondary btn-xs" style="padding: 2px 6px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">
-                🔗 Maps
+                ${I18nService.t('maps_link')}
               </a>
             </div>
           </div>
@@ -617,7 +616,7 @@ export class EmployeesView extends Component {
     const tables = this.state.tables.filter(t => t.status !== 'FREE');
 
     if (waiters.length === 0) {
-      panel.innerHTML = '<p class="text-secondary" style="font-size:0.85rem;">No hay meseros registrados.</p>';
+      panel.innerHTML = `<p class="text-secondary" style="font-size:0.85rem;">${I18nService.t('emp_no_waiters')}</p>`;
       return;
     }
 
@@ -628,13 +627,13 @@ export class EmployeesView extends Component {
         <tr>
           <td style="padding: 8px 12px; font-weight:600;">${w.displayName || w.email}</td>
           <td style="padding: 8px 12px; text-align:center;">
-            <span class="badge" style="background:var(--color-accent-light, #3b82f622); color:var(--color-accent); font-size:0.8rem; padding: 2px 10px;">${assignedTables.length} mesas</span>
+            <span class="badge" style="background:var(--color-accent-light, #3b82f622); color:var(--color-accent); font-size:0.8rem; padding: 2px 10px;">${assignedTables.length} ${I18nService.t('waiter_tables')}</span>
           </td>
           <td style="padding: 8px 12px;">
             ${assignedTables.map(t =>
               `<span style="display:inline-block; background:var(--color-bg-tertiary); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:2px 8px; font-size:0.75rem; margin:2px;">
                 ${t.name}
-                <button class="btn-reassign-table" data-table="${t.id}" data-table-name="${t.name}" title="Reasignar" style="background:none; border:none; cursor:pointer; color:var(--color-accent); font-size:0.7rem; padding:0 2px;">✏️</button>
+                <button class="btn-reassign-table" data-table="${t.id}" data-table-name="${t.name}" title="${I18nService.t('reassign')}" style="background:none; border:none; cursor:pointer; color:var(--color-accent); font-size:0.7rem; padding:0 2px;">✏️</button>
               </span>`
             ).join('') || '<span class="text-secondary" style="font-size:0.8rem;">—</span>'}
           </td>
@@ -645,12 +644,12 @@ export class EmployeesView extends Component {
     const unassigned = tables.filter(t => !t.assignedWaiterId);
     const unassignedRow = unassigned.length > 0 ? `
       <tr style="background: rgba(239,68,68,0.04);">
-        <td style="padding: 8px 12px; color:#ef4444; font-weight:600;">⚠️ Sin asignar</td>
+        <td style="padding: 8px 12px; color:#ef4444; font-weight:600;">⚠️ ${I18nService.t('unassigned')}</td>
         <td style="padding: 8px 12px; text-align:center;"><span class="badge" style="background:#ef444422; color:#ef4444;">${unassigned.length}</span></td>
         <td style="padding: 8px 12px;">${unassigned.map(t =>
           `<span style="display:inline-block; background:#ef444411; border:1px solid #ef444433; border-radius:var(--radius-md); padding:2px 8px; font-size:0.75rem; margin:2px;">
             ${t.name}
-            <button class="btn-reassign-table" data-table="${t.id}" data-table-name="${t.name}" title="Asignar" style="background:none; border:none; cursor:pointer; color:var(--color-accent); font-size:0.7rem; padding:0 2px;">➕</button>
+            <button class="btn-reassign-table" data-table="${t.id}" data-table-name="${t.name}" title="${I18nService.t('assign')}" style="background:none; border:none; cursor:pointer; color:var(--color-accent); font-size:0.7rem; padding:0 2px;">➕</button>
           </span>`
         ).join('')}</td>
       </tr>
@@ -658,16 +657,16 @@ export class EmployeesView extends Component {
 
     panel.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3);">
-        <span style="font-size:0.82rem; color:var(--color-text-secondary);">Distribución en tiempo real. ${tables.length} mesa(s) activa(s).</span>
-        <button id="btn-reset-rr-index" class="btn btn-secondary btn-xs">🔄 Reiniciar Rotación</button>
+        <span style="font-size:0.82rem; color:var(--color-text-secondary);">${I18nService.t('emp_table_dist_realtime', { count: tables.length })}</span>
+        <button id="btn-reset-rr-index" class="btn btn-secondary btn-xs">${I18nService.t('emp_reset_rotation')}</button>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
           <thead>
             <tr style="border-bottom:2px solid var(--color-border);">
-              <th style="padding:8px 12px; text-align:left;">Mesero</th>
-              <th style="padding:8px 12px; text-align:center;">Carga</th>
-              <th style="padding:8px 12px; text-align:left;">Mesas Asignadas</th>
+              <th style="padding:8px 12px; text-align:left;">${I18nService.t('emp_role_waiter')}</th>
+              <th style="padding:8px 12px; text-align:center;">${I18nService.t('emp_load')}</th>
+              <th style="padding:8px 12px; text-align:left;">${I18nService.t('emp_assigned_tables')}</th>
             </tr>
           </thead>
           <tbody>${rows}${unassignedRow}</tbody>
@@ -679,17 +678,17 @@ export class EmployeesView extends Component {
   async openReassignModal(tableId, tableName) {
     const waiters = this.state.employees.filter(e => e.role === 'WAITER' || e.permissions?.tomar_pedidos === true);
     if (waiters.length === 0) {
-      NotificationService.error('No hay personal habilitado para tomar pedidos.');
+      NotificationService.error(I18nService.t('emp_error_no_waiters_enabled'));
       return;
     }
 
     const modal = new Modal({
-      title: `Reasignar ${tableName}`,
+      title: I18nService.t('emp_reassign_title', { name: tableName }),
       bodyHTML: `
-        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:var(--space-3);">Selecciona el trabajador al que deseas asignar esta mesa:</p>
+        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:var(--space-3);">${I18nService.t('emp_reassign_desc')}</p>
         <div style="display:flex; flex-direction:column; gap:var(--space-2);">
           ${waiters.map(w => {
-            const displayCargo = w.customRole || (w.role === 'WAITER' ? 'Mesero' : w.role);
+            const displayCargo = w.customRole || (w.role === 'WAITER' ? I18nService.t('emp_role_waiter') : w.role);
             return `
               <button class="btn btn-secondary w-full btn-pick-waiter" style="justify-content:flex-start;" data-uid="${w.uid}" data-name="${w.displayName || w.email}" data-role="${displayCargo}">
                 👤 ${w.displayName || w.email} (${displayCargo})
@@ -698,7 +697,7 @@ export class EmployeesView extends Component {
           }).join('')}
         </div>
       `,
-      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-reassign-cancel">Cancelar</button>`,
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-reassign-cancel">${I18nService.t('cancel')}</button>`,
       size: 'sm'
     });
 
@@ -713,11 +712,11 @@ export class EmployeesView extends Component {
         const role = btn.getAttribute('data-role');
         try {
           await WaiterAssignmentService.reassignTable(tableId, uid, name, role);
-          NotificationService.success(`${tableName} reasignada a ${name}.`);
+          NotificationService.success(I18nService.t('emp_reassigned_success', { tableName, name }));
           modal.close();
         } catch (e) {
           console.error(e);
-          NotificationService.error('Error al reasignar la mesa.');
+          NotificationService.error(I18nService.t('emp_reassign_error'));
         }
       });
     });
@@ -740,33 +739,33 @@ export class EmployeesView extends Component {
   getSYSTEM_PERMISSIONS() {
     return [
       // Restaurante / Alimentos
-      { key: 'tomar_pedidos', label: '🍽️ Tomar pedidos' },
-      { key: 'editar_pedidos', label: '📝 Editar pedidos' },
-      { key: 'cancelar_pedidos', label: '❌ Cancelar pedidos' },
-      { key: 'cobrar_pedidos', label: '💵 Cobrar pedidos' },
-      { key: 'administrar_caja', label: '🏦 Administrar caja' },
-      { key: 'administrar_mesas', label: '📍 Administrar mesas' },
-      { key: 'gestionar_reservas', label: '📅 Gestionar reservas' },
+      { key: 'tomar_pedidos', label: I18nService.t('perm_take_orders') },
+      { key: 'editar_pedidos', label: I18nService.t('perm_edit_orders') },
+      { key: 'cancelar_pedidos', label: I18nService.t('perm_cancel_orders') },
+      { key: 'cobrar_pedidos', label: I18nService.t('perm_collect_orders') },
+      { key: 'administrar_caja', label: I18nService.t('perm_manage_cash') },
+      { key: 'administrar_mesas', label: I18nService.t('perm_manage_tables') },
+      { key: 'gestionar_reservas', label: I18nService.t('perm_manage_reservations') },
 
       // Servicios Múltiples / Citas / Rentas
-      { key: 'gestionar_servicios', label: '🛠️ Gestionar servicios / tareas' },
-      { key: 'gestionar_citas', label: '🗓️ Gestionar citas y agenda' },
-      { key: 'gestionar_alquileres', label: '🔑 Gestionar alquileres y rentas' },
-      { key: 'gestionar_vehiculos', label: '🚗 Gestionar vehículos / delivery' },
-      { key: 'gestionar_herramientas', label: '🔧 Gestionar herramientas y equipos' },
-      { key: 'gestionar_clientes', label: '👥 Gestionar clientes' },
-      { key: 'registrar_ubicacion_clientes', label: '📍 Registrar ubicación de clientes' },
+      { key: 'gestionar_servicios', label: I18nService.t('perm_manage_services') },
+      { key: 'gestionar_citas', label: I18nService.t('perm_manage_appointments') },
+      { key: 'gestionar_alquileres', label: I18nService.t('perm_manage_rentals') },
+      { key: 'gestionar_vehiculos', label: I18nService.t('perm_manage_vehicles') },
+      { key: 'gestionar_herramientas', label: I18nService.t('perm_manage_tools') },
+      { key: 'gestionar_clientes', label: I18nService.t('perm_manage_clients') },
+      { key: 'registrar_ubicacion_clientes', label: I18nService.t('perm_register_client_location') },
 
       // Operaciones Generales
-      { key: 'ver_reportes', label: '📊 Ver reportes' },
-      { key: 'gestionar_productos', label: '📦 Gestionar productos y catálogo' },
-      { key: 'gestionar_categorias', label: '📁 Gestionar categorías' },
-      { key: 'gestionar_inventario', label: '🗄️ Gestionar inventario / stock' },
-      { key: 'administrar_empleados', label: '👥 Administrar empleados' },
-      { key: 'ver_estadisticas', label: '📈 Ver estadísticas' },
-      { key: 'configurar_impresoras', label: '🖨️ Configurar impresoras' },
-      { key: 'recibir_notificaciones', label: '🔔 Recibir notificaciones' },
-      { key: 'administrar_promociones', label: '🏷️ Administrar promociones' }
+      { key: 'ver_reportes', label: I18nService.t('perm_view_reports') },
+      { key: 'gestionar_productos', label: I18nService.t('perm_manage_catalog') },
+      { key: 'gestionar_categorias', label: I18nService.t('perm_manage_categories') },
+      { key: 'gestionar_inventario', label: I18nService.t('perm_manage_inventory') },
+      { key: 'administrar_empleados', label: I18nService.t('perm_manage_employees') },
+      { key: 'ver_estadisticas', label: I18nService.t('perm_view_stats') },
+      { key: 'configurar_impresoras', label: I18nService.t('perm_config_printers') },
+      { key: 'recibir_notificaciones', label: I18nService.t('perm_receive_notifications') },
+      { key: 'administrar_promociones', label: I18nService.t('perm_manage_promos') }
     ];
   }
 
@@ -849,52 +848,52 @@ export class EmployeesView extends Component {
     if (modalOverlay) modalOverlay.remove();
 
     const rolesSelectOptions = `
-      <option value="WAITER">Mesero / Salonero</option>
-      <option value="KITCHEN">Cocinero / Chef</option>
-      <option value="CASHIER">Cajero</option>
-      <option value="MANAGER">Gerente / Administrador</option>
-      <option value="CUSTOM">Cargo Personalizado...</option>
+      <option value="WAITER">${I18nService.t('emp_role_waiter_desc')}</option>
+      <option value="KITCHEN">${I18nService.t('emp_role_kitchen_desc')}</option>
+      <option value="CASHIER">${I18nService.t('emp_role_cashier')}</option>
+      <option value="MANAGER">${I18nService.t('emp_role_manager_desc')}</option>
+      <option value="CUSTOM">${I18nService.t('emp_custom_role_option')}</option>
     `;
 
     const formHTML = `
       <form id="add-employee-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
         <div class="form-group">
-          <label class="form-label" for="emp-name">Nombre Completo <span class="form-label-required"></span></label>
-          <input type="text" id="emp-name" class="input input-md" placeholder="Ej. Carlos Torres" required />
+          <label class="form-label" for="emp-name">${I18nService.t('emp_full_name')} <span class="form-label-required"></span></label>
+          <input type="text" id="emp-name" class="input input-md" placeholder="${I18nService.t('emp_name_placeholder')}" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="emp-role">Cargo / Rol <span class="form-label-required"></span></label>
+            <label class="form-label" for="emp-role">${I18nService.t('emp_role')} <span class="form-label-required"></span></label>
             <select id="emp-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
               ${rolesSelectOptions}
             </select>
           </div>
           <div class="form-group" id="emp-custom-container" style="display:none;">
-            <label class="form-label" for="emp-custom-role">Especificar Cargo <span class="form-label-required"></span></label>
-            <input type="text" id="emp-custom-role" class="input input-md" placeholder="Ej. Bartender, Recepcionista" />
+            <label class="form-label" for="emp-custom-role">${I18nService.t('emp_specify_role_label')} <span class="form-label-required"></span></label>
+            <input type="text" id="emp-custom-role" class="input input-md" placeholder="${I18nService.t('emp_custom_role_placeholder')}" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="emp-phone">Teléfono</label>
-          <input type="text" id="emp-phone" class="input input-md" placeholder="Ej. +505 8888-8888" />
+          <label class="form-label" for="emp-phone">${I18nService.t('col_phone')}</label>
+          <input type="text" id="emp-phone" class="input input-md" placeholder="${I18nService.t('auth_contact_phone_placeholder')}" />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="emp-email">Correo Electrónico <span class="form-label-required"></span></label>
-            <input type="email" id="emp-email" class="input input-md" placeholder="empleado@correo.com" required />
+            <label class="form-label" for="emp-email">${I18nService.t('auth_email')} <span class="form-label-required"></span></label>
+            <input type="email" id="emp-email" class="input input-md" placeholder="${I18nService.t('emp_email_placeholder')}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="emp-password">Contraseña Inicial <span class="form-label-required"></span></label>
-            <input type="password" id="emp-password" class="input input-md" placeholder="Min. 6 caracteres" minlength="6" required />
+            <label class="form-label" for="emp-password">${I18nService.t('emp_initial_password_label')} <span class="form-label-required"></span></label>
+            <input type="password" id="emp-password" class="input input-md" placeholder="${I18nService.t('emp_password_hint')}" minlength="6" required />
           </div>
         </div>
 
         <!-- Permisos checklist -->
         <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 4px;">
-          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--color-accent);">🔑 Permisos del Sistema</label>
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--color-accent);">${I18nService.t('emp_permissions_title')}</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
             ${this.renderPermissionsCheckboxes()}
           </div>
@@ -903,12 +902,12 @@ export class EmployeesView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">Guardar Empleado</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${I18nService.t('emp_save_btn')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: '👥 Registrar Nuevo Trabajador',
+      title: I18nService.t('emp_add_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -931,7 +930,7 @@ export class EmployeesView extends Component {
     const submitBtn = modalEl.querySelector('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Creando cuenta...';
+      submitBtn.textContent = I18nService.t('emp_creating_account');
     }
 
     const displayName = modalEl.querySelector('#emp-name').value.trim();
@@ -965,15 +964,15 @@ export class EmployeesView extends Component {
         await update(ref(db, `${this.companyId}/employees/${uid}`), { phone });
       }
 
-      NotificationService.success(`Trabajador "${displayName}" agregado exitosamente.`);
+      NotificationService.success(I18nService.t('emp_added_success', { name: displayName }));
       this.modalInstance.close();
       this.loadEmployees();
     } catch (e) {
       console.error('[EmployeesView] Error al crear empleado:', e);
-      alert(`Error al registrar el empleado: ${e.message || e}`);
+      alert(I18nService.t('emp_save_error', { error: e.message || e }));
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar Empleado';
+        submitBtn.textContent = I18nService.t('emp_save_btn');
       }
     }
   }
@@ -987,40 +986,40 @@ export class EmployeesView extends Component {
 
     const isCustom = emp.customRole ? true : false;
     const rolesSelectOptions = `
-      <option value="WAITER" ${(!isCustom && emp.role === 'WAITER') ? 'selected' : ''}>Mesero / Salonero</option>
-      <option value="KITCHEN" ${(!isCustom && emp.role === 'KITCHEN') ? 'selected' : ''}>Cocinero / Chef</option>
-      <option value="CASHIER" ${(!isCustom && emp.role === 'CASHIER') ? 'selected' : ''}>Cajero</option>
-      <option value="MANAGER" ${(!isCustom && emp.role === 'MANAGER') ? 'selected' : ''}>Gerente / Administrador</option>
-      <option value="CUSTOM" ${isCustom ? 'selected' : ''}>Cargo Personalizado...</option>
+      <option value="WAITER" ${(!isCustom && emp.role === 'WAITER') ? 'selected' : ''}>${I18nService.t('emp_role_waiter_desc')}</option>
+      <option value="KITCHEN" ${(!isCustom && emp.role === 'KITCHEN') ? 'selected' : ''}>${I18nService.t('emp_role_kitchen_desc')}</option>
+      <option value="CASHIER" ${(!isCustom && emp.role === 'CASHIER') ? 'selected' : ''}>${I18nService.t('emp_role_cashier')}</option>
+      <option value="MANAGER" ${(!isCustom && emp.role === 'MANAGER') ? 'selected' : ''}>${I18nService.t('emp_role_manager_desc')}</option>
+      <option value="CUSTOM" ${isCustom ? 'selected' : ''}>${I18nService.t('emp_custom_role_option')}</option>
     `;
 
     const formHTML = `
       <form id="edit-employee-form" style="display:flex; flex-direction:column; gap: var(--space-3); color: var(--color-text-primary);">
         <div class="form-group">
-          <label class="form-label" for="edit-emp-name">Nombre Completo <span class="form-label-required"></span></label>
+          <label class="form-label" for="edit-emp-name">${I18nService.t('emp_full_name')} <span class="form-label-required"></span></label>
           <input type="text" id="edit-emp-name" class="input input-md" value="${this.escapeHTML(emp.displayName)}" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="edit-emp-role">Cargo / Rol</label>
+            <label class="form-label" for="edit-emp-role">${I18nService.t('emp_role')}</label>
             <select id="edit-emp-role" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
               ${rolesSelectOptions}
             </select>
           </div>
           <div class="form-group" id="edit-emp-custom-container" style="display:${isCustom ? 'block' : 'none'};">
-            <label class="form-label" for="edit-emp-custom-role">Especificar Cargo <span class="form-label-required"></span></label>
-            <input type="text" id="edit-emp-custom-role" class="input input-md" value="${isCustom ? this.escapeHTML(emp.customRole) : ''}" placeholder="Ej. Bartender, Recepcionista" />
+            <label class="form-label" for="edit-emp-custom-role">${I18nService.t('emp_specify_role_label')} <span class="form-label-required"></span></label>
+            <input type="text" id="edit-emp-custom-role" class="input input-md" value="${isCustom ? this.escapeHTML(emp.customRole) : ''}" placeholder="${I18nService.t('emp_custom_role_placeholder')}" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-emp-phone">Teléfono</label>
-          <input type="text" id="edit-emp-phone" class="input input-md" value="${this.escapeHTML(emp.phone && emp.phone !== '—' ? emp.phone : '')}" placeholder="Ej. +505 8888-8888" />
+          <label class="form-label" for="edit-emp-phone">${I18nService.t('col_phone')}</label>
+          <input type="text" id="edit-emp-phone" class="input input-md" value="${this.escapeHTML(emp.phone && emp.phone !== '—' ? emp.phone : '')}" placeholder="${I18nService.t('auth_contact_phone_placeholder')}" />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-emp-email">Correo Electrónico</label>
+          <label class="form-label" for="edit-emp-email">${I18nService.t('auth_email')}</label>
           <input type="email" id="edit-emp-email" class="input input-md" value="${this.escapeHTML(emp.email)}" required />
         </div>
 
@@ -1028,15 +1027,15 @@ export class EmployeesView extends Component {
           <label class="switch-container">
             <input type="checkbox" id="edit-emp-active" class="switch-input" ${emp.active ? 'checked' : ''} />
             <div>
-              <strong style="font-size:0.85rem; display:block;">Estado de la cuenta</strong>
-              <span class="text-xs text-secondary">Activar o suspender el acceso de este trabajador.</span>
+              <strong style="font-size:0.85rem; display:block;">${I18nService.t('emp_account_status_label')}</strong>
+              <span class="text-xs text-secondary">${I18nService.t('emp_account_status_desc')}</span>
             </div>
           </label>
         </div>
 
         <!-- Permisos checklist -->
         <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 4px;">
-          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--color-accent);">🔑 Permisos del Sistema</label>
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block; color: var(--color-accent);">${I18nService.t('emp_permissions_title')}</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
             ${this.renderPermissionsCheckboxes(emp.permissions)}
           </div>
@@ -1045,12 +1044,12 @@ export class EmployeesView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="edit-modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="edit-modal-submit-btn">Guardar Cambios</button>
+      <button class="btn btn-secondary btn-sm" id="edit-modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="edit-modal-submit-btn">${I18nService.t('save_changes')}</button>
     `;
 
     const editModal = new Modal({
-      title: '✏️ Editar Información de Empleado',
+      title: I18nService.t('emp_edit_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -1069,7 +1068,7 @@ export class EmployeesView extends Component {
 
       const submitBtn = el.querySelector('#edit-modal-submit-btn');
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando cambios...';
+      submitBtn.textContent = I18nService.t('updating');
 
       const displayName = el.querySelector('#edit-emp-name').value.trim();
       const roleSelectVal = el.querySelector('#edit-emp-role').value;
@@ -1118,20 +1117,20 @@ export class EmployeesView extends Component {
           description: `El gerente/dueño editó el perfil del empleado ${displayName} (${email}). Rol: ${role}, Cargo: ${customRole || 'Predefinido'}, Activo: ${active}.`
         });
 
-        NotificationService.success(`Datos de "${displayName}" actualizados.`);
+        NotificationService.success(I18nService.t('emp_updated_success', { name: displayName }));
         editModal.close();
         this.loadEmployees();
       } catch (err) {
         console.error(err);
-        alert(`Error al guardar cambios: ${err.message || err}`);
+        alert(I18nService.t('error_occurred') + ': ' + (err.message || err));
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar Cambios';
+        submitBtn.textContent = I18nService.t('save_changes');
       }
     });
   }
 
   confirmDeleteEmployee(uid, name) {
-    if (confirm(`¿Estás seguro de que deseas dar de baja y eliminar al empleado "${name}" del negocio?`)) {
+    if (confirm(I18nService.t('emp_confirm_delete', { name }))) {
       this.deleteEmployee(uid);
     }
   }
@@ -1139,11 +1138,11 @@ export class EmployeesView extends Component {
   async deleteEmployee(uid) {
     try {
       await FirestoreService.removeEmployeeFromCompany(this.companyId, uid);
-      NotificationService.success('Empleado dado de baja exitosamente.');
+      NotificationService.success(I18nService.t('emp_deleted_success'));
       this.loadEmployees();
     } catch (e) {
       console.error('[EmployeesView] Error deleting employee:', e);
-      alert(`Error al dar de baja al empleado: ${e.message || e}`);
+      alert(I18nService.t('emp_delete_error', { error: e.message || e }));
     }
   }
 

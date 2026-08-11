@@ -30,19 +30,19 @@ export class CatalogSettingsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Configuración de Página Pública',
+      title: I18nService.t('pub_title'),
       subtitle: 'Personaliza el diseño de tu catálogo digital público y mide el interés de tus clientes.',
       actionHTML: `
         <a id="lnk-visit-public" href="#/${this.companyId}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
-          🌐 Ver Página Pública
+          🌐 ${I18nService.t('view')} ${I18nService.t('nav_public_page')}
         </a>
       `,
       contentHTML: `
         <!-- Tabs Selector -->
         <div class="settings-tabs">
-          <button class="settings-tab-btn active" id="tab-customize">🎨 Personalización</button>
-          <button class="settings-tab-btn" id="tab-stats">📊 Estadísticas de Tráfico</button>
-          <button class="settings-tab-btn" id="tab-whatsapp">💬 Integración API WhatsApp</button>
+          <button class="settings-tab-btn active" id="tab-customize">🎨 ${I18nService.t('settings_tab_appearance')}</button>
+          <button class="settings-tab-btn" id="tab-stats">📊 ${I18nService.t('ins_statistics')}</button>
+          <button class="settings-tab-btn" id="tab-whatsapp">💬 WhatsApp API</button>
         </div>
 
         <div id="settings-tab-content">

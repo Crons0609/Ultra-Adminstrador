@@ -20,7 +20,7 @@ export class PlansView extends Component {
     // Set up PageLayout
     this.layout = new PageLayout({
       title: I18nService.t('plan_title'),
-      subtitle: 'SaaS subscription management, branch limits, products, and license fees.',
+      subtitle: I18nService.t('sa_plans_subtitle'),
       actionHTML: `<button class="btn btn-primary btn-sm" id="btn-add-plan">+ ${I18nService.t('plan_add')}</button>`,
       contentHTML: `
         <div class="grid-stats" id="plans-container-grid">
@@ -39,9 +39,9 @@ export class PlansView extends Component {
 
   getDefaultPlans() {
     return [
-      { id: 'BASIC', name: 'Plan Basic', price: 499, currency: 'NIO', duration: 'Mensual', description: 'Ideal para cafeterías pequeñas o un solo local.', benefits: '1 Sucursal, 3 Usuarios activos, Menú Digital QR', userLimit: 3, employeeLimit: 5, storageGb: 1, branchLimit: 1, productLimit: 100, status: 'ACTIVO', color: '#64748b', icon: 'store', order: 1, enabledFeatures: 'menu_qr,inventario' },
-      { id: 'PREMIUM', name: 'Plan Premium', price: 999, currency: 'NIO', duration: 'Mensual', description: 'El más popular para restaurantes en crecimiento.', benefits: '3 Sucursales, Usuarios ilimitados, Módulo KDS e Inventario', userLimit: 20, employeeLimit: 50, storageGb: 5, branchLimit: 3, productLimit: 1000, status: 'ACTIVO', color: '#7c75ff', icon: 'crown', order: 2, enabledFeatures: 'menu_qr,inventario,kds,reportes' },
-      { id: 'ENTERPRISE', name: 'Plan Enterprise', price: 1999, currency: 'NIO', duration: 'Mensual', description: 'Para franquicias y grandes cadenas de comida.', benefits: 'Sucursales ilimitadas, Soporte prioritario 24/7, API abierta e informes avanzados', userLimit: 0, employeeLimit: 0, storageGb: 25, branchLimit: 0, productLimit: 0, status: 'ACTIVO', color: '#16a34a', icon: 'building', order: 3, enabledFeatures: 'menu_qr,inventario,kds,reportes,api,soporte_prioritario' }
+      { id: 'BASIC', name: I18nService.t('plan_name') + ' Basic', price: 499, currency: 'NIO', duration: I18nService.t('fin_monthly'), description: I18nService.t('sa_plan_basic_desc'), benefits: I18nService.t('sa_plan_basic_benefits'), userLimit: 3, employeeLimit: 5, storageGb: 1, branchLimit: 1, productLimit: 100, status: 'ACTIVO', color: '#64748b', icon: 'store', order: 1, enabledFeatures: 'menu_qr,inventario' },
+      { id: 'PREMIUM', name: I18nService.t('plan_name') + ' Premium', price: 999, currency: 'NIO', duration: I18nService.t('fin_monthly'), description: I18nService.t('sa_plan_premium_desc'), benefits: I18nService.t('sa_plan_premium_benefits'), userLimit: 20, employeeLimit: 50, storageGb: 5, branchLimit: 3, productLimit: 1000, status: 'ACTIVO', color: '#7c75ff', icon: 'crown', order: 2, enabledFeatures: 'menu_qr,inventario,kds,reportes' },
+      { id: 'ENTERPRISE', name: I18nService.t('plan_name') + ' Enterprise', price: 1999, currency: 'NIO', duration: I18nService.t('fin_monthly'), description: I18nService.t('sa_plan_enterprise_desc'), benefits: I18nService.t('sa_plan_enterprise_benefits'), userLimit: 0, employeeLimit: 0, storageGb: 25, branchLimit: 0, productLimit: 0, status: 'ACTIVO', color: '#16a34a', icon: 'building', order: 3, enabledFeatures: 'menu_qr,inventario,kds,reportes,api,soporte_prioritario' }
     ];
   }
 
@@ -56,7 +56,7 @@ export class PlansView extends Component {
       GlobalStore.set({ plans });
     } catch (error) {
       console.error('[PlansView] Error loading plans:', error);
-      NotificationService.error('No se pudieron cargar los planes desde Firebase.');
+      NotificationService.error(I18nService.t('sa_plans_error_load'));
       GlobalStore.set({ plans: this.getDefaultPlans() });
     }
   }
@@ -109,26 +109,26 @@ export class PlansView extends Component {
       const benefits = p.benefits || p.features || '';
       const featuresList = benefits
         ? benefits.split(',').map(f => `<li>✓ ${f.trim()}</li>`).join('')
-        : '<li>Sin características</li>';
+        : `<li>${I18nService.t('sa_plans_no_features')}</li>`;
       
       const isPremium = p.id === 'PREMIUM';
       const highlightStyle = isPremium ? `border: 2px solid ${p.color || 'var(--color-accent)'};` : '';
-      const badgeHTML = isPremium ? '<span class="badge" style="background-color: var(--color-accent); color: white; margin-bottom: var(--space-2); align-self: center;">Recomendado</span>' : '';
-      const statusLabel = p.status === 'INACTIVO' ? 'Inactivo' : 'Activo';
+      const badgeHTML = isPremium ? `<span class="badge" style="background-color: var(--color-accent); color: white; margin-bottom: var(--space-2); align-self: center;">${I18nService.t('sa_plans_recommended')}</span>` : '';
+      const statusLabel = p.status === 'INACTIVO' ? I18nService.t('inactive') : I18nService.t('active');
 
       return `
         <div class="card p-5 text-center d-flex flex-column justify-content-between hover-lift" style="${highlightStyle}">
           <div>
             ${badgeHTML}
             <h4 class="text-lg font-bold">${p.name}</h4>
-            <h3 class="text-3xl font-extrabold my-3">${p.currency || 'NIO'} ${p.price} <span class="text-sm font-normal">/ ${p.duration || 'mes'}</span></h3>
+            <h3 class="text-3xl font-extrabold my-3">${p.currency || 'NIO'} ${p.price} <span class="text-sm font-normal">/ ${p.duration || I18nService.t('fin_monthly')}</span></h3>
             <p class="text-xs text-secondary mb-4">${p.description}</p>
-            <p class="text-xs text-secondary mb-3">${statusLabel} · ${Number(p.branchLimit || 0) || 'Ilimitadas'} sucursales · ${Number(p.productLimit || 0) || 'Ilimitados'} productos</p>
+            <p class="text-xs text-secondary mb-3">${statusLabel} · ${Number(p.branchLimit || 0) || I18nService.t('sa_plans_unlimited')} ${I18nService.t('branch_title').toLowerCase()} · ${Number(p.productLimit || 0) || I18nService.t('sa_plans_unlimited_m')} ${I18nService.t('inv_products').toLowerCase()}</p>
             <ul class="text-sm text-left mb-4" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px;">
               ${featuresList}
             </ul>
           </div>
-          <button class="btn btn-secondary btn-sm w-full btn-edit-plan" data-id="${p.id}">Editar Plan</button>
+          <button class="btn btn-secondary btn-sm w-full btn-edit-plan" data-id="${p.id}">${I18nService.t('sa_plans_edit_btn')}</button>
         </div>
       `;
     }).join('');
@@ -146,12 +146,12 @@ export class PlansView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">Crear Plan</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${I18nService.t('plan_add')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: 'Crear Nuevo Plan de Suscripción',
+      title: I18nService.t('sa_plans_create_modal_title'),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -183,13 +183,13 @@ export class PlansView extends Component {
 
     // Avoid duplicates
     if (currentPlans.some(p => p.id === planId)) {
-      alert('Ya existe un plan con un nombre similar.');
+      alert(I18nService.t('sa_plans_duplicate_error'));
       return;
     }
 
     await FirestoreService.savePlan(planId, { id: planId, ...plan });
     await this.loadPlans();
-    NotificationService.success(`Plan "${plan.name}" creado y guardado en Firebase.`);
+    NotificationService.success(I18nService.t('sa_plans_created_toast', { name: plan.name }));
     this.modalInstance.close();
   }
 
@@ -203,12 +203,12 @@ export class PlansView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="modal-save-btn">Guardar Cambios</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
+      <button class="btn btn-primary btn-sm" id="modal-save-btn">${I18nService.t('save_changes')}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: `Editar Suscripción: ${plan.name}`,
+      title: I18nService.t('sa_plans_edit_modal_title', { name: plan.name }),
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -238,7 +238,7 @@ export class PlansView extends Component {
     const plan = this.readPlanForm(true);
     await FirestoreService.savePlan(id, { id, ...plan });
     await this.loadPlans();
-    NotificationService.success(`Plan "${plan.name}" actualizado en Firebase.`);
+    NotificationService.success(I18nService.t('sa_plans_updated_toast', { name: plan.name }));
     this.modalInstance.close();
   }
 
@@ -249,50 +249,50 @@ export class PlansView extends Component {
       <form id="${formId}" class="d-flex flex-column gap-3" style="color: var(--color-text-primary); max-height:70vh; overflow-y:auto; padding-right:4px;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="${prefix}plan-name">Nombre del Plan</label>
+            <label class="form-label" for="${prefix}plan-name">${I18nService.t('sa_plans_name_label')}</label>
             <input type="text" id="${prefix}plan-name" class="input input-md" value="${plan.name || ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="${prefix}plan-price">Precio</label>
+            <label class="form-label" for="${prefix}plan-price">${I18nService.t('price')}</label>
             <input type="number" id="${prefix}plan-price" class="input input-md" value="${plan.price || 0}" min="0" required />
           </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="${prefix}plan-currency">Moneda</label>
+            <label class="form-label" for="${prefix}plan-currency">${I18nService.t('settings_currency')}</label>
             <input type="text" id="${prefix}plan-currency" class="input input-md" value="${plan.currency || 'NIO'}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="${prefix}plan-duration">Duración</label>
-            <input type="text" id="${prefix}plan-duration" class="input input-md" value="${plan.duration || 'Mensual'}" required />
+            <label class="form-label" for="${prefix}plan-duration">${I18nService.t('time').replace('Hora', 'Duración')}</label>
+            <input type="text" id="${prefix}plan-duration" class="input input-md" value="${plan.duration || I18nService.t('fin_monthly')}" required />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="${prefix}plan-desc">Descripción</label>
+          <label class="form-label" for="${prefix}plan-desc">${I18nService.t('description')}</label>
           <textarea id="${prefix}plan-desc" class="input input-md" style="height:70px; padding:var(--space-2); resize:vertical;" required>${plan.description || ''}</textarea>
         </div>
         <div class="form-group">
-          <label class="form-label" for="${prefix}plan-benefits">Beneficios (separados por coma)</label>
+          <label class="form-label" for="${prefix}plan-benefits">${I18nService.t('sa_plans_benefits_label')}</label>
           <input type="text" id="${prefix}plan-benefits" class="input input-md" value="${plan.benefits || plan.features || ''}" required />
         </div>
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-3);">
-          <input id="${prefix}plan-user-limit" class="input input-md" type="number" min="0" placeholder="Límite usuarios" value="${plan.userLimit || 0}" />
-          <input id="${prefix}plan-employee-limit" class="input input-md" type="number" min="0" placeholder="Límite empleados" value="${plan.employeeLimit || 0}" />
-          <input id="${prefix}plan-storage" class="input input-md" type="number" min="0" placeholder="GB almacenamiento" value="${plan.storageGb || 0}" />
-          <input id="${prefix}plan-branches" class="input input-md" type="number" min="0" placeholder="Sucursales" value="${plan.branchLimit || 0}" />
-          <input id="${prefix}plan-products" class="input input-md" type="number" min="0" placeholder="Productos" value="${plan.productLimit || 0}" />
-          <input id="${prefix}plan-order" class="input input-md" type="number" min="0" placeholder="Orden" value="${plan.order || 0}" />
+          <input id="${prefix}plan-user-limit" class="input input-md" type="number" min="0" placeholder="${I18nService.t('sa_plans_limit_users')}" value="${plan.userLimit || 0}" />
+          <input id="${prefix}plan-employee-limit" class="input input-md" type="number" min="0" placeholder="${I18nService.t('sa_plans_limit_employees')}" value="${plan.employeeLimit || 0}" />
+          <input id="${prefix}plan-storage" class="input input-md" type="number" min="0" placeholder="${I18nService.t('sa_plans_limit_storage')}" value="${plan.storageGb || 0}" />
+          <input id="${prefix}plan-branches" class="input input-md" type="number" min="0" placeholder="${I18nService.t('sa_plans_limit_branches')}" value="${plan.branchLimit || 0}" />
+          <input id="${prefix}plan-products" class="input input-md" type="number" min="0" placeholder="${I18nService.t('sa_plans_limit_products')}" value="${plan.productLimit || 0}" />
+          <input id="${prefix}plan-order" class="input input-md" type="number" min="0" placeholder="${I18nService.t('sa_plans_order_label')}" value="${plan.order || 0}" />
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:var(--space-3);">
           <select id="${prefix}plan-status" class="input input-md">
-            <option value="ACTIVO" ${plan.status !== 'INACTIVO' ? 'selected' : ''}>Activo</option>
-            <option value="INACTIVO" ${plan.status === 'INACTIVO' ? 'selected' : ''}>Inactivo</option>
+            <option value="ACTIVO" ${plan.status !== 'INACTIVO' ? 'selected' : ''}>${I18nService.t('active')}</option>
+            <option value="INACTIVO" ${plan.status === 'INACTIVO' ? 'selected' : ''}>${I18nService.t('inactive')}</option>
           </select>
           <input id="${prefix}plan-color" class="input input-md" type="color" value="${plan.color || '#7c75ff'}" />
-          <input id="${prefix}plan-icon" class="input input-md" type="text" placeholder="Icono" value="${plan.icon || 'store'}" />
+          <input id="${prefix}plan-icon" class="input input-md" type="text" placeholder="${I18nService.t('sa_plans_icon_label')}" value="${plan.icon || 'store'}" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="${prefix}plan-features-enabled">Funciones habilitadas (claves separadas por coma)</label>
+          <label class="form-label" for="${prefix}plan-features-enabled">${I18nService.t('sa_plans_features_enabled_label')}</label>
           <input type="text" id="${prefix}plan-features-enabled" class="input input-md" value="${plan.enabledFeatures || ''}" />
         </div>
       </form>

@@ -8,6 +8,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class LandingView extends Component {
   constructor(params = {}) {
@@ -16,12 +17,12 @@ export class LandingView extends Component {
     this.config = {};
 
     this.layout = new PageLayout({
-      title: 'Editor de Landing Page',
-      subtitle: 'Administración del portal público: edita los textos, contadores, llamadas a la acción y enlaces de contacto.',
+      title: I18nService.t('sa_land_title'),
+      subtitle: I18nService.t('sa_land_subtitle'),
       actionHTML: `
         <button type="button" data-open-landing class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; padding: 8px 18px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; border: none; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); cursor: pointer; transition: all 0.2s ease;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          👁️ Ver Página Web
+          ${I18nService.t('sa_land_view_live')}
         </button>
       `,
       contentHTML: `
@@ -86,13 +87,13 @@ export class LandingView extends Component {
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.4rem;">🌐</span>
             <div>
-              <strong style="color: #ffffff; font-size: 0.95rem; display: block;">Editor en Vivo de la Landing Page</strong>
-              <span style="color: #94a3b8; font-size: 0.8rem;">Los cambios guardados se reflejan inmediatamente en la página web pública de ventas.</span>
+              <strong style="color: #ffffff; font-size: 0.95rem; display: block;">${I18nService.t('sa_land_live_editor')}</strong>
+              <span style="color: #94a3b8; font-size: 0.8rem;">${I18nService.t('sa_land_live_editor_desc')}</span>
             </div>
           </div>
           <button type="button" data-open-landing class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 7px 14px; font-size: 0.82rem; border-radius: 6px; cursor: pointer;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            Abrir Landing Page
+            ${I18nService.t('sa_land_open_btn')}
           </button>
         </div>
 
@@ -102,23 +103,23 @@ export class LandingView extends Component {
             <!-- ── SECCIÓN HERO ── -->
             <div class="editor-section-box">
               <h3 class="editor-section-title" style="color: #818cf8;">
-                <span>🎯</span> Sección Hero (Portada)
+                <span>🎯</span> ${I18nService.t('sa_land_hero_section')}
               </h3>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div style="grid-column: span 2;">
-                  <label class="form-label" for="hero-title-input">Título del Hero (Soporta etiquetas HTML/decoración)</label>
-                  <input type="text" id="hero-title-input" class="form-control" placeholder="El sistema que transforma tu negocio por completo" required />
+                  <label class="form-label" for="hero-title-input">${I18nService.t('sa_land_hero_title_label')}</label>
+                  <input type="text" id="hero-title-input" class="form-control" placeholder="${I18nService.t('sa_land_hero_title_placeholder')}" required />
                 </div>
                 <div style="grid-column: span 2;">
-                  <label class="form-label" for="hero-subtitle-input">Subtítulo del Hero</label>
-                  <textarea id="hero-subtitle-input" class="form-control" rows="3" placeholder="Más de 41 módulos integrados para gestionar tu empresa desde un solo lugar." required style="resize: vertical;"></textarea>
+                  <label class="form-label" for="hero-subtitle-input">${I18nService.t('sa_land_hero_subtitle_label')}</label>
+                  <textarea id="hero-subtitle-input" class="form-control" rows="3" placeholder="${I18nService.t('sa_land_hero_subtitle_placeholder')}" required style="resize: vertical;"></textarea>
                 </div>
                 <div>
-                  <label class="form-label" for="hero-cta-input">Texto del Botón CTA (Hero)</label>
-                  <input type="text" id="hero-cta-input" class="form-control" placeholder="Solicitar Demo Gratis" required />
+                  <label class="form-label" for="hero-cta-input">${I18nService.t('sa_land_hero_cta_label')}</label>
+                  <input type="text" id="hero-cta-input" class="form-control" placeholder="${I18nService.t('sa_land_hero_cta_placeholder')}" required />
                 </div>
                 <div>
-                  <label class="form-label" for="hero-modules-input">Límite de Módulos (Contador Animado)</label>
+                  <label class="form-label" for="hero-modules-input">${I18nService.t('sa_land_hero_modules_label')}</label>
                   <input type="number" id="hero-modules-input" class="form-control" min="1" max="200" placeholder="41" required />
                 </div>
               </div>
@@ -127,15 +128,15 @@ export class LandingView extends Component {
             <!-- ── SECCIÓN COMPARATIVA ── -->
             <div class="editor-section-box">
               <h3 class="editor-section-title" style="color: #38bdf8;">
-                <span>🏆</span> Comparación vs Competidores
+                <span>🏆</span> ${I18nService.t('sa_land_comp_section')}
               </h3>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
-                  <label class="form-label" for="comp-shopify-input">Módulos estimados Shopify</label>
+                  <label class="form-label" for="comp-shopify-input">${I18nService.t('sa_land_comp_shopify_label')}</label>
                   <input type="text" id="comp-shopify-input" class="form-control" placeholder="~15 (con apps)" required />
                 </div>
                 <div>
-                  <label class="form-label" for="comp-treinta-input">Módulos estimados Treinta</label>
+                  <label class="form-label" for="comp-treinta-input">${I18nService.t('sa_land_comp_treinta_label')}</label>
                   <input type="text" id="comp-treinta-input" class="form-control" placeholder="~12" required />
                 </div>
               </div>
@@ -144,20 +145,20 @@ export class LandingView extends Component {
             <!-- ── SECCIÓN CONTACTO ── -->
             <div class="editor-section-box">
               <h3 class="editor-section-title" style="color: #34d399;">
-                <span>💬</span> WhatsApp y Enlaces de Contacto
+                <span>💬</span> ${I18nService.t('sa_land_contact_section')}
               </h3>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
-                  <label class="form-label" for="whatsapp-number-input">Número de WhatsApp (con código de país, sin +)</label>
+                  <label class="form-label" for="whatsapp-number-input">${I18nService.t('sa_land_wa_number_label')}</label>
                   <input type="text" id="whatsapp-number-input" class="form-control" placeholder="50500000000" required />
                 </div>
                 <div>
-                  <label class="form-label" for="whatsapp-cta-input">Texto del Botón Principal inferior (CTA)</label>
-                  <input type="text" id="whatsapp-cta-input" class="form-control" placeholder="Solicitar Demo por WhatsApp" required />
+                  <label class="form-label" for="whatsapp-cta-input">${I18nService.t('sa_land_wa_cta_label')}</label>
+                  <input type="text" id="whatsapp-cta-input" class="form-control" placeholder="${I18nService.t('sa_land_wa_cta_placeholder')}" required />
                 </div>
                 <div style="grid-column: span 2;">
-                  <label class="form-label" for="whatsapp-message-input">Mensaje predeterminado de WhatsApp</label>
-                  <input type="text" id="whatsapp-message-input" class="form-control" placeholder="¡Hola! Me interesa conocer más sobre Ultra Administrador..." required />
+                  <label class="form-label" for="whatsapp-message-input">${I18nService.t('sa_land_wa_msg_label')}</label>
+                  <input type="text" id="whatsapp-message-input" class="form-control" placeholder="${I18nService.t('sa_land_wa_msg_placeholder')}" required />
                 </div>
               </div>
             </div>
@@ -165,20 +166,20 @@ export class LandingView extends Component {
             <!-- ── SECCIÓN PRICING/FOOTER ── -->
             <div style="margin-bottom: 24px;">
               <h3 class="editor-section-title" style="color: #fbbf24;">
-                <span>💰</span> Pricing &amp; Notas del Sistema
+                <span>💰</span> ${I18nService.t('sa_land_pricing_section')}
               </h3>
               <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                 <div>
-                  <label class="form-label" for="pricing-disclaimer-input">Nota de descargo (Disclaimer inferior)</label>
-                  <input type="text" id="pricing-disclaimer-input" class="form-control" placeholder="Sin compromisos · Demo 100% gratuita · Respuesta en menos de 1 hora" required />
+                  <label class="form-label" for="pricing-disclaimer-input">${I18nService.t('sa_land_disclaimer_label')}</label>
+                  <input type="text" id="pricing-disclaimer-input" class="form-control" placeholder="${I18nService.t('sa_land_disclaimer_placeholder')}" required />
                 </div>
               </div>
             </div>
 
             <!-- ── ACCIONES ── -->
             <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-landing" style="padding: 10px 22px; border-radius: 8px;">Restablecer Predeterminados</button>
-              <button type="submit" class="btn btn-primary btn-sm" id="btn-save-landing" style="padding: 10px 28px; border-radius: 8px; background: #6366f1; color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">Guardar Cambios</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-landing" style="padding: 10px 22px; border-radius: 8px;">${I18nService.t('sa_land_reset_defaults')}</button>
+              <button type="submit" class="btn btn-primary btn-sm" id="btn-save-landing" style="padding: 10px 28px; border-radius: 8px; background: #6366f1; color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">${I18nService.t('save_changes')}</button>
             </div>
 
           </form>
@@ -238,7 +239,7 @@ export class LandingView extends Component {
       console.log('[LandingView] ✅ Configuración de landing cargada correctamente.');
     } catch (err) {
       console.warn('[LandingView] Error cargando configuración:', err.message);
-      NotificationService.error('No se pudo cargar la configuración de la Landing Page.');
+      NotificationService.error(I18nService.t('sa_land_error_load'));
     }
   }
 
@@ -255,7 +256,7 @@ export class LandingView extends Component {
     const saveBtn = root.querySelector('#btn-save-landing');
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.textContent = 'Guardando…';
+      saveBtn.textContent = I18nService.t('saving');
     }
 
     try {
@@ -273,27 +274,27 @@ export class LandingView extends Component {
       };
 
       await FirestoreService.updateLandingConfig(payload);
-      NotificationService.success('✅ Configuración de Landing Page guardada exitosamente.');
+      NotificationService.success(I18nService.t('sa_land_saved_success'));
       
       // Log audit
       await FirestoreService.logAudit({
         action: 'LANDING_PAGE_UPDATE',
-        description: 'La landing page pública fue actualizada por el programador.'
+        description: I18nService.t('sa_land_audit_update')
       });
       
     } catch (err) {
       console.error('[LandingView] Error guardando config:', err);
-      NotificationService.error('No se pudieron guardar los cambios: ' + err.message);
+      NotificationService.error(I18nService.t('sa_land_error_save', { error: err.message }));
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Guardar Cambios';
+        saveBtn.textContent = I18nService.t('save_changes');
       }
     }
   }
 
   handleResetLanding() {
-    if (!confirm('¿Estás seguro de que deseas restablecer los textos de la Landing Page a los valores predeterminados?')) return;
+    if (!confirm(I18nService.t('sa_land_confirm_reset'))) return;
     
     const root = this.layout.element;
     if (!root) return;
@@ -310,7 +311,7 @@ export class LandingView extends Component {
     this._setVal(root, '#whatsapp-message-input', defaults.whatsappMessage);
     this._setVal(root, '#pricing-disclaimer-input', defaults.pricingDisclaimer);
     
-    NotificationService.info('Valores restablecidos en el formulario. Recuerda hacer clic en "Guardar Cambios" para aplicarlos.');
+    NotificationService.info(I18nService.t('sa_land_reset_info'));
   }
 
   mount() {
