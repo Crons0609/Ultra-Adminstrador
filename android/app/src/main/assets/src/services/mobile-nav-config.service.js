@@ -113,6 +113,15 @@ export const NAV_TAB_CATALOG = [
     description: 'Atención de tickets de ayuda'
   },
   {
+    id: 'landing_edit',
+    label: 'Landing Page',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+    emoji: '🌐',
+    allowedRoles: ['SUPER_ADMIN'],
+    action: 'navigate:#/super-admin/landing',
+    description: 'Modificar contenido de la landing page'
+  },
+  {
     id: 'logs',
     label: 'Logs',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,

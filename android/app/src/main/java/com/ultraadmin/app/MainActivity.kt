@@ -163,11 +163,13 @@ class MainActivity : AppCompatActivity() {
         // Handle deep links & notification intent extras
         handleIntent(intent)
 
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState)
-        } else {
-            webView.loadUrl(LOCAL_URL)
-        }
+        // ─────────────────────────────────────────────────────────────────
+        // CRITICAL: Always load from Render (SAAS_URL), NOT from local assets.
+        // This ensures every web update deployed to Render appears automatically
+        // in the APK WITHOUT recompiling it.
+        // LOCAL_URL is kept as a reference but is no longer used as the primary URL.
+        // ─────────────────────────────────────────────────────────────────
+        webView.loadUrl(SAAS_URL)
     }
 
     // ── System Status & Notification Bar setup ─────────────────────────────
@@ -235,7 +237,7 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
 
             // ── User Agent — identifies as an Android app, not a browser ───
-            userAgentString = "UltraAdministrador/1.0 (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
+            userAgentString = "UltraAdministrador/1.4.7 (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
 
             // ── File chooser ───────────────────────────────────────────────
             allowFileAccessFromFileURLs = false
@@ -613,6 +615,53 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        /**
+         * Triggers a forced Service Worker cache invalidation + page reload.
+         * Called from web settings screen when user taps "Buscar actualizaciones".
+         * Anti-loop: The SW only sends RELOAD_NOW once per FORCE_UPDATE message,
+         * so this cannot cause an infinite reload loop.
+         */
+        @JavascriptInterface
+        fun checkForUpdate() {
+            Handler(Looper.getMainLooper()).post {
+                // 1. Ask the SW to clear its cache and notify when done
+                webView.evaluateJavascript(
+                    """
+                    (function() {
+                        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                            navigator.serviceWorker.controller.postMessage({ type: 'FORCE_UPDATE' });
+                            console.log('[AndroidBridge] FORCE_UPDATE sent to SW.');
+                        } else {
+                            // No SW controller yet — just reload
+                            window.location.reload();
+                        }
+                    })()
+                    """.trimIndent(),
+                    null
+                )
+            }
+        }
+
+        /**
+         * Returns a JSON string with debug information about the current runtime.
+         * Used by the web app's diagnostics / settings screen.
+         * Example: { "webVersion": "1.1.0", "nativeVersion": "1.4.7", "webUrl": "https://..." }
+         */
+        @JavascriptInterface
+        fun getDebugInfo(): String {
+            val info = mapOf(
+                "nativeVersion" to BuildConfig.VERSION_NAME,
+                "nativeVersionCode" to BuildConfig.VERSION_CODE.toString(),
+                "webUrl" to SAAS_URL,
+                "androidVersion" to Build.VERSION.RELEASE,
+                "deviceModel" to Build.MODEL,
+                "isAndroidApp" to "true"
+            )
+            return info.entries.joinToString(",", "{", "}") {
+                "\"${it.key}\":\"${it.value}\""
+            }
+        }
     }
 
     // ── Offline page ─────────────────────────────────────────────────────────
@@ -697,6 +746,17 @@ class MainActivity : AppCompatActivity() {
         activeInstance = WeakReference(this)
         if (::webView.isInitialized) {
             webView.onResume()
+            // Trigger SW update check each time the app comes to foreground.
+            // This ensures that if a new version was deployed while the app was in background,
+            // it will be detected and applied on the next foreground event.
+            webView.evaluateJavascript(
+                """(function(){
+                  if(navigator.serviceWorker){
+                    navigator.serviceWorker.getRegistration().then(reg=>{ if(reg) reg.update(); });
+                  }
+                })()""",
+                null
+            )
         }
         setupEdgeToEdge() // Re-apply after system dialogs
     }

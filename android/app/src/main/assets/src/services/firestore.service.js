@@ -313,6 +313,40 @@ export class FirestoreService {
   }
 
   /**
+   * Fast Stale-While-Revalidate Query:
+   * Returns cached data immediately (< 1ms) if present, while revalidating network data in background.
+   * @param {string} collectionName
+   * @param {Array} filters
+   * @param {Object} sortBy
+   * @param {number} limitCount
+   * @returns {Promise<Array<Object>>}
+   */
+  static async queryFast(collectionName, filters = [], sortBy = null, limitCount = null) {
+    const path = this._getTenantPath(collectionName);
+    const cached = await LocalStorageDBService.getCache(path);
+
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      // Revalidate in background if online
+      if (navigator.onLine && db) {
+        get(ref(db, path)).then(async snapshot => {
+          if (snapshot.exists()) {
+            let results = [];
+            snapshot.forEach(snap => results.push({ id: snap.key, ...snap.val() }));
+            await LocalStorageDBService.setCache(path, results);
+          }
+        }).catch(() => {});
+      }
+
+      let results = this._applyFilters(cached, filters);
+      results = this._applySort(results, sortBy);
+      if (limitCount) results = results.slice(0, limitCount);
+      return results;
+    }
+
+    return this.query(collectionName, filters, sortBy, limitCount);
+  }
+
+  /**
    * Get ALL documents in a tenant collection.
    * @param {string} collectionName
    * @returns {Promise<Array<Object>>}
@@ -529,7 +563,7 @@ export class FirestoreService {
       enableVehiclesCatalog: false,
       enableRentals: false,
       enableRentalReminders: false,
-      enableAppointments: false,
+      enableAppointments: true,
       enableSchedules: false,
       enableReservations: false,
       enableServiceRequests: false,
@@ -1494,6 +1528,53 @@ export class FirestoreService {
     await update(configRef, payload);
     await LocalStorageDBService.setCache('global/saas_config', payload);
     console.log('[FirestoreService] ✅ SaaS config updated at global/saas_config');
+  }
+
+  /**
+   * Read the global Landing configuration object from Firebase RTDB.
+   * Stored at the path: global/landing_config
+   *
+   * @returns {Promise<Object|null>}
+   */
+  static async getLandingConfig() {
+    const path = 'global/landing_config';
+    if (navigator.onLine && db) {
+      try {
+        const configRef = ref(db, path);
+        const snap = await Promise.race([
+          get(configRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('network-timeout')), 4000))
+        ]);
+        if (snap.exists()) {
+          const val = snap.val();
+          await LocalStorageDBService.setCache(path, val);
+          return val;
+        }
+      } catch (err) {
+        console.warn('[FirestoreService] getLandingConfig failed:', err.message);
+      }
+    }
+    return LocalStorageDBService.getCache(path);
+  }
+
+  /**
+   * Write / merge fields into the global Landing configuration object.
+   * Stored at the path: global/landing_config
+   *
+   * @param {Object} data - Fields to merge into the config node.
+   * @returns {Promise<void>}
+   */
+  static async updateLandingConfig(data = {}) {
+    if (!db) throw new Error('[FirestoreService] Database not initialized.');
+    const configRef = ref(db, 'global/landing_config');
+    // Strip undefined values to avoid Firebase errors
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
+    const payload = { ...clean, updatedAtLocal: TimeService.timestamp() };
+    await update(configRef, payload);
+    await LocalStorageDBService.setCache('global/landing_config', payload);
+    console.log('[FirestoreService] ✅ Landing config updated at global/landing_config');
   }
 
   static async listPlans() {

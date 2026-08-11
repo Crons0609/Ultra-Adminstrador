@@ -66,6 +66,15 @@
 .table-dense .th { padding: var(--space-2) var(--space-3); }
 .table-dense .td { padding: var(--space-2) var(--space-3); }
 
+.table-compact .th {
+  padding: 10px 12px;
+  font-size: 0.65rem;
+}
+.table-compact .td {
+  padding: 10px 12px;
+  font-size: 0.8rem;
+}
+
 /* ══════════════════════════════════════════════════════════════
    RESPONSIVE WRAPPER — desktop: table  |  mobile: cards
    ══════════════════════════════════════════════════════════════ */

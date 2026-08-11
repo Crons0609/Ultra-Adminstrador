@@ -24,7 +24,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
-  onAuthStateChanged
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
 } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
 
 import {
@@ -69,6 +71,11 @@ export class AuthService {
     }
 
     try {
+      // ── Configurar persistencia de sesión explícitamente ANTES del login ───────
+      await setPersistence(auth, browserLocalPersistence).catch((err) => {
+        console.warn('[AuthService] No se pudo establecer persistencia antes del login:', err.message);
+      });
+
       const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
       const firebaseUser = credential.user;
 
@@ -792,17 +799,20 @@ export class AuthService {
 
   /**
    * Set up a Firebase Auth state observer with a safety timeout.
-   * Automatically restores sessions on page reload or offline restart.
-   * Never hangs — resolves within 3 seconds at most.
+   * Automatically restores sessions on page reload, refresh, or offline restart.
+   * Never hangs — resolves within 3.5 seconds at most.
    *
    * @param {Function} onUserReady - Called once with user session or null
    */
   static watchAuthState(onUserReady) {
     let resolved = false;
 
+    GlobalStore.set({ authLoading: true });
+
     const resolve = (session) => {
       if (resolved) return;
       resolved = true;
+      GlobalStore.set({ authLoading: false });
       onUserReady(session);
     };
 
@@ -817,7 +827,8 @@ export class AuthService {
         GlobalStore.set({
           currentUser: fullSession,
           activeRole: fullSession.role,
-          isAuthenticated: true
+          isAuthenticated: true,
+          authLoading: false
         });
         const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
         if (cachedCompany) {
@@ -825,9 +836,10 @@ export class AuthService {
         }
         resolve(fullSession);
       } else {
+        GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
         resolve(null);
       }
-    }, 3000);
+    }, 3500);
 
     if (!auth) {
       clearTimeout(timeout);
@@ -835,9 +847,10 @@ export class AuthService {
         if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
           const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
           const fullSession = { ...cachedProfile, ...cachedSession };
-          GlobalStore.set({ currentUser: fullSession, activeRole: fullSession.role, isAuthenticated: true });
+          GlobalStore.set({ currentUser: fullSession, activeRole: fullSession.role, isAuthenticated: true, authLoading: false });
           resolve(fullSession);
         } else {
+          GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
           resolve(null);
         }
       });
@@ -846,28 +859,28 @@ export class AuthService {
 
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
-        // If offline, attempt to restore session from IndexedDB cache before defaulting to unauthenticated
-        if (!navigator.onLine) {
-          const cachedSession = await LocalStorageDBService.getCache('user_session');
-          if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
-            console.log('[AuthService] 📴 Offline session restored for:', cachedSession.email);
-            const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
-            const fullSession = { ...cachedProfile, ...cachedSession };
-            GlobalStore.set({
-              currentUser: fullSession,
-              activeRole: fullSession.role,
-              isAuthenticated: true
-            });
-            const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
-            if (cachedCompany) {
-              GlobalStore.set({ currentCompany: cachedCompany });
-            }
-            clearTimeout(timeout);
-            resolve(fullSession);
-            return;
+        // Attempt to restore session from IndexedDB cache before defaulting to unauthenticated
+        const cachedSession = await LocalStorageDBService.getCache('user_session');
+        if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
+          console.log('[AuthService] 📴 Local session restored for:', cachedSession.email);
+          const cachedProfile = (await LocalStorageDBService.getCache(`users/${cachedSession.uid}`)) || {};
+          const fullSession = { ...cachedProfile, ...cachedSession };
+          GlobalStore.set({
+            currentUser: fullSession,
+            activeRole: fullSession.role,
+            isAuthenticated: true,
+            authLoading: false
+          });
+          const cachedCompany = await LocalStorageDBService.getCache(`companies/${cachedSession.companyId}`);
+          if (cachedCompany) {
+            GlobalStore.set({ currentCompany: cachedCompany });
           }
+          clearTimeout(timeout);
+          resolve(fullSession);
+          return;
         }
-        GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+
+        GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
         clearTimeout(timeout);
         resolve(null);
         return;
@@ -883,7 +896,7 @@ export class AuthService {
             const userRef = ref(db, `users/${firebaseUser.uid}`);
             const snap = await Promise.race([
               get(userRef),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('database-timeout')), 2500))
+              new Promise((_, reject) => setTimeout(() => reject(new Error('database-timeout')), 3000))
             ]);
             if (snap.exists()) {
               userProfile = snap.val();
@@ -912,7 +925,7 @@ export class AuthService {
                 const companySnap = await get(ref(db, `companies/${userProfile.companyId}`));
                 if (!companySnap.exists() || (companySnap.val() && companySnap.val().status === 'ELIMINADO')) {
                   console.warn('[AuthService] Company deleted or trashed. Blocking session.');
-                  GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+                  GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
                   clearTimeout(timeout);
                   resolve(null);
                   return;
@@ -925,7 +938,7 @@ export class AuthService {
               const cachedCompany = await LocalStorageDBService.getCache(`companies/${userProfile.companyId}`);
               if (cachedCompany && cachedCompany.status === 'ELIMINADO') {
                 console.warn('[AuthService] Cached company is deleted. Blocking session.');
-                GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+                GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
                 clearTimeout(timeout);
                 resolve(null);
                 return;
@@ -942,15 +955,22 @@ export class AuthService {
             companyId: userProfile.companyId,
             branchId: userProfile.branchId || 'main',
             permissions: userProfile.permissions || {},
+            phone: userProfile.phone || userProfile.telefono || '',
+            personalInfo: userProfile.personalInfo || '',
+            avatarImageId: userProfile.avatarImageId || '',
+            photoURL: userProfile.photoURL || '',
+            preferences: userProfile.preferences || {},
             expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days offline session validity
           };
 
           await LocalStorageDBService.setCache('user_session', userSession);
+          await LocalStorageDBService.setUserSession(userSession);
 
           GlobalStore.set({
             currentUser: userSession,
             activeRole: userSession.role,
-            isAuthenticated: true
+            isAuthenticated: true,
+            authLoading: false
           });
 
           AppearanceService.loadAndApply().catch(e => console.warn('[AuthService] Could not apply appearance on session restore:', e));
@@ -964,14 +984,15 @@ export class AuthService {
             GlobalStore.set({
               currentUser: cachedSession,
               activeRole: cachedSession.role,
-              isAuthenticated: true
+              isAuthenticated: true,
+              authLoading: false
             });
             clearTimeout(timeout);
             resolve(cachedSession);
             return;
           }
 
-          GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+          GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
           clearTimeout(timeout);
           resolve(null);
         }
@@ -980,13 +1001,13 @@ export class AuthService {
         console.warn('[AuthService] Session restore error:', e.message);
         const cachedSession = await LocalStorageDBService.getCache('user_session');
         if (cachedSession && (!cachedSession.expiresAt || Date.now() < cachedSession.expiresAt)) {
-          GlobalStore.set({ currentUser: cachedSession, activeRole: cachedSession.role, isAuthenticated: true });
+          GlobalStore.set({ currentUser: cachedSession, activeRole: cachedSession.role, isAuthenticated: true, authLoading: false });
           clearTimeout(timeout);
           resolve(cachedSession);
           return;
         }
 
-        GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false });
+        GlobalStore.set({ currentUser: null, activeRole: null, isAuthenticated: false, authLoading: false });
         clearTimeout(timeout);
         resolve(null);
       }

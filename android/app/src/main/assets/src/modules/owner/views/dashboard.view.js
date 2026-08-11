@@ -202,6 +202,22 @@ export class OwnerDashboardView extends Component {
 
   // ─── CALCULATIONS ──────────────────────────────────────────────────────────
   _calculateMetrics() {
+    const { selectedBranchId, selectedBranchMode, branches } = GlobalStore.getState();
+    const isSingleBranchContext = selectedBranchMode === 'single' && selectedBranchId && selectedBranchId !== 'all';
+
+    // Apply branch filter if single branch selected
+    const filterByBranch = (list) => {
+      if (!isSingleBranchContext) return list;
+      return list.filter(item => !item.branchId || item.branchId === selectedBranchId || item.branchId === 'principal');
+    };
+
+    const ventasList = filterByBranch(this.state.ventas);
+    const gastosList = filterByBranch(this.state.gastos);
+    const clientsList = filterByBranch(this.state.clients);
+    const productsList = filterByBranch(this.state.products);
+    const payableList = filterByBranch(this.state.payable);
+    const requestsList = filterByBranch(this.state.requests);
+
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -209,30 +225,30 @@ export class OwnerDashboardView extends Component {
     const prevMonthEnd = monthStart - 1;
 
     // Ventas hoy
-    const ventasHoy = this.state.ventas.filter(v => {
+    const ventasHoy = ventasList.filter(v => {
       const d = v.createdAt ? new Date(v.createdAt).toISOString().split('T')[0] : '';
       return d === todayStr || v.date === todayStr;
     }).reduce((s, v) => s + (Number(v.total || v.monto || 0)), 0);
 
     // Ventas mes
-    const ventasMes = this.state.ventas.filter(v => {
+    const ventasMes = ventasList.filter(v => {
       const ts = Number(v.createdAt || v.timestamp || 0);
       return ts >= monthStart;
     }).reduce((s, v) => s + (Number(v.total || v.monto || 0)), 0);
 
     // Ventas mes anterior
-    const ventasMesPrev = this.state.ventas.filter(v => {
+    const ventasMesPrev = ventasList.filter(v => {
       const ts = Number(v.createdAt || v.timestamp || 0);
       return ts >= prevMonthStart && ts <= prevMonthEnd;
     }).reduce((s, v) => s + (Number(v.total || v.monto || 0)), 0);
 
     // Gastos mes
-    const gastosMes = this.state.gastos.filter(g => {
+    const gastosMes = gastosList.filter(g => {
       const ts = Number(g.createdAt || g.timestamp || g.dateTimestamp || 0);
       return ts >= monthStart;
     }).reduce((s, g) => s + (Number(g.amount || g.monto || 0)), 0);
 
-    const gastosMesPrev = this.state.gastos.filter(g => {
+    const gastosMesPrev = gastosList.filter(g => {
       const ts = Number(g.createdAt || g.timestamp || g.dateTimestamp || 0);
       return ts >= prevMonthStart && ts <= prevMonthEnd;
     }).reduce((s, g) => s + (Number(g.amount || g.monto || 0)), 0);
@@ -242,19 +258,19 @@ export class OwnerDashboardView extends Component {
     const utilidadMesPrev = ventasMesPrev - gastosMesPrev;
 
     // Clientes
-    const totalClientes = this.state.clients.length;
+    const totalClientes = clientsList.length;
 
     // Stock crítico (< 5 unidades)
-    const lowStockCount = this.state.products.filter(p => Number(p.stock || p.existencias || 0) <= (Number(p.minStock) || 5)).length;
+    const lowStockCount = productsList.filter(p => Number(p.stock || p.existencias || 0) <= (Number(p.minStock) || 5)).length;
 
     // Cuentas por pagar vencidas
-    const payableOverdue = this.state.payable.filter(p => p.status !== 'PAGADO' && Number(p.dueDate || 0) < Date.now()).length;
+    const payableOverdue = payableList.filter(p => p.status !== 'PAGADO' && Number(p.dueDate || 0) < Date.now()).length;
 
     // Solicitudes pendientes
-    const pendingRequests = this.state.requests.filter(r => r.status === 'PENDIENTE').length;
+    const pendingRequests = requestsList.filter(r => r.status === 'PENDIENTE').length;
 
     // Score calculation (0-100)
-    let hasData = (this.state.ventas.length > 0 || this.state.gastos.length > 0 || this.state.products.length > 0);
+    let hasData = (ventasList.length > 0 || gastosList.length > 0 || productsList.length > 0);
     let score = 0;
     let scoreLabel = 'Analizando rendimiento';
 
@@ -280,8 +296,8 @@ export class OwnerDashboardView extends Component {
 
       // 3. Inventory health (max 20)
       let invScore = 20;
-      if (this.state.products.length > 0) {
-        const lowPct = (lowStockCount / this.state.products.length) * 100;
+      if (productsList.length > 0) {
+        const lowPct = (lowStockCount / productsList.length) * 100;
         if (lowPct > 30) invScore = 8;
         else if (lowPct > 15) invScore = 14;
         else invScore = 20;
@@ -323,18 +339,25 @@ export class OwnerDashboardView extends Component {
 
     const m = this._calculateMetrics();
     const companyName = this.currentCompany?.name || 'Mi Negocio';
-    const branchName = this.currentCompany?.branchName || 'Sucursal Principal';
+    const { selectedBranchId, selectedBranchMode, currentBranch } = GlobalStore.getState();
+    const branchLabel = selectedBranchMode === 'all'
+      ? 'Todas las Sucursales'
+      : `${currentBranch?.name || 'Sucursal Principal'}`;
+    const branchSubLabel = selectedBranchMode === 'all'
+      ? `Vista consolidada de ${GlobalStore.getState().branches?.length || 1} sucursal(es)`
+      : `${currentBranch?.city || currentBranch?.address || 'Sucursal'}`;
+
 
     // Alerts logic
     const alerts = [];
     if (m.lowStockCount > 0 && isModuleEnabled(this.currentCompany, 'inventory')) {
-      alerts.push({ text: `⚠️ ${m.lowStockCount} producto${m.lowStockCount > 1 ? 's tienen' : ' tiene'} stock bajo`, path: '#/inventory/alerts', color: '#f59e0b' });
+      alerts.push({ text: `${m.lowStockCount} producto${m.lowStockCount > 1 ? 's tienen' : ' tiene'} stock bajo`, path: '#/inventory/alerts', color: '#f59e0b' });
     }
     if (m.payableOverdue > 0 && isModuleEnabled(this.currentCompany, 'accountsPayable')) {
-      alerts.push({ text: `⚠️ ${m.payableOverdue} cuenta${m.payableOverdue > 1 ? 's están' : ' está'} vencida${m.payableOverdue > 1 ? 's' : ''}`, path: '#/owner/accounts-payable', color: '#ef4444' });
+      alerts.push({ text: `${m.payableOverdue} cuenta${m.payableOverdue > 1 ? 's están' : ' está'} vencida${m.payableOverdue > 1 ? 's' : ''}`, path: '#/owner/accounts-payable', color: '#ef4444' });
     }
     if (m.pendingRequests > 0 && isModuleEnabled(this.currentCompany, 'serviceRequests')) {
-      alerts.push({ text: `📋 ${m.pendingRequests} solicitud${m.pendingRequests > 1 ? 'es pendientes' : ' pendiente'} de revisión`, path: '#/manager/service-requests', color: '#6366f1' });
+      alerts.push({ text: `${m.pendingRequests} solicitud${m.pendingRequests > 1 ? 'es pendientes' : ' pendiente'} de revisión`, path: '#/manager/service-requests', color: '#6366f1' });
     }
 
     const alertsHTML = alerts.length > 0
@@ -343,7 +366,7 @@ export class OwnerDashboardView extends Component {
           <span style="color:var(--color-accent);font-weight:700">Ver →</span>
         </div>`).join('')
       : `<div style="padding:14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-md);color:#10b981;font-weight:600;font-size:0.85rem">
-          ✓ No hay problemas críticos en la operación
+          No hay problemas críticos en la operación
         </div>`;
 
     // Area scores
@@ -355,29 +378,29 @@ export class OwnerDashboardView extends Component {
 
     // Quick Actions buttons (max 5)
     const quickActions = [];
-    if (isModuleEnabled(this.currentCompany, 'pos')) quickActions.push({ label: '+ Nueva Venta', path: '#/cashier/pos', icon: '🛍️' });
-    if (isModuleEnabled(this.currentCompany, 'recurringClients')) quickActions.push({ label: '+ Nuevo Cliente', path: '#/owner/recurring-clients', icon: '👤' });
-    if (isModuleEnabled(this.currentCompany, 'inventory')) quickActions.push({ label: '+ Producto', path: '#/inventory/products', icon: '📦' });
-    if (isModuleEnabled(this.currentCompany, 'expenses')) quickActions.push({ label: '+ Registrar Gasto', path: '#/owner/expenses', icon: '💸' });
-    if (isModuleEnabled(this.currentCompany, 'serviceRequests')) quickActions.push({ label: '+ Pedido / Servicio', path: '#/manager/service-requests', icon: '⚙️' });
+    if (isModuleEnabled(this.currentCompany, 'pos')) quickActions.push({ label: '+ Nueva Venta', path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'recurringClients')) quickActions.push({ label: '+ Nuevo Cliente', path: '#/owner/recurring-clients', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'inventory')) quickActions.push({ label: '+ Producto', path: '#/inventory/products', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'expenses')) quickActions.push({ label: '+ Registrar Gasto', path: '#/owner/expenses', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>` });
+    if (isModuleEnabled(this.currentCompany, 'serviceRequests')) quickActions.push({ label: '+ Pedido / Servicio', path: '#/manager/service-requests', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>` });
 
     const actionsHTML = quickActions.slice(0, 5).map(a => `
-      <a href="${a.path}" class="odb-action-btn">
-        <span style="font-size:1.2rem">${a.icon}</span>
+      <a href="${a.path}" class="odb-action-btn" style="display:inline-flex;align-items:center;gap:8px;">
+        ${a.icon}
         <span>${a.label}</span>
       </a>
     `).join('');
 
     // Recent activity list
     const recentActivity = [
-      ...this.state.ventas.slice(0, 3).map(v => ({ text: `Venta registrada por ${this._formatMoney(v.total || v.monto || 0)}`, time: 'Reciente', icon: '💰' })),
-      ...this.state.gastos.slice(0, 2).map(g => ({ text: `Gasto registrado: ${g.description || g.notes || 'Operativo'} (${this._formatMoney(g.amount || 0)})`, time: 'Reciente', icon: '💸' }))
+      ...this.state.ventas.slice(0, 3).map(v => ({ text: `Venta registrada por ${this._formatMoney(v.total || v.monto || 0)}`, time: 'Reciente', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>` })),
+      ...this.state.gastos.slice(0, 2).map(g => ({ text: `Gasto registrado: ${g.description || g.notes || 'Operativo'} (${this._formatMoney(g.amount || 0)})`, time: 'Reciente', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>` }))
     ].slice(0, 4);
 
     const activityHTML = recentActivity.length > 0
       ? recentActivity.map(act => `
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--color-border)">
-            <span style="font-size:1.1rem">${act.icon}</span>
+            <span>${act.icon}</span>
             <div style="flex:1;font-size:0.83rem">${act.text}</div>
           </div>
         `).join('')
@@ -390,13 +413,14 @@ export class OwnerDashboardView extends Component {
         <!-- 1. HEADER / CONTEXT CARD -->
         <div class="odb-context-card">
           <div>
-            <div style="font-size:0.95rem;font-weight:700;">🏢 ${companyName}</div>
-            <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:2px;">📍 ${branchName} · 📅 ${this._getFormattedDate()}</div>
+            <div style="font-size:0.95rem;font-weight:700;">${companyName}</div>
+            <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:2px;">${branchSubLabel} · ${this._getFormattedDate()}</div>
           </div>
           <div class="odb-status-badge ${alerts.length > 0 ? 'warning' : 'stable'}">
-            ${alerts.length > 0 ? '⚠️ Requiere atención' : '● Operación estable'}
+            ${alerts.length > 0 ? 'Requiere atención' : '● Operación estable'}
           </div>
         </div>
+
 
         <!-- 2. RESUMEN GENERAL (KPI CARDS) -->
         <div class="odb-kpi-grid">
@@ -668,6 +692,12 @@ export class OwnerDashboardView extends Component {
   // ─── MOUNT ─────────────────────────────────────────────────────────────────
   mount() {
     this.element = this.layout.mount();
+
+    // Subscribe to branch context changes
+    const unsubBranch = GlobalStore.subscribe('selectedBranchId', () => {
+      this.renderUI();
+    });
+    this.listeners.push(unsubBranch);
 
     // Bind manual refresh button
     this.element.querySelector('#btn-refresh-dashboard')?.addEventListener('click', async () => {

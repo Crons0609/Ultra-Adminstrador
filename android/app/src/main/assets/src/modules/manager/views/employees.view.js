@@ -118,8 +118,8 @@ export class EmployeesView extends Component {
             if (this.currentUser.role !== 'OWNER') return '<span class="text-xs text-secondary">Solo Dueño</span>';
             return `
               <div style="display:flex; gap:4px;">
-                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="Editar">✏️ Editar</button>
-                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="Baja">🗑️ Baja</button>
+                <button class="btn btn-secondary btn-sm btn-edit-employee" data-uid="${row.uid}" title="Editar">Editar</button>
+                <button class="btn btn-danger btn-sm btn-delete-employee" data-uid="${row.uid}" data-name="${row.displayName || row.email}" title="Baja">Baja</button>
               </div>
             `;
           }
@@ -150,10 +150,10 @@ export class EmployeesView extends Component {
         <div class="card p-5 mb-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-              <h3 class="text-md font-bold" style="margin:0;">🗺️ Mapa de Ubicaciones GPS</h3>
+              <h3 class="text-md font-bold" style="margin:0;">Mapa de Ubicaciones GPS</h3>
               <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Posición en tiempo real de los empleados que compartieron su ubicación.</p>
             </div>
-            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">🔄 Actualizar</button>
+            <button class="btn btn-secondary btn-xs" id="btn-refresh-gps-map">Actualizar</button>
           </div>
           <div id="gps-map-panel">
             <!-- Sidebar + Map split grid layout -->
@@ -169,7 +169,7 @@ export class EmployeesView extends Component {
             
             <!-- Placeholder for no locations or loading -->
             <div id="gps-map-placeholder">
-              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">📡 Cargando ubicaciones GPS...</div>
+              <div class="text-center py-6 text-secondary" style="font-size:0.85rem;">Cargando ubicaciones GPS...</div>
             </div>
           </div>
         </div>
@@ -179,7 +179,7 @@ export class EmployeesView extends Component {
         <div class="card p-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-              <h3 class="text-md font-bold" style="margin:0;">📍 Distribución de Mesas</h3>
+              <h3 class="text-md font-bold" style="margin:0;">Distribución de Mesas</h3>
               <p class="text-secondary" style="font-size:0.8rem; margin:4px 0 0;">Carga de trabajo de meseros activos y mesas asignadas.</p>
             </div>
           </div>
@@ -188,6 +188,7 @@ export class EmployeesView extends Component {
           </div>
         </div>
         ` : ''}
+
       `
     });
 

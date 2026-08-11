@@ -78,7 +78,7 @@ export class DataTable extends Component {
 
     return `
       <div class="table-container">
-        <table class="table">
+        <table class="table ${this.props.tableClass || ''}">
           <thead><tr>${headersHTML}</tr></thead>
           <tbody>${rowsHTML}</tbody>
         </table>

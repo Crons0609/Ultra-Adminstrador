@@ -1,8 +1,3 @@
-/**
- * @file header.js
- * @description Premium top header bar with notifications, breadcrumb, theme toggle, and user menu.
- */
-
 import { Component } from '../../core/component.js';
 import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
@@ -16,11 +11,13 @@ import { OfflineSyncService } from '../../services/offline-sync.service.js';
 import { NotificationCenter } from '../notifications/notification-center.js';
 import { PushNotificationsCenterService } from '../../services/push-notifications-center.service.js';
 import { isProgrammerRole } from '../../core/middleware.js';
+import { BranchSelector } from '../ui/branch-selector.js';
 
 export class Header extends Component {
   constructor(props = {}) {
     super(props);
     this.state = GlobalStore.getState();
+    this.branchSelectorComponent = new BranchSelector();
   }
 
   getCurrentPageTitle() {
@@ -43,6 +40,7 @@ export class Header extends Component {
       '#/super-admin/billing': 'Facturación',
       '#/super-admin/logs': 'Logs del Sistema',
       '#/super-admin/settings': 'Ajustes',
+      '#/super-admin/landing': 'Editor de Landing Page',
       '#/cashier/pos': 'Punto de Venta',
       '#/cashier/payments': 'Pagos',
       '#/cashier/cash-register': 'Caja Chica',
@@ -55,7 +53,11 @@ export class Header extends Component {
       '#/calendar/work-calendar': 'Calendario Laboral',
       '#/owner/whatsapp': 'WhatsApp Automation',
       '#/owner/telegram': 'Telegram Automation',
+      '#/owner/branches': 'Sucursales',
+      '#/owner/warehouse': 'Bodega',
+      '#/owner/transfers': 'Traslados de Inventario',
     };
+
     for (const [path, title] of Object.entries(pages)) {
       if (hash === path || hash.startsWith(path + '/')) return title;
     }
@@ -94,6 +96,9 @@ export class Header extends Component {
             <span class="header-divider">·</span>
             <span class="header-page-title" id="header-page-title">${pageTitle}</span>
           </div>
+
+          <!-- Branch Selector -->
+          <div id="header-branch-selector-container" style="margin-left: 12px;"></div>
         </div>
 
         <div class="header-right">
@@ -214,6 +219,12 @@ export class Header extends Component {
   }
 
   afterMount() {
+    // Mount BranchSelector component
+    const branchContainer = this.$('#header-branch-selector-container');
+    if (branchContainer) {
+      branchContainer.appendChild(this.branchSelectorComponent.mount());
+    }
+
     // Check and auto-resume or prompt employee for GPS tracking
     GeolocationService.checkAndPromptGPS();
 

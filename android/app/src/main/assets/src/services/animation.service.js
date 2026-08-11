@@ -40,7 +40,9 @@ export const AnimationService = {
 
     function raf(time) {
       if (lenisInstance) {
-        lenisInstance.raf(time);
+        if (!document.hidden) {
+          lenisInstance.raf(time);
+        }
         requestAnimationFrame(raf);
       }
     }
@@ -90,13 +92,13 @@ export const AnimationService = {
       }
 
       gsap.fromTo(elementsToAnimate,
-        { opacity: 0, y: -24 },
+        { opacity: 0, y: -8 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.7,
-          stagger: 0.08,
-          ease: 'power3.out',
+          duration: 0.15,
+          stagger: 0.02,
+          ease: 'power2.out',
           clearProps: 'transform,opacity'
         }
       );
@@ -106,17 +108,17 @@ export const AnimationService = {
     const cards = container.querySelectorAll('.card');
     if (cards.length > 0) {
       cards.forEach((card, index) => {
-        // Set initial invisible state to prevent flickering
+        // Set initial state for snappy entrance
         card.style.opacity = '0';
-        card.style.transform = 'scale(0.96) translateY(12px)';
+        card.style.transform = 'translateY(6px)';
 
         animate(
           card,
-          { opacity: [0, 1], transform: ['scale(0.96) translateY(12px)', 'scale(1) translateY(0px)'] },
+          { opacity: [0, 1], transform: ['translateY(6px)', 'translateY(0px)'] },
           {
-            delay: 0.05 + index * 0.05,
-            duration: 0.5,
-            easing: [0.16, 1, 0.3, 1] // smooth cubic-bezier
+            delay: index * 0.02,
+            duration: 0.18,
+            easing: [0.16, 1, 0.3, 1]
           }
         );
 
@@ -181,9 +183,9 @@ export const AnimationService = {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 55;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
@@ -198,7 +200,7 @@ export const AnimationService = {
     activeRenderer = renderer;
 
     // 2. Generate Interactive Particles
-    const particleCount = 650;
+    const particleCount = 300;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const initialPositions = [];

@@ -1,15 +1,19 @@
 /**
  * @file sw.js
- * @description Ultra Administrador — Offline-First Service Worker
+ * @description Ultra Administrador — Service Worker
  *
- * Estrategia:
- *  - App shell (HTML, CSS, JS, fuentes, assets) → Cache First
- *  - Solicitudes de red propias → Network First con fallback a caché
- *  - Firebase RTDB / Auth / Firestore → NUNCA interceptado (Firebase maneja su propia persistencia offline)
- *  - Background Sync → Cola de escrituras pendientes que se reenvían al reconectarse
+ * Estrategia v12 (Network-First para garantizar actualizaciones automáticas):
+ *  - index.html / navegación SPA  → Network First  (siempre la versión más nueva de Render)
+ *  - /src/ y /assets/ locales      → Network First  (con fallback a caché cuando hay error de red)
+ *  - CDNs (Firebase, fuentes, etc) → Stale-While-Revalidate (rendimiento + disponibilidad offline)
+ *  - Firebase RTDB / Auth          → NUNCA interceptado (Firebase maneja su propia persistencia)
+ *  - Background Sync               → Cola de escrituras pendientes al reconectarse
+ *
+ * IMPORTANTE: Cambiar CACHE_VERSION en cada deploy fuerza la limpieza de cachés antiguos
+ * en todos los dispositivos existentes (incluyendo APKs instaladas).
  */
 
-const CACHE_VERSION = 'ultra-admin-v11-offline-full';
+const CACHE_VERSION = 'ultra-admin-v12-network-first';
 const SYNC_TAG      = 'ultra-offline-sync';
 
 // ─── Assets del App Shell (se almacenan en instalación) ──────────────────────
@@ -39,15 +43,21 @@ const BYPASS_PATTERNS = [
   'localhost:8080'
 ];
 
+// Cola de escrituras offline (declarada aquí para que activate pueda referenciarla)
+const QUEUE_CACHE = 'ultra-offline-queue-v1';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // INSTALL — cache del app shell
 // ─────────────────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v9 — caching full app shell & Firebase JS SDK...');
+  console.log('[SW] Installing v12-network-first — caching Firebase SDK & critical assets...');
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
-      return cache.addAll(SHELL_ASSETS).catch((err) => {
-        console.warn('[SW] Some shell assets failed to cache on install:', err.message);
+      // Solo pre-cacheamos los SDKs externos que no cambian frecuentemente.
+      // Los archivos locales (/src/, /index.html) se obtienen frescos de la red.
+      const externalAssets = SHELL_ASSETS.filter(a => a.startsWith('https://'));
+      return cache.addAll(externalAssets).catch((err) => {
+        console.warn('[SW] Some external assets failed to cache on install:', err.message);
       });
     })
   );
@@ -58,18 +68,24 @@ self.addEventListener('install', (event) => {
 // ACTIVATE — limpiar cachés viejos
 // ─────────────────────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v9 — cleaning old caches...');
+  console.log('[SW] Activating v12-network-first — cleaning old caches...');
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
+    caches.keys().then(async (keys) => {
+      await Promise.all(
         keys
-          .filter((k) => k !== CACHE_VERSION)
+          .filter((k) => k !== CACHE_VERSION && k !== QUEUE_CACHE)
           .map((k) => {
             console.log('[SW] Deleted old cache:', k);
             return caches.delete(k);
           })
-      )
-    )
+      );
+
+      // Notificar a todos los clientes que hay una nueva versión del SW activa.
+      // Esto permite que la APK muestre un mensaje o recargue de forma controlada.
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      clients.forEach((c) => c.postMessage({ type: 'SW_UPDATED', version: CACHE_VERSION }));
+      console.log(`[SW] ✅ Notified ${clients.length} client(s) of SW update.`);
+    })
   );
   self.clients.claim();
 });
@@ -102,15 +118,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ── Navegación principal (rutas SPA / HTML) → Stale-While-Revalidate / Cache First ──
-  if (req.mode === 'navigate' || isShellRequest(url)) {
-    event.respondWith(staleWhileRevalidate(req));
+  // ── Navegación principal (index.html / rutas SPA) → Network First ──────────────
+  // CRÍTICO: Siempre intenta obtener el HTML más nuevo de Render.
+  // Si falla la red, cae a caché para funcionar offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(networkFirstWithCache(req));
     return;
   }
 
-  // ── Código fuente en /src/ y assets locales → Stale-While-Revalidate ──
+  // ── Código fuente local (/src/, /assets/) → Network First ────────────────────
+  // Garantiza que los cambios en JS/CSS/componentes aparezcan inmediatamente.
   if (url.includes('/src/') || url.includes('/assets/')) {
-    event.respondWith(staleWhileRevalidate(req));
+    event.respondWith(networkFirstWithCache(req));
+    return;
+  }
+
+  // ── Shell assets explícitos (manifest, sw, version) → Network First ──────────
+  if (isShellRequest(url)) {
+    event.respondWith(networkFirstWithCache(req));
     return;
   }
 
@@ -137,6 +162,24 @@ self.addEventListener('message', (event) => {
   switch (type) {
     case 'SKIP_WAITING':
       self.skipWaiting();
+      break;
+
+    case 'FORCE_UPDATE':
+      // Forzar actualización completa: eliminar todos los cachés y recargar.
+      // Invocado por AndroidBridge cuando el usuario toca "Buscar actualizaciones".
+      caches.keys().then((keys) =>
+        Promise.all(keys.filter(k => k !== QUEUE_CACHE).map(k => caches.delete(k)))
+      ).then(() => {
+        console.log('[SW] 🔄 All caches cleared on FORCE_UPDATE request.');
+        self.skipWaiting();
+        // Notificar al cliente para que recargue
+        event.source?.postMessage({ type: 'RELOAD_NOW' });
+      });
+      break;
+
+    case 'CHECK_VERSION':
+      // Responder con la versión del SW activo
+      event.source?.postMessage({ type: 'SW_VERSION', version: CACHE_VERSION });
       break;
 
     case 'QUEUE_WRITE':
@@ -262,7 +305,6 @@ function isShellRequest(url) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Cola de escrituras offline (IndexedDB ligero via Cache Storage)
 // ─────────────────────────────────────────────────────────────────────────────
-const QUEUE_CACHE = 'ultra-offline-queue-v1';
 
 async function queueOfflineWrite(payload) {
   if (!payload) return;

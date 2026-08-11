@@ -9,9 +9,7 @@ import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
 import { MODULE_REGISTRY, isModuleEnabled } from '../../config/modules.config.js';
-import { isProgrammerRole } from '../../core/middleware.js';
-import { db } from '../../config/firebase.config.js';
-import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
+import { ROUTES } from '../../config/routes.config.js';
 
 export class Sidebar extends Component {
   constructor(props = {}) {
@@ -76,6 +74,7 @@ export class Sidebar extends Component {
               { label: 'Planes', path: '#/super-admin/plans', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>` },
               { label: 'Facturación', path: '#/super-admin/billing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>` },
               { label: 'Soporte Clientes', path: '#/super-admin/support', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`, badgeId: 'sidebar-support-badge' },
+              { label: 'Landing Page', path: '#/super-admin/landing', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>` },
             ]
           },
           {
@@ -97,11 +96,12 @@ export class Sidebar extends Component {
           // 4 Canonical Accordion Categories Order with Icons
           const categoryOrder = ['General', 'Finanzas', 'Operaciones', 'Automatización'];
           const categoryIcons = {
-            'General': '🧩',
-            'Finanzas': '💰',
-            'Operaciones': '⚙️',
-            'Automatización': '🤖'
+            'General': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+            'Finanzas': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+            'Operaciones': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+            'Automatización': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>`
           };
+
 
           const categories = [];
           categoryOrder.forEach(cat => {
@@ -132,14 +132,14 @@ export class Sidebar extends Component {
             m.allowedRoles.includes('MANAGER') && isModuleEnabled(currentCompany, m.id)
           );
           const allItems = enabledModules.map(m => ({ label: m.name, path: m.path, icon: m.icon }));
-          return allItems.length > 0 ? [{ label: 'Operaciones', icon: '⚙️', items: allItems }] : [{ label: 'Operaciones', icon: '⚙️', items: [] }];
+          return allItems.length > 0 ? [{ label: 'Operaciones', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`, items: allItems }] : [{ label: 'Operaciones', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`, items: [] }];
         })()
       },
       CASHIER: {
         groups: [
           {
             label: 'Caja',
-            icon: '💰',
+            icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
             items: [
               { label: 'Punto de Venta', path: '#/cashier/pos', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>` },
               { label: 'Pagos', path: '#/cashier/payments', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>` },
@@ -157,7 +157,7 @@ export class Sidebar extends Component {
         groups: [
           {
             label: 'Servicio',
-            icon: '🛎️',
+            icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
             items: [
               ...(guards.enableServiceRequests || category === 'SERVICIOS_PERSONALIZADOS'
                 ? [{ label: 'Mis Clientes Asignados', path: '#/waiter/client-assignments', icon: icons.calendar }]
@@ -172,7 +172,7 @@ export class Sidebar extends Component {
         groups: [
           {
             label: 'Cocina',
-            icon: '🍳',
+            icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
             items: [
               { label: 'KDS – Comandas', path: '#/kitchen/kds', icon: icons.kds },
               { label: 'Estadísticas', path: '#/kitchen/stats', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>` },
@@ -182,6 +182,7 @@ export class Sidebar extends Component {
         ]
       }
     };
+
 
     return menus[role] || { groups: [] };
   }
@@ -299,26 +300,8 @@ export class Sidebar extends Component {
           ${menuHTML}
         </nav>
 
-        <!-- User Profile Footer -->
-        <div class="sidebar-footer">
-          <div class="sidebar-user-avatar" style="background: linear-gradient(135deg, ${roleColor}33, ${roleColor}66);">
-            ${userInitial}
-          </div>
-          <div class="sidebar-user-info">
-            <span class="sidebar-user-name">${userName}</span>
-            <span class="sidebar-user-email">${userEmail}</span>
-          </div>
-          <button class="sidebar-logout-btn" id="sidebar-logout-btn" title="Cerrar sesión">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16,17 21,12 16,7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </button>
-        </div>
-
         <!-- ProLine System Rights Badge -->
-        <div style="padding: 6px 16px 10px; text-align: center; font-size: 0.65rem; color: var(--color-text-tertiary); opacity: 0.75; letter-spacing: 0.02em;">
+        <div style="padding: 10px 16px; text-align: center; font-size: 0.65rem; color: var(--color-text-tertiary); opacity: 0.75; letter-spacing: 0.02em;">
           <span>Ultra Administrador &bull; <strong>ProLine System</strong></span>
         </div>
       </aside>
@@ -326,17 +309,6 @@ export class Sidebar extends Component {
   }
 
   afterMount() {
-    // Logout button
-    const logoutBtn = this.$('#sidebar-logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', async () => {
-        if (confirm('¿Seguro que deseas cerrar sesión?')) {
-          await AuthService.logout();
-          window.location.hash = '#/login';
-        }
-      });
-    }
-
     // Collapsible Group Accordion Toggle Click Handler
     this.$$('[data-sidebar-toggle-group]').forEach(headerBtn => {
       headerBtn.addEventListener('click', (e) => {
@@ -366,6 +338,36 @@ export class Sidebar extends Component {
     };
     if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
     window.addEventListener('hashchange', this._hashHandler);
+
+    // Instant prefetch on hover/touch: downloads JS module & warms data cache before click
+    this.$$('.sidebar-item').forEach(item => {
+      const prefetch = () => {
+        const href = item.getAttribute('href');
+        if (!href) return;
+        const cleanPath = href.replace('#', '').split('?')[0];
+
+        // 1. Prefetch route JS module chunk
+        const route = ROUTES.find(r => r.path === cleanPath || r.path.startsWith(cleanPath));
+        if (route && typeof route.view === 'function') {
+          route.view().catch(() => {});
+        }
+
+        // 2. Prefetch data for target module
+        const parts = cleanPath.split('/').filter(Boolean);
+        const moduleId = parts[0] === 'manager' || parts[0] === 'owner' || parts[0] === 'cashier' || parts[0] === 'inventory'
+          ? (parts[1] || parts[0])
+          : parts[0];
+
+        if (moduleId) {
+          import('../../services/data-prefetch.service.js').then(({ DataPrefetchService }) => {
+            DataPrefetchService.prefetchModuleData(moduleId);
+          }).catch(() => {});
+        }
+      };
+
+      item.addEventListener('mouseenter', prefetch, { passive: true, once: true });
+      item.addEventListener('touchstart', prefetch, { passive: true, once: true });
+    });
 
     // Subscribe to GlobalStore changes so sidebar re-renders when company
     // info or role changes (e.g. after async session/company restore).

@@ -280,6 +280,7 @@ export const MODULE_REGISTRY = [
     defaultEnabled: true,
     allowedRoles: ['OWNER', 'MANAGER']
   },
+
   {
     id: 'serviceRequests',
     name: 'Solicitudes de Servicio',
@@ -331,8 +332,41 @@ export const MODULE_REGISTRY = [
     description: 'Bot oficial de avisos y comandos por Telegram.',
     defaultEnabled: true,
     allowedRoles: ['OWNER', 'MANAGER']
+  },
+
+  // ─── MULTI-SUCURSALES ──────────────────────────────────────────────────────
+  {
+    id: 'branches',
+    name: 'Sucursales',
+    category: 'General',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>`,
+    path: '#/owner/branches',
+    description: 'Gestión de sucursales, alta de nuevas ubicaciones y contexto multi-sucursal.',
+    defaultEnabled: true,
+    allowedRoles: ['OWNER']
+  },
+  {
+    id: 'warehouse',
+    name: 'Bodega',
+    category: 'General',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>`,
+    path: '#/owner/warehouse',
+    description: 'Control de bodegas, stock por bodega, movimientos y traslados entre sucursales.',
+    defaultEnabled: true,
+    allowedRoles: ['OWNER', 'MANAGER']
+  },
+  {
+    id: 'transfers',
+    name: 'Traslados',
+    category: 'Operaciones',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
+    path: '#/owner/transfers',
+    description: 'Gestión y control de traslados de productos entre sucursales y bodegas.',
+    defaultEnabled: true,
+    allowedRoles: ['OWNER', 'MANAGER', 'CASHIER']
   }
 ];
+
 
 /**
  * Returns a default modules configuration object with boolean states.

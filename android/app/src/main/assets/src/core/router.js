@@ -62,44 +62,80 @@ export class Router {
       return;
     }
 
-    // Clean up previous view instance
-    if (this.currentViewInstance && typeof this.currentViewInstance.unmount === 'function') {
-      this.currentViewInstance.unmount();
-    }
-
     // Clean up any orphaned modal overlays left in the DOM and reset body scroll lock
-    // (modals whose unmount() was never called because the view's innerHTML was cleared)
     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
     document.body.classList.remove('modal-open');
     document.documentElement.classList.remove('modal-open');
 
-    // Initialize and render new View component
+    // Check if the DOM already contains the persistent app container shell
+    const existingContainer = this.rootElement ? this.rootElement.querySelector('.app-container') : null;
+    const existingMainContent = existingContainer ? existingContainer.querySelector('.main-content') : null;
+
     try {
       const params = this.getRouteParams(rawHash, route.path);
       const ViewClass = route.view;
-      
-      this.currentViewInstance = new ViewClass(params);
-      
-      if (this.rootElement) {
-        this.rootElement.innerHTML = '';
-        const renderedElement = await this.currentViewInstance.mount();
+      const newViewInstance = new ViewClass(params);
 
-        // Abort if another navigation started while we were mounting
-        if (navId !== this._navId) return;
+      // Mount the new view component
+      const renderedElement = await newViewInstance.mount();
+
+      // Abort if another navigation started while mounting
+      if (navId !== this._navId) {
+        if (typeof newViewInstance.unmount === 'function') newViewInstance.unmount();
+        return;
+      }
+
+      // Unmount previous view instance safely
+      if (this.currentViewInstance && typeof this.currentViewInstance.unmount === 'function') {
+        this.currentViewInstance.unmount();
+      }
+      this.currentViewInstance = newViewInstance;
+
+      if (this.rootElement) {
+        let newContentEl = null;
 
         if (renderedElement instanceof HTMLElement) {
-          this.rootElement.appendChild(renderedElement);
-          AnimationService.animatePageEntrance(renderedElement);
+          newContentEl = renderedElement;
         } else {
-          this.rootElement.innerHTML = this.currentViewInstance.render();
-          AnimationService.animatePageEntrance(this.rootElement);
+          const tempWrapper = document.createElement('div');
+          tempWrapper.innerHTML = newViewInstance.render();
+          newContentEl = tempWrapper.firstElementChild || tempWrapper;
         }
 
-        // Reset scroll position on every navigation (SPA: prevent inheriting prior page scroll)
+        const newAppContainer = newContentEl.classList.contains('app-container')
+          ? newContentEl
+          : newContentEl.querySelector('.app-container');
+
+        // Persistent AppShell layout swapping — keeps Sidebar & Header 100% stable
+        if (existingContainer && existingMainContent && newAppContainer) {
+          const newMainContent = newAppContainer.querySelector('.main-content');
+          const newPageBody = newMainContent ? newMainContent.querySelector('.page-body') : null;
+          const currentPageBody = existingMainContent.querySelector('.page-body');
+
+          if (newPageBody && currentPageBody) {
+            // Swap ONLY the inner page body content — Sidebar & Header stay untouched
+            currentPageBody.replaceWith(newPageBody);
+            AnimationService.animatePageEntrance(newPageBody);
+          } else if (newMainContent) {
+            existingMainContent.replaceWith(newMainContent);
+            AnimationService.animatePageEntrance(newMainContent);
+          } else {
+            this.rootElement.innerHTML = '';
+            this.rootElement.appendChild(newContentEl);
+            AnimationService.animatePageEntrance(newContentEl);
+          }
+        } else {
+          // Standard full view mount for non-shell routes (e.g. /login)
+          this.rootElement.innerHTML = '';
+          this.rootElement.appendChild(newContentEl);
+          AnimationService.animatePageEntrance(newContentEl);
+        }
+
+        // Reset scroll position on main content area
         try {
           window.scrollTo(0, 0);
-          const mainContent = document.querySelector('.main-content');
-          if (mainContent) mainContent.scrollTop = 0;
+          const mainContentEl = document.querySelector('.main-content');
+          if (mainContentEl) mainContentEl.scrollTop = 0;
         } catch (_) {}
       }
     } catch (error) {

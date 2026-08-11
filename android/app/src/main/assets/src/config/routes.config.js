@@ -86,6 +86,10 @@ const getOwnerCreditSystemView = () => import('../modules/owner/views/credit-sys
 const getOwnerSettingsView = () => import('../modules/owner/views/settings.view.js').then(m => m.SettingsView);
 const getOwnerClientAssignmentsView = () => import('../modules/owner/views/client-assignments.view.js').then(m => m.ClientAssignmentsView);
 const getOwnerMigrationView = () => import('../modules/owner/views/migration.view.js').then(m => m.MigrationView);
+const getOwnerBranchesView = () => import('../modules/owner/views/branches.view.js').then(m => m.BranchesView);
+const getOwnerWarehouseView = () => import('../modules/owner/views/warehouse.view.js').then(m => m.WarehouseView);
+const getOwnerTransfersView = () => import('../modules/owner/views/transfers.view.js').then(m => m.TransfersView);
+
 const getWaiterClientAssignmentsView = () => import('../modules/waiter/views/client-assignments.view.js').then(m => m.ClientAssignmentsView);
 const getWorkCalendarView = () => import('../modules/calendar/views/work-calendar.view.js').then(m => m.WorkCalendarView);
 const getHRPublicApplyView = () => import('../modules/hr/views/public-apply.view.js').then(m => m.PublicApplyView);
@@ -100,6 +104,7 @@ const getSuperAdminLogsView = () => import('../modules/super-admin/views/logs.vi
 const getSuperAdminSettingsView = () => import('../modules/super-admin/views/settings.view.js').then(m => m.SettingsView);
 const getSuperAdminUsersView = () => import('../modules/super-admin/views/users.view.js').then(m => m.UsersView);
 const getSuperAdminSupportView = () => import('../modules/super-admin/views/support-center.view.js').then(m => m.SupportCenterView);
+const getSuperAdminLandingView = () => import('../modules/super-admin/views/landing.view.js').then(m => m.LandingView);
 
 // ─── Lazy Route Adapter ───────────────────────────────────────────────────────
 /**
@@ -207,6 +212,10 @@ export const ROUTES = [
   { path: '/owner/settings', view: lazyView(getOwnerSettingsView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
   { path: '/owner/client-assignments', view: lazyView(getOwnerClientAssignmentsView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
   { path: '/owner/migration', view: lazyView(getOwnerMigrationView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/branches', view: lazyView(getOwnerBranchesView), middlewares: [roleGuard([USER_ROLES.OWNER])] },
+  { path: '/owner/warehouse', view: lazyView(getOwnerWarehouseView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER])] },
+  { path: '/owner/transfers', view: lazyView(getOwnerTransfersView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER, USER_ROLES.CASHIER])] },
+
 
   // Work Calendar route (all roles allowed when module is enabled)
   { path: '/calendar/work-calendar', view: lazyView(getWorkCalendarView), middlewares: [roleGuard([USER_ROLES.OWNER, USER_ROLES.MANAGER, USER_ROLES.CASHIER, USER_ROLES.WAITER, USER_ROLES.KITCHEN])] },
@@ -227,6 +236,7 @@ export const ROUTES = [
   { path: '/super-admin/billing', view: lazyView(getSuperAdminBillingView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/logs', view: lazyView(getSuperAdminLogsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
   { path: '/super-admin/settings', view: lazyView(getSuperAdminSettingsView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
+  { path: '/super-admin/landing', view: lazyView(getSuperAdminLandingView), middlewares: [roleGuard([USER_ROLES.SUPER_ADMIN])] },
 
 
   // Public Catalog dynamic wildcard route (Keep at the very bottom)

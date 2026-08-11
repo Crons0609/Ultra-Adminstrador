@@ -74,6 +74,7 @@ export const GlobalStore = new Store({
   currentBranch: null,
   activeRole: null,
   isAuthenticated: false,
+  authLoading: true,
   networkStatus: 'online',
   // Multi-Branch architecture state
   branches: [],

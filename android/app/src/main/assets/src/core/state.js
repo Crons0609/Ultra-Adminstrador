@@ -74,5 +74,10 @@ export const GlobalStore = new Store({
   currentBranch: null,
   activeRole: null,
   isAuthenticated: false,
-  networkStatus: 'online'
+  authLoading: true,
+  networkStatus: 'online',
+  // Multi-Branch architecture state
+  branches: [],
+  selectedBranchId: 'all',
+  selectedBranchMode: 'all'  // 'all' | 'single'
 });

@@ -36,6 +36,13 @@ export function isProgrammerRole(role, email = '') {
  */
 export async function authGuard(route, router) {
   const state = GlobalStore.getState();
+
+  // If session resolution is still in progress (AUTH_LOADING), do not reject access prematurely
+  if (state.authLoading) {
+    console.log('[authGuard] Auth state resolution in progress — allowing path setup.');
+    return true;
+  }
+
   if (!state.isAuthenticated) {
     console.warn('Access Denied: Unauthenticated. Redirecting to /login');
     router.navigate('/login');

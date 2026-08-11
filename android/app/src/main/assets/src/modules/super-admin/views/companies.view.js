@@ -17,100 +17,109 @@ export class CompaniesView extends Component {
     // Initialize store with empty list — data will be loaded from Firebase RTDB
     GlobalStore.set({ companies: [] });
 
-    // Initialize DataTable
+    // Initialize DataTable with compact, desktop-optimized columns
     this.table = new DataTable({
       columns: [
-        { key: 'name', label: 'Empresa / Negocio' },
         { 
-          key: 'businessType', 
-          label: 'Tipo', 
-          render: (val) => val || 'Restaurante'
-        },
-        {
-          key: 'location',
-          label: 'Ubicación (Local)',
-          render: (_, row) => {
+          key: 'name', 
+          label: 'Empresa / Negocio',
+          render: (val, row) => {
             const country = row.country || 'Nicaragua';
             const city = row.city || row.municipio || '';
             const state = row.state || row.estado || '';
-            const parts = [city, state, country].filter(Boolean);
-            return `<span style="font-size: 0.82rem; color: var(--color-text-secondary);">📍 ${parts.join(', ')}</span>`;
+            const locationParts = [city, state, country].filter(Boolean).join(', ');
+            const typeStr = row.businessType || 'Restaurante';
+            return `
+              <div>
+                <div style="font-weight: 700; color: var(--color-text-primary); font-size: 0.88rem;">${val || 'Sin Nombre'}</div>
+                <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <span style="color: #a78bfa; font-weight: 600; background: rgba(167, 139, 250, 0.1); padding: 1px 6px; border-radius: 4px;">${typeStr}</span>
+                  <span style="opacity: 0.7;">📍 ${locationParts}</span>
+                </div>
+              </div>
+            `;
           }
         },
         { 
           key: 'plan', 
-          label: 'Plan',
-          render: (val) => `<span style="font-weight: 600; color: var(--color-accent);">${val}</span>`
-        },
-        { 
-          key: 'status', 
-          label: 'Estado',
-          render: (val) => {
-            let label = 'Activo';
+          label: 'Plan / Estado',
+          render: (val, row) => {
+            let statusLabel = 'Activo';
             let variant = 'success';
-            if (val === 'INACTIVO') {
-              label = 'Inactivo';
-              variant = 'secondary';
-            } else if (val === 'FALTA_PAGO') {
-              label = 'Falta de Pago';
-              variant = 'danger';
-            } else if (val === 'SUSPENDIDO') {
-              label = 'Suspendido';
-              variant = 'warning';
-            } else if (val === 'ELIMINADO') {
-              label = 'Papelera';
-              variant = 'danger';
-            }
-            return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${variant}-light);color:var(--color-${variant});">${label}</span>`;
+            if (row.status === 'INACTIVO') { statusLabel = 'Inactivo'; variant = 'secondary'; }
+            else if (row.status === 'FALTA_PAGO') { statusLabel = 'Falta Pago'; variant = 'danger'; }
+            else if (row.status === 'SUSPENDIDO') { statusLabel = 'Suspendido'; variant = 'warning'; }
+            else if (row.status === 'ELIMINADO') { statusLabel = 'Papelera'; variant = 'danger'; }
+
+            return `
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                <span class="badge" style="display:inline-flex; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3);">
+                  ${val || 'BASIC'}
+                </span>
+                <span class="badge" style="display:inline-flex; padding: 2px 8px; font-size: 0.7rem; font-weight: 600; border-radius: var(--radius-full); background-color: var(--color-${variant}-light); color: var(--color-${variant});">
+                  ● ${statusLabel}
+                </span>
+              </div>
+            `;
           }
         },
         {
           key: 'subscriptionExpiresAt',
           label: 'Vencimiento',
           render: (val) => {
-            if (!val) return '<span style="color:var(--color-text-secondary); font-style:italic;">Ilimitado</span>';
+            if (!val) return '<span style="color:var(--color-text-secondary); font-size:0.78rem; font-style:italic;">Ilimitado</span>';
             const expDate = new Date(val);
             const today = new Date();
             today.setHours(0,0,0,0);
             const isExpired = expDate < today;
             const formatted = val.split('-').reverse().join('/'); // DD/MM/YYYY
             return isExpired 
-              ? `<span style="color:var(--color-danger); font-weight:600;">⚠️ ${formatted} (Vencido)</span>`
-              : `<span style="color:var(--color-text-primary);">${formatted}</span>`;
+              ? `<span style="color:var(--color-danger); font-weight:600; font-size:0.78rem;">⚠️ ${formatted}<br/><small>(Vencido)</small></span>`
+              : `<span style="color:var(--color-text-primary); font-size:0.8rem;">${formatted}</span>`;
           }
         },
         {
           key: 'ownerEmail',
-          label: 'Credenciales del Cliente (Dueño)',
+          label: 'Credenciales del Cliente',
           render: (val, row) => `
-            <div>
-              <div style="font-weight: 600; color: var(--color-accent); font-size: 0.82rem;">📧 ${val || row.ownerEmail || '—'}</div>
-              <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top:2px;">
-                🔑 <code style="background:var(--color-bg-tertiary); border:1px solid var(--color-border); padding:1px 6px; border-radius:4px; font-family:monospace; font-weight:bold; color:var(--color-text-primary);">${row.ownerPassword || '••••••••'}</code>
+            <div style="font-size: 0.78rem; max-width: 220px; word-break: break-all;">
+              <div style="font-weight: 600; color: #a5b4fc; display: flex; align-items: center; gap: 4px;">
+                <span>📧</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${val || row.ownerEmail || '—'}</span>
+              </div>
+              <div style="font-size: 0.73rem; color: var(--color-text-secondary); margin-top:3px;">
+                🔑 <code style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px; font-family:monospace; font-weight:bold; color:#e2e8f0;">${row.ownerPassword || '••••••••'}</code>
               </div>
             </div>
           `
         },
-        { key: 'branches', label: 'Sucursales' },
-        { key: 'users', label: 'Usuarios' },
+        {
+          key: 'branches',
+          label: 'Estructura',
+          render: (_, row) => `
+            <div style="font-size: 0.78rem; color: var(--color-text-secondary); white-space: nowrap;">
+              <div>🏢 <strong>${row.branches || 1}</strong> sucursal${(row.branches || 1) > 1 ? 'es' : ''}</div>
+              <div style="font-size: 0.73rem; opacity: 0.85; margin-top:2px;">👥 <strong>${row.users || 1}</strong> usuario${(row.users || 1) > 1 ? 's' : ''}</div>
+            </div>
+          `
+        },
         {
           key: 'id',
           label: 'Acciones',
           render: (_, row) => `
-            <div class="d-flex gap-2 flex-wrap" data-stop-row-click="true">
+            <div class="d-flex gap-1 flex-wrap" data-stop-row-click="true" style="min-width: 140px;">
               ${row.status === 'ELIMINADO'
-                ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}">Restaurar</button>
-                   <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}">Eliminar definitivo</button>`
-                : `<button class="btn btn-primary btn-sm btn-company-action" data-action="edit" data-id="${row.id}" style="background-color: var(--color-accent); color: white; border: none;">Editar</button>
-                   <button class="btn btn-warning btn-sm btn-company-action" data-action="credentials" data-id="${row.id}" style="font-size:0.75rem; padding: 3px 8px;" title="Ver / Cambiar Contraseña">🔑 Credenciales</button>
-                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="deactivate" data-id="${row.id}">Desactivar</button>
-                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}">Suspender</button>
-                   <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}">Papelera</button>`}
+                ? `<button class="btn btn-secondary btn-sm btn-company-action" data-action="restore" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;">Restaurar</button>
+                   <button class="btn btn-danger btn-sm btn-company-action" data-action="hard-delete" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;">Eliminar</button>`
+                : `<button class="btn btn-primary btn-sm btn-company-action" data-action="edit" data-id="${row.id}" style="background-color: var(--color-accent); color: white; border: none; padding:4px 8px; font-size:0.72rem;" title="Editar Negocio">✏️ Editar</button>
+                   <button class="btn btn-warning btn-sm btn-company-action" data-action="credentials" data-id="${row.id}" style="font-size:0.72rem; padding: 4px 8px;" title="Ver / Cambiar Contraseña">🔑 Claves</button>
+                   <button class="btn btn-secondary btn-sm btn-company-action" data-action="suspend" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;" title="Suspender o Cambiar Estado">⏸️ Estado</button>
+                   <button class="btn btn-danger btn-sm btn-company-action" data-action="trash" data-id="${row.id}" style="padding:4px 8px; font-size:0.72rem;" title="Mover a Papelera">🗑️</button>`}
             </div>
           `
         }
       ],
       data: GlobalStore.getState().companies,
+      tableClass: 'table-compact',
       onRowClick: (row) => {
         this.openEditCompanyModal(row);
       }

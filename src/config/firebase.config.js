@@ -11,7 +11,7 @@
 // NOTE: Import paths must be static strings — no template literals allowed in ES module imports
 import { initializeApp }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
-import { getAuth, connectAuthEmulator }
+import { getAuth, connectAuthEmulator, setPersistence, browserLocalPersistence }
   from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
 import { getDatabase, connectDatabaseEmulator, goOnline, goOffline } from
   'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
@@ -62,8 +62,11 @@ try {
   firebaseApp = initializeApp(firebaseConfig);
   console.log('[Firebase] ✅ App initialized. Project:', firebaseConfig.projectId);
 
-  // 2. Authentication
+  // 2. Authentication — configure browserLocalPersistence explicitly
   auth = getAuth(firebaseApp);
+  setPersistence(auth, browserLocalPersistence)
+    .then(() => console.log('[Firebase] 🔒 Persistencia de sesión activada (browserLocalPersistence).'))
+    .catch((err) => console.warn('[Firebase] Warning al configurar persistencia de sesión:', err.message));
 
   // 3. Realtime Database — with offline persistence enabled
   db = getDatabase(firebaseApp);

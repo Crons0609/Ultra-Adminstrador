@@ -21,6 +21,7 @@ import { AppearanceService } from './services/appearance.service.js';
 import { OfflineSyncService } from './services/offline-sync.service.js';
 import { LocalStorageDBService } from './services/local-storage-db.service.js';
 import { DataPrefetchService } from './services/data-prefetch.service.js';
+import { BranchService } from './services/branch.service.js';
 
 class App {
   constructor() {
@@ -73,6 +74,9 @@ class App {
 
             // Start real-time company modules & settings listener
             this.startCompanyRealtimeListener(userSession);
+
+            // Initialize Multi-Branch listener so globalStore.branches / selectedBranchId are ready
+            BranchService.initBranchListener();
           }
           // Check GPS tracking prompt / auto-resume for employees
           GeolocationService.checkAndPromptGPS();
@@ -116,6 +120,32 @@ class App {
     this.hideLoadingScreen();
     AnimationService.initGlobalScroll();
     this.router = new Router(ROUTES, 'app');
+
+    // If authenticated user opens app at root or /login, redirect automatically to their dashboard
+    const state = GlobalStore.getState();
+    const currentHash = (window.location.hash || '').slice(1) || '/';
+    const hashPath = currentHash.split('?')[0] || '/';
+    if (state.isAuthenticated && state.currentUser && (hashPath === '/' || hashPath === '/login')) {
+      const { redirectUserDashboard } = await import('./core/middleware.js');
+      redirectUserDashboard(state.currentUser.role, this.router);
+    }
+
+    // Expose diagnostic debugging tool for session & version inspection
+    window.__authDebug = () => {
+      const currentState = GlobalStore.getState();
+      const user = currentState.currentUser;
+      return {
+        authStatus: currentState.isAuthenticated ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+        authLoading: currentState.authLoading,
+        uid: user?.uid || null,
+        email: user?.email || null,
+        role: user?.role || null,
+        companyId: user?.companyId || null,
+        persistence: 'LOCAL (browserLocalPersistence)',
+        webVersion: APP_CONFIG.version,
+        userAgent: navigator.userAgent
+      };
+    };
 
     console.log(`[App] ✅ ${APP_CONFIG.name} v${APP_CONFIG.version} initialized.`);
   }
@@ -217,23 +247,9 @@ class App {
     legacyKeys.forEach(key => {
       if (localStorage.getItem(key) !== null) {
         localStorage.removeItem(key);
-        console.log(`[App] 🗑️ Caché local eliminado: ${key}`);
+        console.log(`[App] 🗑️ Clave obsoleta eliminada: ${key}`);
       }
     });
-
-    // Also purge CacheService localStorage keys (prefixed with cache_)
-    try {
-      Object.keys(localStorage)
-        .filter(k => k.startsWith('cache_'))
-        .forEach(key => {
-          localStorage.removeItem(key);
-          console.log(`[App] 🗑️ Caché de servicio eliminado: ${key}`);
-        });
-    } catch (e) {
-      console.warn('[App] No se pudieron limpiar las claves cache_ de localStorage:', e);
-    }
-
-    console.log('[App] ✅ Limpieza de caché local completada.');
   }
 
   /**
@@ -245,18 +261,69 @@ class App {
   }
 
   /**
-   * Register the PWA service worker if the browser supports it.
+   * Register the PWA service worker and handle automatic update detection.
+   *
+   * Flow:
+   *  1. SW registers → if a new version is waiting, send SKIP_WAITING immediately.
+   *  2. New SW activates → SW broadcasts SW_UPDATED to all clients.
+   *  3. On SW_UPDATED: reload the page so the user gets the latest version.
+   *  4. On RELOAD_NOW (after forced FORCE_UPDATE): perform a cache-busted reload.
    */
   registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then(reg => {
-          console.log('[App] Service Worker registered:', reg.scope);
-          reg.update().catch(() => {});
-        })
-        .catch(err => console.warn('[App] Service Worker registration failed:', err));
-    }
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log(`[App] ✅ Service Worker registered — scope: ${reg.scope}`);
+
+        // If a new SW is already waiting (e.g. user refreshed before SW activated), activate it now.
+        if (reg.waiting) {
+          console.log('[App] 🔄 New SW waiting — sending SKIP_WAITING.');
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        // Listen for a new SW entering "waiting" state (downloaded during this session).
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          console.log('[App] 🆕 New SW downloading...');
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[App] 🆕 New SW installed — activating immediately.');
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+
+        // Trigger an immediate SW update check (important for APK WebView on app resume)
+        reg.update().catch(() => {});
+      })
+      .catch((err) => console.warn('[App] Service Worker registration failed:', err));
+
+    // Listen for messages from the SW
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      const { type } = event.data || {};
+
+      if (type === 'SW_UPDATED') {
+        // A new SW just activated — reload to apply the latest web version.
+        // controllerchange fires after claim(), so we use a small guard to avoid double-reload.
+        console.log('[App] 🔄 SW updated — reloading to apply new web version...');
+        window.location.reload();
+      }
+
+      if (type === 'RELOAD_NOW') {
+        // Forced update requested by user via AndroidBridge.checkForUpdate()
+        console.log('[App] 🔄 Forced reload requested by AndroidBridge.');
+        window.location.reload();
+      }
+    });
+
+    // Debug info available in chrome://inspect console
+    console.log(
+      `%c[Ultra Administrador] Web v${APP_CONFIG.version} — URL: ${window.location.href}`,
+      'color: #8b5cf6; font-weight: bold;'
+    );
   }
 
   /**
