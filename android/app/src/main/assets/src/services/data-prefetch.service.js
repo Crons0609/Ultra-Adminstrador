@@ -80,40 +80,4 @@ export class DataPrefetchService {
 
     runChunk(0);
   }
-
-  /**
-   * Prefetches specific database collections for a targeted module in advance (e.g. on sidebar hover).
-   * @param {string} moduleId - e.g. 'inventory', 'products', 'employees', 'finance', 'branches', 'expenses'
-   */
-  static prefetchModuleData(moduleId) {
-    if (!navigator.onLine || !moduleId) return;
-    const { currentUser } = GlobalStore.getState();
-    if (!currentUser || !currentUser.companyId || currentUser.companyId === 'global') return;
-
-    const moduleMap = {
-      inventory: ['products', 'categories', 'inventory', 'ingredients'],
-      products: ['products', 'categories'],
-      employees: ['employees'],
-      finance: ['expenses', 'invoices', 'purchases'],
-      expenses: ['expenses'],
-      branches: ['branches'],
-      warehouse: ['inventory', 'products'],
-      customers: ['customers'],
-      suppliers: ['suppliers'],
-      vehicles: ['vehicles'],
-      rentals: ['rentals'],
-      appointments: ['appointments'],
-      reports: ['orders', 'invoices', 'expenses'],
-      pos: ['products', 'categories', 'orders'],
-      tables: ['orders'],
-      kds: ['orders']
-    };
-
-    const cols = moduleMap[moduleId];
-    if (cols && Array.isArray(cols)) {
-      cols.forEach(col => {
-        FirestoreService.query(col).catch(() => {});
-      });
-    }
-  }
 }

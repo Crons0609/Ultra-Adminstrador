@@ -313,40 +313,6 @@ export class FirestoreService {
   }
 
   /**
-   * Fast Stale-While-Revalidate Query:
-   * Returns cached data immediately (< 1ms) if present, while revalidating network data in background.
-   * @param {string} collectionName
-   * @param {Array} filters
-   * @param {Object} sortBy
-   * @param {number} limitCount
-   * @returns {Promise<Array<Object>>}
-   */
-  static async queryFast(collectionName, filters = [], sortBy = null, limitCount = null) {
-    const path = this._getTenantPath(collectionName);
-    const cached = await LocalStorageDBService.getCache(path);
-
-    if (cached && Array.isArray(cached) && cached.length > 0) {
-      // Revalidate in background if online
-      if (navigator.onLine && db) {
-        get(ref(db, path)).then(async snapshot => {
-          if (snapshot.exists()) {
-            let results = [];
-            snapshot.forEach(snap => results.push({ id: snap.key, ...snap.val() }));
-            await LocalStorageDBService.setCache(path, results);
-          }
-        }).catch(() => {});
-      }
-
-      let results = this._applyFilters(cached, filters);
-      results = this._applySort(results, sortBy);
-      if (limitCount) results = results.slice(0, limitCount);
-      return results;
-    }
-
-    return this.query(collectionName, filters, sortBy, limitCount);
-  }
-
-  /**
    * Get ALL documents in a tenant collection.
    * @param {string} collectionName
    * @returns {Promise<Array<Object>>}

@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
   "buildTime": "2026-08-11T07:00:00.000Z",
-  "minNativeVersion": "1.4.7",
+  "minNativeVersion": "1.4.8",
   "changelog": "Actualización automática desde Render activada — sin necesidad de recompilar APK"
 }

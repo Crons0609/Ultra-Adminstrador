@@ -92,13 +92,13 @@ export const AnimationService = {
       }
 
       gsap.fromTo(elementsToAnimate,
-        { opacity: 0, y: -8 },
+        { opacity: 0, y: -24 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.15,
-          stagger: 0.02,
-          ease: 'power2.out',
+          duration: 0.7,
+          stagger: 0.08,
+          ease: 'power3.out',
           clearProps: 'transform,opacity'
         }
       );
@@ -108,17 +108,17 @@ export const AnimationService = {
     const cards = container.querySelectorAll('.card');
     if (cards.length > 0) {
       cards.forEach((card, index) => {
-        // Set initial state for snappy entrance
+        // Set initial invisible state to prevent flickering
         card.style.opacity = '0';
-        card.style.transform = 'translateY(6px)';
+        card.style.transform = 'scale(0.96) translateY(12px)';
 
         animate(
           card,
-          { opacity: [0, 1], transform: ['translateY(6px)', 'translateY(0px)'] },
+          { opacity: [0, 1], transform: ['scale(0.96) translateY(12px)', 'scale(1) translateY(0px)'] },
           {
-            delay: index * 0.02,
-            duration: 0.18,
-            easing: [0.16, 1, 0.3, 1]
+            delay: 0.05 + index * 0.05,
+            duration: 0.5,
+            easing: [0.16, 1, 0.3, 1] // smooth cubic-bezier
           }
         );
 

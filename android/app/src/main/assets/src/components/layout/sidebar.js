@@ -9,7 +9,9 @@ import { GlobalStore } from '../../core/state.js';
 import { AuthService } from '../../services/auth.service.js';
 import { getModuleGuards, getBusinessCategory } from '../../config/business-types.config.js';
 import { MODULE_REGISTRY, isModuleEnabled } from '../../config/modules.config.js';
-import { ROUTES } from '../../config/routes.config.js';
+import { isProgrammerRole } from '../../core/middleware.js';
+import { db } from '../../config/firebase.config.js';
+import { ref, onValue } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js';
 
 export class Sidebar extends Component {
   constructor(props = {}) {
@@ -338,36 +340,6 @@ export class Sidebar extends Component {
     };
     if (this._hashHandler) window.removeEventListener('hashchange', this._hashHandler);
     window.addEventListener('hashchange', this._hashHandler);
-
-    // Instant prefetch on hover/touch: downloads JS module & warms data cache before click
-    this.$$('.sidebar-item').forEach(item => {
-      const prefetch = () => {
-        const href = item.getAttribute('href');
-        if (!href) return;
-        const cleanPath = href.replace('#', '').split('?')[0];
-
-        // 1. Prefetch route JS module chunk
-        const route = ROUTES.find(r => r.path === cleanPath || r.path.startsWith(cleanPath));
-        if (route && typeof route.view === 'function') {
-          route.view().catch(() => {});
-        }
-
-        // 2. Prefetch data for target module
-        const parts = cleanPath.split('/').filter(Boolean);
-        const moduleId = parts[0] === 'manager' || parts[0] === 'owner' || parts[0] === 'cashier' || parts[0] === 'inventory'
-          ? (parts[1] || parts[0])
-          : parts[0];
-
-        if (moduleId) {
-          import('../../services/data-prefetch.service.js').then(({ DataPrefetchService }) => {
-            DataPrefetchService.prefetchModuleData(moduleId);
-          }).catch(() => {});
-        }
-      };
-
-      item.addEventListener('mouseenter', prefetch, { passive: true, once: true });
-      item.addEventListener('touchstart', prefetch, { passive: true, once: true });
-    });
 
     // Subscribe to GlobalStore changes so sidebar re-renders when company
     // info or role changes (e.g. after async session/company restore).

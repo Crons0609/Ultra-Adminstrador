@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         // ── Change this to your Firebase Hosting URL ─────────────────────────
-        const val SAAS_URL = "https://ultra-administrador.onrender.com"
+        const val SAAS_URL = "https://ultra-adminstrador.onrender.com"
         const val LOCAL_URL = "https://appassets.androidplatform.net/index.html"
         // ─────────────────────────────────────────────────────────────────────
 
@@ -237,7 +237,7 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
 
             // ── User Agent — identifies as an Android app, not a browser ───
-            userAgentString = "UltraAdministrador/1.4.7 (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
+            userAgentString = "UltraAdministrador/1.4.9 (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
 
             // ── File chooser ───────────────────────────────────────────────
             allowFileAccessFromFileURLs = false
@@ -320,12 +320,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        override fun onReceivedHttpError(
+            view: WebView?,
+            request: WebResourceRequest?,
+            errorResponse: WebResourceResponse?
+        ) {
+            if (request?.isForMainFrame == true) {
+                val statusCode = errorResponse?.statusCode ?: 0
+                if (statusCode >= 400) {
+                    val currentUrl = request?.url?.toString() ?: view?.url ?: ""
+                    if (!currentUrl.startsWith("https://appassets.androidplatform.net")) {
+                        // Remote server returned an error status (e.g. 404 Not Found, 500, 502, 503).
+                        // Fall back immediately to bundled local assets so the app always displays UI.
+                        view?.post {
+                            view.loadUrl(LOCAL_URL)
+                        }
+                    }
+                }
+            }
+        }
+
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             if (request?.isForMainFrame == true) {
-                val currentUrl = view?.url ?: ""
-                // Only show offline page if we are NOT loading from our internal assets domain
+                val currentUrl = request?.url?.toString() ?: view?.url ?: ""
                 if (!currentUrl.startsWith("https://appassets.androidplatform.net")) {
-                    showOfflinePage(view)
+                    // Network failure (offline / unreachable) — fall back to bundled local assets.
+                    view?.post {
+                        view.loadUrl(LOCAL_URL)
+                    }
                 }
             }
         }
