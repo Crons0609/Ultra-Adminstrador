@@ -6,7 +6,7 @@
 export const SUPPORTED_LANGUAGES = [
   { code: 'es', name: 'Español', flag: '🇪🇸', nativeName: 'Español', dir: 'ltr' },
   { code: 'en', name: 'Inglés', flag: '🇺🇸', nativeName: 'English', dir: 'ltr' },
-  { code: 'zh', name: 'Chino Simplificado', flag: '🇨🇳', nativeName: '中文 (简体)', dir: 'ltr' },
+  { code: 'zh-CN', name: 'Chino Simplificado', flag: '🇨🇳', nativeName: '中文 (简体)', dir: 'ltr' },
   { code: 'de', name: 'Alemán', flag: '🇩🇪', nativeName: 'Deutsch', dir: 'ltr' },
   { code: 'ru', name: 'Ruso', flag: '🇷🇺', nativeName: 'Русский', dir: 'ltr' },
   { code: 'fr', name: 'Francés', flag: '🇫🇷', nativeName: 'Français', dir: 'ltr' },

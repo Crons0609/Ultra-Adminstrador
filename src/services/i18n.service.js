@@ -7,11 +7,13 @@
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../i18n/languages/index.js';
 import { es } from '../i18n/languages/es.js';
 import { en } from '../i18n/languages/en.js';
+import { zhCN } from '../i18n/languages/zh-CN.js';
 import { GlobalStore } from '../core/state.js';
 
 const dictionaries = {
   es,
-  en
+  en,
+  'zh-CN': zhCN
 };
 
 class I18nServiceClass {
@@ -156,6 +158,7 @@ class I18nServiceClass {
     
     const activeDict = dictionaries[this.currentLanguage] || dictionaries['en'] || dictionaries[DEFAULT_LANGUAGE];
     const fallbackDict = dictionaries[DEFAULT_LANGUAGE];
+    const englishDict = dictionaries['en'];
 
     let text = activeDict ? activeDict[key] : undefined;
 
@@ -165,6 +168,8 @@ class I18nServiceClass {
         text = fallbackDict[key];
       } else if (typeof params === 'string') {
         text = params;
+      } else {
+        text = englishDict?.[key] ?? fallbackDict?.[key];
       }
     }
 
