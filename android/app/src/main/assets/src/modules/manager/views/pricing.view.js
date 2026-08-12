@@ -33,14 +33,14 @@ export class PricingView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: I18nService.t('price_name'),
+          label: 'Regla / Tarifa',
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               <div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🏷️</div>
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val}</span>
                 <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">
-                  ${I18nService.t('price_applies_to')}: <strong>${row.scopeLabel || row.scope || I18nService.t('all_products')}</strong>
+                  Aplica a: <strong>${row.scopeLabel || row.scope || 'Todos los productos'}</strong>
                 </span>
               </div>
             </div>
@@ -48,42 +48,42 @@ export class PricingView extends Component {
         },
         { 
           key: 'targetType', 
-          label: I18nService.t('price_target_label').replace(' *',''),
+          label: 'Beneficiario',
           render: (val) => {
             const labels = {
-              EMPLEADO: I18nService.t('price_target_staff'),
-              CLIENTE_VIP: I18nService.t('price_target_vip'),
-              MAYORISTA: I18nService.t('price_target_wholesale'),
-              GENERAL: I18nService.t('price_target_general')
+              EMPLEADO: '👨‍🍳 Empleado / Staff',
+              CLIENTE_VIP: '⭐ Cliente VIP',
+              MAYORISTA: '📦 Mayorista',
+              GENERAL: '🌐 Público General'
             };
-            return `<span class="badge" style="background:var(--color-bg-tertiary);color:var(--color-text-primary);font-size:0.75rem;">${labels[val] || val || I18nService.t('price_target_general')}</span>`;
+            return `<span class="badge" style="background:var(--color-bg-tertiary);color:var(--color-text-primary);font-size:0.75rem;">${labels[val] || val || 'General'}</span>`;
           }
         },
         { 
           key: 'discountType', 
-          label: I18nService.t('price_benefit_type_label').replace(' *',''),
+          label: 'Beneficio',
           render: (val, row) => {
             const num = Number(row.value || 0);
             if (val === 'PORCENTAJE') {
-              return `<span class="font-bold text-accent">${num}% ${I18nService.t('discount')}</span>`;
+              return `<span class="font-bold text-accent">${num}% Descuento</span>`;
             }
             if (val === 'MONTO_FIJO') {
-              return `<span class="font-bold text-success">-$${num.toFixed(2)} ${I18nService.t('discount')}</span>`;
+              return `<span class="font-bold text-success">-$${num.toFixed(2)} Descuento</span>`;
             }
-            return `<span class="font-bold text-warning">$${num.toFixed(2)} ${I18nService.t('price_fixed')}</span>`;
+            return `<span class="font-bold text-warning">$${num.toFixed(2)} Precio Fijo</span>`;
           }
         },
         { 
           key: 'status', 
-          label: I18nService.t('status'),
+          label: 'Estado',
           render: (val) => {
             const isActive = val !== 'INACTIVO';
-            return `<span class="stock-badge ${isActive ? 'stock-ok' : 'stock-out'}">${isActive ? I18nService.t('active') : I18nService.t('inactive')}</span>`;
+            return `<span class="stock-badge ${isActive ? 'stock-ok' : 'stock-out'}">${isActive ? 'Activo' : 'Inactivo'}</span>`;
           }
         },
         {
           key: 'id',
-          label: I18nService.t('actions'),
+          label: 'Acciones',
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-rule" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -96,11 +96,11 @@ export class PricingView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('price_title'),
-      subtitle: I18nService.t('price_subtitle'),
+      title: I18nService.t('pricing_rules_title', 'Precios Especiales y Tarifas Preferenciales'),
+      subtitle: I18nService.t('pricing_rules_subtitle', 'Configura reglas de precios reducidos y descuentos automáticos para empleados, vendedores y clientes VIP.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-rule">
-          <span>+</span> ${I18nService.t('price_add_title')}
+          <span>+</span> Nueva Regla de Precio
         </button>
       `,
       contentHTML: `
@@ -108,48 +108,48 @@ export class PricingView extends Component {
         <div class="grid-stats mb-6">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('price_active_kpi')}</span>
+              <span class="kpi-label">Reglas Activas</span>
               <div class="kpi-icon kpi-icon-accent">🏷️</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-rules">0</h3>
-            <span class="kpi-change text-secondary">${I18nService.t('price_active_desc')}</span>
+            <span class="kpi-change text-secondary">Configuraciones vigentes</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('price_staff_kpi')}</span>
+              <span class="kpi-label">Descuentos Empleados</span>
               <div class="kpi-icon kpi-icon-success">👨‍🍳</div>
             </div>
             <h3 class="kpi-value" id="kpi-staff-rules">0</h3>
-            <span class="kpi-change text-secondary">${I18nService.t('price_staff_desc')}</span>
+            <span class="kpi-change text-secondary">Tarifas para personal</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('price_vip_kpi')}</span>
+              <span class="kpi-label">Precios VIP / Mayorista</span>
               <div class="kpi-icon kpi-icon-warning">⭐</div>
             </div>
             <h3 class="kpi-value" id="kpi-vip-rules">0</h3>
-            <span class="kpi-change text-secondary">${I18nService.t('price_vip_desc')}</span>
+            <span class="kpi-change text-secondary">Tarifas preferenciales</span>
           </div>
         </div>
 
         <!-- Filter & Search Toolbar -->
         <div class="card p-4 mb-6 d-flex justify-content-between align-items-center flex-wrap gap-4">
           <div class="d-flex gap-3 flex-wrap align-items-center" style="flex: 1; min-width: 280px;">
-            <input type="text" id="pricing-search" class="input input-md" placeholder="${I18nService.t('price_search_placeholder')}" style="max-width: 320px;" />
+            <input type="text" id="pricing-search" class="input input-md" placeholder="Buscar por nombre de regla..." style="max-width: 320px;" />
             
             <select id="filter-target" class="input input-md" style="max-width: 220px; background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);">
-              <option value="">${I18nService.t('price_all_targets')}</option>
-              <option value="EMPLEADO">${I18nService.t('price_target_staff')}</option>
-              <option value="CLIENTE_VIP">${I18nService.t('price_target_vip')}</option>
-              <option value="MAYORISTA">${I18nService.t('price_target_wholesale')}</option>
-              <option value="GENERAL">${I18nService.t('price_target_general')}</option>
+              <option value="">Todos los beneficiarios</option>
+              <option value="EMPLEADO">👨‍🍳 Empleado / Staff</option>
+              <option value="CLIENTE_VIP">⭐ Cliente VIP</option>
+              <option value="MAYORISTA">📦 Mayorista</option>
+              <option value="GENERAL">🌐 Público General</option>
             </select>
           </div>
 
           <div class="text-xs text-secondary" id="rules-counter-label">
-            ${I18nService.t('loading_data')}
+            Cargando reglas...
           </div>
         </div>
 
@@ -220,7 +220,7 @@ export class PricingView extends Component {
     if (totalEl) totalEl.textContent = activeRules.length;
     if (staffEl) staffEl.textContent = activeRules.filter(r => r.targetType === 'EMPLEADO').length;
     if (vipEl)   vipEl.textContent   = activeRules.filter(r => r.targetType === 'CLIENTE_VIP' || r.targetType === 'MAYORISTA').length;
-    if (countEl) countEl.textContent = I18nService.t('price_rules_count', { count: filtered.length });
+    if (countEl) countEl.textContent = `${filtered.length} reglas registradas`;
 
     // Re-bind edit/delete event handlers
     setTimeout(() => this.bindTableEvents(element), 50);
@@ -259,12 +259,12 @@ export class PricingView extends Component {
     element.querySelectorAll('.btn-delete-rule').forEach(btn => {
       btn.onclick = async () => {
         const id = btn.getAttribute('data-id');
-        if (confirm(I18nService.t('price_confirm_delete'))) {
+        if (confirm('¿Seguro que deseas eliminar esta regla de precio especial?')) {
           try {
             await FirestoreService.delete('precios_especiales', id);
-            NotificationService.success(I18nService.t('price_deleted_success'));
+            NotificationService.success('Regla eliminada de la base de datos.');
           } catch (e) {
-            NotificationService.error(`${I18nService.t('price_delete_error')}${e.message}`);
+            NotificationService.error(`Error al eliminar: ${e.message}`);
           }
         }
       };
@@ -273,7 +273,7 @@ export class PricingView extends Component {
 
   openModal(rule = null) {
     const isEdit = !!rule;
-    const title = isEdit ? I18nService.t('price_edit_title') : I18nService.t('price_add_title');
+    const title = isEdit ? 'Editar Regla de Precio Especial' : 'Nueva Regla de Precio Especial';
 
     const categoryOptions = (this.state.categories || []).map(c => `<option value="${c}" ${rule?.scopeValue === c ? 'selected' : ''}>${c}</option>`).join('');
     const productOptions  = (this.state.products || []).map(p => `<option value="${p.id}" ${rule?.scopeValue === p.id ? 'selected' : ''}>${p.name} ($${p.price || 0})</option>`).join('');
@@ -281,37 +281,37 @@ export class PricingView extends Component {
     const bodyHTML = `
       <form id="form-pricing-rule" style="display: flex; flex-direction: column; gap: var(--space-4);">
         <div class="form-group">
-          <label class="form-label" for="rule-name">${I18nService.t('price_name_label')}</label>
-          <input type="text" id="rule-name" class="input input-md" value="${rule?.name || ''}" placeholder="${I18nService.t('price_name_placeholder')}" required />
+          <label class="form-label" for="rule-name">Nombre de la Regla / Tarifa *</label>
+          <input type="text" id="rule-name" class="input input-md" value="${rule?.name || ''}" placeholder="Ej. Descuento Personal 15%" required />
         </div>
 
         <div class="grid-responsive" style="gap: var(--space-4);">
           <div class="col-6">
             <div class="form-group">
-              <label class="form-label" for="rule-target">${I18nService.t('price_target_label')}</label>
+              <label class="form-label" for="rule-target">Beneficiario *</label>
               <select id="rule-target" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);">
-                <option value="EMPLEADO" ${rule?.targetType === 'EMPLEADO' ? 'selected' : ''}>${I18nService.t('price_target_staff')}</option>
-                <option value="CLIENTE_VIP" ${rule?.targetType === 'CLIENTE_VIP' ? 'selected' : ''}>${I18nService.t('price_target_vip')}</option>
-                <option value="MAYORISTA" ${rule?.targetType === 'MAYORISTA' ? 'selected' : ''}>${I18nService.t('price_target_wholesale')}</option>
-                <option value="GENERAL" ${rule?.targetType === 'GENERAL' ? 'selected' : ''}>${I18nService.t('price_target_general')}</option>
+                <option value="EMPLEADO" ${rule?.targetType === 'EMPLEADO' ? 'selected' : ''}>👨‍🍳 Empleado / Staff</option>
+                <option value="CLIENTE_VIP" ${rule?.targetType === 'CLIENTE_VIP' ? 'selected' : ''}>⭐ Cliente VIP</option>
+                <option value="MAYORISTA" ${rule?.targetType === 'MAYORISTA' ? 'selected' : ''}>📦 Mayorista</option>
+                <option value="GENERAL" ${rule?.targetType === 'GENERAL' ? 'selected' : ''}>🌐 Público General</option>
               </select>
             </div>
           </div>
 
           <div class="col-6">
             <div class="form-group">
-              <label class="form-label" for="rule-scope">${I18nService.t('price_applies_to_label')}</label>
+              <label class="form-label" for="rule-scope">Aplica a *</label>
               <select id="rule-scope" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);">
-                <option value="TODOS" ${rule?.scope === 'TODOS' ? 'selected' : ''}>${I18nService.t('all_products')}</option>
-                <option value="CATEGORIA" ${rule?.scope === 'CATEGORIA' ? 'selected' : ''}>${I18nService.t('price_scope_category')}</option>
-                <option value="PRODUCTO" ${rule?.scope === 'PRODUCTO' ? 'selected' : ''}>${I18nService.t('price_scope_product')}</option>
+                <option value="TODOS" ${rule?.scope === 'TODOS' ? 'selected' : ''}>Todos los Productos</option>
+                <option value="CATEGORIA" ${rule?.scope === 'CATEGORIA' ? 'selected' : ''}>Categoría Específica</option>
+                <option value="PRODUCTO" ${rule?.scope === 'PRODUCTO' ? 'selected' : ''}>Producto Específico</option>
               </select>
             </div>
           </div>
         </div>
 
         <div class="form-group" id="group-scope-value" style="display: ${rule?.scope && rule.scope !== 'TODOS' ? 'block' : 'none'};">
-          <label class="form-label" id="label-scope-value" for="rule-scope-value">${I18nService.t('price_scope_value_label')}</label>
+          <label class="form-label" id="label-scope-value" for="rule-scope-value">Seleccionar Categoría o Producto</label>
           <select id="rule-scope-value" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);">
             ${categoryOptions}
           </select>
@@ -320,28 +320,28 @@ export class PricingView extends Component {
         <div class="grid-responsive" style="gap: var(--space-4);">
           <div class="col-6">
             <div class="form-group">
-              <label class="form-label" for="rule-discount-type">${I18nService.t('price_benefit_type_label')}</label>
+              <label class="form-label" for="rule-discount-type">Tipo de Beneficio *</label>
               <select id="rule-discount-type" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);">
-                <option value="PORCENTAJE" ${rule?.discountType === 'PORCENTAJE' ? 'selected' : ''}>${I18nService.t('price_benefit_percent')}</option>
-                <option value="MONTO_FIJO" ${rule?.discountType === 'MONTO_FIJO' ? 'selected' : ''}>${I18nService.t('price_benefit_amount')}</option>
-                <option value="PRECIO_FIJO" ${rule?.discountType === 'PRECIO_FIJO' ? 'selected' : ''}>${I18nService.t('price_benefit_fixed')}</option>
+                <option value="PORCENTAJE" ${rule?.discountType === 'PORCENTAJE' ? 'selected' : ''}>% Porcentaje de Descuento</option>
+                <option value="MONTO_FIJO" ${rule?.discountType === 'MONTO_FIJO' ? 'selected' : ''}>$ Monto de Descuento Fijo</option>
+                <option value="PRECIO_FIJO" ${rule?.discountType === 'PRECIO_FIJO' ? 'selected' : ''}>$ Precio Fijo Especial</option>
               </select>
             </div>
           </div>
 
           <div class="col-6">
             <div class="form-group">
-              <label class="form-label" for="rule-value">${I18nService.t('price_value_label')}</label>
-              <input type="number" step="0.01" min="0" id="rule-value" class="input input-md" value="${rule?.value || ''}" placeholder="${I18nService.t('price_value_placeholder')}" required />
+              <label class="form-label" for="rule-value">Valor / Monto *</label>
+              <input type="number" step="0.01" min="0" id="rule-value" class="input input-md" value="${rule?.value || ''}" placeholder="Ej. 15 o 50.00" required />
             </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="rule-status">${I18nService.t('status')} *</label>
+          <label class="form-label" for="rule-status">Estado *</label>
           <select id="rule-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-primary);">
-            <option value="ACTIVO" ${rule?.status !== 'INACTIVO' ? 'selected' : ''}>✅ ${I18nService.t('active')}</option>
-            <option value="INACTIVO" ${rule?.status === 'INACTIVO' ? 'selected' : ''}>❌ ${I18nService.t('inactive')}</option>
+            <option value="ACTIVO" ${rule?.status !== 'INACTIVO' ? 'selected' : ''}>✅ Activo</option>
+            <option value="INACTIVO" ${rule?.status === 'INACTIVO' ? 'selected' : ''}>❌ Inactivo</option>
           </select>
         </div>
       </form>
@@ -351,8 +351,8 @@ export class PricingView extends Component {
       title,
       bodyHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-cancel-modal">${I18nService.t('cancel')}</button>
-        <button class="btn btn-primary btn-sm" id="btn-save-rule">${isEdit ? I18nService.t('save_changes') : I18nService.t('create')}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-cancel-modal">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-rule">${isEdit ? 'Guardar Cambios' : 'Crear Regla'}</button>
       `
     });
 
@@ -393,16 +393,16 @@ export class PricingView extends Component {
       const status = modalElement.querySelector('#rule-status').value;
 
       if (!name || isNaN(value) || value < 0) {
-        NotificationService.warn(I18nService.t('error_required_fields'));
+        NotificationService.warn('Por favor completa los campos obligatorios con valores válidos.');
         return;
       }
 
-      let scopeLabel = I18nService.t('all_products');
+      let scopeLabel = 'Todos los productos';
       if (scope === 'CATEGORIA') {
-        scopeLabel = `${I18nService.t('category')}: ${scopeValue}`;
+        scopeLabel = `Categoría: ${scopeValue}`;
       } else if (scope === 'PRODUCTO') {
         const prod = this.state.products.find(p => p.id === scopeValue);
-        scopeLabel = `${I18nService.t('ale_product')}: ${prod ? prod.name : scopeValue}`;
+        scopeLabel = `Producto: ${prod ? prod.name : scopeValue}`;
       }
 
       const payload = {
@@ -420,17 +420,17 @@ export class PricingView extends Component {
       try {
         if (isEdit) {
           await FirestoreService.update('precios_especiales', rule.id, payload);
-          NotificationService.success(I18nService.t('price_updated_success'));
+          NotificationService.success('Regla de precio actualizada.');
         } else {
           await FirestoreService.create('precios_especiales', {
             ...payload,
             createdAt: Date.now()
           });
-          NotificationService.success(I18nService.t('price_saved_success'));
+          NotificationService.success('Regla de precio creada exitosamente.');
         }
         modal.close();
       } catch (e) {
-        NotificationService.error(`${I18nService.t('price_save_error')}${e.message}`);
+        NotificationService.error(`Error al guardar: ${e.message}`);
       }
     });
   }

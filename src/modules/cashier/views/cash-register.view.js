@@ -3,6 +3,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class CashRegisterView extends Component {
   constructor(params = {}) {
@@ -13,8 +14,8 @@ export class CashRegisterView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Control de Caja Chica',
-      subtitle: 'Monitorea las ventas del día, flujos de efectivo y realiza cierres de caja.',
+      title: I18nService.t('cash_register_title', 'Control de Caja Chica'),
+      subtitle: I18nService.t('cash_register_subtitle', 'Monitorea las ventas del día, flujos de efectivo y realiza cierres de caja.'),
       actionHTML: `
         <button class="btn btn-secondary btn-sm" id="btn-go-arqueo" style="display:flex;align-items:center;gap:6px;" onclick="window.location.hash='/cashier/arqueo'">
           📊 Arqueo de Caja

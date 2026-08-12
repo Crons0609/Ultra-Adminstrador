@@ -68,13 +68,13 @@ export class InvoiceOCRView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: I18nService.t('ocr_title'),
-      subtitle: I18nService.t('ocr_subtitle'),
+      title: I18nService.t('ocr_title') || 'Escáner Inteligente de Facturas (OCR)',
+      subtitle: I18nService.t('ocr_subtitle') || 'Digitalización automática de comprobantes de compra con OCR e integración al inventario',
       actionHTML: `
         <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm" id="hdr-btn-digitize">${I18nService.t('ocr_tab_digitize')}</button>
-          <button class="btn btn-secondary btn-sm" id="hdr-btn-history">${I18nService.t('ocr_tab_history')}</button>
-          <button class="btn btn-secondary btn-sm" id="hdr-btn-stats">${I18nService.t('ocr_tab_stats')}</button>
+          <button class="btn btn-secondary btn-sm" id="hdr-btn-digitize">📄 ${I18nService.t('digitize') || 'Digitalizar'}</button>
+          <button class="btn btn-secondary btn-sm" id="hdr-btn-history">📜 ${I18nService.t('wa_history') || 'Historial'}</button>
+          <button class="btn btn-secondary btn-sm" id="hdr-btn-stats">📊 ${I18nService.t('kds_stats') || 'Estadísticas'}</button>
         </div>
       `,
       contentHTML: `<div id="invoice-ocr-view-container"></div>`
@@ -251,12 +251,12 @@ export class InvoiceOCRView extends Component {
   async handleFileUpload(file) {
     if (!file) return;
     if (file.size === 0) {
-      NotificationService.warning(I18nService.t('ocr_error_empty_file'));
+      NotificationService.warning('El archivo seleccionado está vacío (0 bytes). Selecciona un documento válido.');
       return;
     }
 
     this.state.imageFile = file;
-    this.state.fileName = file.name || I18nService.t('ri_invoice');
+    this.state.fileName = file.name || 'Factura';
     this.state.fileSizeText = `${(file.size / 1024).toFixed(1)} KB`;
 
     if (file.type && file.type.startsWith('image/')) {
@@ -275,7 +275,7 @@ export class InvoiceOCRView extends Component {
   async processInvoiceOCR(file = null) {
     const targetFile = file || this.state.imageFile || null;
     this.state.isScanning = true;
-    this.state.scanningText = targetFile ? I18nService.t('ocr_scanning_file', { name: targetFile.name }) : I18nService.t('ocr_scanning_generic');
+    this.state.scanningText = targetFile ? `Analizando "${targetFile.name}"...` : 'Procesando lectura OCR...';
     this.updateView();
 
     try {
@@ -290,10 +290,10 @@ export class InvoiceOCRView extends Component {
       this.state.items = data.items || [];
       this.state.confidenceScores = data.confidenceScores || {};
       this.state.hasScannedData = true;
-      NotificationService.success(I18nService.t('ocr_scan_success_toast', { count: this.state.items.length }));
+      NotificationService.success(`Documento analizado correctamente. ${this.state.items.length} productos identificados.`);
     } catch (err) {
       console.error('[OCR] Scan failed:', err);
-      NotificationService.error(I18nService.t('ocr_scan_error_toast', { error: err.message }));
+      NotificationService.error('Error al procesar el archivo: ' + err.message);
     } finally {
       this.state.isScanning = false;
       this.updateView();
@@ -304,13 +304,13 @@ export class InvoiceOCRView extends Component {
     return `
       <div class="d-flex gap-2 border-b mb-4 pb-2 overflow-x-auto touch-scroll flex-nowrap" style="-webkit-overflow-scrolling: touch;">
         <button id="tab-btn-digitize" class="btn ${this.state.activeTab === 'digitize' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
-          ${I18nService.t('ocr_tab_digitize')}
+          📄 Cargar / Digitalizar
         </button>
         <button id="tab-btn-history" class="btn ${this.state.activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
-          ${I18nService.t('ocr_tab_history')}
+          📜 Historial de Facturas
         </button>
         <button id="tab-btn-stats" class="btn ${this.state.activeTab === 'stats' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
-          ${I18nService.t('ocr_tab_stats')}
+          📊 Indicadores & Márgenes
         </button>
       </div>
     `;
@@ -574,7 +574,7 @@ export class InvoiceOCRView extends Component {
     }
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-secondary">${I18nService.t('ocr_history_empty')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-secondary">No se encontraron facturas registradas.</td></tr>`;
       return;
     }
 
@@ -584,9 +584,9 @@ export class InvoiceOCRView extends Component {
         <td class="py-2 font-bold">${inv.invoiceNumber || 'N/A'}</td>
         <td class="py-2">${inv.supplierName || 'N/A'}</td>
         <td class="py-2 font-bold text-emerald-400">S/ ${(inv.totalAmount || 0).toFixed(2)}</td>
-        <td class="py-2"><span class="badge badge-secondary">${inv.itemCount || 0} ${I18nService.t('ri_items')}</span></td>
-        <td class="py-2"><span class="badge ${inv.status === 'Confirmada' ? 'badge-success' : 'badge-warning'}">${inv.status === 'Confirmada' ? I18nService.t('ocr_status_confirmed') : I18nService.t('pending')}</span></td>
-        <td class="py-2 text-xs text-secondary">${inv.importedBy || I18nService.t('nav_system')}</td>
+        <td class="py-2"><span class="badge badge-secondary">${inv.itemCount || 0} items</span></td>
+        <td class="py-2"><span class="badge ${inv.status === 'Confirmada' ? 'badge-success' : 'badge-warning'}">${inv.status}</span></td>
+        <td class="py-2 text-xs text-secondary">${inv.importedBy || 'Sistema'}</td>
       </tr>
     `).join('');
   }
@@ -627,13 +627,13 @@ export class InvoiceOCRView extends Component {
     return `
       <div class="d-flex gap-2 border-b mb-4 pb-2 overflow-x-auto touch-scroll flex-nowrap" style="-webkit-overflow-scrolling: touch;">
         <button id="tab-btn-digitize" class="btn ${this.state.activeTab === 'digitize' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
-          ${I18nService.t('ocr_tab_digitize')}
+          📄 Cargar / Digitalizar
         </button>
         <button id="tab-btn-history" class="btn ${this.state.activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
-          ${I18nService.t('ocr_tab_history')}
+          📜 Historial de Facturas
         </button>
         <button id="tab-btn-stats" class="btn ${this.state.activeTab === 'stats' ? 'btn-primary' : 'btn-secondary'} btn-sm text-truncate" style="flex-shrink:0;">
-          ${I18nService.t('ocr_tab_stats')}
+          📊 Indicadores & Márgenes
         </button>
       </div>
     `;
@@ -648,27 +648,27 @@ export class InvoiceOCRView extends Component {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Column 1: Upload & File Status -->
         <div class="card p-4 sm:p-5">
-          <h3 class="text-md font-bold mb-3">${I18nService.t('ocr_step1_title')}</h3>
+          <h3 class="text-md font-bold mb-3">1. Subir Factura o Documento</h3>
           
           <div id="invoice-dropzone" class="border-dashed border-2 p-4 sm:p-6 text-center rounded-lg mb-4 cursor-pointer hover:bg-slate-800 transition" style="border-radius: var(--radius-lg);">
             <input type="file" id="invoice-file-input" accept=".pdf,.xlsx,.xls,.csv,.docx,.json,.txt,image/*" class="hidden" />
             <label class="cursor-pointer">
               <div class="text-3xl mb-2">📸 / 📁</div>
-              <p class="font-medium text-sm">${I18nService.t('ocr_dropzone_text')}</p>
-              <span class="text-xs text-secondary mt-1 block">${I18nService.t('ocr_dropzone_formats')}</span>
+              <p class="font-medium text-sm">Arrastra tu factura o haz clic para explorar</p>
+              <span class="text-xs text-secondary mt-1 block">Formatos: PDF, Excel (.xlsx, .csv), JSON, Word, TXT e Imágenes (JPG, PNG)</span>
             </label>
           </div>
 
           <div class="d-flex gap-2 mb-4">
-            <button class="btn btn-secondary btn-xs w-full" id="btn-scan-demo">${I18nService.t('ocr_demo_btn')}</button>
+            <button class="btn btn-secondary btn-xs w-full" id="btn-scan-demo">⚡ Probar Factura Demo</button>
           </div>
 
           <!-- Loading & Scanning Indicator -->
           ${this.state.isScanning ? `
             <div class="p-6 text-center rounded-lg border border-accent mb-4" style="background: rgba(124, 58, 237, 0.1);">
               <div class="spinner-border text-accent mb-3" role="status" style="width: 2.5rem; height: 2.5rem; border-width: 3px; border-color: var(--color-accent) transparent transparent transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-              <h4 class="font-bold text-sm" style="color: var(--color-text-primary);">${I18nService.t('ocr_analyzing_title')}</h4>
-              <p class="text-xs text-secondary mt-1">${this.state.scanningText || I18nService.t('ocr_analyzing_desc')}</p>
+              <h4 class="font-bold text-sm" style="color: var(--color-text-primary);">Analizando e Interpretando Documento...</h4>
+              <p class="text-xs text-secondary mt-1">${this.state.scanningText || 'Extrayendo productos y precios...'}</p>
             </div>
           ` : ''}
 
@@ -681,7 +681,7 @@ export class InvoiceOCRView extends Component {
                 <div class="text-4xl mb-2">📄</div>
               `}
               <h4 class="font-bold text-xs text-truncate">${this.state.fileName}</h4>
-              <span class="text-xs text-secondary">${this.state.fileSizeText || I18nService.t('ocr_file_loaded')}</span>
+              <span class="text-xs text-secondary">${this.state.fileSizeText || 'Documento cargado'}</span>
             </div>
           ` : ''}
         </div>
@@ -691,47 +691,47 @@ export class InvoiceOCRView extends Component {
           <!-- Supplier Header Form -->
           <div class="card p-4 sm:p-5">
             <div class="d-flex justify-between align-items-center mb-3 flex-wrap gap-2">
-              <h3 class="text-md font-bold">${I18nService.t('ocr_step2_title')}</h3>
-              ${this.state.hasScannedData ? `<span class="badge badge-success text-xs">${I18nService.t('ocr_status_completed')}</span>` : ''}
+              <h3 class="text-md font-bold">2. Datos Extraídos del Proveedor</h3>
+              ${this.state.hasScannedData ? '<span class="badge badge-success text-xs">✨ OCR Completado</span>' : ''}
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
               <div>
                 <label class="font-medium text-secondary d-flex justify-between">
-                  ${I18nService.t('sup_title')}
-                  ${(this.state.confidenceScores.supplierName || 100) < 80 ? `<span class="badge badge-warning text-xs">${I18nService.t('ocr_low_confidence')}</span>` : ''}
+                  Proveedor
+                  ${(this.state.confidenceScores.supplierName || 100) < 80 ? '<span class="badge badge-warning text-xs">⚠️ Baja Confianza</span>' : ''}
                 </label>
-                <input type="text" class="input input-sm text-xs w-full mt-1" value="${this.state.supplierName}" placeholder="${I18nService.t('ocr_supplier_name_placeholder')}" />
+                <input type="text" class="input input-sm text-xs w-full mt-1" value="${this.state.supplierName}" placeholder="Nombre de la empresa" />
               </div>
 
               <div>
                 <label class="font-medium text-secondary d-flex justify-between">
-                  ${I18nService.t('ocr_ruc_label')}
-                  ${(this.state.confidenceScores.ruc || 100) < 80 ? `<span class="badge badge-warning text-xs">${I18nService.t('ocr_low_confidence')}</span>` : ''}
+                  RUC / Identificación Fiscal
+                  ${(this.state.confidenceScores.ruc || 100) < 80 ? '<span class="badge badge-warning text-xs">⚠️ Baja Confianza</span>' : ''}
                 </label>
                 <input type="text" class="input input-sm text-xs w-full mt-1 font-mono" value="${this.state.ruc}" placeholder="Ej. 20123456789" />
               </div>
 
               <div>
                 <label class="font-medium text-secondary d-flex justify-between">
-                  ${I18nService.t('ocr_invoice_num_label')}
-                  ${(this.state.confidenceScores.invoiceNumber || 100) < 80 ? `<span class="badge badge-warning text-xs">${I18nService.t('ocr_low_confidence')}</span>` : ''}
+                  Nº Factura
+                  ${(this.state.confidenceScores.invoiceNumber || 100) < 80 ? '<span class="badge badge-warning text-xs">⚠️ Baja Confianza</span>' : ''}
                 </label>
                 <input type="text" class="input input-sm text-xs w-full mt-1 font-mono" value="${this.state.invoiceNumber}" placeholder="Ej. F001-0029" />
               </div>
 
               <div>
-                <label class="font-medium text-secondary">${I18nService.t('ocr_invoice_date_label')}</label>
+                <label class="font-medium text-secondary">Fecha de Emisión</label>
                 <input type="date" class="input input-sm text-xs w-full mt-1" value="${this.state.invoiceDate}" />
               </div>
 
               <div>
-                <label class="font-medium text-secondary">${I18nService.t('col_phone')}</label>
+                <label class="font-medium text-secondary">Teléfono</label>
                 <input type="text" class="input input-sm text-xs w-full mt-1" value="${this.state.phone}" />
               </div>
 
               <div>
-                <label class="font-medium text-secondary">${I18nService.t('col_email')}</label>
+                <label class="font-medium text-secondary">Correo Electrónico</label>
                 <input type="email" class="input input-sm text-xs w-full mt-1" value="${this.state.email}" />
               </div>
             </div>
@@ -741,24 +741,24 @@ export class InvoiceOCRView extends Component {
           <div class="card p-4 sm:p-5">
             <div class="d-flex justify-between align-items-center mb-3 flex-wrap gap-2">
               <div>
-                <h3 class="text-md font-bold">${I18nService.t('ocr_step3_title')}</h3>
-                <p class="text-xs text-secondary">${I18nService.t('ocr_step3_subtitle')}</p>
+                <h3 class="text-md font-bold">3. Tabla Editable de Productos Detectados</h3>
+                <p class="text-xs text-secondary">Define márgenes de ganancia y verifica precios antes de importar.</p>
               </div>
-              <button class="btn btn-secondary btn-xs" id="btn-add-item-row">${I18nService.t('ocr_add_row')}</button>
+              <button class="btn btn-secondary btn-xs" id="btn-add-item-row">➕ Agregar Fila</button>
             </div>
 
             <div class="overflow-x-auto touch-scroll border rounded-lg" style="-webkit-overflow-scrolling: touch;">
               <table class="w-full text-xs text-left" style="min-width: 680px;">
                 <thead>
                   <tr class="border-b text-secondary bg-slate-900/50">
-                    <th class="py-2.5 px-3">${I18nService.t('inv_product_name')}</th>
+                    <th class="py-2.5 px-3">Producto</th>
                     <th class="py-2.5 px-2 w-28">SKU</th>
-                    <th class="py-2.5 px-2 w-20 text-center">${I18nService.t('quantity_short')}</th>
-                    <th class="py-2.5 px-2 w-24 text-right">${I18nService.t('ocr_cost_unit_col')}</th>
-                    <th class="py-2.5 px-2 w-20 text-center">${I18nService.t('ocr_margin_col')}</th>
-                    <th class="py-2.5 px-2 w-24 text-right">${I18nService.t('ocr_price_sale_col')}</th>
-                    <th class="py-2.5 px-2 w-24 text-right">${I18nService.t('subtotal')}</th>
-                    <th class="py-2.5 px-2 text-center w-12">${I18nService.t('actions')}</th>
+                    <th class="py-2.5 px-2 w-20 text-center">Cant.</th>
+                    <th class="py-2.5 px-2 w-24 text-right">Costo Unit.</th>
+                    <th class="py-2.5 px-2 w-20 text-center">Margen %</th>
+                    <th class="py-2.5 px-2 w-24 text-right">P. Venta</th>
+                    <th class="py-2.5 px-2 w-24 text-right">Subtotal</th>
+                    <th class="py-2.5 px-2 text-center w-12">Acción</th>
                   </tr>
                 </thead>
                 <tbody id="items-table-body">
@@ -766,7 +766,7 @@ export class InvoiceOCRView extends Component {
                     <tr data-item-id="${item.id}" class="border-b hover:bg-slate-900 transition">
                       <td class="py-2 px-3">
                         <input type="text" data-field="name" class="input input-sm text-xs w-full" value="${item.name}" />
-                        ${item.confidence < 80 ? `<span class="text-amber-400 text-[10px]">${I18nService.t('ocr_conf_warn', { conf: item.confidence })}</span>` : ''}
+                        ${item.confidence < 80 ? '<span class="text-amber-400 text-[10px]">⚠️ Confianza OCR: ' + item.confidence + '%</span>' : ''}
                       </td>
                       <td class="py-2 px-2">
                         <input type="text" data-field="sku" class="input input-sm text-xs w-full font-mono" value="${item.sku}" />
@@ -798,14 +798,14 @@ export class InvoiceOCRView extends Component {
             <!-- Totals Footer Summary -->
             <div class="d-flex flex-column sm:flex-row justify-between align-items-stretch sm:align-items-center gap-3 mt-4 pt-3 border-t">
               <div class="d-flex flex-column sm:flex-row gap-2">
-                <button class="btn btn-secondary btn-sm w-full sm:w-auto" id="btn-clear-form">🧹 ${I18nService.t('clear')}</button>
-                <button class="btn btn-primary btn-sm w-full sm:w-auto" id="btn-confirm-import">${I18nService.t('ocr_confirm_import')}</button>
+                <button class="btn btn-secondary btn-sm w-full sm:w-auto" id="btn-clear-form">🧹 Limpiar</button>
+                <button class="btn btn-primary btn-sm w-full sm:w-auto" id="btn-confirm-import">📥 Confirmar e Importar al Inventario</button>
               </div>
 
               <div class="text-left sm:text-right text-xs space-y-1 bg-slate-900/60 p-3 sm:p-0 rounded-lg">
-                <div>${I18nService.t('subtotal')}: <span id="summary-subtotal" class="font-semibold">S/ ${subtotal.toFixed(2)}</span></div>
-                <div>${I18nService.t('ocr_tax_label')} <span id="summary-tax" class="text-secondary">S/ ${tax.toFixed(2)}</span></div>
-                <div class="text-sm font-bold text-emerald-400">${I18nService.t('ocr_total_label')} <span id="summary-total">S/ ${grandTotal.toFixed(2)}</span></div>
+                <div>Subtotal: <span id="summary-subtotal" class="font-semibold">S/ ${subtotal.toFixed(2)}</span></div>
+                <div>IGV (18%): <span id="summary-tax" class="text-secondary">S/ ${tax.toFixed(2)}</span></div>
+                <div class="text-sm font-bold text-emerald-400">Total Factura: <span id="summary-total">S/ ${grandTotal.toFixed(2)}</span></div>
               </div>
             </div>
           </div>
@@ -820,14 +820,14 @@ export class InvoiceOCRView extends Component {
         <div class="modal-container modal-lg p-4 sm:p-6 space-y-4">
           <div class="modal-header px-0 pt-0 pb-3">
             <div>
-              <h3 class="modal-title text-base sm:text-lg">${I18nService.t('ocr_match_title')}</h3>
-              <span class="text-xs text-secondary">${I18nService.t('ocr_match_subtitle')}</span>
+              <h3 class="modal-title text-base sm:text-lg">🔍 Validación y Resolución de Productos</h3>
+              <span class="text-xs text-secondary">Evita duplicados en tu base de datos</span>
             </div>
             <button class="modal-close" id="btn-cancel-match">&times;</button>
           </div>
 
           <p class="text-xs text-secondary">
-            ${I18nService.t('ocr_match_desc')}
+            El sistema ha comparado los productos escaneados con tu inventario actual. Selecciona la acción deseada para cada producto:
           </p>
 
           <div class="modal-body px-0 space-y-3">
@@ -835,25 +835,25 @@ export class InvoiceOCRView extends Component {
               <div class="border rounded-lg p-3 text-xs bg-slate-900 space-y-2">
                 <div class="d-flex flex-column sm:flex-row justify-between font-bold gap-1">
                   <span>${m.scannedItem.name} (SKU: ${m.scannedItem.sku})</span>
-                  <span class="text-emerald-400">${I18nService.t('quantity_short')}: ${m.scannedItem.quantity} | ${I18nService.t('fin_concept')}: S/ ${m.scannedItem.costPrice.toFixed(2)}</span>
+                  <span class="text-emerald-400">Cant: ${m.scannedItem.quantity} | Costo: S/ ${m.scannedItem.costPrice.toFixed(2)}</span>
                 </div>
                 ${m.existingProduct ? `
                   <div class="text-amber-400 bg-amber-950/40 p-2 rounded">
-                    ${I18nService.t('ocr_match_found', { name: m.existingProduct.name, stock: m.existingProduct.stock || 0 })}
+                    ⚡ Coincidencia encontrada con: <strong>${m.existingProduct.name}</strong> (Stock actual: ${m.existingProduct.stock || 0})
                   </div>
                 ` : `
-                  <div class="text-sky-400">${I18nService.t('ocr_match_new')}</div>
+                  <div class="text-sky-400">✨ Producto totalmente nuevo para el inventario.</div>
                 `}
 
                 <div>
-                  <label class="font-medium text-secondary">${I18nService.t('ocr_match_action_label')}</label>
+                  <label class="font-medium text-secondary">Acción al importar:</label>
                   <select data-index="${idx}" class="select-match-action select select-sm text-xs w-full mt-1">
                     ${m.existingProduct ? `
-                      <option value="UPDATE_STOCK_AND_PRICE" selected>🟢 [RECOMENDADO] ${I18nService.t('ocr_match_update', { qty: m.scannedItem.quantity })}</option>
-                      <option value="ONLY_UPDATE_COST">🟡 ${I18nService.t('ocr_match_cost')}</option>
-                      <option value="CREATE_NEW">🔵 ${I18nService.t('ocr_match_create')}</option>
+                      <option value="UPDATE_STOCK_AND_PRICE" selected>🟢 [RECOMENDADO] Sumar Stock (+${m.scannedItem.quantity}) y Actualizar Precios</option>
+                      <option value="ONLY_UPDATE_COST">🟡 Solo Actualizar Costo de Adquisición (Mantener Stock Actual)</option>
+                      <option value="CREATE_NEW">🔵 Crear como Producto Nuevo Independiente</option>
                     ` : `
-                      <option value="CREATE_NEW" selected>🟢 ${I18nService.t('ocr_match_create_new')}</option>
+                      <option value="CREATE_NEW" selected>🟢 Crear Nuevo Producto en Inventario</option>
                     `}
                   </select>
                 </div>
@@ -862,8 +862,8 @@ export class InvoiceOCRView extends Component {
           </div>
 
           <div class="modal-footer px-0 pb-0 pt-3 border-t">
-            <button class="btn btn-secondary btn-sm w-full sm:w-auto" id="btn-cancel-match">${I18nService.t('cancel')}</button>
-            <button class="btn btn-success btn-sm font-bold w-full sm:w-auto" id="btn-final-confirm-import">${I18nService.t('ocr_process_btn')}</button>
+            <button class="btn btn-secondary btn-sm w-full sm:w-auto" id="btn-cancel-match">Cancelar</button>
+            <button class="btn btn-success btn-sm font-bold w-full sm:w-auto" id="btn-final-confirm-import">✅ Procesar Importación Definitiva</button>
           </div>
         </div>
       </div>
@@ -875,16 +875,16 @@ export class InvoiceOCRView extends Component {
       <div class="card p-4 sm:p-5 space-y-4">
         <div class="d-flex flex-column sm:flex-row justify-between align-items-start sm:align-items-center gap-3">
           <div>
-            <h3 class="text-md font-bold">${I18nService.t('ocr_history_title')}</h3>
-            <p class="text-xs text-secondary">${I18nService.t('ocr_history_subtitle')}</p>
+            <h3 class="text-md font-bold">Historial de Facturas de Proveedores Importadas</h3>
+            <p class="text-xs text-secondary">Consulta compras pasadas, estado de procesamiento y audit logs.</p>
           </div>
 
           <div class="d-flex flex-column sm:flex-row gap-2 w-full sm:w-auto">
-            <input type="text" id="history-search" class="input input-sm text-xs w-full sm:w-auto" placeholder="${I18nService.t('ocr_history_search_placeholder')}" />
+            <input type="text" id="history-search" class="input input-sm text-xs w-full sm:w-auto" placeholder="Buscar proveedor o factura..." />
             <select id="history-filter-status" class="select select-sm text-xs w-full sm:w-auto">
-              <option value="ALL">${I18nService.t('ocr_all_statuses')}</option>
-              <option value="Confirmada">${I18nService.t('ocr_status_confirmed')}</option>
-              <option value="Pendiente">${I18nService.t('pending')}</option>
+              <option value="ALL">Todos los Estados</option>
+              <option value="Confirmada">Confirmadas</option>
+              <option value="Pendiente">Pendientes</option>
             </select>
           </div>
         </div>
@@ -893,13 +893,13 @@ export class InvoiceOCRView extends Component {
           <table class="w-full text-xs text-left" style="min-width: 650px;">
             <thead>
               <tr class="border-b text-secondary bg-slate-900/50">
-                <th class="py-2.5 px-3">${I18nService.t('col_date')}</th>
-                <th class="py-2.5 px-3">${I18nService.t('ocr_invoice_num_label')}</th>
-                <th class="py-2.5 px-3">${I18nService.t('sup_title')}</th>
-                <th class="py-2.5 px-3 text-right">${I18nService.t('col_amount')}</th>
-                <th class="py-2.5 px-3 text-center">${I18nService.t('ri_items')}</th>
-                <th class="py-2.5 px-3 text-center">${I18nService.t('status')}</th>
-                <th class="py-2.5 px-3">${I18nService.t('ocr_imported_by')}</th>
+                <th class="py-2.5 px-3">Fecha</th>
+                <th class="py-2.5 px-3">Nº Factura</th>
+                <th class="py-2.5 px-3">Proveedor</th>
+                <th class="py-2.5 px-3 text-right">Monto Total</th>
+                <th class="py-2.5 px-3 text-center">Items</th>
+                <th class="py-2.5 px-3 text-center">Estado</th>
+                <th class="py-2.5 px-3">Importado Por</th>
               </tr>
             </thead>
             <tbody id="history-tbody">
@@ -917,36 +917,36 @@ export class InvoiceOCRView extends Component {
       <div class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="card p-5 border-l-4 border-l-emerald-500">
-            <span class="text-xs text-secondary font-medium">${I18nService.t('ocr_total_spent_kpi')}</span>
+            <span class="text-xs text-secondary font-medium">Total Comprado por Proveedores</span>
             <div class="text-2xl font-bold text-emerald-400 mt-1">S/ ${(s.totalSpent || 0).toFixed(2)}</div>
           </div>
 
           <div class="card p-5 border-l-4 border-l-sky-500">
-            <span class="text-xs text-secondary font-medium">${I18nService.t('ocr_avg_margin_kpi')}</span>
+            <span class="text-xs text-secondary font-medium">Margen Promedio de Ganancia</span>
             <div class="text-2xl font-bold text-sky-400 mt-1">${(s.avgMargin || 30).toFixed(1)}%</div>
           </div>
 
           <div class="card p-5 border-l-4 border-l-amber-500">
-            <span class="text-xs text-secondary font-medium">${I18nService.t('ocr_total_cost_kpi')}</span>
+            <span class="text-xs text-secondary font-medium">Valor Total Inventario (Al Costo)</span>
             <div class="text-2xl font-bold text-amber-400 mt-1">S/ ${(s.totalInventoryCostValue || 0).toFixed(2)}</div>
           </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="card p-5">
-            <h4 class="font-bold text-sm mb-3">${I18nService.t('ocr_top_products_title')}</h4>
+            <h4 class="font-bold text-sm mb-3">Top Productos Más Adquiridos</h4>
             <div class="space-y-2 text-xs">
               ${(s.topProducts || []).map(([name, qty]) => `
                 <div class="d-flex justify-between border-b pb-1">
                   <span>${name}</span>
-                  <span class="font-bold text-emerald-400">${qty} ${I18nService.t('inv_unit_units')}</span>
+                  <span class="font-bold text-emerald-400">${qty} unidades</span>
                 </div>
               `).join('')}
             </div>
           </div>
 
           <div class="card p-5">
-            <h4 class="font-bold text-sm mb-3">${I18nService.t('ocr_spent_by_supplier_title')}</h4>
+            <h4 class="font-bold text-sm mb-3">Compras por Proveedor</h4>
             <div class="space-y-2 text-xs">
               ${Object.entries(s.supplierCounts || {}).map(([sup, amt]) => `
                 <div class="d-flex justify-between border-b pb-1">

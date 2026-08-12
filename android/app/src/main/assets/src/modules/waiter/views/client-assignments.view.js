@@ -6,6 +6,7 @@ import { TimeService } from '../../../services/time.service.js';
 import { StorageService } from '../../../services/storage.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ClientAssignmentsView extends Component {
   constructor(params = {}) {
@@ -13,40 +14,39 @@ export class ClientAssignmentsView extends Component {
 
     const { currentUser } = GlobalStore.getState();
     this.currentUser = currentUser || {};
-    this.companyId = this.currentUser.companyId || '';
-    this.uid = this.currentUser.uid || '';
+
+    this.companyId = this.currentUser.companyId || 'company-test';
+    this.listeners = [];
 
     this.state = {
-      activeTab: 'active', // 'active' | 'history' | 'register-client' | 'gps-location'
-      assignments: [],
-      authRequests: [],
-      pendingClients: [], 
-      pendingLocations: [], // Location requests sent by this employee
-      clientsCatalog: [], // All clients loaded to support search lookup
-      filters: {
-        searchQuery: '',
-        status: 'ALL',
-        priority: 'ALL',
-        dateAssigned: '',
-        dateScheduled: ''
-      },
-      newClientForm: {
-        displayName: '',
-        companyName: '',
-        phone: '',
-        phoneSecondary: '',
-        email: '',
-        address: '',
-        city: '',
-        department: '',
-        reference: '',
-        observations: '',
-        serviceType: '',
-        problemDescription: '',
-        installedEquipment: '',
-        priority: 'Media',
-        gps: null
-      },
+      activeTab: 'my-clients', // 'my-clients' | 'general-agenda' | 'progress-log' | 'technical-specs' | 'add-client' | 'credentials' | 'gps-location'
+      clients: [],
+      generalClients: [],
+      logs: [],
+      filterTerm: '',
+      statusFilter: 'ALL',
+
+      // Technical Specs modal state
+      selectedClientSpecs: null,
+
+      // New Progress Log modal state
+      selectedClientForLog: '',
+      logType: 'VISITA',
+      logDescription: '',
+      logFile: null,
+      logFilePreview: null,
+      submittingLog: false,
+
+      // Request Credentials modal state
+      credClientId: '',
+      credReason: '',
+      submittingCred: false,
+
+      // New Client registration state
+      newClientName: '',
+      newClientPhone: '',
+      newClientAddress: '',
+      newClientNotes: '',
       confirmingNewClient: false,
       
       // GPS Location tab state
@@ -57,8 +57,8 @@ export class ClientAssignmentsView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Clientes Asignados',
-      subtitle: 'Revisa tu agenda de servicios, consulta especificaciones y reporta progresos.',
+      title: I18nService.t('assigned_clients', 'Clientes Asignados'),
+      subtitle: I18nService.t('assigned_clients_subtitle', 'Revisa tu agenda de servicios, consulta especificaciones y reporta progresos.'),
       actionHTML: `
         <span class="badge" style="font-size: 0.72rem; padding: 4px 10px; border: 1px solid var(--color-border); background: rgba(59, 130, 246, 0.1); color: var(--color-info); display: flex; align-items: center; gap: 6px;">
           <span style="width: 8px; height: 8px; background: var(--color-info); border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>

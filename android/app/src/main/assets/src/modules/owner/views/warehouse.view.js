@@ -12,6 +12,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { WarehouseService } from '../../../services/warehouse.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class WarehouseView extends Component {
   constructor(props = {}) {
@@ -31,11 +32,11 @@ export class WarehouseView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '📦 Gestión de Bodegas y Traslados',
-      subtitle: `${this.currentCompany.name || 'Mi Empresa'} — Control de almacenes, stock y transferencias de inventario.`,
+      title: `📦 ${I18nService.t('wh_title') || 'Gestión de Bodegas y Traslados'}`,
+      subtitle: `${this.currentCompany.name || 'Mi Empresa'} — ${I18nService.t('wh_subtitle') || 'Control de almacenes, stock y transferencias de inventario.'}`,
       actionHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-new-transfer">🚚 Nuevo Traslado</button>
-        <button class="btn btn-primary btn-sm" id="btn-new-warehouse">+ Registrar Bodega</button>
+        <button class="btn btn-secondary btn-sm" id="btn-new-transfer">🚚 ${I18nService.t('wh_new_transfer') || 'Nuevo Traslado'}</button>
+        <button class="btn btn-primary btn-sm" id="btn-new-warehouse">+ ${I18nService.t('wh_register_warehouse') || 'Registrar Bodega'}</button>
       `,
       contentHTML: `
         <!-- KPIs -->
@@ -44,37 +45,37 @@ export class WarehouseView extends Component {
             <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-xl text-indigo-400">📦</div>
             <div>
               <div class="text-2xl font-extrabold text-white" id="wh-kpi-count">0</div>
-              <div class="text-xs text-secondary">Bodegas Registradas</div>
+              <div class="text-xs text-secondary" id="wh-kpi-count-label">${I18nService.t('wh_kpi_warehouses') || 'Bodegas Registradas'}</div>
             </div>
           </div>
           <div class="card p-4 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl text-emerald-400">📊</div>
             <div>
               <div class="text-2xl font-extrabold text-emerald-400" id="wh-kpi-total-items">0</div>
-              <div class="text-xs text-secondary">Total Existencias</div>
+              <div class="text-xs text-secondary" id="wh-kpi-total-items-label">${I18nService.t('wh_kpi_stock') || 'Total Existencias'}</div>
             </div>
           </div>
           <div class="card p-4 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-xl text-cyan-400">🚚</div>
             <div>
               <div class="text-2xl font-extrabold text-cyan-400" id="wh-kpi-pending-transfers">0</div>
-              <div class="text-xs text-secondary">Traslados Pendientes</div>
+              <div class="text-xs text-secondary" id="wh-kpi-pending-label">${I18nService.t('wh_kpi_transfers') || 'Traslados Pendientes'}</div>
             </div>
           </div>
           <div class="card p-4 flex items-center gap-3">
             <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl text-amber-400">⚠️</div>
             <div>
               <div class="text-2xl font-extrabold text-amber-400" id="wh-kpi-low-stock">0</div>
-              <div class="text-xs text-secondary">Productos Stock Bajo</div>
+              <div class="text-xs text-secondary" id="wh-kpi-low-stock-label">${I18nService.t('wh_kpi_low_stock') || 'Productos Stock Bajo'}</div>
             </div>
           </div>
         </div>
 
         <!-- Module Tabs Navigation -->
         <div class="flex gap-2 border-b border-gray-800 mb-6 pb-2">
-          <button class="btn btn-sm wh-tab-btn btn-primary" data-tab="warehouses">🏢 Bodegas y Almacenes</button>
-          <button class="btn btn-sm wh-tab-btn btn-secondary" data-tab="stock">📋 Existencias en Bodega</button>
-          <button class="btn btn-sm wh-tab-btn btn-secondary" data-tab="transfers">🚚 Traslados e Intercambios</button>
+          <button class="btn btn-sm wh-tab-btn btn-primary" data-tab="warehouses">🏢 ${I18nService.t('wh_tab_warehouses') || 'Bodegas y Almacenes'}</button>
+          <button class="btn btn-sm wh-tab-btn btn-secondary" data-tab="stock">📋 ${I18nService.t('wh_tab_stock') || 'Existencias en Bodega'}</button>
+          <button class="btn btn-sm wh-tab-btn btn-secondary" data-tab="transfers">🚚 ${I18nService.t('wh_tab_transfers') || 'Traslados e Intercambios'}</button>
         </div>
 
         <!-- Active View Container -->

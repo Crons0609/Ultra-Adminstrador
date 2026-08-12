@@ -360,7 +360,7 @@ export class SettingsView extends Component {
               
               <!-- Profile Info Column -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">👤 Información Personal</span>
+                <span class="card-title-badge">👤 ${I18nService.t('set_personal_info') || 'Información Personal'}</span>
                 
                 <form id="owner-profile-form" style="display:flex; flex-direction:column; gap: var(--space-3);">
                   <!-- Photo Upload Widget -->
@@ -398,7 +398,7 @@ export class SettingsView extends Component {
 
               <!-- Security, Credentials & Password Column -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">🔒 Seguridad y Credenciales</span>
+                <span class="card-title-badge">🔒 ${I18nService.t('set_security_credentials') || 'Seguridad y Credenciales'}</span>
                 <p class="text-xs text-secondary mb-4">Actualiza tu correo electrónico de acceso o cambia la contraseña directamente. Para realizar estos cambios se requiere ingresar tu contraseña actual.</p>
 
                 <form id="owner-credentials-form" style="display:flex; flex-direction:column; gap: var(--space-3);">
@@ -448,7 +448,7 @@ export class SettingsView extends Component {
               <!-- List Controls -->
               <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
-                  <h3 class="text-lg font-bold" style="margin:0;">👥 Administración de Empleados</h3>
+                  <h3 class="text-lg font-bold" style="margin:0;">👥 ${I18nService.t('set_employee_mgmt') || 'Administración de Empleados'}</h3>
                   <p class="text-secondary" style="font-size:0.8rem; margin-top:4px;">Gestiona los meseros, cocineros, cajeros y gerentes exclusivos de tu negocio.</p>
                 </div>
                 
@@ -495,7 +495,7 @@ export class SettingsView extends Component {
               
               <!-- Dashboard Display Preferences -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">⚙️ Personalización del Panel</span>
+                <span class="card-title-badge">⚙️ ${I18nService.t('set_dashboard_custom') || 'Personalización del Panel'}</span>
                 
                 <form id="owner-preferences-form" style="display:flex; flex-direction:column; gap: var(--space-4);">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
@@ -548,7 +548,7 @@ export class SettingsView extends Component {
                   <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-4); margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-4);">
                     <div>
                       <label class="form-label" style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; color: var(--color-text-primary);">
-                        🎨 Apariencia y Tema de tu Negocio
+                        🎨 ${I18nService.t('set_appearance_theme') || 'Apariencia y Tema de tu Negocio'}
                       </label>
                       <span class="text-xs text-secondary">Elige la apariencia que mejor represente a tu negocio. Se aplicará a tu panel y al de todos tus empleados.</span>
                     </div>
@@ -641,7 +641,7 @@ export class SettingsView extends Component {
 
               <!-- Notifications Alert System Card -->
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">🔔 Notificaciones y Alertas</span>
+                <span class="card-title-badge">🔔 ${I18nService.t('set_notifications_alerts') || 'Notificaciones y Alertas'}</span>
                 
                 <form id="owner-alerts-form" style="display:flex; flex-direction:column; gap: var(--space-4);">
                   <div class="form-group">
@@ -687,7 +687,7 @@ export class SettingsView extends Component {
           <div class="tab-content-panel" id="panel-tab-location" style="display:none;">
             <div class="settings-grid" style="grid-template-columns:1fr;">
               <div class="form-card animate-fade-in">
-                <span class="card-title-badge">📍 Ubicación del Establecimiento</span>
+                <span class="card-title-badge">📍 ${I18nService.t('set_business_location') || 'Ubicación del Establecimiento'}</span>
                 <p class="text-xs text-secondary" style="margin-bottom:var(--space-4);">
                   Configura la dirección física de tu negocio. Esta información se guardará en la nube y estará disponible en cualquier dispositivo, sesión o navegador.
                 </p>
@@ -771,7 +771,7 @@ export class SettingsView extends Component {
           <!-- TAB CONTENT: MOBILE NAV CUSTOMIZATION -->
           <div class="tab-content-panel" id="panel-tab-mobile-nav" style="display:none;">
             <div class="form-card animate-fade-in" style="max-width:680px; margin:0 auto;">
-              <span class="card-title-badge">📱 Personalizar Barra de Navegación Móvil</span>
+              <span class="card-title-badge">📱 ${I18nService.t('set_mobile_nav') || 'Personalizar Barra de Navegación Móvil'}</span>
               <p style="font-size:0.82rem; color:var(--color-text-secondary); margin:8px 0 20px;">Elige hasta <strong>5 botones</strong> y ordénalos según tu flujo de trabajo. Solo se muestran las opciones disponibles para tu rol.</p>
 
               <!-- LIVE PREVIEW -->

@@ -17,6 +17,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { GlobalStore } from '../../../core/state.js';
 import { Modal } from '../../../components/ui/modal.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PromotionsView extends Component {
   constructor(params = {}) {
@@ -28,8 +29,8 @@ export class PromotionsView extends Component {
     this.state = { promotions: [], products: [] };
 
     this.layout = new PageLayout({
-      title: 'Gestión de Promociones',
-      subtitle: 'Crea y administra promociones activas que aparecen en el menú digital del cliente en tiempo real.',
+      title: I18nService.t('promotions_title', 'Gestión de Promociones'),
+      subtitle: I18nService.t('promotions_subtitle', 'Crea y administra promociones activas que aparecen en el menú digital del cliente en tiempo real.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-new-promo" style="display:flex;align-items:center;gap:6px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

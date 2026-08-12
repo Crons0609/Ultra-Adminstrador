@@ -5,6 +5,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class IngredientsView extends Component {
   constructor(params = {}) {
@@ -80,8 +81,8 @@ export class IngredientsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Materia Prima e Insumos',
-      subtitle: 'Monitorea ingredientes, insumos base de producción, unidades de medida y vencimientos.',
+      title: I18nService.t('ingredients_title', 'Materia Prima e Insumos'),
+      subtitle: I18nService.t('ingredients_subtitle', 'Monitorea ingredientes, insumos base de producción, unidades de medida y vencimientos.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-ingredient">
           + Registrar Insumo

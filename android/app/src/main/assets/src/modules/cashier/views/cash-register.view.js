@@ -14,13 +14,13 @@ export class CashRegisterView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: I18nService.t('cash_title'),
-      subtitle: I18nService.t('cash_subtitle'),
+      title: I18nService.t('cash_register_title', 'Control de Caja Chica'),
+      subtitle: I18nService.t('cash_register_subtitle', 'Monitorea las ventas del día, flujos de efectivo y realiza cierres de caja.'),
       actionHTML: `
         <button class="btn btn-secondary btn-sm" id="btn-go-arqueo" style="display:flex;align-items:center;gap:6px;" onclick="window.location.hash='/cashier/arqueo'">
-          📊 ${I18nService.t('arqueo_title')}
+          📊 Arqueo de Caja
         </button>
-        <button class="btn btn-primary btn-sm" id="btn-cash-close">${I18nService.t('cash_close_btn')}</button>
+        <button class="btn btn-primary btn-sm" id="btn-cash-close">Cierre de Caja 🔒</button>
       `,
       contentHTML: `
         <style>
@@ -75,32 +75,32 @@ export class CashRegisterView extends Component {
 
         <div class="cash-register-kpis animate-fade-in">
           <div class="cash-table-card" style="border-top: 4px solid var(--color-success);">
-            <div class="kpi-title">${I18nService.t('fin_total_income')}</div>
+            <div class="kpi-title">Ingresos Totales</div>
             <div class="kpi-amount text-success" id="caja-total-income">$0.00</div>
-            <div class="kpi-subtext" id="caja-total-count">${I18nService.t('cash_transactions_recorded', { count: 0 })}</div>
+            <div class="kpi-subtext" id="caja-total-count">0 transacciones registradas</div>
           </div>
           <div class="cash-table-card" style="border-top: 4px solid var(--color-accent);">
-            <div class="kpi-title">${I18nService.t('cash_income_cash')}</div>
+            <div class="kpi-title">Cobros en Efectivo</div>
             <div class="kpi-amount" style="color:var(--color-accent);" id="caja-cash-total">$0.00</div>
-            <div class="kpi-subtext" id="caja-cash-pct">${I18nService.t('cash_pct_total', { pct: 0 })}</div>
+            <div class="kpi-subtext" id="caja-cash-pct">0% del total cobrado</div>
           </div>
           <div class="cash-table-card" style="border-top: 4px solid var(--color-warning);">
-            <div class="kpi-title">${I18nService.t('cash_income_card')}</div>
+            <div class="kpi-title">Cobros con Tarjeta</div>
             <div class="kpi-amount text-warning" id="caja-card-total">$0.00</div>
-            <div class="kpi-subtext" id="caja-card-pct">${I18nService.t('cash_pct_total', { pct: 0 })}</div>
+            <div class="kpi-subtext" id="caja-card-pct">0% del total cobrado</div>
           </div>
         </div>
 
         <div class="card p-5 movements-wrapper">
-          <h3 class="text-lg font-semibold mb-4">${I18nService.t('cash_daily_sales_log')}</h3>
+          <h3 class="text-lg font-semibold mb-4">Registro Diario de Ventas</h3>
           <div class="mov-row mov-header">
-            <span>${I18nService.t('time')}</span>
-            <span>${I18nService.t('pos_cashier')}</span>
-            <span>${I18nService.t('details')}</span>
-            <span class="text-right">${I18nService.t('cash_amount_collected')}</span>
+            <span>Hora</span>
+            <span>Vendedor</span>
+            <span>Detalles</span>
+            <span class="text-right">Monto Cobrado</span>
           </div>
           <div id="caja-movements-list" style="max-height: 400px; overflow-y: auto;">
-            <p class="text-center py-10 text-secondary">${I18nService.t('cash_waiting_transactions')}</p>
+            <p class="text-center py-10 text-secondary">Esperando transacciones de caja...</p>
           </div>
         </div>
       `
@@ -152,12 +152,12 @@ export class CashRegisterView extends Component {
 
     if (todaySales.length === 0) {
       totalEl.textContent = '$0.00';
-      countEl.textContent = I18nService.t('cash_transactions_today', { count: 0 });
+      countEl.textContent = '0 transacciones hoy';
       cashEl.textContent = '$0.00';
-      cashPctEl.textContent = I18nService.t('cash_pct_total', { pct: 0 });
+      cashPctEl.textContent = '0% del total';
       cardEl.textContent = '$0.00';
-      cardPctEl.textContent = I18nService.t('cash_pct_total', { pct: 0 });
-      list.innerHTML = `<p class="text-center py-10 text-secondary">${I18nService.t('cash_no_transactions_today')}</p>`;
+      cardPctEl.textContent = '0% del total';
+      list.innerHTML = `<p class="text-center py-10 text-secondary">No hay transacciones registradas el día de hoy.</p>`;
       return;
     }
 
@@ -169,17 +169,17 @@ export class CashRegisterView extends Component {
     const cardPct = totalIncome > 0 ? Math.round((cardIncome / totalIncome) * 100) : 0;
 
     totalEl.textContent = `$${totalIncome.toFixed(2)}`;
-    countEl.textContent = I18nService.t('cash_transactions_today', { count: todaySales.length });
+    countEl.textContent = `${todaySales.length} transacciones hoy`;
     cashEl.textContent = `$${cashIncome.toFixed(2)}`;
-    cashPctEl.textContent = I18nService.t('cash_pct_total', { pct: cashPct });
+    cashPctEl.textContent = `${cashPct}% del total cobrado`;
     cardEl.textContent = `$${cardIncome.toFixed(2)}`;
-    cardPctEl.textContent = I18nService.t('cash_pct_total', { pct: cardPct });
+    cardPctEl.textContent = `${cardPct}% del total cobrado`;
 
     list.innerHTML = todaySales.map(s => {
       const time = new Date(s.date || s.createdAt).toLocaleTimeString();
-      const seller = s.sellerName || I18nService.t('pos_cashier');
+      const seller = s.sellerName || 'Cajero';
       const itemsCount = (s.items || []).reduce((sum, i) => sum + i.qty, 0);
-      const desc = `${itemsCount} ${I18nService.t('ri_items')} · ${s.paymentMethod}`;
+      const desc = `${itemsCount} artículos · ${s.paymentMethod}`;
       
       return `
         <div class="mov-row animate-slide-up">
@@ -203,38 +203,38 @@ export class CashRegisterView extends Component {
 
     const bodyHTML = `
       <div style="color: var(--color-text-primary); font-family:var(--font-sans);">
-        <p class="mb-4">${I18nService.t('cash_close_desc')}</p>
+        <p class="mb-4">Se cerrará la jornada fiscal/operativa de hoy. A continuación se desglosan los fondos registrados en el sistema:</p>
         <div class="card p-3 mb-4" style="background:var(--color-bg-tertiary);">
           <div class="d-flex justify-content-between mb-2">
-            <span>${I18nService.t('dash_total_sales')}:</span>
+            <span>Ventas Totales:</span>
             <strong>$${totalIncome.toFixed(2)}</strong>
           </div>
           <div class="d-flex justify-content-between mb-2" style="font-size:0.85rem; color:var(--color-text-secondary);">
-            <span>${I18nService.t('cash_fund_cash')}</span>
+            <span>En Efectivo (Fondo en Caja):</span>
             <span>$${cashIncome.toFixed(2)}</span>
           </div>
           <div class="d-flex justify-content-between mb-2" style="font-size:0.85rem; color:var(--color-text-secondary);">
-            <span>${I18nService.t('cash_fund_card')}</span>
+            <span>En Tarjeta (Terminales POS):</span>
             <span>$${cardIncome.toFixed(2)}</span>
           </div>
           <div class="d-flex justify-content-between" style="font-size:0.85rem; color:var(--color-text-secondary);">
-            <span>${I18nService.t('cash_total_transactions')}</span>
+            <span>Transacciones totales:</span>
             <span>${todaySales.length}</span>
           </div>
         </div>
         <div class="form-group mb-2">
-          <label class="form-label" for="actual-cash">${I18nService.t('cash_physical_counted_label')}</label>
-          <input type="number" id="actual-cash" class="input input-md" placeholder="${I18nService.t('cash_physical_counted_placeholder')}" required />
+          <label class="form-label" for="actual-cash">Monto de Efectivo Físico Contado ($) *</label>
+          <input type="number" id="actual-cash" class="input input-md" placeholder="Ingresa el efectivo contado en gaveta" required />
         </div>
       </div>
     `;
 
     const modal = new Modal({
-      title: I18nService.t('cash_close_confirm_title'),
+      title: 'Confirmar Cierre de Caja',
       bodyHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-close-cancel">${I18nService.t('cancel')}</button>
-        <button class="btn btn-danger btn-sm" id="btn-close-confirm">${I18nService.t('cash_close_confirm_btn')}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-close-cancel">Cancelar</button>
+        <button class="btn btn-danger btn-sm" id="btn-close-confirm">Confirmar Cierre y Guardar</button>
       `
     });
 
@@ -244,7 +244,7 @@ export class CashRegisterView extends Component {
     modal.$('#btn-close-confirm').addEventListener('click', async () => {
       const input = modal.$('#actual-cash');
       if (!input || !input.value) {
-        alert(I18nService.t('cash_error_no_counted'));
+        alert('Debes ingresar el total del efectivo contado.');
         return;
       }
 
@@ -262,11 +262,11 @@ export class CashRegisterView extends Component {
           transactionsCount: todaySales.length
         };
         await FirestoreService.create('cierres_caja', closePayload);
-        NotificationService.success(I18nService.t('cash_close_success'));
+        NotificationService.success('Cierre de caja registrado exitosamente.');
         modal.close();
       } catch (e) {
         console.error(e);
-        NotificationService.error(I18nService.t('cash_close_error'));
+        NotificationService.error('Error al guardar el cierre de caja.');
       }
     });
   }

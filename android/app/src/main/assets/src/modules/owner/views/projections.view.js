@@ -4,6 +4,7 @@ import { Chart } from '../../../components/data/chart.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ProjectionsView extends Component {
   constructor(params = {}) {
@@ -25,42 +26,42 @@ export class ProjectionsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Proyecciones Financieras',
-      subtitle: 'Análisis predictivo basado en el histórico de ventas reales y tendencias del negocio.',
+      title: I18nService.t('nav_projections') || 'Proyecciones Financieras',
+      subtitle: I18nService.t('proj_subtitle') || 'Análisis predictivo basado en el histórico de ventas reales y tendencias del negocio.',
       contentHTML: `
         <!-- Summary KPIs -->
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Promedio Mensual Real</span>
+              <span class="kpi-label">${I18nService.t('proj_monthly_avg') || 'Promedio Mensual Real'}</span>
               <div class="kpi-icon kpi-icon-accent">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               </div>
             </div>
             <h3 class="kpi-value" id="proj-monthly-avg">$0.00</h3>
-            <span class="kpi-change" style="color: var(--color-text-secondary);" id="proj-avg-label">basado en historial real</span>
+            <span class="kpi-change" style="color: var(--color-text-secondary);" id="proj-avg-label">${I18nService.t('proj_based_history') || 'basado en historial real'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Proyección Próximo Mes</span>
+              <span class="kpi-label">${I18nService.t('proj_next_month') || 'Proyección Próximo Mes'}</span>
               <div class="kpi-icon kpi-icon-success">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
               </div>
             </div>
             <h3 class="kpi-value" id="proj-next-30">$0.00</h3>
-            <span class="kpi-change kpi-change-up" id="proj-30-label">Con crecimiento estimado del 5%</span>
+            <span class="kpi-change kpi-change-up" id="proj-30-label">${I18nService.t('proj_growth_est') || 'Con crecimiento estimado del 5%'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Meta Anual Estimada</span>
+              <span class="kpi-label">${I18nService.t('proj_annual_goal') || 'Meta Anual Estimada'}</span>
               <div class="kpi-icon kpi-icon-warning">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
             </div>
             <h3 class="kpi-value" id="proj-annual">$0.00</h3>
-            <span class="kpi-change" style="color: var(--color-text-secondary);">Basado en tendencia actual real</span>
+            <span class="kpi-change" style="color: var(--color-text-secondary);">${I18nService.t('proj_based_trend') || 'Basado en tendencia actual real'}</span>
           </div>
         </div>
 

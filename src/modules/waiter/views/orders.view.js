@@ -4,6 +4,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class OrdersView extends Component {
   constructor(params = {}) {
@@ -11,7 +12,7 @@ export class OrdersView extends Component {
     const state = GlobalStore.getState();
     const currentUser = state.currentUser || {};
     this.companyId = currentUser.companyId || '';
-    this.waiterName = currentUser.displayName || 'Mesero';
+    this.waiterName = currentUser.displayName || I18nService.t('emp_role_waiter', 'Mesero');
 
     this.state = {
       orders: [],
@@ -20,8 +21,8 @@ export class OrdersView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Mis Pedidos (Comandas)',
-      subtitle: 'Gestiona comandas, verifica pedidos móviles de clientes y controla las entregas.',
+      title: I18nService.t('my_orders_comandas', 'Mis Pedidos (Comandas)'),
+      subtitle: I18nService.t('my_orders_subtitle', 'Gestiona comandas, verifica pedidos móviles de clientes y controla las entregas.'),
       actionHTML: `
         <button class="btn btn-secondary btn-sm" id="btn-refresh-orders">🔄 Recargar Lista</button>
       `,

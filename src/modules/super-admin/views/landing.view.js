@@ -8,6 +8,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class LandingView extends Component {
   constructor(params = {}) {
@@ -16,8 +17,8 @@ export class LandingView extends Component {
     this.config = {};
 
     this.layout = new PageLayout({
-      title: 'Editor de Landing Page',
-      subtitle: 'Administración del portal público: edita los textos, contadores, llamadas a la acción y enlaces de contacto.',
+      title: I18nService.t('landing_page_editor', 'Editor de Landing Page'),
+      subtitle: I18nService.t('landing_page_editor_subtitle', 'Administración del portal público: edita los textos, contadores, llamadas a la acción y enlaces de contacto.'),
       actionHTML: `
         <button type="button" data-open-landing class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; padding: 8px 18px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; border: none; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); cursor: pointer; transition: all 0.2s ease;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>

@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class VehiclesView extends Component {
   constructor(params = {}) {
@@ -85,8 +86,8 @@ export class VehiclesView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Catálogo de Vehículos',
-      subtitle: 'Administra la flota de vehículos, estados de disponibilidad y códigos de barra o placa.',
+      title: I18nService.t('vehicles_mgmt_title', 'Catálogo de Vehículos'),
+      subtitle: I18nService.t('vehicles_mgmt_subtitle', 'Administra la flota de vehículos, estados de disponibilidad y códigos de barra o placa.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-vehicle">
           + Agregar Vehículo

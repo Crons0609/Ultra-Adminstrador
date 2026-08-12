@@ -19,6 +19,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { MigrationService } from '../../../services/migration.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { exportToExcel, exportToPDF, exportToJSON, exportToCSV } from '../../../utils/export.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class MigrationView extends Component {
   constructor(params = {}) {
@@ -50,12 +51,12 @@ export class MigrationView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Migración y Central de Datos',
-      subtitle: 'Importa masivamente documentos (PDF, Excel, Word), gestiona mapeos y transfiere datos hacia tu negocio.',
+      title: I18nService.t('nav_migration') || 'Migración y Central de Datos',
+      subtitle: I18nService.t('mig_subtitle') || 'Importa masivamente documentos (PDF, Excel, Word), gestiona mapeos y transfiere datos hacia tu negocio.',
       actionHTML: `
         <div class="d-flex gap-2">
           <button class="btn btn-secondary btn-sm" id="btn-refresh-migration">
-            🔄 Sincronizar
+            🔄 ${I18nService.t('mig_sync') || 'Sincronizar'}
           </button>
         </div>
       `,
@@ -72,16 +73,16 @@ export class MigrationView extends Component {
         <!-- Navigation Tabs -->
         <div class="d-flex border-b border-border gap-2 flex-wrap" style="border-bottom: 2px solid var(--color-border); padding-bottom: 4px;">
           <button class="btn ${activeTab === 'import' ? 'btn-primary' : 'btn-secondary'} btn-sm migration-tab-btn" data-tab="import" style="padding: 10px 18px; font-weight: 600;">
-            📥 Importar y Migrar Documentos
+            📥 ${I18nService.t('mig_tab_import') || 'Importar y Migrar Documentos'}
           </button>
           <button class="btn ${activeTab === 'export' ? 'btn-primary' : 'btn-secondary'} btn-sm migration-tab-btn" data-tab="export" style="padding: 10px 18px; font-weight: 600;">
-            📤 Exportar Datos del Sistema
+            📤 ${I18nService.t('mig_tab_export') || 'Exportar Datos del Sistema'}
           </button>
           <button class="btn ${activeTab === 'templates' ? 'btn-primary' : 'btn-secondary'} btn-sm migration-tab-btn" data-tab="templates" style="padding: 10px 18px; font-weight: 600;">
-            📄 Plantillas de Ejemplo
+            📄 ${I18nService.t('mig_tab_templates') || 'Plantillas de Ejemplo'}
           </button>
           <button class="btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm migration-tab-btn" data-tab="history" style="padding: 10px 18px; font-weight: 600;">
-            📜 Historial y Auditoría
+            📜 ${I18nService.t('mig_tab_history') || 'Historial y Auditoría'}
           </button>
         </div>
 

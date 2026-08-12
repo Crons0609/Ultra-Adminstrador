@@ -43,7 +43,7 @@ export class FinanceView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('fin_title'),
-      subtitle: 'Real-time financial management, income, expenses, and net profit.',
+      subtitle: I18nService.t('fin_subtitle') || 'Gestión financiera en tiempo real, ingresos, gastos y utilidad neta.',
       actionHTML: ``,
       contentHTML: `
         <!-- Financial KPI cards -->
@@ -59,34 +59,34 @@ export class FinanceView extends Component {
 
           <div class="card p-4 hover-lift">
             <div class="d-flex justify-between align-items-start">
-              <span class="text-sm text-secondary">Gastos Registrados</span>
+              <span class="text-sm text-secondary">${I18nService.t('fin_expenses_label') || 'Gastos Registrados'}</span>
               <span style="font-size: 1.2rem; color: var(--color-danger);">📉</span>
             </div>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="val-total-expenses">$0.00</h3>
-            <span class="text-xs text-secondary" id="val-expenses-count">0 salidas de caja registradas</span>
+            <span class="text-xs text-secondary" id="val-expenses-count">${I18nService.t('fin_expense_records') || '0 salidas de caja registradas'}</span>
           </div>
 
           <div class="card p-4 hover-lift">
             <div class="d-flex justify-between align-items-start">
-              <span class="text-sm text-secondary">Utilidad Neta (Balance)</span>
+              <span class="text-sm text-secondary">${I18nService.t('fin_net_profit') || 'Utilidad Neta (Balance)'}</span>
               <span style="font-size: 1.2rem;" id="val-profit-icon">⚖️</span>
             </div>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="val-net-profit">$0.00</h3>
-            <span class="text-xs text-secondary" id="val-profit-margin">Margen neto: 0%</span>
+            <span class="text-xs text-secondary" id="val-profit-margin">${I18nService.t('fin_net_margin') || 'Margen neto: 0%'}</span>
           </div>
         </div>
 
         <!-- Multi-period chart -->
         <div class="card p-4 sm:p-5 mt-6">
           <div class="d-flex justify-between align-items-center mb-4 flex-wrap gap-3">
-            <h3 class="text-lg font-semibold">Flujo de Caja</h3>
+            <h3 class="text-lg font-semibold">${I18nService.t('fin_cashflow') || 'Flujo de Caja'}</h3>
             <div class="d-flex gap-2 flex-wrap" id="period-tabs">
               ${[
-                ['daily',     'Diario'],
-                ['weekly',    'Semanal'],
-                ['monthly',   'Mensual'],
-                ['quarterly', 'Trimestral'],
-                ['annual',    'Anual']
+                ['daily',     I18nService.t('period_daily') || 'Diario'],
+                ['weekly',    I18nService.t('period_weekly') || 'Semanal'],
+                ['monthly',   I18nService.t('period_monthly') || 'Mensual'],
+                ['quarterly', I18nService.t('period_quarterly') || 'Trimestral'],
+                ['annual',    I18nService.t('period_annual') || 'Anual']
               ].map(([val, label]) => `
                 <button class="btn btn-sm period-tab ${val === 'weekly' ? 'btn-primary' : 'btn-secondary'}"
                         data-period="${val}" style="font-size:0.78rem;padding:4px 12px;">${label}</button>
@@ -99,23 +99,23 @@ export class FinanceView extends Component {
         <!-- Detailed sold items list -->
         <div class="card p-4 sm:p-5 mt-6">
           <div class="d-flex justify-between align-items-center mb-4 flex-wrap gap-2">
-            <h3 class="text-lg font-semibold">Historial Detallado de Ventas</h3>
-            <span class="text-xs text-secondary" id="sales-list-count">0 transacciones</span>
+            <h3 class="text-lg font-semibold">${I18nService.t('fin_sales_history') || 'Historial Detallado de Ventas'}</h3>
+            <span class="text-xs text-secondary" id="sales-list-count">${I18nService.t('fin_transactions') || '0 transacciones'}</span>
           </div>
           <div class="overflow-x-auto touch-scroll border rounded-lg" style="-webkit-overflow-scrolling: touch;">
             <table style="width:100%;min-width:600px;border-collapse:collapse;font-size:0.82rem;" id="sales-detail-table">
               <thead>
                 <tr style="border-bottom:1px solid var(--color-border);background:rgba(255,255,255,0.02);">
-                  <th style="text-align:left;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Producto</th>
-                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Cant.</th>
-                  <th style="text-align:right;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">P. Unit.</th>
-                  <th style="text-align:right;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Total</th>
-                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Hora</th>
-                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">Método de Pago</th>
+                  <th style="text-align:left;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">${I18nService.t('col_product') || 'Producto'}</th>
+                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">${I18nService.t('col_qty') || 'Cant.'}</th>
+                  <th style="text-align:right;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">${I18nService.t('col_unit_price') || 'P. Unit.'}</th>
+                  <th style="text-align:right;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">${I18nService.t('col_total') || 'Total'}</th>
+                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">${I18nService.t('col_time') || 'Hora'}</th>
+                  <th style="text-align:center;padding:10px 12px;color:var(--color-text-secondary);font-weight:600;font-size:0.75rem;">${I18nService.t('col_payment_method') || 'Método de Pago'}</th>
                 </tr>
               </thead>
               <tbody id="sales-detail-body">
-                <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-text-secondary);">Esperando transacciones...</td></tr>
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-text-secondary);">${I18nService.t('fin_waiting') || 'Esperando transacciones...'}</td></tr>
               </tbody>
             </table>
           </div>

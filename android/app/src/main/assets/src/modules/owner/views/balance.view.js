@@ -16,7 +16,7 @@ export class BalanceView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('bal_title'),
-      subtitle: 'Comprehensive financial status — assets, liabilities, and net position.',
+      subtitle: I18nService.t('bal_subtitle') || 'Estado financiero integral — activos, pasivos y posición neta.',
       actionHTML: '',
       contentHTML: `
         <!-- Summary Row -->
@@ -29,7 +29,7 @@ export class BalanceView extends Component {
               </div>
             </div>
             <h3 class="kpi-value" id="bal-total-income">$0.00</h3>
-            <span class="kpi-change kpi-change-up" id="bal-income-count">0 sales completed</span>
+            <span class="kpi-change kpi-change-up" id="bal-income-count">${I18nService.t('fin_sales_count') || '0 ventas completadas'}</span>
           </div>
 
           <div class="kpi-card hover-lift" style="border-top: 3px solid var(--color-danger);">
@@ -40,7 +40,7 @@ export class BalanceView extends Component {
               </div>
             </div>
             <h3 class="kpi-value" id="bal-total-expenses">$0.00</h3>
-            <span class="kpi-change kpi-change-down" id="bal-expense-count">0 outflows recorded</span>
+            <span class="kpi-change kpi-change-down" id="bal-expense-count">${I18nService.t('fin_outflows') || '0 salidas registradas'}</span>
           </div>
 
           <div class="kpi-card hover-lift" id="bal-net-card">
@@ -51,7 +51,7 @@ export class BalanceView extends Component {
               </div>
             </div>
             <h3 class="kpi-value" id="bal-net">$0.00</h3>
-            <span class="kpi-change" id="bal-margin">Margen neto: 0%</span>
+            <span class="kpi-change" id="bal-margin">${I18nService.t('fin_net_margin') || 'Margen neto: 0%'}</span>
           </div>
         </div>
 

@@ -7,6 +7,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
 import { EncryptionService } from '../../../utils/encryption.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ClientAssignmentsView extends Component {
   constructor(params = {}) {
@@ -42,8 +43,8 @@ export class ClientAssignmentsView extends Component {
     this.isServiceRubro = (category === 'SERVICIOS_PERSONALIZADOS' || category === 'OTROS' || category === 'PERSONALIZADA');
 
     this.layout = new PageLayout({
-      title: 'Asignación de Clientes y Autorizaciones',
-      subtitle: 'Distribuye tareas de servicio, registra fichas técnicas y autoriza credenciales de forma segura.',
+      title: I18nService.t('ca_title') || 'Asignación de Clientes y Autorizaciones',
+      subtitle: I18nService.t('ca_subtitle') || 'Distribuye tareas de servicio, registra fichas técnicas y autoriza credenciales de forma segura.',
       actionHTML: `
         <span class="badge" style="font-size: 0.75rem; padding: 4px 10px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 4px; background: rgba(139, 92, 246, 0.1); color: var(--color-accent);">
           🏢 Rubro: ${this.currentCompany.businessType || 'Servicios Varios'}

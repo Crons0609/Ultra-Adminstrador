@@ -12,6 +12,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { WhatsAppService } from '../../../services/whatsapp.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class WhatsAppHubView extends Component {
   constructor(params = {}) {
@@ -36,13 +37,13 @@ export class WhatsAppHubView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '💬 WhatsApp Automation Hub',
-      subtitle: 'Gestiona conversaciones en tiempo real, automatizaciones, campañas de marketing y la configuración de la API de WhatsApp de tu negocio.',
+      title: `💬 ${I18nService.t('nav_whatsapp') || 'WhatsApp Automation Hub'}`,
+      subtitle: I18nService.t('wa_subtitle') || 'Gestiona conversaciones en tiempo real, automatizaciones, campañas de marketing y la configuración de la API de WhatsApp de tu negocio.',
       actionHTML: `
         <div class="d-flex gap-2 align-items-center">
           <div id="wa-connection-status" style="display:flex; align-items:center; gap:8px; padding:4px 12px; border-radius:var(--radius-xl); background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); font-size:0.8rem; color:var(--color-success);">
             <span style="width:8px; height:8px; border-radius:50%; background:var(--color-success); display:inline-block; animation: pulse-dot 2s infinite;"></span>
-            <span>API Conectada</span>
+            <span>${I18nService.t('api_connected') || 'API Conectada'}</span>
           </div>
         </div>
       `,

@@ -3,6 +3,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { DataTable } from '../../../components/ui/table.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class AlertsView extends Component {
   constructor(params = {}) {
@@ -68,8 +69,8 @@ export class AlertsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Alertas de Inventario',
-      subtitle: 'Vista consolidada de productos agotados, insumos con bajo nivel y materias primas vencidas.',
+      title: I18nService.t('inventory_alerts_title', 'Alertas de Inventario'),
+      subtitle: I18nService.t('inventory_alerts_subtitle', 'Vista consolidada de productos agotados, insumos con bajo nivel y materias primas vencidas.'),
       contentHTML: `
         <!-- KPI Cards Row -->
         <div class="grid-stats animate-fade-in">

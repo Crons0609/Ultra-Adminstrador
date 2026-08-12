@@ -9,13 +9,13 @@ export class PaymentsView extends Component {
     this.state = { sales: [], filter: 'today' };
 
     this.layout = new PageLayout({
-      title: I18nService.t('pay_history_title'),
-      subtitle: I18nService.t('pay_history_subtitle'),
+      title: I18nService.t('payments_history_title', 'Historial de Cobros'),
+      subtitle: I18nService.t('payments_history_subtitle', 'Registro completo de todas las transacciones procesadas por caja.'),
       actionHTML: `
         <select id="pay-filter-period" class="input input-sm" style="min-width:140px;">
-          <option value="today">${I18nService.t('dash_today')}</option>
-          <option value="week">${I18nService.t('dash_this_week')}</option>
-          <option value="month">${I18nService.t('dash_this_month')}</option>
+          <option value="today">Hoy</option>
+          <option value="week">Esta semana</option>
+          <option value="month">Este mes</option>
         </select>
       `,
       contentHTML: `
@@ -35,31 +35,31 @@ export class PaymentsView extends Component {
         <div class="pay-kpis animate-fade-in">
           <div class="pay-kpi" style="border-top:4px solid var(--color-success);">
             <div class="pay-kpi-val text-success" id="pay-total">$0.00</div>
-            <div class="pay-kpi-label">${I18nService.t('pay_total_collected')}</div>
+            <div class="pay-kpi-label">Total Cobrado</div>
           </div>
           <div class="pay-kpi" style="border-top:4px solid var(--color-accent);">
             <div class="pay-kpi-val" style="color:var(--color-accent);" id="pay-count">0</div>
-            <div class="pay-kpi-label">${I18nService.t('cash_total_transactions')}</div>
+            <div class="pay-kpi-label">Transacciones</div>
           </div>
           <div class="pay-kpi" style="border-top:4px solid #10b981;">
             <div class="pay-kpi-val" style="color:#10b981;" id="pay-cash">$0.00</div>
-            <div class="pay-kpi-label">${I18nService.t('pos_cash')}</div>
+            <div class="pay-kpi-label">En Efectivo</div>
           </div>
           <div class="pay-kpi" style="border-top:4px solid #3b82f6;">
             <div class="pay-kpi-val" style="color:#3b82f6;" id="pay-card">$0.00</div>
-            <div class="pay-kpi-label">${I18nService.t('pos_card')}</div>
+            <div class="pay-kpi-label">Con Tarjeta</div>
           </div>
         </div>
 
         <div class="card p-5">
           <div class="pay-row header">
-            <span>${I18nService.t('log_date')}</span>
-            <span>${I18nService.t('pos_cashier')}</span>
-            <span>${I18nService.t('pos_payment_method')}</span>
-            <span class="text-right">${I18nService.t('amount')}</span>
+            <span>Fecha / Hora</span>
+            <span>Vendedor</span>
+            <span>Método de Pago</span>
+            <span class="text-right">Monto</span>
           </div>
           <div id="payments-list" style="max-height:400px;overflow-y:auto;">
-            <p class="text-center py-10 text-secondary">${I18nService.t('loading_data')}</p>
+            <p class="text-center py-10 text-secondary">Cargando historial...</p>
           </div>
         </div>
       `
@@ -123,7 +123,7 @@ export class PaymentsView extends Component {
     if (!list) return;
 
     if (filtered.length === 0) {
-      list.innerHTML = `<p class="text-center py-10 text-secondary">${I18nService.t('pay_no_records')}</p>`;
+      list.innerHTML = `<p class="text-center py-10 text-secondary">No hay cobros registrados para el período seleccionado.</p>`;
       return;
     }
 
@@ -134,7 +134,7 @@ export class PaymentsView extends Component {
       return `
         <div class="pay-row animate-slide-up">
           <span class="text-secondary text-xs">${ts}</span>
-          <span>👤 ${s.sellerName || I18nService.t('pos_cashier')}</span>
+          <span>👤 ${s.sellerName || 'Cajero'}</span>
           <span><span class="pay-method-badge ${cls}">${method}</span></span>
           <strong class="text-right text-success">$${Number(s.total || 0).toFixed(2)}</strong>
         </div>

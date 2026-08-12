@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class SuppliesView extends Component {
   constructor(params = {}) {
@@ -83,8 +84,8 @@ export class SuppliesView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Control de Insumos',
-      subtitle: 'Administra materias primas, materiales consumibles de oficina o limpieza y control de niveles mínimos.',
+      title: I18nService.t('supplies_mgmt_title', 'Control de Insumos'),
+      subtitle: I18nService.t('supplies_mgmt_subtitle', 'Administra materias primas, materiales consumibles de oficina o limpieza y control de niveles mínimos.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-supply">
           + Registrar Insumo

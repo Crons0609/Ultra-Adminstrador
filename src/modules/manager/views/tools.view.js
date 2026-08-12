@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ToolsView extends Component {
   constructor(params = {}) {
@@ -81,8 +82,8 @@ export class ToolsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Control de Herramientas',
-      subtitle: 'Gestiona las herramientas de trabajo del negocio, asignaciones de uso, ubicaciones y control de daño.',
+      title: I18nService.t('tools_mgmt_title', 'Control de Herramientas'),
+      subtitle: I18nService.t('tools_mgmt_subtitle', 'Gestiona las herramientas de trabajo del negocio, asignaciones de uso, ubicaciones y control de daño.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-tool">
           + Agregar Herramienta

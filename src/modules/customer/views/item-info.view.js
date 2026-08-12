@@ -5,6 +5,7 @@ import { ref, get, update, push, set } from 'https://www.gstatic.com/firebasejs/
 import { TimeService } from '../../../services/time.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ItemInfoView extends Component {
   constructor(params = {}) {
@@ -28,8 +29,8 @@ export class ItemInfoView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Identificación de Artículo',
-      subtitle: 'Consulta de especificaciones, póliza de garantía y soporte de servicio técnico.',
+      title: I18nService.t('item_info_title', 'Identificación de Artículo'),
+      subtitle: I18nService.t('item_info_subtitle', 'Consulta de especificaciones, póliza de garantía y soporte de servicio técnico.'),
       hideHeader: true, // We want a clean public portal experience without sidebars/headers
       contentHTML: `
         <div id="item-info-portal-container" style="min-height: 100vh; background: var(--color-bg-primary); display: flex; align-items: center; justify-content: center; padding: 20px;">

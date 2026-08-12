@@ -33,7 +33,7 @@ export class AssetsView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: I18nService.t('ass_name_col'),
+          label: 'Activo / Equipo',
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               <div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🖥️</div>
@@ -46,27 +46,27 @@ export class AssetsView extends Component {
         },
         { 
           key: 'code', 
-          label: I18nService.t('ass_code_col'),
-          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : `<span class="text-xs text-secondary">${I18nService.t('unassigned')}</span>`
+          label: 'Código de Activo',
+          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : '<span class="text-xs text-secondary">Sin asignar</span>'
         },
-        { key: 'category', label: I18nService.t('category') },
+        { key: 'category', label: 'Categoría' },
         { 
           key: 'cost', 
-          label: I18nService.t('ass_cost_col'),
+          label: 'Valor/Costo',
           render: (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)
         },
-        { key: 'location', label: I18nService.t('qr_location') },
+        { key: 'location', label: 'Ubicación' },
         { 
           key: 'status', 
-          label: I18nService.t('status'),
+          label: 'Estado',
           render: (val) => {
-            let label = I18nService.t('ass_status_operative');
+            let label = 'Operativo';
             let badgeClass = 'stock-ok';
             if (val === 'MANTENIMIENTO') {
-              label = I18nService.t('ass_status_maintenance');
+              label = 'Mantenimiento';
               badgeClass = 'stock-low';
             } else if (val === 'DEBAJA') {
-              label = I18nService.t('ass_status_retired');
+              label = 'De Baja';
               badgeClass = 'stock-out';
             }
             return `<span class="stock-badge ${badgeClass}">${label}</span>`;
@@ -74,7 +74,7 @@ export class AssetsView extends Component {
         },
         {
           key: 'id',
-          label: I18nService.t('actions'),
+          label: 'Acciones',
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-asset" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -87,11 +87,11 @@ export class AssetsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('ass_title'),
-      subtitle: I18nService.t('ass_subtitle'),
+      title: I18nService.t('assets_mgmt_title', 'Registro de Activos y Equipos'),
+      subtitle: I18nService.t('assets_mgmt_subtitle', 'Administra los bienes tangibles de la empresa, inventario de computadoras, mobiliario e infraestructura.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-asset">
-          ${I18nService.t('ass_add')}
+          + Registrar Activo
         </button>
       `,
       contentHTML: `
@@ -99,38 +99,38 @@ export class AssetsView extends Component {
         <div class="grid-stats animate-fade-in" id="assets-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ass_total_kpi')}</span>
+              <span class="kpi-label">Activos Registrados</span>
               <div class="kpi-icon kpi-icon-accent">🖥️</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-assets">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('ass_total_desc')}</span>
+            <span class="text-xs text-secondary">Bienes registrados</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ass_total_value_kpi')}</span>
+              <span class="kpi-label">Valor en Activos</span>
               <div class="kpi-icon kpi-icon-success">💰</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-total-cost">$0.00</h3>
-            <span class="text-xs text-secondary">${I18nService.t('ass_total_value_desc')}</span>
+            <span class="text-xs text-secondary">Valor acumulado</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ass_operative_kpi')}</span>
+              <span class="kpi-label">Operativos</span>
               <div class="kpi-icon kpi-icon-success">✅</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-active-assets">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('ass_operative_desc')}</span>
+            <span class="text-xs text-secondary">Activos en funcionamiento</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ass_maintenance_kpi')}</span>
+              <span class="kpi-label">En Reparación</span>
               <div class="kpi-icon kpi-icon-warning">🔧</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-maintenance-assets">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('ass_maintenance_desc')}</span>
+            <span class="text-xs text-secondary">Fuera de servicio temporal</span>
           </div>
         </div>
 
@@ -139,14 +139,14 @@ export class AssetsView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-asset" class="input input-md" placeholder="${I18nService.t('ass_search_placeholder')}" />
+              <input type="text" id="inp-search-asset" class="input input-md" placeholder="Buscar por nombre, placa de activo, número de serie o categoría..." />
             </div>
 
             <select id="sel-filter-status" class="inv-filter-select">
-              <option value="">${I18nService.t('ocr_all_statuses')}</option>
-              <option value="OPERATIVO">${I18nService.t('ass_status_operative')}</option>
-              <option value="MANTENIMIENTO">${I18nService.t('ass_status_maintenance')}</option>
-              <option value="DEBAJA">${I18nService.t('ass_status_retired')}</option>
+              <option value="">Todos los estados</option>
+              <option value="OPERATIVO">Operativos</option>
+              <option value="MANTENIMIENTO">En Mantenimiento</option>
+              <option value="DEBAJA">De Baja</option>
             </select>
           </div>
         </div>
@@ -219,13 +219,13 @@ export class AssetsView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-asset');
         if (deleteBtn) {
           const assetId = deleteBtn.getAttribute('data-id');
-          if (confirm(I18nService.t('ass_confirm_delete'))) {
+          if (confirm('¿Estás seguro de que deseas eliminar este activo definitivamente?')) {
             try {
               await FirestoreService.delete('activos', assetId);
-              NotificationService.success(I18nService.t('ass_deleted_success'));
+              NotificationService.success('Activo eliminado.');
             } catch (err) {
               console.error('[AssetsView] Error deleting:', err);
-              NotificationService.error(I18nService.t('ass_delete_error'));
+              NotificationService.error('Error al eliminar el activo.');
             }
           }
         }
@@ -309,48 +309,48 @@ export class AssetsView extends Component {
       <form id="asset-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="ass-name">${I18nService.t('ass_name_label')}</label>
-            <input type="text" id="ass-name" class="input input-md" placeholder="${I18nService.t('ass_name_placeholder')}" value="${isEdit ? asset.name : ''}" required />
+            <label class="form-label" for="ass-name">Nombre del Activo / Descripción</label>
+            <input type="text" id="ass-name" class="input input-md" placeholder="Ej. Impresora HP Laserjet" value="${isEdit ? asset.name : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="ass-serial">${I18nService.t('qr_serial_number_label')}</label>
-            <input type="text" id="ass-serial" class="input input-md" placeholder="${I18nService.t('ass_serial_number_placeholder')}" value="${isEdit ? (asset.serialNumber || '') : ''}" />
+            <label class="form-label" for="ass-serial">Número de Serie</label>
+            <input type="text" id="ass-serial" class="input input-md" placeholder="Ej. CNB12345" value="${isEdit ? (asset.serialNumber || '') : ''}" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">${I18nService.t('ass_barcode_label')}</label>
+          <label class="form-label">Asociar Código de Barras / QR (Etiqueta de Activo)</label>
           <div id="ass-barcode-container"></div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="ass-category">${I18nService.t('category')}</label>
+            <label class="form-label" for="ass-category">Categoría</label>
             <select id="ass-category" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="Equipos de Oficina" ${isEdit && asset.category === 'Equipos de Oficina' ? 'selected' : ''}>${I18nService.t('ass_cat_office')}</option>
-              <option value="Mobiliario" ${isEdit && asset.category === 'Mobiliario' ? 'selected' : ''}>${I18nService.t('ass_cat_furniture')}</option>
-              <option value="Tecnología" ${isEdit && asset.category === 'Tecnología' ? 'selected' : ''}>${I18nService.t('ass_cat_tech')}</option>
-              <option value="Herramientas" ${isEdit && asset.category === 'Herramientas' ? 'selected' : ''}>${I18nService.t('nav_tools')}</option>
-              <option value="Otros" ${isEdit && asset.category === 'Otros' ? 'selected' : ''}>${I18nService.t('inv_category_others')}</option>
+              <option value="Equipos de Oficina" ${isEdit && asset.category === 'Equipos de Oficina' ? 'selected' : ''}>Equipos de Oficina</option>
+              <option value="Mobiliario" ${isEdit && asset.category === 'Mobiliario' ? 'selected' : ''}>Mobiliario</option>
+              <option value="Tecnología" ${isEdit && asset.category === 'Tecnología' ? 'selected' : ''}>Tecnología (PC, Servidores)</option>
+              <option value="Herramientas" ${isEdit && asset.category === 'Herramientas' ? 'selected' : ''}>Herramientas</option>
+              <option value="Otros" ${isEdit && asset.category === 'Otros' ? 'selected' : ''}>Otros</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="ass-cost">${I18nService.t('ass_cost_label')}</label>
+            <label class="form-label" for="ass-cost">Costo de Adquisición</label>
             <input type="number" id="ass-cost" class="input input-md" placeholder="0.00" min="0" step="0.01" value="${isEdit ? asset.cost : ''}" />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="ass-location">${I18nService.t('ass_location_label')}</label>
-            <input type="text" id="ass-location" class="input input-md" placeholder="${I18nService.t('ass_location_placeholder')}" value="${isEdit ? (asset.location || '') : ''}" />
+            <label class="form-label" for="ass-location">Ubicación física</label>
+            <input type="text" id="ass-location" class="input input-md" placeholder="Ej. Oficina Principal, Recepción" value="${isEdit ? (asset.location || '') : ''}" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="ass-status">${I18nService.t('ass_status_label')}</label>
+            <label class="form-label" for="ass-status">Estado del Activo</label>
             <select id="ass-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="OPERATIVO" ${isEdit && asset.status === 'OPERATIVO' ? 'selected' : ''}>${I18nService.t('ass_status_operative_desc')}</option>
-              <option value="MANTENIMIENTO" ${isEdit && asset.status === 'MANTENIMIENTO' ? 'selected' : ''}>${I18nService.t('ass_status_maintenance')}</option>
-              <option value="DEBAJA" ${isEdit && asset.status === 'DEBAJA' ? 'selected' : ''}>${I18nService.t('ass_status_retired_desc')}</option>
+              <option value="OPERATIVO" ${isEdit && asset.status === 'OPERATIVO' ? 'selected' : ''}>Operativo / Activo</option>
+              <option value="MANTENIMIENTO" ${isEdit && asset.status === 'MANTENIMIENTO' ? 'selected' : ''}>En Mantenimiento</option>
+              <option value="DEBAJA" ${isEdit && asset.status === 'DEBAJA' ? 'selected' : ''}>Dado de Baja / Desechado</option>
             </select>
           </div>
         </div>
@@ -358,12 +358,12 @@ export class AssetsView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('ass_add')}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Activo'}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? I18nService.t('ass_edit_title') : I18nService.t('ass_add_title'),
+      title: isEdit ? 'Editar Activo / Equipo' : 'Registrar Nuevo Activo Fijo',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md',
@@ -383,7 +383,7 @@ export class AssetsView extends Component {
       this.modalBarcodeInput = new BarcodeInput({
         id: 'ass-code',
         compact: true,
-        placeholder: I18nService.t('ass_scan_placeholder'),
+        placeholder: 'Escanea el código del activo...',
         value: isEdit ? (asset.code || '') : '',
         onScan: (code) => {
           this.modalBarcodeInput.setValue(code);
@@ -410,7 +410,7 @@ export class AssetsView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('saving');
+      submitBtn.textContent = 'Guardando...';
     }
 
     const name = this.modalInstance.$('#ass-name').value.trim();
@@ -448,7 +448,7 @@ export class AssetsView extends Component {
     try {
       if (asset) {
         await FirestoreService.update('activos', asset.id, payload);
-        NotificationService.success(I18nService.t('ass_updated_success'));
+        NotificationService.success('Activo actualizado correctamente.');
         if (code) {
           await BarcodeRegistryService.associateCode(code, asset.id, 'activo', name).catch(() => {});
         }
@@ -456,7 +456,7 @@ export class AssetsView extends Component {
         payload.createdAt = Date.now();
         payload.createdAtLocal = TimeService.timestamp();
         const newId = await FirestoreService.create('activos', payload);
-        NotificationService.success(I18nService.t('ass_saved_success'));
+        NotificationService.success('Activo registrado correctamente.');
         if (code && newId) {
           await BarcodeRegistryService.associateCode(code, newId, 'activo', name).catch(() => {});
         }
@@ -464,10 +464,10 @@ export class AssetsView extends Component {
       this.modalInstance.close();
     } catch (err) {
       console.error('[AssetsView] Error saving asset:', err);
-      alert(I18nService.t('ass_save_error', { error: err.message }));
+      alert(`Error al guardar: ${err.message}`);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = asset ? I18nService.t('save_changes') : I18nService.t('ass_add');
+        submitBtn.textContent = asset ? 'Guardar Cambios' : 'Registrar Activo';
       }
     }
   }

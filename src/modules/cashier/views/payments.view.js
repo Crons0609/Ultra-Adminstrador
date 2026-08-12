@@ -1,6 +1,7 @@
 import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PaymentsView extends Component {
   constructor(params = {}) {
@@ -8,8 +9,8 @@ export class PaymentsView extends Component {
     this.state = { sales: [], filter: 'today' };
 
     this.layout = new PageLayout({
-      title: 'Historial de Cobros',
-      subtitle: 'Registro completo de todas las transacciones procesadas por caja.',
+      title: I18nService.t('payments_history_title', 'Historial de Cobros'),
+      subtitle: I18nService.t('payments_history_subtitle', 'Registro completo de todas las transacciones procesadas por caja.'),
       actionHTML: `
         <select id="pay-filter-period" class="input input-sm" style="min-width:140px;">
           <option value="today">Hoy</option>

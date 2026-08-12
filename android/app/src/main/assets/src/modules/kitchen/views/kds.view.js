@@ -21,10 +21,10 @@ export class KDSView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('kds_title'),
-      subtitle: I18nService.t('kds_subtitle'),
+      subtitle: 'Real-time kitchen order display and preparation tracking.',
       actionHTML: `
         <span id="kds-timer-sync" class="badge" style="background:#3b82f622; color:#3b82f6; border:1px solid #3b82f644; padding:4px 10px;">
-          ${I18nService.t('kds_auto_sync')}
+          ⏱️ Auto-sync
         </span>
       `,
       contentHTML: `
@@ -102,7 +102,7 @@ export class KDSView extends Component {
         </style>
 
         <div id="kds-container" class="kds-grid animate-fade-in">
-          <p class="text-secondary text-center py-10 w-full">${I18nService.t('kds_loading_orders')}</p>
+          <p class="text-secondary text-center py-10 w-full">Cargando comandas activas...</p>
         </div>
       `
     });
@@ -145,10 +145,10 @@ export class KDSView extends Component {
 
         if (startBtn) {
           const orderId = startBtn.getAttribute('data-id');
-          this.updateOrderStatus(orderId, 'EN_PREPARACION', I18nService.t('kds_prep_started_toast'));
+          this.updateOrderStatus(orderId, 'EN_PREPARACION', '¡Preparación iniciada!');
         } else if (readyBtn) {
           const orderId = readyBtn.getAttribute('data-id');
-          this.updateOrderStatus(orderId, 'READY', this.isBar ? I18nService.t('kds_drink_ready_toast') : I18nService.t('kds_order_ready_toast'));
+          this.updateOrderStatus(orderId, 'READY', this.isBar ? 'Bebida lista. Mesero notificado.' : 'Comanda LISTA. Mesero notificado.');
         }
       });
     }
@@ -167,8 +167,8 @@ export class KDSView extends Component {
       grid.innerHTML = `
         <div class="card p-10 text-center w-full text-secondary" style="grid-column: 1 / -1; display:flex; flex-direction:column; align-items:center;">
           <span style="font-size:3.5rem;">${this.isBar ? '🍹' : '🍳'}</span>
-          <h4 class="font-bold mt-2">${this.isBar ? I18nService.t('kds_empty_bar') : I18nService.t('kds_empty_kitchen')}</h4>
-          <p class="text-xs text-secondary mt-1">${this.isBar ? I18nService.t('kds_no_drinks_desc') : I18nService.t('kds_no_orders_desc')}</p>
+          <h4 class="font-bold mt-2">${this.isBar ? '¡Barra Despejada!' : '¡Cocina Limpia!'}</h4>
+          <p class="text-xs text-secondary mt-1">${this.isBar ? 'No hay bebidas en cola de preparación en este momento.' : 'No hay comandas pendientes de preparación.'}</p>
         </div>
       `;
       return;
@@ -187,14 +187,14 @@ export class KDSView extends Component {
 
       const limitMinutes = this.isBar ? 8 : 15;
       const warningClass = elapsedMins >= limitMinutes ? 'warning-time' : '';
-      const timeText = elapsedMins === 0 ? I18nService.t('just_now') : I18nService.t('minutes_ago', { min: elapsedMins });
+      const timeText = elapsedMins === 0 ? 'Hace un momento' : `Hace ${elapsedMins} min`;
 
       const isPreparing = o.status === 'EN_PREPARACION';
       const accentColor = this.isBar ? '#a855f7' : (isPreparing ? '#f59e0b' : 'var(--color-accent)');
 
       const statusBadge = isPreparing
-        ? `<span style="font-size:0.7rem; background:#f59e0b22; color:#f59e0b; border:1px solid #f59e0b44; border-radius:4px; padding:2px 7px; font-weight:700;">${I18nService.t('kds_status_preparing')}</span>`
-        : `<span style="font-size:0.7rem; background:#ef444422; color:#ef4444; border:1px solid #ef444444; border-radius:4px; padding:2px 7px; font-weight:700;">${I18nService.t('kds_status_new')}</span>`;
+        ? `<span style="font-size:0.7rem; background:#f59e0b22; color:#f59e0b; border:1px solid #f59e0b44; border-radius:4px; padding:2px 7px; font-weight:700;">🔥 En Preparación</span>`
+        : `<span style="font-size:0.7rem; background:#ef444422; color:#ef4444; border:1px solid #ef444444; border-radius:4px; padding:2px 7px; font-weight:700;">🆕 Nueva</span>`;
 
       const itemsHTML = (o.items || []).map(item => `
         <div class="kds-item">
@@ -210,14 +210,14 @@ export class KDSView extends Component {
       const notesBlock = o.notes ? `<div style="font-size:0.75rem; color:var(--color-text-secondary); background:rgba(255,255,255,0.03); border:1px solid var(--color-border); border-radius:4px; padding:6px 8px;">📝 ${o.notes}</div>` : '';
 
       const actionBtn = isPreparing
-        ? `<button class="kds-btn kds-btn-ready" data-id="${o.id}" style="background:var(--color-success);">${this.isBar ? I18nService.t('kds_btn_drink_ready') : I18nService.t('kds_btn_order_ready')}</button>`
-        : `<button class="kds-btn kds-btn-start" data-id="${o.id}" style="background:#f59e0b;">${this.isBar ? I18nService.t('kds_btn_prep_drink') : I18nService.t('kds_btn_start_prep')}</button>`;
+        ? `<button class="kds-btn kds-btn-ready" data-id="${o.id}" style="background:var(--color-success);">${this.isBar ? '🍹 Bebida Lista ✓' : '✅ Listo para Entregar'}</button>`
+        : `<button class="kds-btn kds-btn-start" data-id="${o.id}" style="background:#f59e0b;">${this.isBar ? '🍹 Preparar Bebida' : '🔥 Iniciar Preparación'}</button>`;
 
       return `
         <div class="kds-card ${warningClass}" style="border-left-color:${accentColor};">
           <div class="kds-header">
             <div>
-              <span class="kds-table-name">${o.tableName || I18nService.t('pos_table') + ' ' + o.tableId}</span>
+              <span class="kds-table-name">${o.tableName || `Mesa ${o.tableId}`}</span>
               <span class="text-xs text-secondary d-block" style="margin-top:2px;">${o.accountType || ''}${label}</span>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
@@ -244,7 +244,7 @@ export class KDSView extends Component {
       NotificationService.success(successMsg);
     } catch (e) {
       console.error('[KDS] Error al actualizar estado:', e);
-      NotificationService.error(I18nService.t('kds_error_update'));
+      NotificationService.error('Error al actualizar el estado de la comanda.');
     }
   }
 

@@ -28,31 +28,31 @@ export class PurchasesView extends Component {
       columns: [
         { 
           key: 'id', 
-          label: I18nService.t('pur_order_id'),
+          label: 'Orden ID',
           render: (val) => `<span class="text-xs text-secondary font-mono">#${(val || '').slice(-6).toUpperCase()}</span>`
         },
-        { key: 'supplierName', label: I18nService.t('pur_supplier') },
+        { key: 'supplierName', label: 'Proveedor' },
         { 
           key: 'total', 
-          label: I18nService.t('pur_total_amount'),
+          label: 'Total Compra',
           render: (val) => `<strong>${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>`
         },
         { 
           key: 'date', 
-          label: I18nService.t('pur_order_date'),
+          label: 'Fecha Orden',
           render: (val) => new Date(val).toLocaleDateString()
         },
         { 
           key: 'status', 
-          label: I18nService.t('status'),
+          label: 'Estado',
           render: (val) => {
-            let label = I18nService.t('pending');
+            let label = 'Pendiente';
             let badgeClass = 'purchase-pending';
             if (val === 'RECEIVED') {
-              label = I18nService.t('pur_status_received');
+              label = 'Recibida';
               badgeClass = 'purchase-received';
             } else if (val === 'CANCELLED') {
-              label = I18nService.t('cancelled');
+              label = 'Cancelada';
               badgeClass = 'purchase-cancelled';
             }
             return `<span class="stock-badge ${badgeClass}">${label}</span>`;
@@ -60,17 +60,17 @@ export class PurchasesView extends Component {
         },
         {
           key: 'id',
-          label: I18nService.t('actions'),
+          label: 'Acciones',
           render: (val, row) => {
             if (row.status === 'PENDING') {
               return `
                 <div class="d-flex gap-2">
-                  <button class="btn btn-success btn-sm py-1 px-2 btn-receive-order" data-id="${val}" style="font-size: 0.7rem;">${I18nService.t('pur_receive_btn')}</button>
+                  <button class="btn btn-success btn-sm py-1 px-2 btn-receive-order" data-id="${val}" style="font-size: 0.7rem;">✔️ Recibir</button>
                   <button class="btn btn-secondary btn-sm py-1 px-2 btn-cancel-order" data-id="${val}" style="font-size: 0.7rem;">🚫</button>
                 </div>
               `;
             }
-            return `<span class="text-xs text-secondary">${I18nService.t('pur_finished')}</span>`;
+            return `<span class="text-xs text-secondary">Finalizada</span>`;
           }
         }
       ],
@@ -78,11 +78,11 @@ export class PurchasesView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('pur_title_full'),
-      subtitle: I18nService.t('pur_subtitle'),
+      title: I18nService.t('purchases_title', 'Órdenes de Compra'),
+      subtitle: I18nService.t('purchases_subtitle', 'Registra compras mayoristas, gestiona el ingreso de mercadería e incrementa stock de forma automática.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-purchase">
-          ${I18nService.t('pur_add_new')}
+          + Nueva Orden de Compra
         </button>
       `,
       contentHTML: `
@@ -90,29 +90,29 @@ export class PurchasesView extends Component {
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('pur_total_kpi')}</span>
+              <span class="kpi-label">Órdenes Totales</span>
               <div class="kpi-icon kpi-icon-accent">📄</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-orders">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('pur_total_desc')}</span>
+            <span class="text-xs text-secondary">Pedidos a distribuidores</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('pur_pending_kpi')}</span>
+              <span class="kpi-label">Pendientes por Recibir</span>
               <div class="kpi-icon kpi-icon-warning">⏳</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-pending-orders">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('pur_pending_desc')}</span>
+            <span class="text-xs text-secondary">Tránsito y despacho</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('pur_cost_kpi')}</span>
+              <span class="kpi-label">Gasto Acumulado (Recibido)</span>
               <div class="kpi-icon kpi-icon-success">💰</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-total-purchase-cost">$0.00</h3>
-            <span class="text-xs text-secondary">${I18nService.t('pur_cost_desc')}</span>
+            <span class="text-xs text-secondary">Inversión real en inventario</span>
           </div>
         </div>
 
@@ -159,7 +159,7 @@ export class PurchasesView extends Component {
         const receiveBtn = e.target.closest('.btn-receive-order');
         if (receiveBtn) {
           const purchaseId = receiveBtn.getAttribute('data-id');
-          if (confirm(I18nService.t('pur_confirm_receive'))) {
+          if (confirm('¿Confirmas que has recibido esta mercancía? El stock se incrementará automáticamente.')) {
             await this.receiveOrder(purchaseId);
           }
         }
@@ -167,13 +167,13 @@ export class PurchasesView extends Component {
         const cancelBtn = e.target.closest('.btn-cancel-order');
         if (cancelBtn) {
           const purchaseId = cancelBtn.getAttribute('data-id');
-          if (confirm(I18nService.t('pur_confirm_cancel'))) {
+          if (confirm('¿Estás seguro de que deseas cancelar esta orden de compra?')) {
             try {
               await FirestoreService.update('compras', purchaseId, { status: 'CANCELLED' });
-              NotificationService.success(I18nService.t('pur_cancelled_success'));
+              NotificationService.success('Orden de compra cancelada.');
             } catch (err) {
               console.error('[PurchasesView] Error cancelling:', err);
-              NotificationService.error(I18nService.t('pur_cancel_error'));
+              NotificationService.error('Error al cancelar la orden.');
             }
           }
         }
@@ -245,45 +245,45 @@ export class PurchasesView extends Component {
     const formHTML = `
       <form id="purchase-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div class="form-group">
-          <label class="form-label" for="pur-supplier">${I18nService.t('pur_select_supplier')}</label>
+          <label class="form-label" for="pur-supplier">Selecciona Proveedor</label>
           <select id="pur-supplier" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);" required>
-            <option value="">${I18nService.t('select')}...</option>
+            <option value="">Selecciona...</option>
             ${supplierOptionsHTML}
           </select>
         </div>
 
         <div style="margin-bottom: var(--space-2);">
           <label class="form-label font-semibold" style="font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
-            <span>📊</span> ${I18nService.t('pur_scan_to_add')}
+            <span>📊</span> Escanear Artículo para Agregar
           </label>
           <div id="pur-barcode-input-container"></div>
         </div>
 
         <div style="border-top: 1px dashed var(--color-border); padding-top: var(--space-2);">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="form-label" style="font-weight: 600;">${I18nService.t('pur_items_detail')}</span>
-            <button type="button" class="btn btn-secondary btn-xs" id="btn-add-item-row" style="font-size: 0.7rem; padding: 2px 8px;">${I18nService.t('pur_add_row')}</button>
+            <span class="form-label" style="font-weight: 600;">Detalle de Insumos / Productos</span>
+            <button type="button" class="btn btn-secondary btn-xs" id="btn-add-item-row" style="font-size: 0.7rem; padding: 2px 8px;">+ Fila</button>
           </div>
 
           <div id="pur-items-container" class="d-flex flex-column gap-2" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
-            <p class="text-xs text-secondary text-center py-3">${I18nService.t('pur_empty_items')}</p>
+            <p class="text-xs text-secondary text-center py-3">Agrega artículos a la lista</p>
           </div>
         </div>
 
         <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-2); display: flex; justify-content: space-between; align-items: center;">
-          <span class="text-sm font-semibold">${I18nService.t('pur_estimated_total')}</span>
+          <span class="text-sm font-semibold">Total Estimado:</span>
           <span class="text-lg font-bold text-success" id="pur-grand-total">$0.00</span>
         </div>
       </form>
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${I18nService.t('pur_save_order')}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">Guardar Orden</button>
     `;
 
     this.modalInstance = new Modal({
-      title: I18nService.t('pur_add_title'),
+      title: 'Registrar Orden de Compra',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md',
@@ -303,7 +303,7 @@ export class PurchasesView extends Component {
       this._modalBarcodeInput = new BarcodeInput({
         id: 'pur-barcode-scan',
         compact: true,
-        placeholder: I18nService.t('pur_scan_placeholder'),
+        placeholder: 'Escanea código de barras o QR...',
         onScan: (code, format) => {
           const product = this.state.products.find(p =>
             (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
@@ -311,9 +311,9 @@ export class PurchasesView extends Component {
           );
           if (product) {
             this.addItemRow(product.id, 1, product.purchasePrice || 0);
-            NotificationService.success(I18nService.t('pur_item_added_toast', { name: product.name }));
+            NotificationService.success(`Agregado: ${product.name}`);
           } else {
-            NotificationService.warning(I18nService.t('pur_code_not_found', { code }));
+            NotificationService.warning(`Código "${code}" no registrado en productos.`);
           }
           // Clear and refocus input
           setTimeout(() => {
@@ -386,11 +386,11 @@ export class PurchasesView extends Component {
 
     rowHTML.innerHTML = `
       <select class="input input-sm pur-row-prod" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
-        <option value="">${I18nService.t('pur_select_item')}</option>
+        <option value="">Selecciona Artículo...</option>
         ${productOptionsHTML}
       </select>
-      <input type="number" class="input input-sm pur-row-qty" min="1" value="${qty}" placeholder="${I18nService.t('quantity_short')}" required style="width:100%" />
-      <input type="number" class="input input-sm pur-row-price" min="0" step="0.01" value="${initialPrice}" placeholder="${I18nService.t('inv_cost')}" required style="width:100%" />
+      <input type="number" class="input input-sm pur-row-qty" min="1" value="${qty}" placeholder="Cant." required style="width:100%" />
+      <input type="number" class="input input-sm pur-row-price" min="0" step="0.01" value="${initialPrice}" placeholder="Costo" required style="width:100%" />
       <button type="button" class="btn btn-danger btn-xs btn-remove-row" style="padding:4px 8px;">🗑️</button>
     `;
 
@@ -450,7 +450,7 @@ export class PurchasesView extends Component {
     const rows = itemsContainer.children;
     
     if (rows.length === 0 || (rows.length === 1 && rows[0].tagName === 'P')) {
-      alert(I18nService.t('pur_error_no_items'));
+      alert('Debes agregar al menos un artículo a la orden de compra.');
       return;
     }
 
@@ -460,7 +460,7 @@ export class PurchasesView extends Component {
     for (let row of rows) {
       const productId = row.querySelector('.pur-row-prod').value;
       const product = this.state.products.find(p => p.id === productId);
-      const name = product ? product.name : I18nService.t('inv_product_name');
+      const name = product ? product.name : 'Artículo';
       const qty = Number(row.querySelector('.pur-row-qty').value);
       const purchasePrice = Number(row.querySelector('.pur-row-price').value);
 
@@ -476,7 +476,7 @@ export class PurchasesView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('saving');
+      submitBtn.textContent = 'Guardando...';
     }
 
     try {
@@ -490,14 +490,14 @@ export class PurchasesView extends Component {
         createdAt: Date.now()
       });
 
-      NotificationService.success(I18nService.t('pur_saved_success'));
+      NotificationService.success('Orden de compra registrada.');
       this.modalInstance.close();
     } catch (err) {
       console.error('[PurchasesView] Error submitting order:', err);
-      alert(I18nService.t('pur_save_error', { error: err.message }));
+      alert(`Error al registrar la orden: ${err.message}`);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = I18nService.t('pur_save_order');
+        submitBtn.textContent = 'Guardar Orden';
       }
     }
   }
@@ -522,10 +522,10 @@ export class PurchasesView extends Component {
         }
       }
 
-      NotificationService.success(I18nService.t('pur_received_success'));
+      NotificationService.success('Mercancía ingresada al inventario correctamente.');
     } catch (err) {
       console.error('[PurchasesView] Error receiving order:', err);
-      NotificationService.error(I18nService.t('pur_receive_error'));
+      NotificationService.error('Error al recibir e ingresar mercancía.');
     }
   }
 

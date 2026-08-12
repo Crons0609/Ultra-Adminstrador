@@ -24,36 +24,36 @@ export class SuppliersView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: I18nService.t('sup_title'),
+          label: 'Proveedor',
           render: (val, row) => `
             <div style="display: flex; flex-direction: column;">
               <span class="font-semibold text-primary">${val}</span>
-              <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📍 ${row.address || I18nService.t('sup_no_address')}</span>
+              <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📍 ${row.address || 'Sin dirección'}</span>
             </div>
           `
         },
-        { key: 'contact', label: I18nService.t('sup_contact') },
-        { key: 'phone', label: I18nService.t('sup_phone') },
-        { key: 'email', label: I18nService.t('sup_email') },
+        { key: 'contact', label: 'Contacto' },
+        { key: 'phone', label: 'Teléfono' },
+        { key: 'email', label: 'Correo Electrónico' },
         { 
           key: 'categories', 
-          label: I18nService.t('sup_categories_col'),
-          render: (val) => val ? val.split(',').map(c => `<span class="badge" style="background-color: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); padding: 2px 6px; border-radius: var(--radius-md); font-size: 0.7rem; margin-right: 4px;">${c.trim()}</span>`).join('') : I18nService.t('various')
+          label: 'Insumos / Categorías',
+          render: (val) => val ? val.split(',').map(c => `<span class="badge" style="background-color: var(--color-bg-tertiary); color: var(--color-text-primary); border: 1px solid var(--color-border); padding: 2px 6px; border-radius: var(--radius-md); font-size: 0.7rem; margin-right: 4px;">${c.trim()}</span>`).join('') : 'Varios'
         },
         { 
           key: 'status', 
-          label: I18nService.t('status'),
+          label: 'Estado',
           render: (val) => {
             const isActive = val !== 'INACTIVO';
-            return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${isActive ? 'success' : 'secondary'}-light);color:var(--color-${isActive ? 'success' : 'secondary'});">${isActive ? I18nService.t('active') : I18nService.t('inactive')}</span>`;
+            return `<span class="badge" style="display:inline-flex;padding:2px 8px;font-size:0.75rem;font-weight:500;border-radius:var(--radius-full);background-color:var(--color-${isActive ? 'success' : 'secondary'}-light);color:var(--color-${isActive ? 'success' : 'secondary'});">${isActive ? 'Activo' : 'Inactivo'}</span>`;
           }
         },
         {
           key: 'id',
-          label: I18nService.t('actions'),
+          label: 'Acciones',
           render: (val) => `
             <div class="d-flex gap-2">
-              <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-supplier" data-id="${val}" style="font-size: 0.7rem;">✏️ ${I18nService.t('edit')}</button>
+              <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-supplier" data-id="${val}" style="font-size: 0.7rem;">✏️ Editar</button>
               <button class="btn btn-danger btn-sm py-1 px-2 btn-delete-supplier" data-id="${val}" style="font-size: 0.7rem;">🗑️</button>
             </div>
           `
@@ -63,11 +63,11 @@ export class SuppliersView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('sup_title_full'),
-      subtitle: I18nService.t('sup_subtitle'),
+      title: I18nService.t('suppliers_title', 'Directorio de Proveedores'),
+      subtitle: I18nService.t('suppliers_subtitle', 'Administra tus contactos comerciales, categorías de insumos contratados y pedidos mayoristas.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-supplier">
-          ${I18nService.t('sup_add')}
+          + Registrar Proveedor
         </button>
       `,
       contentHTML: `
@@ -75,29 +75,29 @@ export class SuppliersView extends Component {
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('sup_total_kpi')}</span>
+              <span class="kpi-label">Proveedores Totales</span>
               <div class="kpi-icon kpi-icon-accent">👥</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-suppliers">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sup_total_desc')}</span>
+            <span class="text-xs text-secondary">Contactos en el directorio</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('sup_active_kpi')}</span>
+              <span class="kpi-label">Proveedores Activos</span>
               <div class="kpi-icon kpi-icon-success">✔️</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-active-suppliers">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sup_active_desc')}</span>
+            <span class="text-xs text-secondary">Cuentas con compras vigentes</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('sup_categories_kpi')}</span>
+              <span class="kpi-label">Categorías Surtidas</span>
               <div class="kpi-icon kpi-icon-warning">🏷️</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-total-categories">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sup_categories_desc')}</span>
+            <span class="text-xs text-secondary">Líneas de insumos diferentes</span>
           </div>
         </div>
 
@@ -106,7 +106,7 @@ export class SuppliersView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search" style="flex-grow: 1;">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-supplier" class="input input-md" placeholder="${I18nService.t('sup_search_placeholder')}" />
+              <input type="text" id="inp-search-supplier" class="input input-md" placeholder="Buscar por nombre, contacto o correo..." />
             </div>
           </div>
         </div>
@@ -170,13 +170,13 @@ export class SuppliersView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-supplier');
         if (deleteBtn) {
           const supplierId = deleteBtn.getAttribute('data-id');
-          if (confirm(I18nService.t('sup_confirm_delete'))) {
+          if (confirm('¿Estás seguro de que deseas eliminar este proveedor del directorio?')) {
             try {
               await FirestoreService.delete('proveedores', supplierId);
-              NotificationService.success(I18nService.t('sup_deleted_success'));
+              NotificationService.success('Proveedor eliminado correctamente.');
             } catch (err) {
               console.error('[SuppliersView] Error deleting:', err);
-              NotificationService.error(I18nService.t('sup_delete_error'));
+              NotificationService.error('Error al eliminar el proveedor.');
             }
           }
         }
@@ -246,54 +246,54 @@ export class SuppliersView extends Component {
     const formHTML = `
       <form id="supplier-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div class="form-group">
-          <label class="form-label" for="sup-name">${I18nService.t('sup_company_name_label')}</label>
-          <input type="text" id="sup-name" class="input input-md" placeholder="${I18nService.t('sup_company_name_placeholder')}" value="${isEdit ? supplier.name : ''}" required />
+          <label class="form-label" for="sup-name">Nombre de la Empresa / Comercial</label>
+          <input type="text" id="sup-name" class="input input-md" placeholder="Ej. Distribuidora de Alimentos S.A." value="${isEdit ? supplier.name : ''}" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="sup-contact">${I18nService.t('sup_contact_name_label')}</label>
-            <input type="text" id="sup-contact" class="input input-md" placeholder="${I18nService.t('auth_owner_name_placeholder')}" value="${isEdit ? supplier.contact : ''}" required />
+            <label class="form-label" for="sup-contact">Nombre de Contacto</label>
+            <input type="text" id="sup-contact" class="input input-md" placeholder="Ej. Juan Pérez" value="${isEdit ? supplier.contact : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="sup-phone">${I18nService.t('sup_phone_label')}</label>
-            <input type="tel" id="sup-phone" class="input input-md" placeholder="${I18nService.t('sup_phone_placeholder')}" value="${isEdit ? (supplier.phone || '') : ''}" required />
+            <label class="form-label" for="sup-phone">Teléfono de Contacto</label>
+            <input type="tel" id="sup-phone" class="input input-md" placeholder="Ej. 555-123-4567" value="${isEdit ? (supplier.phone || '') : ''}" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="sup-email">${I18nService.t('sup_email')}</label>
-            <input type="email" id="sup-email" class="input input-md" placeholder="${I18nService.t('sup_email_placeholder')}" value="${isEdit ? (supplier.email || '') : ''}" required />
+            <label class="form-label" for="sup-email">Correo Electrónico</label>
+            <input type="email" id="sup-email" class="input input-md" placeholder="Ej. ventas@distribuidora.com" value="${isEdit ? (supplier.email || '') : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="sup-status">${I18nService.t('status')}</label>
+            <label class="form-label" for="sup-status">Estado</label>
             <select id="sup-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="ACTIVO" ${isEdit && supplier.status === 'ACTIVO' ? 'selected' : ''}>${I18nService.t('sup_status_active_desc')}</option>
-              <option value="INACTIVO" ${isEdit && supplier.status === 'INACTIVO' ? 'selected' : ''}>${I18nService.t('sup_status_inactive_desc')}</option>
+              <option value="ACTIVO" ${isEdit && supplier.status === 'ACTIVO' ? 'selected' : ''}>Activo (Disponible)</option>
+              <option value="INACTIVO" ${isEdit && supplier.status === 'INACTIVO' ? 'selected' : ''}>Inactivo (Deshabilitado)</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="sup-categories">${I18nService.t('sup_categories_label')}</label>
-          <input type="text" id="sup-categories" class="input input-md" placeholder="${I18nService.t('sup_categories_placeholder')}" value="${isEdit ? (supplier.categories || '') : ''}" required />
+          <label class="form-label" for="sup-categories">Líneas de Producto / Categorías (Separadas por comas)</label>
+          <input type="text" id="sup-categories" class="input input-md" placeholder="Ej. Abarrotes, Verduras, Carnes, Bebidas" value="${isEdit ? (supplier.categories || '') : ''}" required />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="sup-address">${I18nService.t('sup_address_label')}</label>
-          <input type="text" id="sup-address" class="input input-md" placeholder="${I18nService.t('sup_address_placeholder')}" value="${isEdit ? (supplier.address || '') : ''}" />
+          <label class="form-label" for="sup-address">Dirección Física / Despacho</label>
+          <input type="text" id="sup-address" class="input input-md" placeholder="Ej. Av. Central #123, Col. Centro" value="${isEdit ? (supplier.address || '') : ''}" />
         </div>
       </form>
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('sup_add')}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Proveedor'}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? I18nService.t('sup_edit_title') : I18nService.t('sup_add_title'),
+      title: isEdit ? 'Editar Registro de Proveedor' : 'Registrar Nuevo Proveedor',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -319,7 +319,7 @@ export class SuppliersView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('saving');
+      submitBtn.textContent = 'Guardando...';
     }
 
     const name = this.modalInstance.$('#sup-name').value.trim();
@@ -344,19 +344,19 @@ export class SuppliersView extends Component {
     try {
       if (supplier) {
         await FirestoreService.update('proveedores', supplier.id, payload);
-        NotificationService.success(I18nService.t('sup_updated_success'));
+        NotificationService.success('Proveedor actualizado correctamente.');
       } else {
         payload.createdAt = Date.now();
         await FirestoreService.create('proveedores', payload);
-        NotificationService.success(I18nService.t('sup_saved_success'));
+        NotificationService.success('Proveedor registrado correctamente.');
       }
       this.modalInstance.close();
     } catch (err) {
       console.error('[SuppliersView] Error saving supplier:', err);
-      alert(I18nService.t('sup_save_error', { error: err.message }));
+      alert(`Error al registrar el proveedor: ${err.message}`);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = supplier ? I18nService.t('save_changes') : I18nService.t('sup_add');
+        submitBtn.textContent = supplier ? 'Guardar Cambios' : 'Registrar Proveedor';
       }
     }
   }

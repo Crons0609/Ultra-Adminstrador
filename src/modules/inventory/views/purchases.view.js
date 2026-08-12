@@ -7,6 +7,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeScannerService } from '../../../services/barcode-scanner.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PurchasesView extends Component {
   constructor(params = {}) {
@@ -77,8 +78,8 @@ export class PurchasesView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Órdenes de Compra',
-      subtitle: 'Registra compras mayoristas, gestiona el ingreso de mercadería e incrementa stock de forma automática.',
+      title: I18nService.t('purchases_title', 'Órdenes de Compra'),
+      subtitle: I18nService.t('purchases_subtitle', 'Registra compras mayoristas, gestiona el ingreso de mercadería e incrementa stock de forma automática.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-purchase">
           + Nueva Orden de Compra

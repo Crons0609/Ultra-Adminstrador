@@ -27,17 +27,17 @@ export class ScanHistoryView extends Component {
       columns: [
         { 
           key: 'lastScannedAt', 
-          label: I18nService.t('log_date'),
+          label: 'Fecha y Hora',
           render: (val) => new Date(val).toLocaleString()
         },
         { 
           key: 'code', 
-          label: I18nService.t('ri_invoice_num'),
+          label: 'Código',
           render: (val) => `<span class="scan-code-badge">${val}</span>`
         },
         { 
           key: 'format', 
-          label: I18nService.t('ri_format'),
+          label: 'Formato',
           render: (val) => {
             const label = BarcodeScannerService.getFormatLabel(val);
             const lower = (val || '').toLowerCase();
@@ -46,9 +46,9 @@ export class ScanHistoryView extends Component {
         },
         { 
           key: 'associatedWith', 
-          label: I18nService.t('type'),
+          label: 'Tipo',
           render: (val) => {
-            if (!val) return `<span class="text-xs text-secondary">—</span>`;
+            if (!val) return '<span class="text-xs text-secondary">—</span>';
             const label = BarcodeRegistryService.getTypeLabel(val);
             const icon = BarcodeRegistryService.getTypeIcon(val);
             return `<span class="scan-type-badge scan-type-${val}">${icon} ${label}</span>`;
@@ -56,14 +56,14 @@ export class ScanHistoryView extends Component {
         },
         { 
           key: 'productName', 
-          label: I18nService.t('sh_associated_object'),
+          label: 'Objeto Asociado',
           render: (val, row) => val 
             ? `<strong class="text-primary">${val}</strong>` 
-            : `<span class="text-xs text-secondary">${I18nService.t('sh_not_associated')}</span>`
+            : `<span class="text-xs text-secondary">No asociado</span>`
         },
         { 
           key: 'scanCount', 
-          label: I18nService.t('qr_scans_col'),
+          label: 'Lecturas',
           render: (val) => `<strong style="color:var(--color-accent);">${val || 1}</strong>`
         }
       ],
@@ -71,45 +71,45 @@ export class ScanHistoryView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('sh_title'),
-      subtitle: I18nService.t('sh_subtitle'),
+      title: I18nService.t('scan_history_title', 'Auditoría e Historial de Escaneos'),
+      subtitle: I18nService.t('scan_history_subtitle', 'Consulta el registro permanente de todos los códigos de barra y QR leídos por los dispositivos del negocio.'),
       contentHTML: `
         <!-- KPI Cards Row -->
         <div class="grid-stats animate-fade-in" id="history-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('sh_unique_codes_kpi')}</span>
+              <span class="kpi-label">Códigos Únicos</span>
               <div class="kpi-icon kpi-icon-accent">📊</div>
             </div>
             <h3 class="kpi-value" id="kpi-unique-codes">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sh_unique_codes_desc')}</span>
+            <span class="text-xs text-secondary">Registrados permanentemente</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('qr_total_scans_kpi')}</span>
+              <span class="kpi-label">Total Lecturas</span>
               <div class="kpi-icon kpi-icon-success">📡</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-total-scans">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sh_total_scans_desc')}</span>
+            <span class="text-xs text-secondary">Escaneos acumulados</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ri_qr_codes')}</span>
+              <span class="kpi-label">Códigos QR</span>
               <div class="kpi-icon kpi-icon-warning">📱</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-qr-count">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sh_qr_count_desc')}</span>
+            <span class="text-xs text-secondary">Lecturas de códigos QR</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('sh_associated_codes_kpi')}</span>
+              <span class="kpi-label">Códigos Asociados</span>
               <div class="kpi-icon kpi-icon-success">🔗</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-linked-count">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('sh_associated_codes_desc')}</span>
+            <span class="text-xs text-secondary">Vinculados a productos/activos</span>
           </div>
         </div>
 
@@ -118,26 +118,26 @@ export class ScanHistoryView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-scan" class="input input-md" placeholder="${I18nService.t('sh_search_placeholder')}" />
+              <input type="text" id="inp-search-scan" class="input input-md" placeholder="Buscar por código u objeto..." />
             </div>
 
             <select id="sel-filter-type" class="inv-filter-select">
-              <option value="">${I18nService.t('sh_all_types')}</option>
-              <option value="producto">${I18nService.t('inv_products')}</option>
-              <option value="activo">${I18nService.t('nav_assets')}</option>
-              <option value="vehiculo">${I18nService.t('nav_vehicles')}</option>
-              <option value="herramienta">${I18nService.t('nav_tools')}</option>
-              <option value="insumo">${I18nService.t('nav_supplies')}</option>
+              <option value="">Todos los tipos</option>
+              <option value="producto">Productos</option>
+              <option value="activo">Activos</option>
+              <option value="vehiculo">Vehículos</option>
+              <option value="herramienta">Herramientas</option>
+              <option value="insumo">Insumos</option>
             </select>
 
             <select id="sel-filter-format" class="inv-filter-select">
-              <option value="">${I18nService.t('sh_all_formats')}</option>
+              <option value="">Todos los formatos</option>
               <option value="EAN13">EAN-13</option>
               <option value="EAN8">EAN-8</option>
               <option value="UPC_A">UPC-A</option>
               <option value="CODE128">Code 128</option>
               <option value="QR">QR</option>
-              <option value="CUSTOM">${I18nService.t('sh_format_custom')}</option>
+              <option value="CUSTOM">Personalizados</option>
             </select>
           </div>
         </div>

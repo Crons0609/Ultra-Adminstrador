@@ -2,6 +2,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class InvoicesView extends Component {
   constructor(params = {}) {
@@ -9,8 +10,8 @@ export class InvoicesView extends Component {
     this.state = { sales: [], search: '' };
 
     this.layout = new PageLayout({
-      title: 'Comprobantes de Venta',
-      subtitle: 'Consulta y descarga los recibos de todas las ventas procesadas.',
+      title: I18nService.t('invoices_title', 'Comprobantes de Venta'),
+      subtitle: I18nService.t('invoices_subtitle', 'Consulta y descarga los recibos de todas las ventas procesadas.'),
       actionHTML: `
         <input type="text" id="inv-search" class="input input-sm" placeholder="Buscar por vendedor o monto..." style="min-width:240px;"/>
       `,

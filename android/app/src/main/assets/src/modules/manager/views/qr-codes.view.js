@@ -81,15 +81,15 @@ export class QRCodesView extends Component {
     this.maps = {};
 
     this.layout = new PageLayout({
-      title: I18nService.t('qr_title'),
+      title: I18nService.t('qr_title') || 'Generador de Códigos QR',
       subtitle: this.isRestaurantMode 
-        ? I18nService.t('qr_subtitle_restaurant')
-        : I18nService.t('qr_subtitle_product'),
+        ? (I18nService.t('qr_subtitle_restaurant') || 'Genera y guarda códigos QR permanentes para cada mesa. Los QR persisten en la base de datos.')
+        : (I18nService.t('qr_subtitle') || 'Genera códigos QR únicos para cada unidad de tu inventario, asocia números de serie, administra garantías y analiza escaneos.'),
       actionHTML: this.isRestaurantMode 
         ? `
-          <button class="btn btn-secondary btn-sm" id="btn-print-all">${I18nService.t('print_all')}</button>
-          <button class="btn btn-success btn-sm" id="btn-save-qrs" style="background:#34d399;border:none;color:#000;font-weight:700;">${I18nService.t('qr_save_db')}</button>
-          <button class="btn btn-primary btn-sm" id="btn-generate-qr">${I18nService.t('qr_generate')}</button>
+          <button class="btn btn-secondary btn-sm" id="btn-print-all">🖨️ ${I18nService.t('print_all') || 'Imprimir Todo'}</button>
+          <button class="btn btn-success btn-sm" id="btn-save-qrs" style="background:#34d399;border:none;color:#000;font-weight:700;">💾 ${I18nService.t('save_qr') || 'Guardar QR en DB'}</button>
+          <button class="btn btn-primary btn-sm" id="btn-generate-qr">⚡ ${I18nService.t('qr_generate') || 'Generar QR'}</button>
         `
         : '',
       contentHTML: `<div id="qr-module-view-container"></div>`
@@ -129,35 +129,35 @@ export class QRCodesView extends Component {
     this.container.innerHTML = `
       <!-- Configuration Panel -->
       <div class="card p-5 mb-6">
-        <h3 class="text-lg font-semibold mb-4">${I18nService.t('qr_config_tables')}</h3>
+        <h3 class="text-lg font-semibold mb-4">⚙️ Configuración de Mesas</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-4); align-items: end;">
           <div class="form-group">
-            <label class="form-label" for="qr-table-count">${I18nService.t('qr_table_count_label')}</label>
+            <label class="form-label" for="qr-table-count">Número de mesas / asientos</label>
             <input type="number" id="qr-table-count" class="input input-md" value="10" min="1" max="200" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="qr-table-type">${I18nService.t('qr_location_type_label')}</label>
+            <label class="form-label" for="qr-table-type">Tipo de ubicación</label>
             <select id="qr-table-type" class="input input-md" style="background-color:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 var(--space-3);color:var(--color-text-primary);">
-              <option value="mesa">${I18nService.t('waiter_table_number')}</option>
-              <option value="asiento">${I18nService.t('qr_type_seat')}</option>
-              <option value="barra">${I18nService.t('qr_type_bar')}</option>
-              <option value="cabina">${I18nService.t('qr_type_cabin')}</option>
-              <option value="zona">${I18nService.t('qr_type_zone')}</option>
-              <option value="habitacion">${I18nService.t('qr_type_room')}</option>
+              <option value="mesa">Mesa</option>
+              <option value="asiento">Asiento / Silla</option>
+              <option value="barra">Barra / Bar</option>
+              <option value="cabina">Cabina</option>
+              <option value="zona">Zona</option>
+              <option value="habitacion">Habitación</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="qr-prefix">${I18nService.t('qr_prefix_label')}</label>
-            <input type="text" id="qr-prefix" class="input input-md" value="" placeholder="${I18nService.t('qr_prefix_placeholder')}" />
+            <label class="form-label" for="qr-prefix">Prefijo del número</label>
+            <input type="text" id="qr-prefix" class="input input-md" value="" placeholder="Ej. A, VIP, Sin prefijo..." />
           </div>
           <div class="form-group" style="font-size:0.75rem;">
-            <label class="form-label" for="qr-base-url">${I18nService.t('qr_base_url_label')}</label>
+            <label class="form-label" for="qr-base-url">URL base del menú</label>
             <input type="text" id="qr-base-url" class="input input-md" value="${this.baseMenuUrl}" style="font-size:0.72rem;" />
           </div>
           <div style="grid-column: 1 / -1; margin-top: var(--space-2); display: flex; gap: var(--space-3); flex-wrap: wrap;">
-            <button class="btn btn-primary btn-md" id="btn-generate-qr-card" style="font-weight: 700;">${I18nService.t('qr_generate_btn')}</button>
-            <button class="btn btn-success btn-md" id="btn-save-qrs-card" style="background:#34d399;border:none;color:#000;font-weight:700;">${I18nService.t('qr_save_db')}</button>
-            <button class="btn btn-secondary btn-md" id="btn-print-all-card">${I18nService.t('print_all')}</button>
+            <button class="btn btn-primary btn-md" id="btn-generate-qr-card" style="font-weight: 700;">⚡ Generar Códigos QR</button>
+            <button class="btn btn-success btn-md" id="btn-save-qrs-card" style="background:#34d399;border:none;color:#000;font-weight:700;">💾 Guardar QR en DB</button>
+            <button class="btn btn-secondary btn-md" id="btn-print-all-card">🖨️ Imprimir Todo</button>
           </div>
         </div>
       </div>
@@ -166,13 +166,13 @@ export class QRCodesView extends Component {
       <div id="qr-saved-section" class="card p-5 mb-6" style="display:none;">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
           <div>
-            <h3 class="text-lg font-semibold">${I18nService.t('qr_saved_db_title')}</h3>
-            <p class="text-xs text-secondary mt-1">${I18nService.t('qr_saved_db_desc')}</p>
+            <h3 class="text-lg font-semibold">📂 QR Guardados en Base de Datos</h3>
+            <p class="text-xs text-secondary mt-1">Estos QR están almacenados permanentemente y son reutilizables.</p>
           </div>
           <div style="display:flex;align-items:center;gap:var(--space-3);">
             <span class="badge" id="saved-qr-count" style="font-size:0.78rem;padding:4px 12px;"></span>
             <button class="btn btn-sm" id="btn-delete-all-saved-qrs" style="background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);font-weight:700;font-size:0.78rem;padding:4px 12px;cursor:pointer;">
-              ${I18nService.t('delete_all')}
+              🗑️ Eliminar Todos
             </button>
           </div>
         </div>
@@ -183,8 +183,8 @@ export class QRCodesView extends Component {
       <div id="qr-grid-container" class="card p-5">
         <div class="text-center py-8 text-secondary" id="qr-empty-state">
           <span style="font-size: 3rem; display: block; margin-bottom: 12px;">📱</span>
-          <p>${I18nService.t('qr_empty_state_desc')}</p>
-          <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">${I18nService.t('qr_empty_state_hint')}</p>
+          <p>Configura el número de mesas y presiona <strong>Generar QR</strong>.</p>
+          <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">Luego presiona <strong>Guardar QR en DB</strong> para hacerlos permanentes.</p>
         </div>
       </div>
     `;
@@ -233,15 +233,15 @@ export class QRCodesView extends Component {
     }
 
     section.style.display = 'block';
-    if (count) count.textContent = `${this.state.savedQRs.length} ${I18nService.t('saved')}`;
+    if (count) count.textContent = `${this.state.savedQRs.length} guardados`;
 
     grid.innerHTML = this.state.savedQRs.map(qr => `
       <div class="card p-4 text-center hover-lift" style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
         <div id="saved-qr-canvas-${qr.id}" style="width:180px;height:180px;display:flex;align-items:center;justify-content:center;background:white;border-radius:var(--radius-sm);overflow:hidden;padding:4px;"></div>
         <h4 style="font-weight:700;font-size:0.9rem;margin:0;">${qr.label || qr.tableId}</h4>
-        <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">${I18nService.t('qr_token_label')}${(qr.qrToken || qr.id || '').slice(0,8)}…</p>
+        <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">🔑 Token: ${(qr.qrToken || qr.id || '').slice(0,8)}…</p>
         <div style="display:flex;gap:6px;width:100%;">
-          <button class="btn btn-secondary btn-sm" style="flex:1;font-size:0.72rem;" onclick="navigator.clipboard.writeText('${qr.url}').then(()=>alert('${I18nService.t('copied')}'))">${I18nService.t('copy')}</button>
+          <button class="btn btn-secondary btn-sm" style="flex:1;font-size:0.72rem;" onclick="navigator.clipboard.writeText('${qr.url}').then(()=>alert('URL copiada'))">📋 Copiar</button>
           <button class="btn btn-sm btn-delete-saved-qr" data-id="${qr.id}" style="flex:0.6;font-size:0.72rem;background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2);">🗑</button>
         </div>
       </div>
@@ -257,9 +257,9 @@ export class QRCodesView extends Component {
     grid.querySelectorAll('.btn-delete-saved-qr').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-id');
-        if (!confirm(I18nService.t('qr_confirm_delete'))) return;
+        if (!confirm('¿Eliminar este QR de la base de datos?')) return;
         await FirestoreService.delete('qr_codes', id);
-        NotificationService.success(I18nService.t('qr_deleted_success'));
+        NotificationService.success('QR eliminado de la base de datos.');
       });
     });
   }
@@ -277,7 +277,7 @@ export class QRCodesView extends Component {
     const prefix    = prefixInput?.value.trim() || '';
     const baseUrl   = (baseUrlInput?.value.trim() || this.baseMenuUrl).replace(/\/$/, '');
 
-    const typeLabels = { mesa:I18nService.t('waiter_table_number'), asiento:I18nService.t('qr_type_seat'), barra:I18nService.t('qr_type_bar'), cabina:I18nService.t('qr_type_cabin'), zona:I18nService.t('qr_type_zone'), habitacion:I18nService.t('qr_type_room') };
+    const typeLabels = { mesa:'Mesa', asiento:'Asiento', barra:'Barra', cabina:'Cabina', zona:'Zona', habitacion:'Habitación' };
     const typeLabel  = typeLabels[tableType] || tableType;
 
     this._lastGenParams = { count, tableType, prefix, baseUrl, typeLabel };
@@ -301,8 +301,8 @@ export class QRCodesView extends Component {
              style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);">
           <div id="qr-canvas-${i}" style="width:180px;height:180px;display:flex;align-items:center;justify-content:center;background:white;border-radius:var(--radius-sm);overflow:hidden;padding:4px;"></div>
           <h4 style="font-weight:700;font-size:1rem;margin:0;">${label}</h4>
-          <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">${I18nService.t('qr_token_label')}${qrToken.slice(0,8)}…</p>
-          <button class="btn btn-secondary btn-sm" style="width:100%;font-size:0.75rem;" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('${I18nService.t('qr_url_copied_toast')}${label}'))">${I18nService.t('qr_copy_url_btn')}</button>
+          <p style="font-size:0.6rem;color:var(--color-text-tertiary);word-break:break-all;margin:0;max-width:200px;">🔑 Token: ${qrToken.slice(0,8)}…</p>
+          <button class="btn btn-secondary btn-sm" style="width:100%;font-size:0.75rem;" onclick="navigator.clipboard.writeText('${url}').then(()=>alert('URL copiada: ${label}'))">📋 Copiar URL</button>
         </div>`;
     }
     html += `</div>`;
@@ -322,14 +322,14 @@ export class QRCodesView extends Component {
   async saveRestaurantQRsToDB(element) {
     const grid = element.querySelector('#qr-cards-grid');
     if (!grid || grid.children.length === 0) {
-      NotificationService.warn(I18nService.t('qr_error_generate_first'));
+      NotificationService.warn('Primero presiona "Generar Códigos QR" antes de guardarlos.');
       return;
     }
 
     const btn = element.querySelector('#btn-save-qrs');
     const cardBtn = element.querySelector('#btn-save-qrs-card');
-    if (btn) { btn.disabled = true; btn.textContent = I18nService.t('saving'); }
-    if (cardBtn) { cardBtn.disabled = true; cardBtn.textContent = I18nService.t('saving'); }
+    if (btn) { btn.disabled = true; btn.textContent = '💾 Guardando...'; }
+    if (cardBtn) { cardBtn.disabled = true; cardBtn.textContent = '💾 Guardando...'; }
 
     const cards = grid.querySelectorAll('.card');
     let saved = 0;
@@ -359,8 +359,8 @@ export class QRCodesView extends Component {
       }
     }
 
-    if (btn) { btn.disabled = false; btn.textContent = I18nService.t('qr_save_db'); }
-    if (cardBtn) { cardBtn.disabled = false; cardBtn.textContent = I18nService.t('qr_save_db'); }
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar QR en DB'; }
+    if (cardBtn) { cardBtn.disabled = false; cardBtn.textContent = '💾 Guardar QR en DB'; }
 
     // Clear the preview draft container so that only the official saved QRs section is visible
     const container = element.querySelector('#qr-grid-container');
@@ -368,27 +368,27 @@ export class QRCodesView extends Component {
       container.innerHTML = `
         <div class="text-center py-8 text-secondary" id="qr-empty-state">
           <span style="font-size: 3rem; display: block; margin-bottom: 12px;">✅</span>
-          <p class="font-semibold" style="color:var(--color-success);">${I18nService.t('qr_save_success_title')}</p>
-          <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">${I18nService.t('qr_save_success_desc')}</p>
+          <p class="font-semibold" style="color:var(--color-success);">¡Códigos QR guardados con éxito!</p>
+          <p class="text-xs mt-2" style="color:var(--color-text-tertiary);">Los códigos QR oficiales están almacenados arriba en la base de datos.</p>
         </div>
       `;
     }
 
-    NotificationService.success(I18nService.t('qr_save_success_toast', { count: saved }));
+    NotificationService.success(`${saved} códigos QR guardados permanentemente en la base de datos.`);
   }
 
   async deleteRestaurantAllSavedQRs() {
     const total = this.state.savedQRs.length;
     if (total === 0) {
-      NotificationService.warn(I18nService.t('qr_error_no_saved'));
+      NotificationService.warn('No hay códigos QR guardados para eliminar.');
       return;
     }
-    if (!confirm(I18nService.t('qr_confirm_delete_all', { count: total }))) {
+    if (!confirm(`⚠️ ¿Estás seguro de que deseas eliminar TODOS los ${total} códigos QR?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
     try {
       await FirestoreService.deleteAll('qr_codes');
-      NotificationService.success(I18nService.t('qr_delete_all_success', { count: total }));
+      NotificationService.success(`Se han eliminado todos los códigos QR (${total}) de la base de datos.`);
     } catch (e) {
       console.error(e);
     }
@@ -398,7 +398,7 @@ export class QRCodesView extends Component {
     // Prefer generated preview grid if active, otherwise print saved QRs grid
     const grid = element.querySelector('#qr-cards-grid') || element.querySelector('#saved-qr-grid');
     if (!grid || grid.children.length === 0) {
-      NotificationService.warn(I18nService.t('qr_error_print_empty'));
+      NotificationService.warn('Primero genera o guarda códigos QR antes de imprimir.');
       return;
     }
     const printArea = document.createElement('div');
@@ -478,10 +478,10 @@ export class QRCodesView extends Component {
       </style>
 
       <div class="qr-tabs">
-        <button class="qr-tab-btn ${this.state.activeTab === 'generator' ? 'active' : ''}" data-tab="generator">${I18nService.t('qr_tab_generator')}</button>
-        <button class="qr-tab-btn ${this.state.activeTab === 'inventory' ? 'active' : ''}" data-tab="inventory">${I18nService.t('qr_tab_inventory')}</button>
-        <button class="qr-tab-btn ${this.state.activeTab === 'settings' ? 'active' : ''}" data-tab="settings">${I18nService.t('qr_tab_settings')}</button>
-        <button class="qr-tab-btn ${this.state.activeTab === 'stats' ? 'active' : ''}" data-tab="stats">${I18nService.t('qr_tab_stats')}</button>
+        <button class="qr-tab-btn ${this.state.activeTab === 'generator' ? 'active' : ''}" data-tab="generator">⚡ Generar Códigos</button>
+        <button class="qr-tab-btn ${this.state.activeTab === 'inventory' ? 'active' : ''}" data-tab="inventory">📂 Inventario de Códigos</button>
+        <button class="qr-tab-btn ${this.state.activeTab === 'settings' ? 'active' : ''}" data-tab="settings">⚙️ Ajustes del QR</button>
+        <button class="qr-tab-btn ${this.state.activeTab === 'stats' ? 'active' : ''}" data-tab="stats">📊 Estadísticas</button>
       </div>
 
       <div id="product-qr-tab-content" class="animate-fade-in"></div>
@@ -527,47 +527,47 @@ export class QRCodesView extends Component {
 
     this.tabContentEl.innerHTML = `
       <div class="card p-6" style="max-width: 650px; margin: 0 auto;">
-        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">${I18nService.t('qr_product_gen_title')}</h3>
+        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">⚡ Generar Códigos QR para Productos</h3>
         
         <form id="prod-qr-generator-form" style="display:flex; flex-direction:column; gap:12px;">
           
           <div class="form-group">
-            <label class="form-label" for="gen-product-select">${I18nService.t('qr_select_product_label')} <span class="form-label-required"></span></label>
+            <label class="form-label" for="gen-product-select">Selecciona el Producto <span class="form-label-required"></span></label>
             <select id="gen-product-select" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
-              <option value="" disabled ${!this.state.genProductId ? 'selected' : ''}>${I18nService.t('qr_select_product_placeholder')}</option>
+              <option value="" disabled ${!this.state.genProductId ? 'selected' : ''}>Escoge un producto del inventario...</option>
               ${prodOpts}
             </select>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div class="form-group">
-              <label class="form-label" for="gen-serial-input">${I18nService.t('qr_serial_number_label')} <span class="form-label-required"></span></label>
-              <input type="text" id="gen-serial-input" class="input input-md" value="${this.state.genSerialNumber}" placeholder="${I18nService.t('qr_serial_number_placeholder')}" required />
-              <span style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px; display:block;">${I18nService.t('qr_serial_number_hint')}</span>
+              <label class="form-label" for="gen-serial-input">Número de Serie <span class="form-label-required"></span></label>
+              <input type="text" id="gen-serial-input" class="input input-md" value="${this.state.genSerialNumber}" placeholder="Ej. AUTOGENERADO, SN-123456..." required />
+              <span style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px; display:block;">Escribe "AUTOGENERADO" para asignar una clave única al lote.</span>
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="gen-warranty-select">${I18nService.t('qr_warranty_label')} <span class="form-label-required"></span></label>
+              <label class="form-label" for="gen-warranty-select">Vigencia de la Garantía <span class="form-label-required"></span></label>
               <select id="gen-warranty-select" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
-                <option value="0">${I18nService.t('qr_no_warranty')}</option>
-                <option value="1">${I18nService.t('qr_warranty_1m')}</option>
-                <option value="3">${I18nService.t('qr_warranty_3m')}</option>
-                <option value="6">${I18nService.t('qr_warranty_6m')}</option>
-                <option value="12" selected>${I18nService.t('qr_warranty_12m')}</option>
-                <option value="24">${I18nService.t('qr_warranty_24m')}</option>
-                <option value="36">${I18nService.t('qr_warranty_36m')}</option>
+                <option value="0">Sin garantía</option>
+                <option value="1">1 Mes</option>
+                <option value="3">3 Meses</option>
+                <option value="6">6 Meses</option>
+                <option value="12" selected>12 Meses (1 año)</option>
+                <option value="24">24 Meses (2 años)</option>
+                <option value="36">36 Meses (3 años)</option>
               </select>
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="gen-qty-input">${I18nService.t('qr_quantity_label')} <span class="form-label-required"></span></label>
+            <label class="form-label" for="gen-qty-input">Cantidad de Códigos a Generar (Unidades de Inventario) <span class="form-label-required"></span></label>
             <input type="number" id="gen-qty-input" class="input input-md" min="1" max="100" value="${this.state.genQuantity}" required />
-            <span style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px; display:block;">${I18nService.t('qr_quantity_hint')}</span>
+            <span style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px; display:block;">Esta acción incrementará automáticamente el stock de este producto en el catálogo.</span>
           </div>
 
           <div style="display:flex; justify-content:flex-end; margin-top:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
-            <button type="submit" class="btn btn-primary" id="btn-submit-prod-qr-gen">${I18nService.t('qr_generate_and_add_btn')}</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-prod-qr-gen">⚡ Generar y Agregar al Inventario</button>
           </div>
         </form>
       </div>
@@ -590,13 +590,13 @@ export class QRCodesView extends Component {
 
       const product = this.state.products.find(p => p.id === productId);
       if (!product) {
-        NotificationService.error(I18nService.t('qr_error_no_product'));
+        NotificationService.error('Debes elegir un producto válido.');
         return;
       }
 
       const submitBtn = form.querySelector('#btn-submit-prod-qr-gen');
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('qr_generating_toast');
+      submitBtn.textContent = 'Generando códigos...';
 
       try {
         const batchKeys = [];
@@ -628,7 +628,7 @@ export class QRCodesView extends Component {
             createdAt: Date.now(),
             status: 'Disponible',
             clientName: '',
-            warrantyStatus: warrantyM > 0 ? 'Activa' : I18nService.t('qr_no_warranty'),
+            warrantyStatus: warrantyM > 0 ? 'Activa' : 'Sin Garantía',
             warrantyExpiresAt: warrantyExpiresAt,
             url: qrUrl,
             scanCount: 0,
@@ -654,7 +654,7 @@ export class QRCodesView extends Component {
           description: `Se generaron ${qty} códigos QR únicos para el producto "${product.name}" (IDs del lote: [${batchKeys.join(', ')}]). Stock del inventario actualizado a ${newStock}.`
         });
 
-        NotificationService.success(I18nService.t('qr_generate_success_toast', { qty }));
+        NotificationService.success(`Códigos QR generados con éxito. Stock incrementado en ${qty} uds.`);
         
         // Reset generator fields
         this.state.genQuantity = 1;
@@ -664,9 +664,9 @@ export class QRCodesView extends Component {
 
       } catch (err) {
         console.error(err);
-        alert(I18nService.t('qr_generate_error') + err.message);
+        alert('Error al generar los códigos QR: ' + err.message);
         submitBtn.disabled = false;
-        submitBtn.textContent = I18nService.t('qr_generate_and_add_btn');
+        submitBtn.textContent = '⚡ Generar y Agregar al Inventario';
       }
     });
   }
@@ -693,16 +693,16 @@ export class QRCodesView extends Component {
 
     const rowsHTML = filteredItems.map(item => {
       const stateBadge = {
-        Disponible: `<span class="badge" style="background:rgba(16,185,129,0.1); color:#34d399;">${I18nService.t('active')}</span>`,
-        'En exhibición': `<span class="badge" style="background:rgba(59,130,246,0.1); color:#60a5fa;">${I18nService.t('qr_status_display')}</span>`,
-        'En reparación': `<span class="badge" style="background:rgba(245,158,11,0.1); color:#fbbf24;">${I18nService.t('qr_status_repair')}</span>`,
-        Devuelto: `<span class="badge" style="background:rgba(156,163,175,0.1); color:#9ca3af;">${I18nService.t('qr_status_returned')}</span>`,
-        Vendido: `<span class="badge" style="background:rgba(139,92,246,0.1); color:#a78bfa;">${I18nService.t('qr_status_sold')}</span>`
+        Disponible: `<span class="badge" style="background:rgba(16,185,129,0.1); color:#34d399;">Disponible</span>`,
+        'En exhibición': `<span class="badge" style="background:rgba(59,130,246,0.1); color:#60a5fa;">En Exhibición</span>`,
+        'En reparación': `<span class="badge" style="background:rgba(245,158,11,0.1); color:#fbbf24;">En Reparación</span>`,
+        Devuelto: `<span class="badge" style="background:rgba(156,163,175,0.1); color:#9ca3af;">Devuelto</span>`,
+        Vendido: `<span class="badge" style="background:rgba(139,92,246,0.1); color:#a78bfa;">Vendido</span>`
       }[item.status] || `<span class="badge">${item.status}</span>`;
 
       const warrantyStr = item.warrantyExpiresAt 
         ? `${TimeService.formatDate(new Date(item.warrantyExpiresAt).getTime())}`
-        : I18nService.t('qr_no_warranty');
+        : 'Sin Garantía';
 
       return `
         <tr style="border-bottom:1px solid var(--color-border); font-size:0.78rem;">
@@ -712,9 +712,9 @@ export class QRCodesView extends Component {
           <td style="padding:10px 14px; color:var(--color-text-secondary);">${warrantyStr}</td>
           <td style="padding:10px 14px; font-family:monospace; font-weight:700; text-align:center;">${item.scanCount || 0}</td>
           <td style="padding:10px 14px; text-align:right; display:flex; gap:6px; justify-content:flex-end;">
-            <button class="btn btn-secondary btn-xs btn-view-tag-qr" data-id="${item.id}" title="${I18nService.t('qr_print_label_title')}">🏷️ ${I18nService.t('print')}</button>
-            <button class="btn btn-secondary btn-xs btn-edit-item-qr" data-id="${item.id}" title="${I18nService.t('qr_edit_item_title')}">✏️</button>
-            <button class="btn btn-danger btn-xs btn-delete-item-qr" data-id="${item.id}" title="${I18nService.t('qr_delete_item_title')}">🗑️</button>
+            <button class="btn btn-secondary btn-xs btn-view-tag-qr" data-id="${item.id}" title="Previsualizar e Imprimir Etiqueta">🏷️ Imprimir</button>
+            <button class="btn btn-secondary btn-xs btn-edit-item-qr" data-id="${item.id}" title="Editar Ficha del Artículo">✏️</button>
+            <button class="btn btn-danger btn-xs btn-delete-item-qr" data-id="${item.id}" title="Eliminar y descontar stock">🗑️</button>
           </td>
         </tr>
       `;
@@ -723,16 +723,16 @@ export class QRCodesView extends Component {
     this.tabContentEl.innerHTML = `
       <div class="card p-5">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-          <h3 class="text-md font-bold" style="margin:0;">${I18nService.t('qr_inventory_title')}</h3>
+          <h3 class="text-md font-bold" style="margin:0;">📂 Inventario de Códigos Generados</h3>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="inv-search-input" class="input input-md" placeholder="${I18nService.t('qr_inventory_search_placeholder')}" value="${f.searchQuery}" style="width:230px;" />
+            <input type="text" id="inv-search-input" class="input input-md" placeholder="Buscar por producto, serie o ID..." value="${f.searchQuery}" style="width:230px;" />
             <select id="inv-status-select" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-              <option value="ALL" ${f.status === 'ALL' ? 'selected' : ''}>${I18nService.t('ocr_all_statuses')}</option>
-              <option value="Disponible" ${f.status === 'Disponible' ? 'selected' : ''}>${I18nService.t('active')}</option>
-              <option value="En exhibición" ${f.status === 'En exhibición' ? 'selected' : ''}>${I18nService.t('qr_status_display')}</option>
-              <option value="En reparación" ${f.status === 'En reparación' ? 'selected' : ''}>${I18nService.t('qr_status_repair')}</option>
-              <option value="Vendido" ${f.status === 'Vendido' ? 'selected' : ''}>${I18nService.t('qr_status_sold')}</option>
-              <option value="Devuelto" ${f.status === 'Devuelto' ? 'selected' : ''}>${I18nService.t('qr_status_returned')}</option>
+              <option value="ALL" ${f.status === 'ALL' ? 'selected' : ''}>Todos los Estados</option>
+              <option value="Disponible" ${f.status === 'Disponible' ? 'selected' : ''}>Disponible</option>
+              <option value="En exhibición" ${f.status === 'En exhibición' ? 'selected' : ''}>En Exhibición</option>
+              <option value="En reparación" ${f.status === 'En reparación' ? 'selected' : ''}>En Reparación</option>
+              <option value="Vendido" ${f.status === 'Vendido' ? 'selected' : ''}>Vendido</option>
+              <option value="Devuelto" ${f.status === 'Devuelto' ? 'selected' : ''}>Devuelto</option>
             </select>
           </div>
         </div>
@@ -741,16 +741,16 @@ export class QRCodesView extends Component {
           <table style="width:100%; border-collapse:collapse; text-align:left;">
             <thead>
               <tr style="border-bottom:2px solid var(--color-border); color:var(--color-text-secondary); font-size:0.75rem;">
-                <th style="padding:8px 14px;">${I18nService.t('inv_product_name')}</th>
-                <th style="padding:8px 14px;">${I18nService.t('qr_serial_number_col')}</th>
-                <th style="padding:8px 14px;">${I18nService.t('status')}</th>
-                <th style="padding:8px 14px;">${I18nService.t('qr_warranty_expiry_col')}</th>
-                <th style="padding:8px 14px; text-align:center;">${I18nService.t('qr_scans_col')}</th>
-                <th style="padding:8px 14px; text-align:right;">${I18nService.t('actions')}</th>
+                <th style="padding:8px 14px;">Producto</th>
+                <th style="padding:8px 14px;">Nº de Serie</th>
+                <th style="padding:8px 14px;">Estado</th>
+                <th style="padding:8px 14px;">Expiración Garantía</th>
+                <th style="padding:8px 14px; text-align:center;">Escaneos</th>
+                <th style="padding:8px 14px; text-align:right;">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              ${rowsHTML || `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--color-text-secondary);">${I18nService.t('qr_inventory_empty')}</td></tr>`}
+              ${rowsHTML || '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--color-text-secondary);">No se encontraron códigos generados en el inventario.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -792,7 +792,7 @@ export class QRCodesView extends Component {
     const item = this.state.itemQrs.find(i => i.id === itemId);
     if (!item) return;
 
-    if (!confirm(I18nService.t('qr_confirm_delete_item', { sn: item.serialNumber }))) {
+    if (!confirm(`¿Eliminar este código QR del inventario (Serie: ${item.serialNumber})?\nNota: El stock del producto se restará por 1.`)) {
       return;
     }
 
@@ -809,7 +809,7 @@ export class QRCodesView extends Component {
         });
       }
 
-      NotificationService.success(I18nService.t('qr_delete_item_success'));
+      NotificationService.success('Código QR eliminado e inventario actualizado.');
       this.loadProductModeData();
 
     } catch (e) {
@@ -827,80 +827,80 @@ export class QRCodesView extends Component {
 
     this.tabContentEl.innerHTML = `
       <div class="card p-6 animate-fade-in" style="max-width:700px; margin:0 auto;">
-        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">${I18nService.t('qr_settings_title')}</h3>
+        <h3 class="text-md font-bold mb-4" style="color:var(--color-accent); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">⚙️ Ajustes del Código QR y Redireccionamiento</h3>
         
         <form id="qr-product-settings-form" style="display:flex; flex-direction:column; gap:12px;">
           
           <div class="form-group">
-            <label class="form-label" for="sett-redirect">${I18nService.t('qr_redirect_target_label')} <span class="form-label-required"></span></label>
+            <label class="form-label" for="sett-redirect">Destino de Escaneo (No Vendidos) <span class="form-label-required"></span></label>
             <select id="sett-redirect" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);" required>
-              <option value="landing" ${s.defaultRedirect === 'landing' ? 'selected' : ''}>${I18nService.t('qr_target_landing')}</option>
-              <option value="web" ${s.defaultRedirect === 'web' ? 'selected' : ''}>${I18nService.t('qr_target_web')}</option>
-              <option value="catalog" ${s.defaultRedirect === 'catalog' ? 'selected' : ''}>${I18nService.t('qr_target_catalog')}</option>
-              <option value="support" ${s.defaultRedirect === 'support' ? 'selected' : ''}>${I18nService.t('qr_target_support')}</option>
-              <option value="warranty" ${s.defaultRedirect === 'warranty' ? 'selected' : ''}>${I18nService.t('qr_target_warranty')}</option>
-              <option value="whatsapp" ${s.defaultRedirect === 'whatsapp' ? 'selected' : ''}>${I18nService.t('qr_target_whatsapp')}</option>
-              <option value="custom" ${s.defaultRedirect === 'custom' ? 'selected' : ''}>${I18nService.t('qr_target_custom')}</option>
+              <option value="landing" ${s.defaultRedirect === 'landing' ? 'selected' : ''}>Ficha de Producto (Detalles y Soporte - Recomendado)</option>
+              <option value="web" ${s.defaultRedirect === 'web' ? 'selected' : ''}>Sitio Web de la Empresa</option>
+              <option value="catalog" ${s.defaultRedirect === 'catalog' ? 'selected' : ''}>Catálogo QR Digital</option>
+              <option value="support" ${s.defaultRedirect === 'support' ? 'selected' : ''}>Página de Soporte Técnico</option>
+              <option value="warranty" ${s.defaultRedirect === 'warranty' ? 'selected' : ''}>Página de Registro de Garantía</option>
+              <option value="whatsapp" ${s.defaultRedirect === 'whatsapp' ? 'selected' : ''}>Mensaje directo de WhatsApp</option>
+              <option value="custom" ${s.defaultRedirect === 'custom' ? 'selected' : ''}>URL Personalizada</option>
             </select>
-            <span style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px; display:block;">${I18nService.t('qr_redirect_hint')}</span>
+            <span style="font-size:0.65rem; color:var(--color-text-secondary); margin-top:2px; display:block;">El destino predeterminado cuando un cliente escanea un artículo en la tienda o exhibición.</span>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div class="form-group">
-              <label class="form-label" for="sett-web-url">${I18nService.t('qr_web_url_label')}</label>
+              <label class="form-label" for="sett-web-url">URL de Sitio Web</label>
               <input type="url" id="sett-web-url" class="input input-md" value="${s.webUrl || ''}" placeholder="https://miweb.com" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="sett-support-url">${I18nService.t('qr_support_url_label')}</label>
+              <label class="form-label" for="sett-support-url">URL de Soporte</label>
               <input type="url" id="sett-support-url" class="input input-md" value="${s.supportUrl || ''}" placeholder="https://soporte.com" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div class="form-group">
-              <label class="form-label" for="sett-warranty-url">${I18nService.t('qr_warranty_url_label')}</label>
+              <label class="form-label" for="sett-warranty-url">URL de Garantías</label>
               <input type="url" id="sett-warranty-url" class="input input-md" value="${s.warrantyUrl || ''}" placeholder="https://garantias.com" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="sett-custom-url">${I18nService.t('qr_custom_url_label')}</label>
+              <label class="form-label" for="sett-custom-url">URL Personalizada / Link Externo</label>
               <input type="url" id="sett-custom-url" class="input input-md" value="${s.customUrl || ''}" placeholder="https://mi-enlace.com" />
             </div>
           </div>
 
-          <div class="form-section-title">${I18nService.t('qr_after_sale_title')}</div>
+          <div class="form-section-title">👤 Configuración de Postventa (Productos Vendidos)</div>
           <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; margin:6px 0;">
             <input type="checkbox" id="sett-history-toggle" ${s.showServiceHistoryToClient ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--color-accent);" />
-            <label for="sett-history-toggle" class="form-label" style="margin:0; cursor:pointer;">${I18nService.t('qr_show_history_label')}</label>
+            <label for="sett-history-toggle" class="form-label" style="margin:0; cursor:pointer;">Mostrar historial de mantenimientos/servicios al cliente final.</label>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="sett-faq">${I18nService.t('qr_faq_label')}</label>
-            <textarea id="sett-faq" class="input" style="height:70px; padding:10px;" placeholder="${I18nService.t('qr_faq_placeholder')}">${s.faqContent || ''}</textarea>
+            <label class="form-label" for="sett-faq">Preguntas Frecuentes / Enlaces a Manuales (FAQ)</label>
+            <textarea id="sett-faq" class="input" style="height:70px; padding:10px;" placeholder="Ej. Manual de Uso: www.manuales.com/LG&#10;FAQ: ¿Cómo limpiar el filtro?...">${s.faqContent || ''}</textarea>
           </div>
 
-          <div class="form-section-title">${I18nService.t('qr_label_config_title')}</div>
+          <div class="form-section-title">🏷️ Estructura e Impresión de Etiquetas</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div class="form-group">
-              <label class="form-label" for="sett-size">${I18nService.t('qr_label_size_label')}</label>
+              <label class="form-label" for="sett-size">Tamaño Físico de Etiqueta</label>
               <select id="sett-size" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-                <option value="pequeña" ${s.labelSize === 'pequeña' ? 'selected' : ''}>${I18nService.t('qr_size_small')}</option>
-                <option value="mediana" ${s.labelSize === 'mediana' ? 'selected' : ''}>${I18nService.t('qr_size_medium')}</option>
-                <option value="grande" ${s.labelSize === 'grande' ? 'selected' : ''}>${I18nService.t('qr_size_large')}</option>
+                <option value="pequeña" ${s.labelSize === 'pequeña' ? 'selected' : ''}>Pequeña (30mm x 30mm)</option>
+                <option value="mediana" ${s.labelSize === 'mediana' ? 'selected' : ''}>Mediana (50mm x 50mm)</option>
+                <option value="grande" ${s.labelSize === 'grande' ? 'selected' : ''}>Grande (80mm x 80mm)</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="sett-footer">${I18nService.t('qr_label_footer_label')}</label>
-              <input type="text" id="sett-footer" class="input input-md" value="${s.footerText || ''}" placeholder="${I18nService.t('qr_label_footer_placeholder')}" />
+              <label class="form-label" for="sett-footer">Texto de pie de página de la etiqueta</label>
+              <input type="text" id="sett-footer" class="input input-md" value="${s.footerText || ''}" placeholder="Ej. Escanear para Garantía" />
             </div>
           </div>
 
           <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; margin:6px 0;">
             <input type="checkbox" id="sett-logo-toggle" ${s.printLogo !== false ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--color-accent);" />
-            <label for="sett-logo-toggle" class="form-label" style="margin:0; cursor:pointer;">${I18nService.t('qr_print_logo_label')}</label>
+            <label for="sett-logo-toggle" class="form-label" style="margin:0; cursor:pointer;">Imprimir logotipo del negocio centrado en el código QR.</label>
           </div>
 
           <div style="display:flex; justify-content:flex-end; margin-top:12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
-            <button type="submit" class="btn btn-primary" id="btn-save-qr-settings">💾 ${I18nService.t('save_changes')}</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-qr-settings">💾 Guardar Ajustes</button>
           </div>
         </form>
       </div>
@@ -931,10 +931,10 @@ export class QRCodesView extends Component {
         await set(ref(db, `${this.companyId}/qr_settings`), payload);
         this.state.qrSettings = payload;
 
-        NotificationService.success(I18nService.t('qr_settings_updated_success'));
+        NotificationService.success('Ajustes de códigos QR actualizados.');
       } catch (err) {
         console.error(err);
-        alert(I18nService.t('error_occurred') + ': ' + err.message);
+        alert('Error al guardar ajustes: ' + err.message);
       } finally {
         saveBtn.disabled = false;
       }
@@ -976,11 +976,11 @@ export class QRCodesView extends Component {
       .map(log => `
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:6px; font-size:0.75rem;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong>${log.productName} (${I18nService.t('qr_serial_number_col').substring(0,3)}: ${log.serialNumber})</strong>
+            <strong>${log.productName} (S/N: ${log.serialNumber})</strong>
             <span class="text-secondary" style="font-size:0.68rem;">${TimeService.formatDate(log.scannedAt, true)}</span>
           </div>
           <div style="color:var(--color-text-secondary); font-size:0.7rem; margin-top:2px;">
-            ${I18nService.t('qr_device_label')}${log.device.substring(0, 75)}... | ${I18nService.t('qr_location_label')}${log.location}
+            📱 Dispositivo: ${log.device.substring(0, 75)}... | Ubicación: ${log.location}
           </div>
         </div>
       `).join('');
@@ -991,19 +991,19 @@ export class QRCodesView extends Component {
         <!-- Metrics Row -->
         <div class="grid-stats" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
           <div class="card p-4 text-center">
-            <span class="text-xs text-secondary font-semibold">${I18nService.t('qr_total_kpi')}</span>
+            <span class="text-xs text-secondary font-semibold">Total Códigos QR</span>
             <h3 class="text-xl font-bold mt-1" style="color:var(--color-accent);">${totalGen}</h3>
           </div>
           <div class="card p-4 text-center">
-            <span class="text-xs text-secondary font-semibold">${I18nService.t('qr_active_kpi')}</span>
+            <span class="text-xs text-secondary font-semibold">Códigos QR Activos</span>
             <h3 class="text-xl font-bold mt-1" style="color:#60a5fa;">${totalActive}</h3>
           </div>
           <div class="card p-4 text-center">
-            <span class="text-xs text-secondary font-semibold">${I18nService.t('qr_sold_kpi')}</span>
+            <span class="text-xs text-secondary font-semibold">Productos Vendidos con QR</span>
             <h3 class="text-xl font-bold mt-1" style="color:#a78bfa;">${totalSold}</h3>
           </div>
           <div class="card p-4 text-center" style="border-left:3px solid #34d399;">
-            <span class="text-xs text-secondary font-semibold">${I18nService.t('qr_total_scans_kpi')}</span>
+            <span class="text-xs text-secondary font-semibold">Total Escaneos Recibidos</span>
             <h3 class="text-xl font-bold mt-1" style="color:#34d399;">${totalScans}</h3>
           </div>
         </div>
@@ -1012,20 +1012,20 @@ export class QRCodesView extends Component {
           
           <!-- Top Scans Table -->
           <div class="card p-5">
-            <h3 class="text-sm font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">${I18nService.t('qr_top_scanned_title')}</h3>
+            <h3 class="text-sm font-bold uppercase tracking-wider mb-4" style="color:var(--color-accent);">🔥 Productos Más Consultados (QR)</h3>
             <div style="overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse; text-align:left;">
                 <thead>
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.05); color:var(--color-text-secondary); font-size:0.7rem; font-weight:700;">
-                    <th style="padding:6px 4px;">${I18nService.t('inv_product_name')}</th>
-                    <th style="padding:6px 4px;">${I18nService.t('qr_serial_number_col')}</th>
-                    <th style="padding:6px 4px;">${I18nService.t('status')}</th>
-                    <th style="padding:6px 4px; text-align:center;">${I18nService.t('qr_scans_col')}</th>
-                    <th style="padding:6px 4px; text-align:right;">${I18nService.t('qr_last_scan_col')}</th>
+                    <th style="padding:6px 4px;">Producto</th>
+                    <th style="padding:6px 4px;">Serie</th>
+                    <th style="padding:6px 4px;">Estado</th>
+                    <th style="padding:6px 4px; text-align:center;">Escaneos</th>
+                    <th style="padding:6px 4px; text-align:right;">Última Lectura</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${topScansRows || `<tr><td colspan="5" style="text-align:center; padding:15px; color:var(--color-text-secondary); font-size:0.75rem;">${I18nService.t('qr_no_scans_yet')}</td></tr>`}
+                  ${topScansRows || '<tr><td colspan="5" style="text-align:center; padding:15px; color:var(--color-text-secondary); font-size:0.75rem;">Ningún escaneo registrado todavía.</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -1033,15 +1033,14 @@ export class QRCodesView extends Component {
 
           <!-- Live Timelines scans -->
           <div class="card p-5" style="display:flex; flex-direction:column; gap:10px; max-height:450px; overflow-y:auto;">
-            <h3 class="text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--color-accent);">${I18nService.t('qr_live_scans_title')}</h3>
-            ${historyLogs || `<div class="text-center py-10 text-secondary" style="font-size:0.75rem;">${I18nService.t('qr_live_scans_empty')}</div>`}
+            <h3 class="text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--color-accent);">🔔 Registro de Lecturas en Tiempo Real</h3>
+            ${historyLogs || '<div class="text-center py-10 text-secondary" style="font-size:0.75rem;">Escanea un código QR para iniciar el feed.</div>'}
           </div>
 
         </div>
 
       </div>
     `;
-  }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1058,7 +1057,7 @@ export class QRCodesView extends Component {
     const formHTML = `
       <form id="edit-product-item-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary); font-size:0.85rem;">
         <div class="form-group">
-          <label class="form-label" style="font-weight:700;">${I18nService.t('inv_product_name')}</label>
+          <label class="form-label" style="font-weight:700;">Producto</label>
           <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
             <strong>${item.productName}</strong> ${item.brand ? `(${item.brand})` : ''}
           </div>
@@ -1066,53 +1065,53 @@ export class QRCodesView extends Component {
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           <div class="form-group">
-            <label class="form-label" for="edit-item-serial">${I18nService.t('qr_serial_number_label')}</label>
+            <label class="form-label" for="edit-item-serial">Número de Serie</label>
             <input type="text" id="edit-item-serial" class="input input-md" value="${item.serialNumber || ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="edit-item-status">${I18nService.t('emp_account_status_label')}</label>
+            <label class="form-label" for="edit-item-status">Estado del Artículo</label>
             <select id="edit-item-status" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary);">
-              <option value="Disponible" ${item.status === 'Disponible' ? 'selected' : ''}>${I18nService.t('active')}</option>
-              <option value="En exhibición" ${item.status === 'En exhibición' ? 'selected' : ''}>${I18nService.t('qr_status_display')}</option>
-              <option value="En reparación" ${item.status === 'En reparación' ? 'selected' : ''}>${I18nService.t('qr_status_repair')}</option>
-              <option value="Vendido" ${item.status === 'Vendido' ? 'selected' : ''}>${I18nService.t('qr_status_sold')}</option>
-              <option value="Devuelto" ${item.status === 'Devuelto' ? 'selected' : ''}>${I18nService.t('qr_status_returned')}</option>
+              <option value="Disponible" ${item.status === 'Disponible' ? 'selected' : ''}>Disponible</option>
+              <option value="En exhibición" ${item.status === 'En exhibición' ? 'selected' : ''}>En Exhibición</option>
+              <option value="En reparación" ${item.status === 'En reparación' ? 'selected' : ''}>En Reparación</option>
+              <option value="Vendido" ${item.status === 'Vendido' ? 'selected' : ''}>Vendido</option>
+              <option value="Devuelto" ${item.status === 'Devuelto' ? 'selected' : ''}>Devuelto</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-item-client">${I18nService.t('qr_customer_label')}</label>
-          <input type="text" id="edit-item-client" class="input input-md" value="${item.clientName || ''}" placeholder="${I18nService.t('auth_owner_name_placeholder')}" />
+          <label class="form-label" for="edit-item-client">Comprador (Cliente - Opcional)</label>
+          <input type="text" id="edit-item-client" class="input input-md" value="${item.clientName || ''}" placeholder="Ej. Carlos Martínez" />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-item-warranty">${I18nService.t('qr_warranty_expiry_label')}</label>
+          <label class="form-label" for="edit-item-warranty">Fecha Límite de Garantía</label>
           <input type="date" id="edit-item-warranty" class="input input-md" value="${item.warrantyExpiresAt || ''}" />
         </div>
 
-        <div class="form-section-title">${I18nService.t('qr_service_history_title')}</div>
+        <div class="form-section-title">🔧 Historial de Servicios Mantenimiento</div>
         <div id="modal-service-history-list" style="display:flex; flex-direction:column; gap:6px; max-height:120px; overflow-y:auto; margin-bottom:8px;">
           <!-- Loaded dynamically -->
         </div>
 
         <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.05); padding:8px; border-radius:6px; display:flex; flex-direction:column; gap:6px;">
-          <strong>${I18nService.t('qr_add_service_entry')}</strong>
+          <strong>Agregar Entrada de Servicio:</strong>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
             <input type="text" id="new-service-type" class="input input-xs" placeholder="Ej. Mantenimiento, Reparación" />
             <input type="text" id="new-service-desc" class="input input-xs" placeholder="Detalle técnico..." />
           </div>
-          <button type="button" class="btn btn-secondary btn-xs align-self-end" id="btn-add-service-entry">${I18nService.t('add')}</button>
+          <button type="button" class="btn btn-secondary btn-xs align-self-end" id="btn-add-service-entry">Añadir Entrada</button>
         </div>
       </form>
     `;
 
     const editModal = new Modal({
-      title: I18nService.t('qr_edit_item_title'),
+      title: '✏️ Editar Ficha del Artículo',
       bodyHTML: formHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-close-edit-modal">${I18nService.t('cancel')}</button>
-        <button class="btn btn-primary btn-sm" id="btn-save-edit-modal">${I18nService.t('save_changes')}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-close-edit-modal">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-edit-modal">Guardar Ficha</button>
       `,
       size: 'md'
     });
@@ -1127,7 +1126,7 @@ export class QRCodesView extends Component {
 
       const history = item.service_history ? Object.values(item.service_history) : [];
       if (history.length === 0) {
-        historyList.innerHTML = `<span style="font-size:0.72rem; color:var(--color-text-secondary); text-align:center; display:block;">${I18nService.t('qr_service_history_empty')}</span>`;
+        historyList.innerHTML = `<span style="font-size:0.72rem; color:var(--color-text-secondary); text-align:center; display:block;">Sin historial de servicios registrado.</span>`;
         return;
       }
 
@@ -1155,7 +1154,7 @@ export class QRCodesView extends Component {
       const desc = el.querySelector('#new-service-desc').value.trim();
 
       if (!type || !desc) {
-        alert(I18nService.t('error_required_fields'));
+        alert('Por favor rellena el tipo y detalle.');
         return;
       }
 
@@ -1198,7 +1197,7 @@ export class QRCodesView extends Component {
           description: `Se actualizó la ficha técnica del artículo "${item.productName}" (Serie: ${payload.serialNumber}, ID: ${item.id}). Nuevo Estado: ${payload.status}.`
         });
 
-        NotificationService.success(I18nService.t('qr_item_saved_success'));
+        NotificationService.success('Ficha del artículo guardada con éxito.');
         editModal.close();
         this.loadProductModeData();
 
@@ -1223,13 +1222,13 @@ export class QRCodesView extends Component {
         
         <!-- Physical Tag layout -->
         <div id="printable-item-tag" style="background:#ffffff; border:1px solid #000; padding:15px; color:#000; border-radius:4px; max-width:250px; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
-          <strong style="font-size:0.85rem; border-bottom:1px solid #000; width:100%; padding-bottom:3px; display:block; word-break:break-all;">${this.currentCompany.name || I18nService.t('nav_companies')}</strong>
+          <strong style="font-size:0.85rem; border-bottom:1px solid #000; width:100%; padding-bottom:3px; display:block; word-break:break-all;">${this.currentCompany.name || 'Negocio'}</strong>
           <div id="print-modal-qr-canvas" style="width:130px; height:130px; display:flex; align-items:center; justify-content:center; background:#fff; padding:2px;"></div>
           
           <div style="font-size:0.65rem; width:100%; line-height:1.3; font-weight:700;">
-            <div>${I18nService.t('inv_product_name')}: ${item.productName}</div>
-            ${item.brand ? `<div>${I18nService.t('inv_brand_label')}: ${item.brand}</div>` : ''}
-            <div>${I18nService.t('qr_serial_number_col')}: <span style="font-family:monospace;">${item.serialNumber}</span></div>
+            <div>Producto: ${item.productName}</div>
+            ${item.brand ? `<div>Marca: ${item.brand}</div>` : ''}
+            <div>Serie: <span style="font-family:monospace;">${item.serialNumber}</span></div>
           </div>
           
           <div style="font-size:0.58rem; text-transform:uppercase; font-weight:bold; border-top:1px dashed #666; width:100%; padding-top:4px; color:#333;">
@@ -1237,16 +1236,16 @@ export class QRCodesView extends Component {
           </div>
         </div>
 
-        <p class="text-xs text-secondary mt-1">${I18nService.t('qr_print_preview_desc')}</p>
+        <p class="text-xs text-secondary mt-1">Esta vista previsualiza la etiqueta de código QR para impresión.</p>
       </div>
     `;
 
     const printModal = new Modal({
-      title: I18nService.t('qr_print_label_title'),
+      title: '🏷️ Imprimir Etiqueta de Producto',
       bodyHTML,
       footerHTML: `
-        <button class="btn btn-secondary btn-sm" id="btn-close-print-modal">${I18nService.t('close')}</button>
-        <button class="btn btn-primary btn-sm" id="btn-trigger-label-print">${I18nService.t('qr_print_label_btn')}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-close-print-modal">Cerrar</button>
+        <button class="btn btn-primary btn-sm" id="btn-trigger-label-print">🖨️ Imprimir Etiqueta</button>
       `,
       size: 'sm'
     });
@@ -1363,7 +1362,7 @@ export class QRCodesView extends Component {
       }
     } catch(e) {
       console.error('[QRCodesView] renderQRCodeWithLogo error:', e);
-      container.innerHTML = `<div style="color:red;font-size:0.65rem;padding:8px;">${I18nService.t('qr_error_generate')}</div>`;
+      container.innerHTML = '<div style="color:red;font-size:0.65rem;padding:8px;">Error al generar QR</div>';
     }
   }
 

@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { CalendarService, EVENT_TYPES, ABSENCE_TYPES } from '../../../services/calendar.service.js';
 import { isModuleEnabled } from '../../../config/modules.config.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class WorkCalendarView extends Component {
   constructor(params = {}) {
@@ -43,8 +44,8 @@ export class WorkCalendarView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Calendario Laboral Compartido',
-      subtitle: 'Gestión inteligente de días libres, vacaciones, licencias y disponibilidad de personal.',
+      title: `📅 ${I18nService.t('shared_work_calendar') || 'Calendario Laboral Compartido'}`,
+      subtitle: I18nService.t('cal_subtitle') || 'Gestión inteligente de días libres, vacaciones, licencias y disponibilidad de personal.',
       contentHTML: this.buildContentHTML()
     });
   }

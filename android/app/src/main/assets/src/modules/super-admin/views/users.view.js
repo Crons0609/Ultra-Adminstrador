@@ -18,8 +18,8 @@ export class UsersView extends Component {
     this.selectedUser = null;
 
     this.layout = new PageLayout({
-      title: I18nService.t('sa_users_title'),
-      subtitle: I18nService.t('sa_users_subtitle'),
+      title: I18nService.t('sa_user_mgmt_title') !== 'sa_user_mgmt_title' ? I18nService.t('sa_user_mgmt_title') : 'Global User Management',
+      subtitle: I18nService.t('sa_user_mgmt_subtitle') !== 'sa_user_mgmt_subtitle' ? I18nService.t('sa_user_mgmt_subtitle') : 'Centralized management of all accounts registered on the platform.',
       actionHTML: `
         <button type="button" id="btn-refresh-users" class="btn btn-secondary btn-sm" style="display:flex; align-items:center; gap:6px;">
           🔄 ${I18nService.t('refresh')}
@@ -47,22 +47,22 @@ export class UsersView extends Component {
               
               <!-- Role Filter -->
               <select id="filter-role-select" class="input input-md" style="min-width: 140px;">
-                <option value="ALL">${I18nService.t('select_all').replace(' Seleccionar Todo', 'Todos')}</option>
-                <option value="SUPER_ADMIN">${I18nService.t('sa_users_role_sa')}</option>
-                <option value="OWNER">${I18nService.t('sa_users_role_owner')}</option>
-                <option value="MANAGER">${I18nService.t('sa_users_role_manager')}</option>
-                <option value="CASHIER">${I18nService.t('sa_users_role_cashier')}</option>
-                <option value="WAITER">${I18nService.t('sa_users_role_waiter')}</option>
-                <option value="KITCHEN">${I18nService.t('sa_users_role_kitchen')}</option>
-                <option value="CUSTOMER">${I18nService.t('sa_users_role_customer')}</option>
+                <option value="ALL">${I18nService.t('select_all') !== 'Select All' ? I18nService.t('select_all') : 'All Roles'}</option>
+                <option value="SUPER_ADMIN">⚡ ${I18nService.t('sa_title')}</option>
+                <option value="OWNER">👑 ${I18nService.t('emp_role_owner')}</option>
+                <option value="MANAGER">👔 ${I18nService.t('emp_role_manager')}</option>
+                <option value="CASHIER">💵 ${I18nService.t('emp_role_cashier')}</option>
+                <option value="WAITER">🍽️ ${I18nService.t('emp_role_waiter')}</option>
+                <option value="KITCHEN">👨‍🍳 ${I18nService.t('emp_role_kitchen')}</option>
+                <option value="CUSTOMER">👤 Client</option>
               </select>
 
               <!-- Status Filter -->
               <select id="filter-status-select" class="input input-md" style="min-width: 130px;">
-                <option value="ALL">${I18nService.t('select_all').replace(' Seleccionar Todo', 'Todos')}</option>
-                <option value="ACTIVE">${I18nService.t('sa_users_status_active')}</option>
-                <option value="SUSPENDED">${I18nService.t('sa_users_status_suspended')}</option>
-                <option value="DISABLED">${I18nService.t('sa_users_status_disabled')}</option>
+                <option value="ALL">${I18nService.t('select_all') !== 'Select All' ? I18nService.t('select_all') : 'All Statuses'}</option>
+                <option value="ACTIVE">✅ ${I18nService.t('active')}</option>
+                <option value="SUSPENDED">⏳ ${I18nService.t('on_hold')}</option>
+                <option value="DISABLED">🚫 ${I18nService.t('disabled')}</option>
               </select>
 
               <!-- Business Filter -->
@@ -110,7 +110,7 @@ export class UsersView extends Component {
         <div id="edit-user-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
           <div class="card p-6" style="max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-              <h3 class="text-lg font-bold">✏️ ${I18nService.t('sa_users_edit_profile')}</h3>
+              <h3 class="text-lg font-bold">✏️ Editar Perfil de Usuario</h3>
               <button type="button" id="btn-close-edit-modal" class="btn btn-secondary btn-sm" style="padding: 2px 8px;">✖</button>
             </div>
 
@@ -118,59 +118,59 @@ export class UsersView extends Component {
               <input type="hidden" id="edit-user-uid" />
 
               <div class="form-group">
-                <label class="form-label" for="edit-user-name">${I18nService.t('emp_full_name')}</label>
+                <label class="form-label" for="edit-user-name">Nombre Completo</label>
                 <input type="text" id="edit-user-name" class="input input-md" required />
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="edit-user-email">${I18nService.t('emp_email')}</label>
+                <label class="form-label" for="edit-user-email">Correo Electrónico</label>
                 <input type="email" id="edit-user-email" class="input input-md" required />
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="edit-user-phone">${I18nService.t('sup_phone')}</label>
+                <label class="form-label" for="edit-user-phone">Teléfono de Contacto</label>
                 <input type="text" id="edit-user-phone" class="input input-md" placeholder="+52 123 456 7890" />
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div class="form-group">
-                  <label class="form-label" for="edit-user-role">${I18nService.t('emp_role')}</label>
+                  <label class="form-label" for="edit-user-role">Rol del Usuario</label>
                   <select id="edit-user-role" class="input input-md">
-                    <option value="SUPER_ADMIN">${I18nService.t('sa_users_role_sa')}</option>
-                    <option value="OWNER">${I18nService.t('sa_users_role_owner')}</option>
-                    <option value="MANAGER">${I18nService.t('sa_users_role_manager')}</option>
-                    <option value="CASHIER">${I18nService.t('sa_users_role_cashier')}</option>
-                    <option value="WAITER">${I18nService.t('sa_users_role_waiter')}</option>
-                    <option value="KITCHEN">${I18nService.t('sa_users_role_kitchen')}</option>
-                    <option value="CUSTOMER">${I18nService.t('sa_users_role_customer')}</option>
+                    <option value="SUPER_ADMIN">⚡ Programador (SuperAdmin)</option>
+                    <option value="OWNER">👑 Dueño / Propietario</option>
+                    <option value="MANAGER">👔 Gerente / Administrador</option>
+                    <option value="CASHIER">💵 Cajero</option>
+                    <option value="WAITER">🍽️ Mesero</option>
+                    <option value="KITCHEN">👨‍🍳 Cocina</option>
+                    <option value="CUSTOMER">👤 Cliente</option>
                   </select>
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label" for="edit-user-status">${I18nService.t('status')}</label>
+                  <label class="form-label" for="edit-user-status">Estado de la Cuenta</label>
                   <select id="edit-user-status" class="input input-md">
-                    <option value="ACTIVE">${I18nService.t('sa_users_status_active')}</option>
-                    <option value="SUSPENDED">${I18nService.t('sa_users_status_suspended')}</option>
-                    <option value="DISABLED">${I18nService.t('sa_users_status_disabled')}</option>
+                    <option value="ACTIVE">✅ Activa</option>
+                    <option value="SUSPENDED">⏳ Suspendida</option>
+                    <option value="DISABLED">🚫 Deshabilitada</option>
                   </select>
                 </div>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="edit-user-company">${I18nService.t('sa_users_assigned_biz')}</label>
+                <label class="form-label" for="edit-user-company">Negocio Asignado</label>
                 <select id="edit-user-company" class="input input-md">
-                  <option value="global">${I18nService.t('sa_users_global_saas')}</option>
+                  <option value="global">SaaS Global (Administración)</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="edit-user-photo">${I18nService.t('sa_users_photo_url')}</label>
+                <label class="form-label" for="edit-user-photo">URL Foto de Perfil / Avatar</label>
                 <input type="url" id="edit-user-photo" class="input input-md" placeholder="https://..." />
               </div>
 
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
-                <button type="button" id="btn-cancel-edit" class="btn btn-secondary btn-md">${I18nService.t('cancel')}</button>
-                <button type="submit" id="btn-save-edit" class="btn btn-primary btn-md">${I18nService.t('save_changes')}</button>
+                <button type="button" id="btn-cancel-edit" class="btn btn-secondary btn-md">Cancelar</button>
+                <button type="submit" id="btn-save-edit" class="btn btn-primary btn-md">Guardar Cambios</button>
               </div>
             </form>
           </div>
@@ -180,7 +180,7 @@ export class UsersView extends Component {
         <div id="password-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
           <div class="card p-6" style="max-width: 440px; width: 100%;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-              <h3 class="text-lg font-bold" style="color: #60a5fa;">🔑 ${I18nService.t('sa_users_change_pass_title')}</h3>
+              <h3 class="text-lg font-bold" style="color: #60a5fa;">🔑 Cambiar Contraseña de Usuario</h3>
               <button type="button" id="btn-close-pass-modal" class="btn btn-secondary btn-sm" style="padding: 2px 8px;">✖</button>
             </div>
 
@@ -191,13 +191,13 @@ export class UsersView extends Component {
               <input type="hidden" id="pass-user-email" />
 
               <div class="form-group">
-                <label class="form-label" for="new-pass-input">${I18nService.t('sa_users_new_pass_label')}</label>
+                <label class="form-label" for="new-pass-input">Nueva Contraseña (mín. 6 caracteres)</label>
                 <input type="password" id="new-pass-input" class="input input-md" placeholder="******" minlength="6" required />
               </div>
 
               <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 12px;">
-                <button type="button" id="btn-cancel-pass" class="btn btn-secondary btn-md">${I18nService.t('cancel')}</button>
-                <button type="submit" id="btn-submit-pass" class="btn btn-primary btn-md">${I18nService.t('settings_change_password').replace('Cambiar', 'Actualizar')}</button>
+                <button type="button" id="btn-cancel-pass" class="btn btn-secondary btn-md">Cancelar</button>
+                <button type="submit" id="btn-submit-pass" class="btn btn-primary btn-md">Actualizar Contraseña</button>
               </div>
             </form>
           </div>
@@ -206,21 +206,21 @@ export class UsersView extends Component {
         <!-- DELETE USER CONFIRMATION MODAL -->
         <div id="delete-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
           <div class="card p-6" style="max-width: 460px; width: 100%; border: 1px solid rgba(239,68,68,0.4);">
-            <h3 class="text-lg font-bold" style="color: #ef4444; margin-bottom: 12px;">🚨 ${I18nService.t('sa_users_delete_account_title')}</h3>
+            <h3 class="text-lg font-bold" style="color: #ef4444; margin-bottom: 12px;">🚨 Eliminar Cuenta de Usuario</h3>
             
             <p id="delete-target-info" class="text-xs text-secondary mb-4" style="line-height: 1.5;"></p>
 
             <div style="padding: 12px; background: rgba(239,68,68,0.08); border-radius: 6px; border: 1px solid rgba(239,68,68,0.2); margin-bottom: 16px;">
               <p class="text-xs" style="color: #f87171; margin: 0;">
-                ⚠️ ${I18nService.t('sa_users_delete_confirm_hint')}
+                ⚠️ Para confirmar la eliminación permanente, escribe el correo electrónico del usuario exactamente como aparece arriba:
               </p>
             </div>
 
-            <input type="text" id="delete-confirm-email-input" class="input input-md mb-4" placeholder="${I18nService.t('sa_users_delete_placeholder')}" style="font-family: monospace;" />
+            <input type="text" id="delete-confirm-email-input" class="input input-md mb-4" placeholder="Ingresa el correo para confirmar" style="font-family: monospace;" />
 
             <div style="display: flex; gap: 12px; justify-content: flex-end;">
-              <button type="button" id="btn-cancel-delete" class="btn btn-secondary btn-md">${I18nService.t('cancel')}</button>
-              <button type="button" id="btn-confirm-delete" class="btn btn-danger btn-md" disabled style="opacity: 0.5; cursor: not-allowed;">🔥 ${I18nService.t('sa_users_delete_permanent_btn')}</button>
+              <button type="button" id="btn-cancel-delete" class="btn btn-secondary btn-md">Cancelar</button>
+              <button type="button" id="btn-confirm-delete" class="btn btn-danger btn-md" disabled style="opacity: 0.5; cursor: not-allowed;">🔥 Eliminar Cuenta Definitivamente</button>
             </div>
           </div>
         </div>
@@ -299,7 +299,7 @@ export class UsersView extends Component {
       console.log('[UsersView] Cargando lista global de usuarios y empresas...');
       
       const countBadge = root.querySelector('#users-count-badge');
-      if (countBadge) countBadge.textContent = I18nService.t('sa_users_querying_firebase');
+      if (countBadge) countBadge.textContent = '⏳ Consultando usuarios en Firebase...';
 
       // Load companies for select options
       const companies = await FirestoreService.getCompanies();
@@ -314,13 +314,13 @@ export class UsersView extends Component {
       console.log(`[UsersView] ✅ Cargados ${this.allUsers.length} usuarios.`);
     } catch (err) {
       console.error('[UsersView] Error al cargar usuarios:', err);
-      NotificationService.error(I18nService.t('sa_users_error_load', { error: err.message || err }));
+      NotificationService.error(`Error al cargar lista de usuarios: ${err.message || err}`);
       const tbody = root.querySelector('#users-table-body');
       if (tbody) {
         tbody.innerHTML = `
           <tr>
             <td colspan="7" style="padding: 24px; text-align: center; color: #ef4444;">
-              ❌ ${I18nService.t('sa_users_error_fetch', { error: err.message || err })}
+              ❌ Error al obtener usuarios de Firebase: ${err.message || err}
             </td>
           </tr>
         `;
@@ -332,8 +332,8 @@ export class UsersView extends Component {
     const filterSelect = root.querySelector('#filter-company-select');
     const editSelect = root.querySelector('#edit-user-company');
 
-    let optionsHTML = `<option value="ALL">${I18nService.t('sa_users_all_biz')}</option><option value="global">${I18nService.t('sa_users_global_saas')}</option>`;
-    let editOptionsHTML = `<option value="global">${I18nService.t('sa_users_global_saas')}</option>`;
+    let optionsHTML = '<option value="ALL">Todos los Negocios</option><option value="global">SaaS Global (Administración)</option>';
+    let editOptionsHTML = '<option value="global">SaaS Global (Administración)</option>';
 
     this.companiesList.forEach(c => {
       const name = c.informacion_local?.nombre || c.name || c.id;
@@ -376,7 +376,7 @@ export class UsersView extends Component {
     const countBadge = root.querySelector('#users-count-badge');
 
     if (countBadge) {
-      countBadge.textContent = I18nService.t('sa_users_showing_count', { count: this.filteredUsers.length, total: this.allUsers.length });
+      countBadge.textContent = `Mostrando ${this.filteredUsers.length} de ${this.allUsers.length} usuarios registrados`;
     }
 
     if (!tbody) return;
@@ -385,7 +385,7 @@ export class UsersView extends Component {
       tbody.innerHTML = `
         <tr>
           <td colspan="7" style="padding: 32px; text-align: center; color: var(--color-text-tertiary);">
-            🔍 ${I18nService.t('sa_users_not_found')}
+            🔍 No se encontraron usuarios con los criterios de búsqueda seleccionados.
           </td>
         </tr>
       `;
@@ -476,13 +476,13 @@ export class UsersView extends Component {
 
   getRoleBadgeHTML(role) {
     const roles = {
-      SUPER_ADMIN: { label: I18nService.t('sa_users_role_sa'), bg: 'rgba(139,92,246,0.2)', color: '#c084fc', border: 'rgba(139,92,246,0.4)' },
-      OWNER: { label: I18nService.t('sa_users_role_owner'), bg: 'rgba(234,179,8,0.2)', color: '#fde047', border: 'rgba(234,179,8,0.4)' },
-      MANAGER: { label: I18nService.t('sa_users_role_manager'), bg: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: 'rgba(59,130,246,0.4)' },
-      CASHIER: { label: I18nService.t('sa_users_role_cashier'), bg: 'rgba(16,185,129,0.2)', color: '#34d399', border: 'rgba(16,185,129,0.4)' },
-      WAITER: { label: I18nService.t('sa_users_role_waiter'), bg: 'rgba(249,115,22,0.2)', color: '#fb923c', border: 'rgba(249,115,22,0.4)' },
-      KITCHEN: { label: I18nService.t('sa_users_role_kitchen'), bg: 'rgba(236,72,153,0.2)', color: '#f472b6', border: 'rgba(236,72,153,0.4)' },
-      CUSTOMER: { label: I18nService.t('sa_users_role_customer'), bg: 'rgba(107,114,128,0.2)', color: '#9ca3af', border: 'rgba(107,114,128,0.4)' }
+      SUPER_ADMIN: { label: `⚡ ${I18nService.t('sa_title')}`, bg: 'rgba(139,92,246,0.2)', color: '#c084fc', border: 'rgba(139,92,246,0.4)' },
+      OWNER: { label: `👑 ${I18nService.t('emp_role_owner')}`, bg: 'rgba(234,179,8,0.2)', color: '#fde047', border: 'rgba(234,179,8,0.4)' },
+      MANAGER: { label: `👔 ${I18nService.t('emp_role_manager')}`, bg: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: 'rgba(59,130,246,0.4)' },
+      CASHIER: { label: `💵 ${I18nService.t('emp_role_cashier')}`, bg: 'rgba(16,185,129,0.2)', color: '#34d399', border: 'rgba(16,185,129,0.4)' },
+      WAITER: { label: `🍽️ ${I18nService.t('emp_role_waiter')}`, bg: 'rgba(249,115,22,0.2)', color: '#fb923c', border: 'rgba(249,115,22,0.4)' },
+      KITCHEN: { label: `👨‍🍳 ${I18nService.t('emp_role_kitchen')}`, bg: 'rgba(236,72,153,0.2)', color: '#f472b6', border: 'rgba(236,72,153,0.4)' },
+      CUSTOMER: { label: `👤 Client`, bg: 'rgba(107,114,128,0.2)', color: '#9ca3af', border: 'rgba(107,114,128,0.4)' }
     };
     const r = roles[role] || { label: role, bg: 'rgba(255,255,255,0.1)', color: '#fff', border: 'rgba(255,255,255,0.2)' };
     return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: ${r.bg}; color: ${r.color}; border: 1px solid ${r.border};">${r.label}</span>`;
@@ -490,12 +490,12 @@ export class UsersView extends Component {
 
   getStatusBadgeHTML(status = 'ACTIVE') {
     if (status === 'SUSPENDED') {
-      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.3);">${I18nService.t('sa_users_status_suspended')}</span>`;
+      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.3);">⏳ ${I18nService.t('on_hold')}</span>`;
     }
     if (status === 'DISABLED') {
-      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">${I18nService.t('sa_users_status_disabled')}</span>`;
+      return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3);">🚫 ${I18nService.t('disabled')}</span>`;
     }
-    return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">${I18nService.t('sa_users_status_active')}</span>`;
+    return `<span style="font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">✅ ${I18nService.t('active')}</span>`;
   }
 
   openEditUserModal(uid, root) {
@@ -529,7 +529,7 @@ export class UsersView extends Component {
 
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.textContent = I18nService.t('saving');
+      saveBtn.textContent = 'Guardando...';
     }
 
     try {
@@ -543,16 +543,16 @@ export class UsersView extends Component {
         photoURL
       });
 
-      NotificationService.success(I18nService.t('sa_users_updated_toast', { name: displayName }));
+      NotificationService.success(`Perfil de "${displayName}" actualizado correctamente.`);
       this.closeModal('#edit-user-modal', root);
       await this.loadInitialData(root);
     } catch (err) {
       console.error('[UsersView] Error al actualizar perfil:', err);
-      NotificationService.error(I18nService.t('sa_users_update_error_toast', { error: err.message || err }));
+      NotificationService.error(`Error al actualizar usuario: ${err.message || err}`);
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = I18nService.t('save_changes');
+        saveBtn.textContent = 'Guardar Cambios';
       }
     }
   }
@@ -564,7 +564,7 @@ export class UsersView extends Component {
 
     root.querySelector('#pass-user-uid').value = user.uid;
     root.querySelector('#pass-user-email').value = user.email;
-    root.querySelector('#pass-target-user-info').innerHTML = `${I18nService.t('sa_users_modifying_pass_for')} <strong>${this.escapeHTML(user.displayName)}</strong> (${user.email})`;
+    root.querySelector('#pass-target-user-info').innerHTML = `Modificando clave para: <strong>${this.escapeHTML(user.displayName)}</strong> (${user.email})`;
     root.querySelector('#new-pass-input').value = '';
 
     this.openModal('#password-modal', root);
@@ -578,27 +578,27 @@ export class UsersView extends Component {
     const submitBtn = root.querySelector('#btn-submit-pass');
 
     if (!newPassword || newPassword.length < 6) {
-      NotificationService.error(I18nService.t('sa_users_pass_short_error'));
+      NotificationService.error('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('updating');
+      submitBtn.textContent = 'Actualizando...';
     }
 
     try {
       await AuthService.adminUpdateUserPassword(uid, email, newPassword);
-      NotificationService.success(I18nService.t('sa_users_pass_updated_toast', { email }));
+      NotificationService.success(`Contraseña actualizada con éxito para ${email}.`);
       this.closeModal('#password-modal', root);
       await this.loadInitialData(root);
     } catch (err) {
       console.error('[UsersView] Error al actualizar clave:', err);
-      NotificationService.error(I18nService.t('sa_users_pass_error_toast', { error: err.message || err }));
+      NotificationService.error(`Error al actualizar clave: ${err.message || err}`);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = I18nService.t('settings_change_password').replace('Cambiar', 'Actualizar');
+        submitBtn.textContent = 'Actualizar Contraseña';
       }
     }
   }
@@ -609,9 +609,9 @@ export class UsersView extends Component {
     this.selectedUser = user;
 
     root.querySelector('#delete-target-info').innerHTML = `
-      ${I18nService.t('sa_users_about_to_delete')} <strong>${this.escapeHTML(user.displayName)}</strong><br/>
-      ${I18nService.t('auth_email')}: <code style="color:#60a5fa;">${user.email}</code><br/>
-      ${I18nService.t('emp_role')}: <strong>${user.role}</strong> | ${I18nService.t('ri_invoice_num').replace('Factura', 'Negocio')}: <strong>${user.companyName}</strong>
+      Estás a punto de eliminar a: <strong>${this.escapeHTML(user.displayName)}</strong><br/>
+      Correo: <code style="color:#60a5fa;">${user.email}</code><br/>
+      Rol: <strong>${user.role}</strong> | Negocio: <strong>${user.companyName}</strong>
     `;
 
     const confirmInput = root.querySelector('#delete-confirm-email-input');
@@ -635,21 +635,21 @@ export class UsersView extends Component {
 
     if (deleteBtn) {
       deleteBtn.disabled = true;
-      deleteBtn.textContent = I18nService.t('deleting');
+      deleteBtn.textContent = 'Eliminando...';
     }
 
     try {
       await AuthService.adminDeleteUserAccount(user.uid, user.email, user.companyId);
-      NotificationService.success(I18nService.t('sa_users_deleted_toast', { name: user.displayName }));
+      NotificationService.success(`Cuenta de "${user.displayName}" eliminada permanentemente.`);
       this.closeModal('#delete-modal', root);
       await this.loadInitialData(root);
     } catch (err) {
       console.error('[UsersView] Error al eliminar usuario:', err);
-      NotificationService.error(I18nService.t('sa_users_delete_error_toast', { error: err.message || err }));
+      NotificationService.error(`Error al eliminar cuenta: ${err.message || err}`);
     } finally {
       if (deleteBtn) {
         deleteBtn.disabled = false;
-        deleteBtn.textContent = '🔥 ' + I18nService.t('sa_users_delete_permanent_btn');
+        deleteBtn.textContent = '🔥 Eliminar Cuenta Definitivamente';
       }
     }
   }

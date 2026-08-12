@@ -6,6 +6,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class AccountsPayableView extends Component {
   constructor(params = {}) {
@@ -25,30 +26,30 @@ export class AccountsPayableView extends Component {
     // Initialize DataTable
     this.table = new DataTable({
       columns: [
-        { key: 'supplierName', label: 'Proveedor', render: (val) => `<span class="font-semibold text-primary">🏢 ${val}</span>` },
-        { key: 'invoiceRef', label: 'N° Factura', render: (val) => `<code>#${val || 'N/D'}</code>` },
+        { key: 'supplierName', label: I18nService.t('ap_col_supplier') || 'Proveedor', render: (val) => `<span class="font-semibold text-primary">🏢 ${val}</span>` },
+        { key: 'invoiceRef', label: I18nService.t('invoice_number') || 'N° Factura', render: (val) => `<code>#${val || 'N/D'}</code>` },
         { 
           key: 'amount', 
-          label: 'Monto Total', 
+          label: I18nService.t('ap_col_amount') || 'Monto Total', 
           render: (val) => `<strong style="color:var(--color-danger);">${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)}</strong>` 
         },
         { 
           key: 'dueDate', 
-          label: 'Vencimiento', 
-          render: (val) => val ? new Date(val).toLocaleDateString() : '<span class="text-secondary">N/D</span>' 
+          label: I18nService.t('ap_col_due') || 'Vencimiento', 
+          render: (val) => val ? new Date(val).toLocaleDateString() : `<span class="text-secondary">${I18nService.t('no_data')}</span>` 
         },
         {
           key: 'status',
-          label: 'Estado',
+          label: I18nService.t('ap_col_status') || 'Estado',
           render: (val) => `<span class="badge" style="background-color: ${val === 'PENDIENTE' ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-tertiary)'}; color: ${val === 'PENDIENTE' ? 'var(--color-danger)' : 'var(--color-text-secondary)'}; border: 1px solid var(--color-border); padding: 2px 8px; border-radius: var(--radius-md); font-size: 0.75rem;">${val || 'PENDIENTE'}</span>`
         },
         {
           key: 'id',
-          label: 'Acción',
+          label: I18nService.t('ap_col_actions') || 'Acción',
           render: (val, row) => `
             <div class="d-flex gap-2">
               ${row.status === 'PENDIENTE' ? `
-                <button class="btn btn-primary btn-xs btn-pay-bill" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">💳 Liquidar Deuda</button>
+                <button class="btn btn-primary btn-xs btn-pay-bill" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">💳 ${I18nService.t('pay_bill') || 'Liquidar Deuda'}</button>
               ` : ''}
               <button class="btn btn-secondary btn-xs btn-delete-bill" data-id="${val}" style="padding: 2px 6px; font-size: 0.7rem;">🗑️</button>
             </div>
@@ -59,15 +60,15 @@ export class AccountsPayableView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Cuentas por Pagar (Proveedores)',
-      subtitle: 'Gestiona facturas a crédito de proveedores e intégralas de forma automatizada al inventario mediante fotos.',
+      title: I18nService.t('nav_accounts_payable') || 'Cuentas por Pagar (Proveedores)',
+      subtitle: I18nService.t('accounts_payable_subtitle') || 'Gestiona facturas a crédito de proveedores e intégralas de forma automatizada al inventario mediante fotos.',
       actionHTML: `
         <div class="d-flex gap-2">
           <a class="btn btn-secondary btn-sm" href="#/owner/supplier-reminders">
-            🏢 Avisos de Pago
+            🏢 ${I18nService.t('payment_reminders') || 'Avisos de Pago'}
           </a>
           <button class="btn btn-primary btn-sm" id="btn-scan-invoice">
-            📷 Subir Foto Factura
+            📷 ${I18nService.t('upload_invoice_photo') || 'Subir Foto Factura'}
           </button>
         </div>
       `,
@@ -75,21 +76,21 @@ export class AccountsPayableView extends Component {
         <!-- KPI summary row -->
         <div class="grid-stats mb-5" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
           <div class="card p-4">
-            <span class="text-sm text-secondary">Total Deuda Proveedores</span>
+            <span class="text-sm text-secondary">${I18nService.t('total_supplier_debt') || 'Total Deuda Proveedores'}</span>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="kpi-total-payable">$0.00</h3>
           </div>
           <div class="card p-4">
-            <span class="text-sm text-secondary">Facturas Pendientes</span>
+            <span class="text-sm text-secondary">${I18nService.t('pending_invoices') || 'Facturas Pendientes'}</span>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="kpi-pending-bills" style="color: var(--color-danger);">0</h3>
           </div>
           <div class="card p-4">
-            <span class="text-sm text-secondary">Facturas Liquidadas</span>
+            <span class="text-sm text-secondary">${I18nService.t('paid_invoices') || 'Facturas Liquidadas'}</span>
             <h3 class="text-2xl font-bold mt-1 text-primary" id="kpi-paid-bills" style="color: var(--color-success);">0</h3>
           </div>
         </div>
 
         <div class="card p-5">
-          <h3 class="text-lg font-semibold mb-4">Cuentas por Pagar</h3>
+          <h3 class="text-lg font-semibold mb-4">${I18nService.t('nav_accounts_payable') || 'Cuentas por Pagar'}</h3>
           <div id="bills-table-wrapper"></div>
         </div>
       `

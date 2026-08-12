@@ -8,6 +8,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { AuthService } from '../../../services/auth.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class SupportCenterView extends Component {
   constructor(params = {}) {
@@ -30,8 +31,8 @@ export class SupportCenterView extends Component {
     this.listeners = [];
 
     this.layout = new PageLayout({
-      title: 'Centro de Soporte Técnico',
-      subtitle: 'Administración global de solicitudes de recuperación de cuentas y consultas de clientes.',
+      title: I18nService.t('technical_support_center', 'Centro de Soporte Técnico'),
+      subtitle: I18nService.t('technical_support_center_subtitle', 'Administración global de solicitudes de recuperación de cuentas y consultas de clientes.'),
       actionHTML: `
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-success btn-sm" id="btn-supp-broadcast-apk" style="background: linear-gradient(135deg, #10b981, #059669); border:none; font-weight:700; color:#fff;">

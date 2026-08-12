@@ -2,6 +2,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { Chart } from '../../../components/data/chart.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class KitchenStatsView extends Component {
   constructor(params = {}) {
@@ -15,8 +16,8 @@ export class KitchenStatsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Estadísticas de Cocina',
-      subtitle: 'Rendimiento del área, tiempo promedio de preparación y platos más demandados.',
+      title: I18nService.t('kitchen_stats_title', 'Estadísticas de Cocina'),
+      subtitle: I18nService.t('kitchen_stats_subtitle', 'Rendimiento del área, tiempo promedio de preparación y platos más demandados.'),
       contentHTML: `
         <style>
           .kitchen-kpis { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:var(--space-4); margin-bottom:var(--space-6); }

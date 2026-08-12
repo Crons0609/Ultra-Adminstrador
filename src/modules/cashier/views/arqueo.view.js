@@ -11,6 +11,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { GlobalStore } from '../../../core/state.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ArqueoView extends Component {
   constructor(params = {}) {
@@ -28,8 +29,8 @@ export class ArqueoView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: 'Arqueo de Caja',
-      subtitle: 'Registra los movimientos del día, cuadra la caja y envía el reporte al dueño para su aprobación.',
+      title: I18nService.t('arqueo_title', 'Arqueo de Caja'),
+      subtitle: I18nService.t('arqueo_subtitle', 'Registra los movimientos del día, cuadra la caja y envía el reporte al dueño para su aprobación.'),
       actionHTML: `
         <button class="btn btn-success btn-sm" id="btn-arqueo-send" style="display:flex;align-items:center;gap:6px;background:#34d399;border:none;color:#000;font-weight:700;">
           ✅ Listo para Enviar

@@ -13,6 +13,7 @@ import { NotificationService } from '../../../services/notification.service.js';
 import { BarcodeInput } from '../../../components/forms/barcode-input.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class AssetsView extends Component {
   constructor(params = {}) {
@@ -86,8 +87,8 @@ export class AssetsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Registro de Activos y Equipos',
-      subtitle: 'Administra los bienes tangibles de la empresa, inventario de computadoras, mobiliario e infraestructura.',
+      title: I18nService.t('assets_mgmt_title', 'Registro de Activos y Equipos'),
+      subtitle: I18nService.t('assets_mgmt_subtitle', 'Administra los bienes tangibles de la empresa, inventario de computadoras, mobiliario e infraestructura.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-asset">
           + Registrar Activo

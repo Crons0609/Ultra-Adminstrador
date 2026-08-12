@@ -50,7 +50,7 @@ export class ExpensesView extends Component {
 
     this.layout = new PageLayout({
       title: I18nService.t('exp_title'),
-      subtitle: 'Track and manage operational expenses and outflows.',
+      subtitle: I18nService.t('exp_subtitle') || 'Rastrea y gestiona gastos operativos y salidas de caja.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-expense">
           + ${I18nService.t('exp_add')}

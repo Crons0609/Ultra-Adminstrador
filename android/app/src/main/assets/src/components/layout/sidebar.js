@@ -130,13 +130,55 @@ export class Sidebar extends Component {
             }
           });
 
+          const getModuleName = (m) => {
+            const map = {
+              dashboard: 'nav_dashboard',
+              employees: 'nav_employees',
+              inventory: 'nav_inventory',
+              invoiceScanner: 'nav_invoice_scanner',
+              migration: 'nav_migration',
+              assets: 'nav_assets',
+              scanHistory: 'nav_scan_history',
+              qrCodes: 'nav_qr_codes',
+              specialPrices: 'nav_special_pricing',
+              publicPage: 'nav_public_page',
+              settings: 'nav_settings',
+              branches: 'nav_branches',
+              warehouse: 'nav_warehouse',
+              expenses: 'nav_expenses',
+              balance: 'nav_balance',
+              financialControl: 'nav_financial_control',
+              accountsPayable: 'nav_payable',
+              accountsReceivable: 'nav_receivable',
+              projections: 'nav_projections',
+              creditSystem: 'nav_credit_system',
+              basicServices: 'nav_basic_services',
+              supplierReminders: 'nav_supplier_reminders',
+              pos: 'nav_pos',
+              serviceRequests: 'nav_service_requests',
+              recurringClients: 'nav_recurring_clients',
+              paymentReminders: 'nav_payment_reminders',
+              clientAssignments: 'ca_my_clients',
+              tools: 'nav_tools',
+              vehicles: 'nav_vehicles',
+              rentals: 'nav_rentals',
+              appointments: 'nav_appointments',
+              whatsAppHub: 'nav_whatsapp',
+              telegramHub: 'nav_telegram',
+              catalogSettings: 'nav_catalog',
+              workCalendar: 'nav_work_calendar'
+            };
+            const key = map[m.id];
+            return key ? I18nService.t(key) : (I18nService.t(m.name) || m.name);
+          };
+
           return categories
             .map(cat => ({
               label: categoryLabels[cat] || cat,
               icon: categoryIcons[cat] || '📦',
               items: enabledModules
                 .filter(m => m.category === cat)
-                .map(m => ({ label: m.name, path: m.path, icon: m.icon }))
+                .map(m => ({ label: getModuleName(m), path: m.path, icon: m.icon }))
             }))
             .filter(g => g.items.length > 0);
         })()
@@ -146,7 +188,48 @@ export class Sidebar extends Component {
           const enabledModules = MODULE_REGISTRY.filter(m =>
             m.allowedRoles.includes('MANAGER') && isModuleEnabled(currentCompany, m.id)
           );
-          const allItems = enabledModules.map(m => ({ label: m.name, path: m.path, icon: m.icon }));
+          const getModuleName = (m) => {
+            const map = {
+              dashboard: 'nav_dashboard',
+              employees: 'nav_employees',
+              inventory: 'nav_inventory',
+              invoiceScanner: 'nav_invoice_scanner',
+              migration: 'nav_migration',
+              assets: 'nav_assets',
+              scanHistory: 'nav_scan_history',
+              qrCodes: 'nav_qr_codes',
+              specialPrices: 'nav_special_pricing',
+              publicPage: 'nav_public_page',
+              settings: 'nav_settings',
+              branches: 'nav_branches',
+              warehouse: 'nav_warehouse',
+              expenses: 'nav_expenses',
+              balance: 'nav_balance',
+              financialControl: 'nav_financial_control',
+              accountsPayable: 'nav_payable',
+              accountsReceivable: 'nav_receivable',
+              projections: 'nav_projections',
+              creditSystem: 'nav_credit_system',
+              basicServices: 'nav_basic_services',
+              supplierReminders: 'nav_supplier_reminders',
+              pos: 'nav_pos',
+              serviceRequests: 'nav_service_requests',
+              recurringClients: 'nav_recurring_clients',
+              paymentReminders: 'nav_payment_reminders',
+              clientAssignments: 'ca_my_clients',
+              tools: 'nav_tools',
+              vehicles: 'nav_vehicles',
+              rentals: 'nav_rentals',
+              appointments: 'nav_appointments',
+              whatsAppHub: 'nav_whatsapp',
+              telegramHub: 'nav_telegram',
+              catalogSettings: 'nav_catalog',
+              workCalendar: 'nav_work_calendar'
+            };
+            const key = map[m.id];
+            return key ? I18nService.t(key) : (I18nService.t(m.name) || m.name);
+          };
+          const allItems = enabledModules.map(m => ({ label: getModuleName(m), path: m.path, icon: m.icon }));
           const opsLabel = I18nService.t('nav_operations');
           const opsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`;
           return allItems.length > 0 ? [{ label: opsLabel, icon: opsIcon, items: allItems }] : [{ label: opsLabel, icon: opsIcon, items: [] }];

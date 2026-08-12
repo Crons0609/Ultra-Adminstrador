@@ -11,6 +11,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PricingView extends Component {
   constructor(params = {}) {
@@ -95,8 +96,8 @@ export class PricingView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Precios Especiales y Tarifas Preferenciales',
-      subtitle: 'Configura reglas de precios reducidos y descuentos automáticos para empleados, vendedores y clientes VIP.',
+      title: I18nService.t('pricing_rules_title', 'Precios Especiales y Tarifas Preferenciales'),
+      subtitle: I18nService.t('pricing_rules_subtitle', 'Configura reglas de precios reducidos y descuentos automáticos para empleados, vendedores y clientes VIP.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-rule">
           <span>+</span> Nueva Regla de Precio

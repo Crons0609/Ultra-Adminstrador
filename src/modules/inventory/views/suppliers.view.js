@@ -5,6 +5,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class SuppliersView extends Component {
   constructor(params = {}) {
@@ -62,8 +63,8 @@ export class SuppliersView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Directorio de Proveedores',
-      subtitle: 'Administra tus contactos comerciales, categorías de insumos contratados y pedidos mayoristas.',
+      title: I18nService.t('suppliers_title', 'Directorio de Proveedores'),
+      subtitle: I18nService.t('suppliers_subtitle', 'Administra tus contactos comerciales, categorías de insumos contratados y pedidos mayoristas.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-supplier">
           + Registrar Proveedor

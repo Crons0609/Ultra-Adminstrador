@@ -1,7 +1,6 @@
 import { Component } from '../../../core/component.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
-import { I18nService } from '../../../services/i18n.service.js';
 
 export class PublicProductDetailView extends Component {
   constructor(params = {}) {
@@ -32,7 +31,7 @@ export class PublicProductDetailView extends Component {
 
   loadProductData(root) {
     if (!this.companyId || !this.productId) {
-      root.innerHTML = `<div class="pub-container text-center py-10"><p>${I18nService.t('pub_pd_params_error')}</p></div>`;
+      root.innerHTML = `<div class="pub-container text-center py-10"><p>Parámetros no especificados.</p></div>`;
       return;
     }
 
@@ -108,30 +107,26 @@ export class PublicProductDetailView extends Component {
     if (!p) {
       root.innerHTML = `
         <div class="pub-container text-center py-10" style="color:var(--pub-text);">
-          <h2>${I18nService.t('pub_pd_not_found_title')}</h2>
-          <p class="text-secondary mt-2">${I18nService.t('pub_pd_not_found_desc')}</p>
-          <a href="#/${this.companyId}" class="btn btn-primary btn-sm mt-4" style="text-decoration:none;">${I18nService.t('pub_pd_back_to_catalog')}</a>
+          <h2>Producto no encontrado</h2>
+          <p class="text-secondary mt-2">El artículo solicitado ha sido removido del catálogo o no existe.</p>
+          <a href="#/${this.companyId}" class="btn btn-primary btn-sm mt-4" style="text-decoration:none;">Volver al catálogo</a>
         </div>
       `;
       return;
     }
 
-    const lang = I18nService.getLanguage();
-    const currency = (info.currency || 'MXN').toUpperCase();
-    const fmt = new Intl.NumberFormat(lang === 'es' ? 'es-MX' : 'en-US', { style: 'currency', currency });
-
     const companyName = info.nombre || this.companyId.replace(/-/g, ' ');
-    const mainPrice = fmt.format(p.price || 0);
+    const mainPrice = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(p.price || 0);
 
     const oldPrice = p.price * 1.25;
-    const oldPriceFormatted = fmt.format(oldPrice);
+    const oldPriceFormatted = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(oldPrice);
     const hasPromo = p.stock % 2 === 0;
 
     // QR Code generation URL
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}&color=7c75ff`;
 
     // Prefilled WhatsApp message
-    const msgText = encodeURIComponent(I18nService.t('pub_pd_wa_msg', { name: p.name, price: mainPrice, company: companyName }));
+    const msgText = encodeURIComponent(`Hola, estoy interesado en el producto "${p.name}" con precio ${mainPrice} en ${companyName}. ¿Tienen disponibilidad?`);
     const waUrl = cfg.socials?.whatsapp 
       ? `https://wa.me/${cfg.socials.whatsapp}?text=${msgText}`
       : `https://wa.me/5215500000000?text=${msgText}`; // Demo default fallback
@@ -141,9 +136,9 @@ export class PublicProductDetailView extends Component {
       <header style="background:var(--pub-surface); border-bottom:1px solid var(--pub-border); sticky:top; z-index:90;">
         <div class="pub-container d-flex justify-content-between align-items-center" style="height:60px; padding:0 var(--space-4);">
           <a href="#/${this.companyId}" class="text-primary font-semibold d-flex align-items-center gap-2" style="text-decoration:none; font-size:0.875rem;">
-            ${I18nService.t('pub_pd_back_to', { company: companyName })}
+            ⬅️ Volver a ${companyName}
           </a>
-          <span class="text-xs text-secondary font-mono">${p.sku || I18nService.t('pub_pd_sku_label')}</span>
+          <span class="text-xs text-secondary font-mono">${p.sku || 'SKU/Código'}</span>
         </div>
       </header>
 
@@ -166,9 +161,9 @@ export class PublicProductDetailView extends Component {
           <div class="card p-4 mt-4" style="background:var(--pub-surface); border-color:var(--pub-border); display:flex; flex-direction:row; align-items:center; gap:var(--space-4);">
             <img src="${qrUrl}" style="width:90px; height:90px; border-radius:var(--radius-md); background:white; padding:4px;" alt="QR Code" />
             <div>
-              <h5 class="font-semibold text-sm mb-1">${I18nService.t('pub_pd_scan_qr')}</h5>
-              <p class="text-xs text-secondary mb-2">${I18nService.t('pub_pd_share_desc')}</p>
-              <a href="${qrUrl}" download="qr-producto.png" target="_blank" class="btn btn-secondary btn-xs" style="text-decoration:none; padding:2px 8px; font-size:0.65rem;">${I18nService.t('pub_pd_download_qr')}</a>
+              <h5 class="font-semibold text-sm mb-1">Escanea el código</h5>
+              <p class="text-xs text-secondary mb-2">Comparte este artículo con tus amigos o ábrelo en tu teléfono.</p>
+              <a href="${qrUrl}" download="qr-producto.png" target="_blank" class="btn btn-secondary btn-xs" style="text-decoration:none; padding:2px 8px; font-size:0.65rem;">💾 Descargar QR</a>
             </div>
           </div>
         </div>
@@ -177,7 +172,7 @@ export class PublicProductDetailView extends Component {
         <div class="pub-detail-info">
           <div>
             <span class="badge" style="background-color: var(--pub-primary); color: white; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 0.7rem; text-transform: uppercase;">
-              ${p.category || I18nService.t('inv_category_others')}
+              ${p.category || 'Otros'}
             </span>
             <h1 style="font-size:2rem; font-weight:800; margin: 10px 0 6px 0; font-family:var(--font-display); line-height:1.2;">${p.name}</h1>
           </div>
@@ -192,20 +187,20 @@ export class PublicProductDetailView extends Component {
             <div class="d-flex align-items-center gap-3 mt-3">
               <!-- Stock level warning badge -->
               ${Number(p.stock || 0) === 0 
-                ? `<span class="stock-badge stock-out">${I18nService.t('pub_pd_stock_out')}</span>`
+                ? `<span class="stock-badge stock-out">⚠️ Agotado</span>` 
                 : (Number(p.stock || 0) <= Number(p.minStock || 0) 
-                  ? `<span class="stock-badge stock-low">${I18nService.t('pub_pd_stock_low')}</span>`
-                  : `<span class="stock-badge stock-ok">${I18nService.t('pub_pd_stock_ok')}</span>`)}
+                  ? `<span class="stock-badge stock-low">⚠️ Pocas unidades</span>` 
+                  : `<span class="stock-badge stock-ok">✔️ Disponible</span>`)}
               
-              <span class="text-xs text-secondary">${I18nService.t('pub_pd_stock_available', { stock: p.stock })}</span>
+              <span class="text-xs text-secondary">${p.stock} unidades disponibles en almacén</span>
             </div>
           </div>
 
           <!-- Description Section -->
           <div>
-            <h4 class="font-semibold text-sm mb-2">${I18nService.t('pub_pd_description_title')}</h4>
+            <h4 class="font-semibold text-sm mb-2">Descripción del Producto</h4>
             <p class="text-sm text-secondary" style="line-height:1.6;">
-              ${p.description || I18nService.t('pub_pd_description_fallback')}
+              ${p.description || 'Este artículo cuenta con los más altos estándares de calidad de la marca. No te quedes sin probar sus sabores e ingredientes premium seleccionados por expertos de la industria.'}
             </p>
           </div>
 
@@ -214,7 +209,7 @@ export class PublicProductDetailView extends Component {
             <div style="background: rgba(22,163,74,0.06); border: 1px solid rgba(22,163,74,0.18); border-radius: var(--pub-radius); padding: var(--space-4); display: flex; flex-direction: column; gap: 10px;">
               ${p.location ? `
                 <div>
-                  <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:4px;">${I18nService.t('pub_pd_location_label')}</span>
+                  <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:4px;">📍 Ubicación en Tienda</span>
                   <span class="text-sm font-semibold" style="color:var(--pub-text);">${p.location}</span>
                 </div>
               ` : ''}
@@ -222,13 +217,13 @@ export class PublicProductDetailView extends Component {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid rgba(22,163,74,0.12); padding-top: 10px;">
                   ${p.brand ? `
                     <div>
-                      <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:2px;">${I18nService.t('pub_pd_brand_label')}</span>
+                      <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:2px;">🏷️ Marca</span>
                       <span class="text-sm" style="color:var(--pub-text);">${p.brand}</span>
                     </div>
                   ` : ''}
                   ${p.presentation ? `
                     <div>
-                      <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:2px;">${I18nService.t('pub_pd_presentation_label')}</span>
+                      <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:2px;">📦 Presentación</span>
                       <span class="text-sm" style="color:var(--pub-text);">${p.presentation}</span>
                     </div>
                   ` : ''}
@@ -236,7 +231,7 @@ export class PublicProductDetailView extends Component {
               ` : ''}
               ${p.nutritionInfo ? `
                 <div style="border-top: 1px solid rgba(22,163,74,0.12); padding-top: 10px;">
-                  <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:4px;">${I18nService.t('pub_pd_nutrition_label')}</span>
+                  <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#16a34a; letter-spacing:0.5px; display:block; margin-bottom:4px;">🍽️ Información Nutricional</span>
                   <p class="text-xs text-secondary" style="line-height:1.5; white-space: pre-line;">${p.nutritionInfo}</p>
                 </div>
               ` : ''}
@@ -246,17 +241,17 @@ export class PublicProductDetailView extends Component {
           <!-- Call to Actions -->
           <div class="d-flex flex-column gap-3 mt-2">
             <a href="${waUrl}" target="_blank" class="btn btn-primary btn-md btn-detail-wa-click" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:0.95rem; height:46px;">
-              ${I18nService.t('pub_pd_wa_query')}
+              💬 Consultar y Pedir por WhatsApp
             </a>
             
             <button class="btn btn-secondary btn-md btn-copy-link" style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.875rem; height:40px;">
-              ${I18nService.t('pub_pd_copy_link')}
+              🔗 Copiar enlace de este producto
             </button>
           </div>
 
           <!-- Social Share Icons bar -->
           <div style="display:flex; align-items:center; gap:12px; margin-top:10px;">
-            <span class="text-xs text-secondary">${I18nService.t('pub_pd_share_on')}</span>
+            <span class="text-xs text-secondary">Compartir en:</span>
             <div class="pub-social-bar">
               <a href="https://wa.me/?text=${encodeURIComponent(window.location.href)}" target="_blank" class="pub-social-btn" style="width:30px; height:30px; font-size:0.75rem;">💬</a>
               <a href="https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" target="_blank" class="pub-social-btn" style="width:30px; height:30px; font-size:0.75rem;">📘</a>
@@ -306,7 +301,7 @@ export class PublicProductDetailView extends Component {
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(window.location.href);
-        NotificationService.success(I18nService.t('pub_pd_link_copied'));
+        NotificationService.success('Enlace de producto copiado al portapapeles.');
       });
     }
   }
@@ -327,21 +322,21 @@ export class PublicProductDetailView extends Component {
     const reviewsListHTML = reviews.length > 0 ? reviews.map(r => `
       <div class="review-card">
         <div class="d-flex justify-content-between align-items-center">
-          <strong style="font-size:0.875rem;">👤 ${r.name || I18nService.t('pub_pd_anonymous')}</strong>
+          <strong style="font-size:0.875rem;">👤 ${r.name || 'Cliente Anónimo'}</strong>
           <span class="review-stars">${'★'.repeat(r.rating || 5)}${'☆'.repeat(5 - (r.rating || 5))}</span>
         </div>
         <p class="text-xs text-secondary mt-1" style="font-size:0.75rem;">${new Date(r.date || Date.now()).toLocaleDateString()}</p>
         <p class="text-sm mt-2" style="line-height:1.4;">${r.comment || ''}</p>
       </div>
-    `).join('') : `<p class="text-xs text-secondary text-center py-4">${I18nService.t('pub_pd_no_reviews')}</p>`;
+    `).join('') : '<p class="text-xs text-secondary text-center py-4">No hay calificaciones todavía. ¡Sé el primero en dejar una opinión!</p>';
 
     section.innerHTML = `
       <div class="grid-responsive">
         <!-- Reviews List -->
         <div class="col-8">
           <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-lg font-semibold">${I18nService.t('pub_pd_reviews_title')}</h3>
-            <span class="text-sm font-bold text-warning">⭐️ ${avgRating} / 5 ${I18nService.t('pub_pd_reviews_count', { count: reviews.length })}</span>
+            <h3 class="text-lg font-semibold">Valoraciones de Clientes</h3>
+            <span class="text-sm font-bold text-warning">⭐️ ${avgRating} / 5 (${reviews.length} opiniones)</span>
           </div>
           <div class="d-flex flex-column gap-3">
             ${reviewsListHTML}
@@ -351,30 +346,30 @@ export class PublicProductDetailView extends Component {
         <!-- Add Review Form -->
         <div class="col-4">
           <div class="card p-5" style="background:var(--pub-surface); border-color:var(--pub-border);">
-            <h3 class="text-md font-semibold mb-3">${I18nService.t('pub_pd_leave_review')}</h3>
+            <h3 class="text-md font-semibold mb-3">Deja tu opinión</h3>
             <form id="add-review-form" class="d-flex flex-column gap-3">
               <div class="form-group">
-                <label class="form-label" style="font-size:0.75rem;" for="rev-name">${I18nService.t('pub_pd_review_name')}</label>
-                <input type="text" id="rev-name" class="input input-sm" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text);" placeholder="${I18nService.t('pub_pd_review_name_placeholder')}" required />
+                <label class="form-label" style="font-size:0.75rem;" for="rev-name">Tu nombre</label>
+                <input type="text" id="rev-name" class="input input-sm" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text);" placeholder="Ej. Ana L." required />
               </div>
 
               <div class="form-group">
-                <label class="form-label" style="font-size:0.75rem;" for="rev-rating">${I18nService.t('pub_pd_review_rating')}</label>
+                <label class="form-label" style="font-size:0.75rem;" for="rev-rating">Calificación</label>
                 <select id="rev-rating" class="input input-sm" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); padding:0 var(--space-2);">
-                  <option value="5">${I18nService.t('pub_pd_rating_5')}</option>
-                  <option value="4">${I18nService.t('pub_pd_rating_4')}</option>
-                  <option value="3">${I18nService.t('pub_pd_rating_3')}</option>
-                  <option value="2">${I18nService.t('pub_pd_rating_2')}</option>
-                  <option value="1">${I18nService.t('pub_pd_rating_1')}</option>
+                  <option value="5">⭐⭐⭐⭐⭐ Excelente</option>
+                  <option value="4">⭐⭐⭐⭐ Muy bueno</option>
+                  <option value="3">⭐⭐⭐ Aceptable</option>
+                  <option value="2">⭐⭐ Regular</option>
+                  <option value="1">⭐ Deficiente</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" style="font-size:0.75rem;" for="rev-comment">${I18nService.t('pub_pd_review_comment')}</label>
-                <textarea id="rev-comment" class="input" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); height:80px; padding:var(--space-2); font-size:0.8rem;" placeholder="${I18nService.t('pub_pd_review_comment_placeholder')}" required></textarea>
+                <label class="form-label" style="font-size:0.75rem;" for="rev-comment">Comentario</label>
+                <textarea id="rev-comment" class="input" style="background:var(--pub-bg); border-color:var(--pub-border); color:var(--pub-text); height:80px; padding:var(--space-2); font-size:0.8rem;" placeholder="Cuéntanos tu experiencia con este producto..." required></textarea>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-review">${I18nService.t('pub_pd_review_submit')}</button>
+              <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-review">Enviar Calificación</button>
             </form>
           </div>
         </div>
@@ -399,7 +394,7 @@ export class PublicProductDetailView extends Component {
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('pub_sr_submitting');
+      submitBtn.textContent = 'Enviando...';
     }
 
     try {
@@ -410,15 +405,15 @@ export class PublicProductDetailView extends Component {
         date: Date.now()
       });
 
-      NotificationService.success(I18nService.t('pub_pd_review_success'));
+      NotificationService.success('Tu opinión ha sido registrada con éxito.');
       form.reset();
     } catch (err) {
       console.error('[ProductDetailView] Error submitting review:', err);
-      alert(I18nService.t('pub_pd_review_error', { error: err.message }));
+      alert(`Error al registrar tu reseña: ${err.message}`);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = I18nService.t('pub_pd_review_submit');
+        submitBtn.textContent = 'Enviar Calificación';
       }
     }
   }

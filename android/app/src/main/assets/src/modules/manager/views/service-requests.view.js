@@ -12,10 +12,10 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { I18nService } from '../../../services/i18n.service.js';
 
 const STATUS_META = {
-  PENDIENTE:   { label: I18nService.t('pending'),  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: '⏳' },
-  EN_PROCESO:  { label: I18nService.t('in_progress'), color: '#6366f1', bg: 'rgba(99,102,241,0.12)',  icon: '⚙️' },
-  COMPLETADO:  { label: I18nService.t('completed'), color: '#10b981', bg: 'rgba(16,185,129,0.12)',  icon: '✅' },
-  CANCELADO:   { label: I18nService.t('cancelled'),  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '❌' }
+  PENDIENTE:   { label: 'Pendiente',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: '⏳' },
+  EN_PROCESO:  { label: 'En Proceso', color: '#6366f1', bg: 'rgba(99,102,241,0.12)',  icon: '⚙️' },
+  COMPLETADO:  { label: 'Completado', color: '#10b981', bg: 'rgba(16,185,129,0.12)',  icon: '✅' },
+  CANCELADO:   { label: 'Cancelado',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   icon: '❌' }
 };
 
 const SERVICE_ICONS = {
@@ -37,11 +37,11 @@ export class ServiceRequestsView extends Component {
     this._pullStart = null;
 
     this.layout = new PageLayout({
-      title: I18nService.t('nav_service_requests'),
-      subtitle: I18nService.t('sr_subtitle'),
+      title: `📥 ${I18nService.t('service_requests_title', 'Solicitudes de Servicio')}`,
+      subtitle: I18nService.t('service_requests_subtitle', 'Bandeja de solicitudes de clientes y seguimiento de órdenes'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-sr-refresh" style="display:flex;align-items:center;gap:6px;">
-          ${I18nService.t('refresh')}
+          🔄 Actualizar
         </button>
       `,
       contentHTML: `<div id="sr-page-root"></div>`
@@ -180,7 +180,7 @@ export class ServiceRequestsView extends Component {
 
     const filterChips = ['TODOS', ...Object.keys(STATUS_META)].map(key => {
       const m = STATUS_META[key];
-      const lbl = key === 'TODOS' ? I18nService.t('all') : m.label;
+      const lbl = key === 'TODOS' ? 'Todos' : m.label;
       const ico = key === 'TODOS' ? '📋' : m.icon;
       return `<button class="sr-chip sr-filter-chip ${this.filter === key ? 'active' : ''}" data-filter="${key}">${ico} ${lbl}</button>`;
     }).join('');
@@ -189,11 +189,11 @@ export class ServiceRequestsView extends Component {
       ? filtered.map(r => this._card(r)).join('')
       : `<div class="sr-empty">
           <div class="sr-empty-icon">📭</div>
-          <h3 style="font-weight:700;margin:0 0 8px;color:var(--color-text-primary)">${I18nService.t('sr_empty')}</h3>
+          <h3 style="font-weight:700;margin:0 0 8px;color:var(--color-text-primary)">Sin solicitudes</h3>
           <p style="font-size:0.85rem;color:var(--color-text-secondary);margin:0 0 16px">
-            ${this.search || this.filter !== 'TODOS' ? I18nService.t('sr_empty_filter') : I18nService.t('sr_empty_desc')}
+            ${this.search || this.filter !== 'TODOS' ? 'Ninguna solicitud coincide con los filtros.' : 'Las solicitudes aparecerán aquí cuando tus clientes las envíen.'}
           </p>
-          <button class="btn btn-secondary btn-sm" id="btn-sr-clear-filters">${I18nService.t('clear_filters')}</button>
+          <button class="btn btn-secondary btn-sm" id="btn-sr-clear-filters">Limpiar filtros</button>
         </div>`;
 
     return `
@@ -207,10 +207,10 @@ export class ServiceRequestsView extends Component {
         <!-- Search -->
         <div class="sr-search-bar">
           <input id="sr-search" class="sr-search-input" type="search"
-            placeholder="${I18nService.t('sr_search_placeholder')}"
+            placeholder="🔍 Buscar por nombre o descripción..."
             value="${this.search.replace(/"/g, '&quot;')}">
           <select id="sr-svc-select" class="sr-search-input" style="flex:0 0 auto;min-width:140px;max-width:180px;">
-            <option value="">${I18nService.t('sr_type_label')}</option>
+            <option value="">🛠️ Tipo de servicio</option>
             ${serviceTypes.map(t => `<option value="${t}" ${this.serviceType===t?'selected':''}>${SERVICE_ICONS[t]||'🛠️'} ${t}</option>`).join('')}
           </select>
         </div>
@@ -219,8 +219,8 @@ export class ServiceRequestsView extends Component {
         <div class="sr-chips">${filterChips}</div>
 
         <!-- Count -->
-        <div style="font-size:0.8rem;color:var(--color-text-secondary)" id="sr-count">
-          ${filtered.length} ${filtered.length !== 1 ? I18nService.t('sr_request_plural') : I18nService.t('sr_request_singular')} ${this.requests.length !== filtered.length ? `${I18nService.t('of')} ${this.requests.length}` : ''}
+        <div style="font-size:0.8rem;color:var(--color-text-secondary)">
+          ${filtered.length} solicitud${filtered.length !== 1 ? 'es' : ''} ${this.requests.length !== filtered.length ? `de ${this.requests.length}` : ''}
         </div>
 
         <!-- Cards -->
@@ -240,8 +240,8 @@ export class ServiceRequestsView extends Component {
       <div class="sr-card" data-id="${r.id}">
         <div class="sr-card-top">
           <div style="flex:1;min-width:0">
-            <div class="sr-card-name">${r.clientName || I18nService.t('no_name')}</div>
-            <p class="sr-card-desc">${(r.description || I18nService.t('sr_no_description')).substring(0, 120)}${(r.description||'').length > 120 ? '…' : ''}</p>
+            <div class="sr-card-name">${r.clientName || 'Cliente sin nombre'}</div>
+            <p class="sr-card-desc">${(r.description || 'Sin descripción').substring(0, 120)}${(r.description||'').length > 120 ? '…' : ''}</p>
           </div>
           <span class="sr-badge" style="background:${m.bg};color:${m.color}">${m.icon} ${m.label}</span>
         </div>
@@ -251,9 +251,9 @@ export class ServiceRequestsView extends Component {
           ${r.total ? `<span class="sr-card-meta-chip">💰 ${Number(r.total).toLocaleString('es-ES')}</span>` : ''}
         </div>
         <div class="sr-card-actions">
-          <button class="sr-action-btn detail sr-view-btn" data-id="${r.id}">👁️ ${I18nService.t('view_details')}</button>
-          ${r.status === 'PENDIENTE' ? `<button class="sr-action-btn approve sr-approve-btn" data-id="${r.id}">✅ ${I18nService.t('approved')}</button>` : ''}
-          ${['PENDIENTE','EN_PROCESO'].includes(r.status) ? `<button class="sr-action-btn cancel sr-cancel-btn" data-id="${r.id}">❌ ${I18nService.t('cancel')}</button>` : ''}
+          <button class="sr-action-btn detail sr-view-btn" data-id="${r.id}">👁️ Ver detalle</button>
+          ${r.status === 'PENDIENTE' ? `<button class="sr-action-btn approve sr-approve-btn" data-id="${r.id}">✅ Aprobar</button>` : ''}
+          ${['PENDIENTE','EN_PROCESO'].includes(r.status) ? `<button class="sr-action-btn cancel sr-cancel-btn" data-id="${r.id}">❌ Cancelar</button>` : ''}
         </div>
       </div>`;
   }
@@ -267,14 +267,14 @@ export class ServiceRequestsView extends Component {
     let extraFields = '';
     if (r.serviceType === 'carpinteria') {
       extraFields = `
-        <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('sr_measures')}</div><div class="sr-detail-value">${r.medidas || '—'}</div></div>
-        <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('sr_material')}</div><div class="sr-detail-value">${r.material || '—'}</div></div>
-        <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('sr_finish')}</div><div class="sr-detail-value">${r.color || '—'}</div></div>`;
+        <div class="sr-detail-item"><div class="sr-detail-label">Medidas</div><div class="sr-detail-value">${r.medidas || '—'}</div></div>
+        <div class="sr-detail-item"><div class="sr-detail-label">Material</div><div class="sr-detail-value">${r.material || '—'}</div></div>
+        <div class="sr-detail-item"><div class="sr-detail-label">Color / Acabado</div><div class="sr-detail-value">${r.color || '—'}</div></div>`;
     } else if (r.serviceType === 'camaras') {
       extraFields = `
-        <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('col_phone')}</div><div class="sr-detail-value">${r.telefono || '—'}</div></div>
-        <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('qr_location')}</div><div class="sr-detail-value">${r.ubicacion || '—'}</div></div>
-        <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('sr_camera_count')}</div><div class="sr-detail-value">${r.numeroCamaras || '—'}</div></div>`;
+        <div class="sr-detail-item"><div class="sr-detail-label">Teléfono</div><div class="sr-detail-value">${r.telefono || '—'}</div></div>
+        <div class="sr-detail-item"><div class="sr-detail-label">Ubicación</div><div class="sr-detail-value">${r.ubicacion || '—'}</div></div>
+        <div class="sr-detail-item"><div class="sr-detail-label">Número de cámaras</div><div class="sr-detail-value">${r.numeroCamaras || '—'}</div></div>`;
     }
 
     const nextStatuses = { PENDIENTE: ['EN_PROCESO','CANCELADO'], EN_PROCESO: ['COMPLETADO','CANCELADO'] };
@@ -290,7 +290,7 @@ export class ServiceRequestsView extends Component {
           <div class="sr-modal-handle"></div>
           <div class="sr-modal-header">
             <div>
-              <div style="font-weight:700;font-size:1rem;color:var(--color-text-primary)">${r.clientName || I18nService.t('sr_request_singular')}</div>
+              <div style="font-weight:700;font-size:1rem;color:var(--color-text-primary)">${r.clientName || 'Solicitud'}</div>
               <span class="sr-badge" style="background:${m.bg};color:${m.color};margin-top:4px;display:inline-block">${m.icon} ${m.label}</span>
             </div>
             <button id="sr-modal-close" style="background:none;border:none;font-size:1.4rem;cursor:pointer;padding:8px;color:var(--color-text-secondary)">✕</button>
@@ -299,21 +299,21 @@ export class ServiceRequestsView extends Component {
 
             <!-- Description -->
             <div style="background:var(--color-bg-tertiary);border-radius:var(--radius-md);padding:12px 14px;">
-              <div class="sr-detail-label" style="margin-bottom:6px">${I18nService.t('description')}</div>
-              <p style="font-size:0.88rem;color:var(--color-text-primary);margin:0;line-height:1.6">${r.description || I18nService.t('sr_no_description')}</p>
+              <div class="sr-detail-label" style="margin-bottom:6px">Descripción</div>
+              <p style="font-size:0.88rem;color:var(--color-text-primary);margin:0;line-height:1.6">${r.description || 'Sin descripción'}</p>
             </div>
 
             <!-- Core fields -->
             <div class="sr-detail-grid">
-              <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('sr_type_label')}</div><div class="sr-detail-value">${svcIcon} ${r.serviceType || '—'}</div></div>
-              <div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('date')}</div><div class="sr-detail-value">${date}</div></div>
-              ${r.total ? `<div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('pur_estimated_total')}</div><div class="sr-detail-value" style="color:var(--color-accent)">💰 ${Number(r.total).toLocaleString('es-ES')}</div></div>` : ''}
-              ${r.phone ? `<div class="sr-detail-item"><div class="sr-detail-label">${I18nService.t('col_phone')}</div><div class="sr-detail-value">📞 ${r.phone}</div></div>` : ''}
+              <div class="sr-detail-item"><div class="sr-detail-label">Tipo de Servicio</div><div class="sr-detail-value">${svcIcon} ${r.serviceType || '—'}</div></div>
+              <div class="sr-detail-item"><div class="sr-detail-label">Fecha</div><div class="sr-detail-value">${date}</div></div>
+              ${r.total ? `<div class="sr-detail-item"><div class="sr-detail-label">Total estimado</div><div class="sr-detail-value" style="color:var(--color-accent)">💰 ${Number(r.total).toLocaleString('es-ES')}</div></div>` : ''}
+              ${r.phone ? `<div class="sr-detail-item"><div class="sr-detail-label">Teléfono</div><div class="sr-detail-value">📞 ${r.phone}</div></div>` : ''}
               ${extraFields}
             </div>
 
             <!-- Notes -->
-            ${r.notes ? `<div class="sr-detail-item" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25)"><div class="sr-detail-label">${I18nService.t('notes')}</div><div class="sr-detail-value" style="font-weight:400;font-size:0.85rem">${r.notes}</div></div>` : ''}
+            ${r.notes ? `<div class="sr-detail-item" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25)"><div class="sr-detail-label">Notas internas</div><div class="sr-detail-value" style="font-weight:400;font-size:0.85rem">${r.notes}</div></div>` : ''}
 
             <!-- Actions -->
             ${actions ? `<div class="sr-card-actions">${actions}</div>` : ''}
@@ -344,17 +344,17 @@ export class ServiceRequestsView extends Component {
       ? filtered.map(r => this._card(r)).join('')
       : `<div class="sr-empty">
           <div class="sr-empty-icon">📭</div>
-          <h3 style="font-weight:700;margin:0 0 8px;color:var(--color-text-primary)">${I18nService.t('sr_empty')}</h3>
+          <h3 style="font-weight:700;margin:0 0 8px;color:var(--color-text-primary)">Sin solicitudes</h3>
           <p style="font-size:0.85rem;color:var(--color-text-secondary);margin:0 0 16px">
-            ${this.search || this.filter !== 'TODOS' ? I18nService.t('sr_empty_filter') : I18nService.t('sr_empty_desc_client')}
+            ${this.search || this.filter !== 'TODOS' ? 'Ninguna solicitud coincide con los filtros.' : 'Las solicitudes de tus clientes aparecerán aquí.'}
           </p>
-          <button class="btn btn-secondary btn-sm" id="btn-sr-clear-filters">${I18nService.t('clear_filters')}</button>
+          <button class="btn btn-secondary btn-sm" id="btn-sr-clear-filters">Limpiar filtros</button>
         </div>`;
     this._bindCardActions(root);
 
     // count
     const cnt = root.querySelector('#sr-count');
-    if (cnt) cnt.textContent = `${filtered.length} ${filtered.length !== 1 ? I18nService.t('sr_request_plural') : I18nService.t('sr_request_singular')} ${this.requests.length !== filtered.length ? `${I18nService.t('of')} ${this.requests.length}` : ''}`;
+    if (cnt) cnt.textContent = `${filtered.length} solicitud${filtered.length !== 1 ? 'es' : ''} ${this.requests.length !== filtered.length ? `de ${this.requests.length}` : ''}`;
   }
 
   _openModal(r, root) {
@@ -382,9 +382,9 @@ export class ServiceRequestsView extends Component {
       await FirestoreService.update('service_requests', id, { status: newStatus, updatedAt: Date.now() });
       const req = this.requests.find(r => r.id === id);
       if (req) req.status = newStatus;
-      NotificationService.success(I18nService.t('sr_status_updated_toast', { status: STATUS_META[newStatus]?.label || newStatus }));
+      NotificationService.success(`Solicitud ${STATUS_META[newStatus]?.label || newStatus}`);
     } catch (e) {
-      NotificationService.error(I18nService.t('sr_update_error') + e.message);
+      NotificationService.error('No se pudo actualizar: ' + e.message);
     }
   }
 
@@ -427,12 +427,12 @@ export class ServiceRequestsView extends Component {
       const diff = e.touches[0].clientY - this._pullStart;
       if (diff > 0 && root.scrollTop === 0 && indicator) {
         indicator.style.height = Math.min(diff * 0.4, 36) + 'px';
-        indicator.textContent = diff > 80 ? I18nService.t('ptr_release') : I18nService.t('ptr_pull');
+        indicator.textContent = diff > 80 ? '⬆️ Suelta para actualizar' : '⬇️ Jala para actualizar';
       }
     }, { passive: true });
     root.addEventListener('touchend', async () => {
       if (indicator && parseInt(indicator.style.height) > 20) {
-        indicator.textContent = I18nService.t('sr_updating_toast');
+        indicator.textContent = '🔄 Actualizando...';
         await this.loadRequests();
         this._refreshList(root);
       }
@@ -484,7 +484,7 @@ export class ServiceRequestsView extends Component {
 
     // Refresh button
     layout.querySelector('#btn-sr-refresh')?.addEventListener('click', async () => {
-      NotificationService.info(I18nService.t('sr_updating_toast'));
+      NotificationService.info('Actualizando solicitudes...');
       await this.loadRequests();
       root.innerHTML = this._buildHTML();
       this._bindCardActions(root);

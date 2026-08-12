@@ -11,6 +11,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class RentalsView extends Component {
   constructor(params = {}) {
@@ -96,8 +97,8 @@ export class RentalsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Gestión de Alquileres',
-      subtitle: 'Contratos activos, devoluciones e historial en tiempo real.',
+      title: I18nService.t('rentals_mgmt_title', 'Gestión de Alquileres'),
+      subtitle: I18nService.t('rentals_mgmt_subtitle', 'Contratos activos, devoluciones e historial en tiempo real.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-rental">
           + Nuevo Alquiler

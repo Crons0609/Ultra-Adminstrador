@@ -12,6 +12,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { SupplierRemindersService } from '../../../services/supplier-reminders.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class SupplierRemindersView extends Component {
   constructor(params = {}) {
@@ -41,12 +42,12 @@ export class SupplierRemindersView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '🏢 Recordatorios de Pagos a Proveedores y Servicios',
-      subtitle: 'Registra obligaciones financieras salientes y recibe alertas por WhatsApp o Telegram antes de cada fecha de vencimiento.',
+      title: `🏢 ${I18nService.t('sr_title') || 'Recordatorios de Pagos a Proveedores y Servicios'}`,
+      subtitle: I18nService.t('sr_subtitle') || 'Registra obligaciones financieras salientes y recibe alertas por WhatsApp o Telegram antes de cada fecha de vencimiento.',
       actionHTML: `
         <div class="d-flex gap-2 align-items-center">
           <button class="btn btn-secondary btn-sm" id="btn-eval-supplier-now">
-            🔄 Evaluar Pagos Próximos
+            🔄 ${I18nService.t('sr_run_eval') || 'Evaluar Pagos Próximos'}
           </button>
         </div>
       `,
@@ -121,10 +122,10 @@ export class SupplierRemindersView extends Component {
 
         <!-- Tab Bar (scrollable, touch-friendly) -->
         <div class="sr-tab-bar" style="margin-bottom:var(--space-5);">
-          <button class="sr-tab-btn active" data-tab="monitor">📋 Monitor</button>
-          <button class="sr-tab-btn" data-tab="rules">⚡ Destinatarios</button>
-          <button class="sr-tab-btn" data-tab="templates">📝 Mensajes</button>
-          <button class="sr-tab-btn" data-tab="history">📜 Bitácora</button>
+          <button class="sr-tab-btn active" data-tab="monitor">📋 ${I18nService.t('sr_tab_monitor') || 'Monitor'}</button>
+          <button class="sr-tab-btn" data-tab="rules">⚡ ${I18nService.t('sr_tab_recipients') || 'Destinatarios'}</button>
+          <button class="sr-tab-btn" data-tab="templates">📝 ${I18nService.t('sr_tab_messages') || 'Mensajes'}</button>
+          <button class="sr-tab-btn" data-tab="history">📜 ${I18nService.t('sr_tab_log') || 'Bitácora'}</button>
         </div>
 
         <div id="sr-tab-content"></div>

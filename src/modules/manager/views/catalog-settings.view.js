@@ -5,6 +5,7 @@ import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class CatalogSettingsView extends Component {
   constructor(params = {}) {
@@ -23,26 +24,30 @@ export class CatalogSettingsView extends Component {
     // Device distribution chart
     this.chart = new Chart({
       type: 'bar',
-      labels: ['Móvil', 'Tablet', 'Computadora'],
+      labels: [
+        I18nService.t('mobile', 'Móvil'),
+        I18nService.t('tablet', 'Tablet'),
+        I18nService.t('computer', 'Computadora')
+      ],
       datasets: [
-        { label: 'Visitas', data: [0, 0, 0], color: '#7c75ff' }
+        { label: I18nService.t('total_visits', 'Visitas'), data: [0, 0, 0], color: '#7c75ff' }
       ]
     });
 
     this.layout = new PageLayout({
-      title: 'Configuración de Página Pública',
-      subtitle: 'Personaliza el diseño de tu catálogo digital público y mide el interés de tus clientes.',
+      title: I18nService.t('public_page_config', 'Configuración de Página Pública'),
+      subtitle: I18nService.t('public_page_config_subtitle', 'Personaliza el diseño de tu catálogo digital público y mide el interés de tus clientes.'),
       actionHTML: `
         <a id="lnk-visit-public" href="#/${this.companyId}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
-          🌐 Ver Página Pública
+          🌐 ${I18nService.t('nav_public_page', 'Ver Página Pública')}
         </a>
       `,
       contentHTML: `
         <!-- Tabs Selector -->
         <div class="settings-tabs">
-          <button class="settings-tab-btn active" id="tab-customize">🎨 Personalización</button>
-          <button class="settings-tab-btn" id="tab-stats">📊 Estadísticas de Tráfico</button>
-          <button class="settings-tab-btn" id="tab-whatsapp">💬 Integración API WhatsApp</button>
+          <button class="settings-tab-btn active" id="tab-customize">🎨 ${I18nService.t('customization', 'Personalización')}</button>
+          <button class="settings-tab-btn" id="tab-stats">📊 ${I18nService.t('traffic_stats', 'Estadísticas de Tráfico')}</button>
+          <button class="settings-tab-btn" id="tab-whatsapp">💬 ${I18nService.t('whatsapp_api_integration', 'Integración API WhatsApp')}</button>
         </div>
 
         <div id="settings-tab-content">
@@ -140,19 +145,19 @@ export class CatalogSettingsView extends Component {
       const cfg = this.state.config || {};
       container.innerHTML = `
         <form id="customize-catalog-form" class="card p-5 animate-fade-in" style="display:flex; flex-direction:column; gap:var(--space-4); color:var(--color-text-primary);">
-          <h3 class="text-lg font-semibold mb-2">Identidad Visual</h3>
+          <h3 class="text-lg font-semibold mb-2">${I18nService.t('visual_identity', 'Identidad Visual')}</h3>
           
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-theme">Tema de Color Base</label>
+              <label class="form-label" for="cat-theme">${I18nService.t('base_color_theme', 'Tema de Color Base')}</label>
               <select id="cat-theme" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                <option value="dark" ${cfg.theme === 'dark' ? 'selected' : ''}>Modo Oscuro Premium (Recomendado)</option>
-                <option value="light" ${cfg.theme === 'light' ? 'selected' : ''}>Modo Claro Limpio</option>
+                <option value="dark" ${cfg.theme === 'dark' ? 'selected' : ''}>${I18nService.t('premium_dark_mode', 'Modo Oscuro Premium (Recomendado)')}</option>
+                <option value="light" ${cfg.theme === 'light' ? 'selected' : ''}>${I18nService.t('clean_light_mode', 'Modo Claro Limpio')}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="cat-primary-color">Color de Acento (Botones, Destacados)</label>
+              <label class="form-label" for="cat-primary-color">${I18nService.t('accent_color', 'Color de Acento (Botones, Destacados)')}</label>
               <div style="display:flex; gap:8px; align-items:center;">
                 <input type="color" id="cat-primary-color" style="border:none; background:none; cursor:pointer; width:40px; height:40px; padding:0;" value="${cfg.colors?.primary || '#7c75ff'}" />
                 <span class="text-xs text-secondary" style="font-family:monospace;">${cfg.colors?.primary || '#7c75ff'}</span>
@@ -162,102 +167,102 @@ export class CatalogSettingsView extends Component {
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-secondary-color">Color secundario</label>
+              <label class="form-label" for="cat-secondary-color">${I18nService.t('secondary_color', 'Color secundario')}</label>
               <input type="color" id="cat-secondary-color" style="border:none; background:none; cursor:pointer; width:40px; height:40px; padding:0;" value="${cfg.colors?.secondary || '#16a34a'}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-background-color">Color de fondo</label>
+              <label class="form-label" for="cat-background-color">${I18nService.t('background_color', 'Color de fondo')}</label>
               <input type="color" id="cat-background-color" style="border:none; background:none; cursor:pointer; width:40px; height:40px; padding:0;" value="${cfg.colors?.background || '#0f172a'}" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-logo">URL de Logotipo (Cuadrado)</label>
+              <label class="form-label" for="cat-logo">${I18nService.t('logo_url', 'URL de Logotipo (Cuadrado)')}</label>
               <input type="url" id="cat-logo" class="input input-md" placeholder="https://ejemplo.com/mi-logo.png" value="${cfg.logo || ''}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-cover">URL de Imagen de Portada (Banner superior)</label>
+              <label class="form-label" for="cat-cover">${I18nService.t('cover_image_url', 'URL de Imagen de Portada (Banner superior)')}</label>
               <input type="url" id="cat-cover" class="input input-md" placeholder="https://ejemplo.com/portada.jpg" value="${cfg.cover || ''}" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-gallery">Galería (URLs separadas por coma)</label>
+              <label class="form-label" for="cat-gallery">${I18nService.t('gallery_urls', 'Galería (URLs separadas por coma)')}</label>
               <input type="text" id="cat-gallery" class="input input-md" value="${(cfg.gallery || []).join(', ')}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-video">Video promocional</label>
+              <label class="form-label" for="cat-video">${I18nService.t('promo_video', 'Video promocional')}</label>
               <input type="url" id="cat-video" class="input input-md" value="${cfg.video || ''}" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-font">Tipografía</label>
+              <label class="form-label" for="cat-font">${I18nService.t('typography', 'Tipografía')}</label>
               <input type="text" id="cat-font" class="input input-md" value="${cfg.typography || ''}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-favicon">Favicon</label>
+              <label class="form-label" for="cat-favicon">${I18nService.t('favicon', 'Favicon')}</label>
               <input type="url" id="cat-favicon" class="input input-md" value="${cfg.favicon || ''}" />
             </div>
           </div>
 
           <hr style="border:0; border-top:1px solid var(--color-border); margin: var(--space-3) 0;" />
-          <h3 class="text-lg font-semibold mb-2">Redes Sociales y Enlaces de Contacto</h3>
+          <h3 class="text-lg font-semibold mb-2">${I18nService.t('social_networks_contact', 'Redes Sociales y Enlaces de Contacto')}</h3>
           
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-whatsapp">Teléfono de WhatsApp (Formato internacional, Ej: 5215512345678)</label>
+              <label class="form-label" for="cat-whatsapp">${I18nService.t('whatsapp_phone', 'Teléfono de WhatsApp (Formato internacional, Ej: 5215512345678)')}</label>
               <input type="text" id="cat-whatsapp" class="input input-md" placeholder="Sin símbolos +, sólo números" value="${cfg.socials?.whatsapp || ''}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-telegram">Usuario de Telegram (Sin @)</label>
+              <label class="form-label" for="cat-telegram">${I18nService.t('telegram_user', 'Usuario de Telegram (Sin @)')}</label>
               <input type="text" id="cat-telegram" class="input input-md" placeholder="mi_negocio_tg" value="${cfg.socials?.telegram || ''}" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-contact">Información de contacto</label>
+              <label class="form-label" for="cat-contact">${I18nService.t('contact_info', 'Información de contacto')}</label>
               <textarea id="cat-contact" class="input input-md" style="height:70px; padding:var(--space-2); resize:vertical;">${cfg.contactInfo || ''}</textarea>
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-hours">Horarios</label>
+              <label class="form-label" for="cat-hours">${I18nService.t('business_hours', 'Horarios')}</label>
               <textarea id="cat-hours" class="input input-md" style="height:70px; padding:var(--space-2); resize:vertical;">${cfg.hours || ''}</textarea>
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-seo-title">Título SEO</label>
+              <label class="form-label" for="cat-seo-title">${I18nService.t('seo_title', 'Título SEO')}</label>
               <input type="text" id="cat-seo-title" class="input input-md" value="${cfg.seo?.title || ''}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-seo-description">Descripción SEO</label>
+              <label class="form-label" for="cat-seo-description">${I18nService.t('seo_description', 'Descripción SEO')}</label>
               <input type="text" id="cat-seo-description" class="input input-md" value="${cfg.seo?.description || ''}" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-facebook">Facebook username o página</label>
+              <label class="form-label" for="cat-facebook">${I18nService.t('facebook_page', 'Facebook username o página')}</label>
               <input type="text" id="cat-facebook" class="input input-md" placeholder="minegocio" value="${cfg.socials?.facebook || ''}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-instagram">Instagram username (Sin @)</label>
+              <label class="form-label" for="cat-instagram">${I18nService.t('instagram_user', 'Instagram username (Sin @)')}</label>
               <input type="text" id="cat-instagram" class="input input-md" placeholder="minegocio" value="${cfg.socials?.instagram || ''}" />
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
             <div class="form-group">
-              <label class="form-label" for="cat-tiktok">TikTok username (Sin @)</label>
+              <label class="form-label" for="cat-tiktok">${I18nService.t('tiktok_user', 'TikTok username (Sin @)')}</label>
               <input type="text" id="cat-tiktok" class="input input-md" placeholder="minegocio" value="${cfg.socials?.tiktok || ''}" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="cat-website">Sitio web oficial</label>
+              <label class="form-label" for="cat-website">${I18nService.t('official_website', 'Sitio web oficial')}</label>
               <input type="url" id="cat-website" class="input input-md" placeholder="https://minegocio.com" value="${cfg.socials?.website || ''}" />
             </div>
           </div>
@@ -265,12 +270,12 @@ export class CatalogSettingsView extends Component {
           <div class="form-group">
             <label class="d-flex align-items-center gap-2 font-medium" style="cursor:pointer;">
               <input type="checkbox" id="cat-enable-reviews" ${cfg.enableReviews ? 'checked' : ''} style="accent-color: var(--color-accent);" />
-              <span>Habilitar opiniones y calificaciones de clientes en productos</span>
+              <span>${I18nService.t('enable_reviews', 'Habilitar opiniones y calificaciones de clientes en productos')}</span>
             </label>
           </div>
 
           <button type="button" class="btn btn-primary btn-md align-self-end mt-4" id="btn-save-cust" style="padding: 0 var(--space-4);">
-            Guardar Cambios
+            ${I18nService.t('save_changes', 'Guardar Cambios')}
           </button>
         </form>
       `;
@@ -308,48 +313,48 @@ export class CatalogSettingsView extends Component {
         <div class="grid-stats animate-fade-in">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Visitas Totales</span>
+              <span class="kpi-label">${I18nService.t('total_visits', 'Visitas Totales')}</span>
               <div class="kpi-icon kpi-icon-accent">📈</div>
             </div>
             <h3 class="kpi-value">${visits}</h3>
-            <span class="text-xs text-secondary">Personas que abrieron la página</span>
+            <span class="text-xs text-secondary">${I18nService.t('opened_page_people', 'Personas que abrieron la página')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Clics de WhatsApp</span>
+              <span class="kpi-label">${I18nService.t('whatsapp_clicks', 'Clics de WhatsApp')}</span>
               <div class="kpi-icon kpi-icon-success">💬</div>
             </div>
             <h3 class="kpi-value text-success">${wsClicks}</h3>
-            <span class="text-xs text-secondary">Consultas por mensajería</span>
+            <span class="text-xs text-secondary">${I18nService.t('messaging_queries', 'Consultas por mensajería')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Consultas Telefónicas</span>
+              <span class="kpi-label">${I18nService.t('phone_queries', 'Consultas Telefónicas')}</span>
               <div class="kpi-icon kpi-icon-warning">📞</div>
             </div>
             <h3 class="kpi-value text-warning">${callClicks}</h3>
-            <span class="text-xs text-secondary">Intentos de llamadas de clientes</span>
+            <span class="text-xs text-secondary">${I18nService.t('customer_call_attempts', 'Intentos de llamadas de clientes')}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">Visitas a Redes</span>
+              <span class="kpi-label">${I18nService.t('social_visits', 'Visitas a Redes')}</span>
               <div class="kpi-icon kpi-icon-info">🌐</div>
             </div>
             <h3 class="kpi-value text-info">${socClicks}</h3>
-            <span class="text-xs text-secondary">Clics en perfiles sociales</span>
+            <span class="text-xs text-secondary">${I18nService.t('social_profile_clicks', 'Clics en perfiles sociales')}</span>
           </div>
         </div>
 
         <div class="grid-responsive mt-6">
           <div class="col-8 card p-5">
-            <h3 class="text-lg font-semibold mb-4">Dispositivos de los Clientes</h3>
+            <h3 class="text-lg font-semibold mb-4">${I18nService.t('customer_devices', 'Dispositivos de los Clientes')}</h3>
             <div id="stats-device-chart" style="width: 100%; height: 260px;"></div>
           </div>
           <div class="col-4 card p-5">
-            <h3 class="text-lg font-semibold mb-4">Productos más vistos</h3>
+            <h3 class="text-lg font-semibold mb-4">${I18nService.t('most_viewed_products', 'Productos más vistos')}</h3>
             <div class="d-flex flex-column gap-2">
               ${topViewsHTML}
             </div>
@@ -372,19 +377,19 @@ export class CatalogSettingsView extends Component {
         container.innerHTML = `
           <div class="card p-6 text-center animate-fade-in" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-4); max-width:600px; margin: 2rem auto; color: var(--color-text-primary);">
             <div style="font-size: 4rem;">🔒</div>
-            <h3 class="text-xl font-bold">WhatsApp API Premium Requerido</h3>
+            <h3 class="text-xl font-bold">${I18nService.t('whatsapp_api_premium_required', 'WhatsApp API Premium Requerido')}</h3>
             <p class="text-secondary" style="line-height:1.6; font-size:0.9rem;">
               La integración con la API de WhatsApp (envío de recibos de cobro automáticos, notificaciones de comandas en tiempo real y alertas de inventario) es una función adicional que requiere la activación de la licencia por el Administrador.
             </p>
             <div style="background:var(--color-bg-secondary); border:1px solid var(--color-border); padding: 12px; border-radius: var(--radius-md); font-size:0.8rem; color:var(--color-text-secondary); text-align:left; width: 100%;">
-              🌟 <strong>Ventajas de activar la API de WhatsApp:</strong>
+              🌟 <strong>${I18nService.t('whatsapp_api_benefits', 'Ventajas de activar la API de WhatsApp:')}</strong>
               <ul style="margin: 6px 0 0; padding-left: 20px; line-height:1.5;">
                 <li>Envío directo de comprobantes de crédito ("sistema de crédito").</li>
                 <li>Notificaciones de cobro automáticas según el día de pago.</li>
                 <li>Reportes automáticos de cierre de caja directos a tu celular.</li>
               </ul>
             </div>
-            <button class="btn btn-primary btn-md mt-2" id="btn-upgrade-wa" type="button">Solicitar Activación de WhatsApp API</button>
+            <button class="btn btn-primary btn-md mt-2" id="btn-upgrade-wa" type="button">${I18nService.t('request_whatsapp_api_activation', 'Solicitar Activación de WhatsApp API')}</button>
           </div>
         `;
         container.querySelector('#btn-upgrade-wa')?.addEventListener('click', () => {
@@ -407,10 +412,10 @@ export class CatalogSettingsView extends Component {
             
             <!-- Credentials Card -->
             <form id="whatsapp-config-form" class="card p-5 d-flex flex-column gap-3">
-              <h3 class="text-md font-bold mb-2">🔑 Credenciales de Conexión</h3>
+              <h3 class="text-md font-bold mb-2">🔑 ${I18nService.t('connection_credentials', 'Credenciales de Conexión')}</h3>
               
               <div class="form-group">
-                <label class="form-label" for="wa-provider">Proveedor del API de WhatsApp</label>
+                <label class="form-label" for="wa-provider">${I18nService.t('whatsapp_api_provider', 'Proveedor del API de WhatsApp')}</label>
                 <select id="wa-provider" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
                   <option value="META" ${api.provider === 'META' ? 'selected' : ''}>Meta Cloud API (Oficial y Directo)</option>
                   <option value="TWILIO" ${api.provider === 'TWILIO' ? 'selected' : ''}>Twilio Messaging API Gateway</option>
@@ -442,12 +447,12 @@ export class CatalogSettingsView extends Component {
                 <input type="text" class="input input-md" value="${webhookUrl}" readonly style="opacity:0.7; font-family:monospace; font-size:0.8rem;" />
               </div>
 
-              <button type="button" class="btn btn-primary btn-sm align-self-end mt-2" id="btn-save-wa">Guardar Configuración API</button>
+              <button type="button" class="btn btn-primary btn-sm align-self-end mt-2" id="btn-save-wa">${I18nService.t('save', 'Guardar Configuración API')}</button>
             </form>
 
             <!-- Templates Card -->
             <div class="card p-5 d-flex flex-column gap-3">
-              <h3 class="text-md font-bold mb-2">📋 Plantillas de Mensajes</h3>
+              <h3 class="text-md font-bold mb-2">📋 ${I18nService.t('message_templates', 'Plantillas de Mensajes')}</h3>
               <p class="text-secondary text-xs" style="margin:0;">Configura las variables utilizando <code>{{cliente}}</code>, <code>{{monto}}</code>, <code>{{interes}}</code>, <code>{{cuota}}</code>, <code>{{vencimiento}}</code>, <code>{{url}}</code>.</p>
               
               <div class="form-group">
@@ -457,7 +462,7 @@ export class CatalogSettingsView extends Component {
 
               <div class="form-group">
                 <label class="form-label" for="wa-tmpl-order">Confirmación de Pedidos / Ventas (ORDER_CONFIRMATION)</label>
-                <textarea id="wa-tmpl-order" class="input input-md" style="height:70px; padding:var(--space-2); font-size:0.8rem; resize:vertical;">${templates.ORDER_CONFIRMATION || '¡Hola {{cliente}}! Tu pedido en {{negocio}} ha sido confirmado. Monto total: {{monto}}. Método de pago: {{metodo}}. Estaremos actualizando el estado de tu entrega.'}</textarea>
+                <textarea id="wa-tmpl-order" class="input input-md" style="height:70px; padding:var(--space-2); font-size:0.8rem; resize:vertical;">${templates.ORDER_CONFIRMATION || '¡Hola {{cliente}}! Tu pedido en {{negocio}} ha sido confirmed. Monto total: {{monto}}. Método de pago: {{metodo}}. Estaremos actualizando el estado de tu entrega.'}</textarea>
               </div>
 
               <div class="form-group">
@@ -473,14 +478,14 @@ export class CatalogSettingsView extends Component {
             
             <!-- Connection Console Tester -->
             <div class="card p-5 d-flex flex-column gap-3">
-              <h3 class="text-md font-bold mb-1">🔌 Consola de Prueba de Conexión</h3>
+              <h3 class="text-md font-bold mb-1">🔌 ${I18nService.t('connection_test_console', 'Consola de Prueba de Conexión')}</h3>
               <p class="text-secondary text-xs" style="margin:0;">Envía un mensaje "Hello World" a tu celular para validar las credenciales configuradas.</p>
               
               <div class="form-group mt-2">
-                <label class="form-label" for="wa-test-phone">Teléfono de Prueba (Ej: 5215512345678)</label>
+                <label class="form-label" for="wa-test-phone">${I18nService.t('test_phone', 'Teléfono de Prueba (Ej: 5215512345678)')}</label>
                 <div class="d-flex gap-2">
                   <input type="tel" id="wa-test-phone" class="input input-md" placeholder="5215512345678" style="flex:1;" />
-                  <button class="btn btn-secondary btn-sm" id="btn-test-wa-conn" type="button" style="padding:0 var(--space-3);">Probar API</button>
+                  <button class="btn btn-secondary btn-sm" id="btn-test-wa-conn" type="button" style="padding:0 var(--space-3);">${I18nService.t('test_api', 'Probar API')}</button>
                 </div>
               </div>
 
@@ -491,7 +496,7 @@ export class CatalogSettingsView extends Component {
 
             <!-- Simulated live delivery log summary -->
             <div class="card p-5 d-flex flex-column gap-3">
-              <h3 class="text-md font-bold">📡 Registro de Envíos del Establecimiento</h3>
+              <h3 class="text-md font-bold">📡 ${I18nService.t('establishment_send_logs', 'Registro de Envíos del Establecimiento')}</h3>
               <div id="wa-logs-list" class="d-flex flex-column gap-2" style="max-height: 280px; overflow-y:auto; padding-right:4px;">
                 <div class="text-center py-4 text-secondary text-xs">Cargando logs de envíos...</div>
               </div>

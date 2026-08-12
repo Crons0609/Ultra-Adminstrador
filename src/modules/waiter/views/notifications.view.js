@@ -2,6 +2,7 @@ import { Component } from '../../../core/component.js';
 import { PageLayout } from '../../../components/layout/page-layout.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class WaiterNotificationsView extends Component {
   constructor(params = {}) {
@@ -9,8 +10,8 @@ export class WaiterNotificationsView extends Component {
     this.state = { orders: [] };
 
     this.layout = new PageLayout({
-      title: 'Notificaciones del Servicio',
-      subtitle: 'Alertas en tiempo real: pedidos listos, cambios de estado y solicitudes de mesa.',
+      title: I18nService.t('service_notifications', 'Notificaciones del Servicio'),
+      subtitle: I18nService.t('service_notifications_subtitle', 'Alertas en tiempo real: pedidos listos, cambios de estado y solicitudes de mesa.'),
       actionHTML: `
         <button class="btn btn-secondary btn-sm" id="btn-mark-all-read">✓ Marcar todo como visto</button>
       `,

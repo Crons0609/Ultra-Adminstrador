@@ -9,6 +9,7 @@ import { PageLayout } from '../../../components/layout/page-layout.js';
 import { GlobalStore } from '../../../core/state.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 const STATUS_META = {
   PENDIENTE:   { label: 'Pendiente',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: '⏳' },
@@ -36,8 +37,8 @@ export class ServiceRequestsView extends Component {
     this._pullStart = null;
 
     this.layout = new PageLayout({
-      title: '📥 Solicitudes de Servicio',
-      subtitle: 'Bandeja de solicitudes de clientes y seguimiento de órdenes',
+      title: `📥 ${I18nService.t('service_requests_title', 'Solicitudes de Servicio')}`,
+      subtitle: I18nService.t('service_requests_subtitle', 'Bandeja de solicitudes de clientes y seguimiento de órdenes'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-sr-refresh" style="display:flex;align-items:center;gap:6px;">
           🔄 Actualizar

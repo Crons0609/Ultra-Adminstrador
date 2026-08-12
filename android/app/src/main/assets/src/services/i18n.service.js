@@ -152,10 +152,25 @@ class I18nServiceClass {
    * @param {Object} [params] - Replacement variables (e.g. { name: 'John' })
    */
   t(key, params = {}) {
-    const activeDict = dictionaries[this.currentLanguage] || dictionaries[DEFAULT_LANGUAGE];
+    if (!key) return typeof params === 'string' ? params : '';
+    
+    const activeDict = dictionaries[this.currentLanguage] || dictionaries['en'] || dictionaries[DEFAULT_LANGUAGE];
     const fallbackDict = dictionaries[DEFAULT_LANGUAGE];
 
-    let text = activeDict[key] || fallbackDict[key] || key;
+    let text = activeDict ? activeDict[key] : undefined;
+
+    // If missing in active language dictionary:
+    if (text === undefined || text === null) {
+      if (this.currentLanguage === DEFAULT_LANGUAGE) {
+        text = fallbackDict[key];
+      } else if (typeof params === 'string') {
+        text = params;
+      }
+    }
+
+    if (text === undefined || text === null) {
+      return typeof params === 'string' ? params : '';
+    }
 
     if (params && typeof params === 'object') {
       Object.keys(params).forEach(p => {

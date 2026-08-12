@@ -42,7 +42,7 @@ export class ProductsView extends Component {
               }
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val}</span>
-                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || I18nService.t('inv_no_category')}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">📦 ${row.category || 'Uncategorized'}</span>
               </div>
             </div>
           `
@@ -74,7 +74,7 @@ export class ProductsView extends Component {
         },
         { 
           key: 'margin', 
-          label: I18nService.t('inv_margin'),
+          label: 'Margin',
           render: (_, row) => {
             const purchase = Number(row.purchasePrice || 0);
             const sale = Number(row.price || 0);
@@ -100,7 +100,7 @@ export class ProductsView extends Component {
         },
         {
           key: 'id',
-          label: I18nService.t('actions'),
+          label: 'Acciones',
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-product" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -113,11 +113,11 @@ export class ProductsView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('inv_title'),
-      subtitle: I18nService.t('inv_subtitle'),
+      title: I18nService.t('inv_title') || 'Inventario de Productos',
+      subtitle: I18nService.t('inv_subtitle') || 'Administra el catálogo de artículos, niveles de stock, precios y márgenes de ganancia.',
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-product">
-          ${I18nService.t('inv_add_product')}
+          + ${I18nService.t('add_product') || 'Agregar Producto'}
         </button>
       `,
       contentHTML: `
@@ -125,38 +125,38 @@ export class ProductsView extends Component {
         <div class="grid-stats animate-fade-in" id="products-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('inv_total_products')}</span>
+              <span class="kpi-label">${I18nService.t('registered_articles') || 'Artículos Registrados'}</span>
               <div class="kpi-icon kpi-icon-accent">📦</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-items">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('inv_active_products_desc')}</span>
+            <span class="text-xs text-secondary">${I18nService.t('active_unique_products') || 'Productos únicos activos'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('inv_total_value')}</span>
+              <span class="kpi-label">${I18nService.t('inventory_value') || 'Valor del Inventario'}</span>
               <div class="kpi-icon kpi-icon-success">💰</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-value">$0.00</h3>
-            <span class="text-xs text-secondary">${I18nService.t('inv_total_value_desc')}</span>
+            <span class="text-xs text-secondary">${I18nService.t('total_accumulated_cost') || 'Costo total acumulado'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('inv_critical_stock')}</span>
+              <span class="kpi-label">${I18nService.t('critical_stock_out') || 'Stock Crítico (Agotados)'}</span>
               <div class="kpi-icon kpi-icon-danger">⚠️</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-critical-items">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('inv_critical_stock_desc')}</span>
+            <span class="text-xs text-secondary">${I18nService.t('urgent_restock_required') || 'Requieren reabastecimiento urgente'}</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('inv_low_stock_kpi')}</span>
+              <span class="kpi-label">${I18nService.t('minimum_stock_low') || 'Stock Mínimo (Bajo)'}</span>
               <div class="kpi-icon kpi-icon-warning">📉</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-low-items">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('inv_low_stock_desc')}</span>
+            <span class="text-xs text-secondary">${I18nService.t('items_below_limit') || 'Artículos por debajo del límite'}</span>
           </div>
         </div>
 
@@ -164,7 +164,7 @@ export class ProductsView extends Component {
         <div class="card p-4 mb-4">
           <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3);">
             <span style="font-size: 1rem;">📊</span>
-            <span class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;">${I18nService.t('inv_scan_search')}</span>
+            <span class="form-label" style="margin: 0; font-weight: 600; font-size: 0.85rem;">${I18nService.t('search_by_scan') || 'Búsqueda por Escaneo'}</span>
           </div>
           <div class="barcode-input-wrapper barcode-input-compact">
             <div class="barcode-input-container">
@@ -173,7 +173,7 @@ export class ProductsView extends Component {
                   <path d="M3 5v14"/><path d="M6 5v14"/><path d="M9 5v14"/><path d="M12 5v14"/><path d="M16 5v14"/><path d="M19 5v14"/><path d="M21 5v14"/>
                 </svg>
               </div>
-              <input type="text" id="inp-barcode-scan" class="input input-md barcode-input-field" placeholder="${I18nService.t('inv_scan_placeholder')}" autocomplete="off" autocorrect="off" spellcheck="false" />
+              <input type="text" id="inp-barcode-scan" class="input input-md barcode-input-field" placeholder="${I18nService.t('scan_barcode_placeholder') || 'Escanea un código de barras o QR para buscar...'}" autocomplete="off" autocorrect="off" spellcheck="false" />
               <div class="barcode-input-indicator"><span class="barcode-pulse"></span></div>
             </div>
             <div id="barcode-scan-feedback" class="barcode-input-feedback" style="display: none;">
@@ -188,18 +188,18 @@ export class ProductsView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search" class="input input-md" placeholder="${I18nService.t('inv_search_placeholder')}" />
+              <input type="text" id="inp-search" class="input input-md" placeholder="${I18nService.t('search_by_name_sku') || 'Buscar por nombre, SKU o código de barras...'}" />
             </div>
 
             <select id="sel-filter-category" class="inv-filter-select">
-              <option value="">${I18nService.t('inv_all_categories')}</option>
+              <option value="">${I18nService.t('all_categories') || 'Todas las categorías'}</option>
             </select>
 
             <select id="sel-filter-status" class="inv-filter-select">
-              <option value="">${I18nService.t('inv_all_statuses')}</option>
-              <option value="OK">${I18nService.t('inv_available')}</option>
-              <option value="LOW">${I18nService.t('inv_low_stock')}</option>
-              <option value="OUT">${I18nService.t('inv_out_of_stock')}</option>
+              <option value="">${I18nService.t('all_statuses') || 'Todos los estados'}</option>
+              <option value="OK">${I18nService.t('available') || 'Disponibles'}</option>
+              <option value="LOW">${I18nService.t('inv_low_stock') || 'Stock Bajo'}</option>
+              <option value="OUT">${I18nService.t('inv_out_of_stock') || 'Agotados'}</option>
             </select>
           </div>
         </div>
@@ -287,13 +287,13 @@ export class ProductsView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-product');
         if (deleteBtn) {
           const prodId = deleteBtn.getAttribute('data-id');
-          if (confirm(I18nService.t('inv_confirm_delete'))) {
+          if (confirm('¿Estás seguro de que deseas eliminar este producto del inventario?')) {
             try {
               await FirestoreService.delete('productos', prodId);
-              NotificationService.success(I18nService.t('inv_product_deleted'));
+              NotificationService.success('Producto eliminado del inventario.');
             } catch (err) {
               console.error('[ProductsView] Error deleting:', err);
-              NotificationService.error(I18nService.t('inv_delete_error'));
+              NotificationService.error('Error al eliminar el producto.');
             }
           }
         }
@@ -325,7 +325,7 @@ export class ProductsView extends Component {
     const dropdown = element.querySelector('#sel-filter-category');
     if (dropdown) {
       const selected = this.state.selectedCategory;
-      dropdown.innerHTML = `<option value="">${I18nService.t('inv_all_categories')}</option>` +
+      dropdown.innerHTML = `<option value="">Todas las categorías</option>` +
         this.state.categories.map(cat => `<option value="${cat}" ${cat === selected ? 'selected' : ''}>${cat}</option>`).join('');
     }
   }
@@ -412,7 +412,7 @@ export class ProductsView extends Component {
       }
     };
 
-    showFeedback('🔍', I18nService.t('inv_searching_code', { code }), 'info');
+    showFeedback('🔍', `Buscando código: ${code}...`, 'info');
 
     // Register the scan in Firebase
     try {
@@ -428,14 +428,14 @@ export class ProductsView extends Component {
     );
 
     if (product) {
-      showFeedback('✅', I18nService.t('inv_product_found_msg', { name: product.name, stock: product.stock, unit: product.unit || 'uds' }), 'success');
-      NotificationService.success(I18nService.t('inv_product_found_toast', { name: product.name }));
+      showFeedback('✅', `Encontrado: ${product.name} — Stock: ${product.stock} ${product.unit || 'uds'}`, 'success');
+      NotificationService.success(`Producto encontrado: ${product.name}`);
 
       // Scroll to product in the table or open edit modal
       setTimeout(() => this.openProductModal(product), 500);
     } else {
-      showFeedback('⚠️', I18nService.t('inv_code_not_registered', { code }), 'warning');
-      NotificationService.warning(I18nService.t('inv_code_not_found_toast', { code }));
+      showFeedback('⚠️', `Código "${code}" no registrado. ¿Deseas crear un producto con este código?`, 'warning');
+      NotificationService.warning(`Código ${code} no encontrado.`);
 
       // Auto-open creation modal with the code pre-filled
       setTimeout(() => {
@@ -460,102 +460,102 @@ export class ProductsView extends Component {
       <form id="product-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="prod-name">${I18nService.t('inv_product_name')}</label>
-            <input type="text" id="prod-name" class="input input-md" placeholder="${I18nService.t('inv_product_name_placeholder')}" value="${isEdit ? product.name : ''}" required />
+            <label class="form-label" for="prod-name">Nombre del Producto</label>
+            <input type="text" id="prod-name" class="input input-md" placeholder="Ej. Coca-Cola 600ml" value="${isEdit ? product.name : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-sku">${I18nService.t('inv_product_code')}</label>
-            <input type="text" id="prod-sku" class="input input-md barcode-input-field" placeholder="${I18nService.t('inv_code_placeholder')}" value="${isEdit ? (product.sku || product.barcode || '') : prefilledCode}" autocomplete="off" autocorrect="off" spellcheck="false" style="font-family: 'JetBrains Mono', 'Fira Code', monospace; letter-spacing: 0.5px;" />
-            <span class="text-xs text-secondary">${I18nService.t('inv_code_hint')}</span>
+            <label class="form-label" for="prod-sku">Código de Barras / SKU</label>
+            <input type="text" id="prod-sku" class="input input-md barcode-input-field" placeholder="Escanea o escribe el código" value="${isEdit ? (product.sku || product.barcode || '') : prefilledCode}" autocomplete="off" autocorrect="off" spellcheck="false" style="font-family: 'JetBrains Mono', 'Fira Code', monospace; letter-spacing: 0.5px;" />
+            <span class="text-xs text-secondary">Compatible con lectores USB, Bluetooth e inalámbricos en modo teclado.</span>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="prod-category">${I18nService.t('inv_category')}</label>
+            <label class="form-label" for="prod-category">Categoría</label>
             <div style="display: flex; gap: var(--space-2);">
               <select id="prod-category" class="input input-md" style="flex: 1; background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-                <option value="">${I18nService.t('select')}...</option>
+                <option value="">Selecciona...</option>
                 ${categoryOptionsHTML}
               </select>
-              <input type="text" id="prod-new-category" class="input input-md" style="flex: 1;" placeholder="${I18nService.t('inv_new_category_placeholder')}" />
+              <input type="text" id="prod-new-category" class="input input-md" style="flex: 1;" placeholder="Nueva categoría..." />
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-unit">${I18nService.t('inv_unit')}</label>
+            <label class="form-label" for="prod-unit">Unidad de Medida</label>
             <select id="prod-unit" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="uds" ${isEdit && product.unit === 'uds' ? 'selected' : ''}>${I18nService.t('inv_unit_units')}</option>
-              <option value="kg" ${isEdit && product.unit === 'kg' ? 'selected' : ''}>${I18nService.t('inv_unit_kg')}</option>
-              <option value="L" ${isEdit && product.unit === 'L' ? 'selected' : ''}>${I18nService.t('inv_unit_liters')}</option>
-              <option value="g" ${isEdit && product.unit === 'g' ? 'selected' : ''}>${I18nService.t('inv_unit_grams')}</option>
-              <option value="paq" ${isEdit && product.unit === 'paq' ? 'selected' : ''}>${I18nService.t('inv_unit_package')}</option>
+              <option value="uds" ${isEdit && product.unit === 'uds' ? 'selected' : ''}>Unidades (uds)</option>
+              <option value="kg" ${isEdit && product.unit === 'kg' ? 'selected' : ''}>Kilogramos (kg)</option>
+              <option value="L" ${isEdit && product.unit === 'L' ? 'selected' : ''}>Litros (L)</option>
+              <option value="g" ${isEdit && product.unit === 'g' ? 'selected' : ''}>Gramos (g)</option>
+              <option value="paq" ${isEdit && product.unit === 'paq' ? 'selected' : ''}>Paquete (paq)</option>
             </select>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="prod-stock">${I18nService.t('inv_stock')}</label>
+            <label class="form-label" for="prod-stock">Stock Actual</label>
             <input type="number" id="prod-stock" class="input input-md" min="0" step="any" placeholder="0" value="${isEdit ? product.stock : '0'}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-min-stock">${I18nService.t('inv_min_stock')}</label>
+            <label class="form-label" for="prod-min-stock">Stock Mínimo (Alerta)</label>
             <input type="number" id="prod-min-stock" class="input input-md" min="0" step="any" placeholder="5" value="${isEdit ? (product.minStock || '5') : '5'}" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="prod-purchase-price">${I18nService.t('inv_cost')}</label>
+            <label class="form-label" for="prod-purchase-price">Precio de Compra (Costo)</label>
             <input type="number" id="prod-purchase-price" class="input input-md" min="0" step="0.01" placeholder="0.00" value="${isEdit ? product.purchasePrice : '0'}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-price">${I18nService.t('inv_price')}</label>
+            <label class="form-label" for="prod-price">Precio de Venta al Público</label>
             <input type="number" id="prod-price" class="input input-md" min="0" step="0.01" placeholder="0.00" value="${isEdit ? product.price : '0'}" required />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="prod-description">${I18nService.t('inv_description_label')}</label>
-          <textarea id="prod-description" class="input input-md" rows="2" style="resize:vertical;" placeholder="${I18nService.t('inv_description_placeholder')}">${isEdit ? (product.description || '') : ''}</textarea>
+          <label class="form-label" for="prod-description">Descripción (visible en catálogo público)</label>
+          <textarea id="prod-description" class="input input-md" rows="2" style="resize:vertical;" placeholder="Describe brevemente el producto para tus clientes...">${isEdit ? (product.description || '') : ''}</textarea>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="prod-brand">${I18nService.t('inv_brand_label')}</label>
-            <input type="text" id="prod-brand" class="input input-md" placeholder="${I18nService.t('inv_brand_placeholder')}" value="${isEdit ? (product.brand || '') : ''}" />
+            <label class="form-label" for="prod-brand">🏷️ Marca (opcional)</label>
+            <input type="text" id="prod-brand" class="input input-md" placeholder="Ej. Nestlé, Coca-Cola, Bimbo" value="${isEdit ? (product.brand || '') : ''}" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-presentation">${I18nService.t('inv_presentation_label')}</label>
-            <input type="text" id="prod-presentation" class="input input-md" placeholder="${I18nService.t('inv_presentation_placeholder')}" value="${isEdit ? (product.presentation || '') : ''}" />
+            <label class="form-label" for="prod-presentation">📦 Presentación / Tamaño (opcional)</label>
+            <input type="text" id="prod-presentation" class="input input-md" placeholder="Ej. 600ml, 1kg, Pack x6" value="${isEdit ? (product.presentation || '') : ''}" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="prod-location">${I18nService.t('inv_location_label')}</label>
-          <input type="text" id="prod-location" class="input input-md" placeholder="${I18nService.t('inv_location_placeholder')}" value="${isEdit ? (product.location || '') : ''}" />
-          <span class="text-xs text-secondary" style="margin-top:2px; display:block;">${I18nService.t('inv_location_hint')}</span>
+          <label class="form-label" for="prod-location">📍 Ubicación en Tienda (optional)</label>
+          <input type="text" id="prod-location" class="input input-md" placeholder="Ej. Pasillo 3 · Sección de Bebidas" value="${isEdit ? (product.location || '') : ''}" />
+          <span class="text-xs text-secondary" style="margin-top:2px; display:block;">Guía a los clientes a encontrar el producto en la tienda.</span>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="prod-nutrition">${I18nService.t('inv_nutrition_label')}</label>
-          <textarea id="prod-nutrition" class="input input-md" rows="2" style="resize:vertical;" placeholder="${I18nService.t('inv_nutrition_placeholder')}">${isEdit ? (product.nutritionInfo || '') : ''}</textarea>
+          <label class="form-label" for="prod-nutrition">🍽️ Información Nutricional / Características (opcional)</label>
+          <textarea id="prod-nutrition" class="input input-md" rows="2" style="resize:vertical;" placeholder="Ej. Calorías: 150 kcal, Sin gluten, Producto orgánico...">${isEdit ? (product.nutritionInfo || '') : ''}</textarea>
         </div>
 
         <div class="form-group" id="prod-image-uploader-slot">
           <!-- ImageUploader component will be mounted here after modal renders -->
           <div style="border:2px dashed var(--color-border); border-radius:var(--radius-lg); background:var(--color-bg-tertiary); padding:16px; text-align:center; color:var(--color-text-secondary); font-size:0.8rem;">
-            ${I18nService.t('inv_loading_uploader')}
+            🖼️ Cargando selector de imagen...
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: center;">
           <div style="display: flex; align-items: center; gap: var(--space-2);">
             <input type="checkbox" id="prod-on-sale" ${isEdit && product.onSale ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--color-accent);" />
-            <label for="prod-on-sale" class="form-label" style="margin:0;">${I18nService.t('inv_on_sale_label')}</label>
+            <label for="prod-on-sale" class="form-label" style="margin:0;">Marcar como <strong>En Oferta</strong></label>
           </div>
           <div class="form-group" id="prod-old-price-group" style="display: ${isEdit && product.onSale ? 'block' : 'none'}; margin-bottom: 0;">
-            <label class="form-label" for="prod-old-price">${I18nService.t('inv_old_price_label')}</label>
+            <label class="form-label" for="prod-old-price">🏷️ Precio Anterior (antes del descuento)</label>
             <input type="number" id="prod-old-price" class="input input-md" min="0" step="0.01" placeholder="0.00" value="${isEdit ? (product.oldPrice || '') : ''}" />
           </div>
         </div>
@@ -563,12 +563,12 @@ export class ProductsView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('inv_add_product')}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Producto'}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? I18nService.t('inv_edit_product') : I18nService.t('inv_add_product'),
+      title: isEdit ? 'Editar Producto del Inventario' : 'Registrar Nuevo Producto',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md'
@@ -620,7 +620,7 @@ export class ProductsView extends Component {
     this._scannerCleanup = BarcodeScannerService.attach(skuInput, {
       onScan: (code) => {
         skuInput.value = code;
-        NotificationService.success(I18nService.t('inv_code_scanned_toast', { code }));
+        NotificationService.success(`Código escaneado: ${code}`);
       }
     });
   }
@@ -632,7 +632,7 @@ export class ProductsView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('saving');
+      submitBtn.textContent = 'Guardando...';
     }
 
     const name = this.modalInstance.$('#prod-name').value.trim();
@@ -641,7 +641,7 @@ export class ProductsView extends Component {
     // Choose category: typed input takes preference over select dropdown
     const selectCat = this.modalInstance.$('#prod-category').value;
     const inputCat = this.modalInstance.$('#prod-new-category').value.trim();
-    const category = inputCat || selectCat || I18nService.t('inv_category_others');
+    const category = inputCat || selectCat || 'Otros';
 
     const unit = this.modalInstance.$('#prod-unit').value;
     const stock = Number(this.modalInstance.$('#prod-stock').value);
@@ -689,7 +689,7 @@ export class ProductsView extends Component {
       if (product) {
         // Edit mode
         await FirestoreService.update('productos', product.id, payload);
-        NotificationService.success(I18nService.t('inv_product_updated'));
+        NotificationService.success('Producto actualizado correctamente.');
 
         // Update registry association
         if (sku) {
@@ -700,7 +700,7 @@ export class ProductsView extends Component {
         payload.createdAt = Date.now();
         payload.createdAtLocal = TimeService.timestamp();
         const newId = await FirestoreService.create('productos', payload);
-        NotificationService.success(I18nService.t('inv_product_saved'));
+        NotificationService.success('Producto registrado correctamente en el inventario.');
 
         // Associate the code with the new product
         if (sku && newId) {
@@ -710,10 +710,10 @@ export class ProductsView extends Component {
       this.modalInstance.close();
     } catch (err) {
       console.error('[ProductsView] Error saving product:', err);
-      alert(I18nService.t('inv_save_error', { error: err.message }));
+      alert(`Error al registrar el producto: ${err.message}`);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = product ? I18nService.t('save_changes') : I18nService.t('inv_add_product');
+        submitBtn.textContent = product ? 'Guardar Cambios' : 'Registrar Producto';
       }
     }
   }

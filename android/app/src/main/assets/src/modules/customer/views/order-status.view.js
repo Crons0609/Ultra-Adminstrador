@@ -8,7 +8,6 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { Modal } from '../../../components/ui/modal.js';
 import { getBusinessCategory } from '../../../config/business-types.config.js';
-import { I18nService } from '../../../services/i18n.service.js';
 
 export class OrderStatusView extends Component {
   constructor(params = {}) {
@@ -41,9 +40,9 @@ export class OrderStatusView extends Component {
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
           <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
             <div style="font-size: 3rem; margin-bottom: 15px;">🔍</div>
-            <h3 class="font-bold text-lg">${I18nService.t('os_no_active_title')}</h3>
-            <p class="text-xs text-secondary mt-2">${I18nService.t('os_no_active_desc')}</p>
-            <button class="btn btn-secondary btn-sm mt-4 w-full" id="btn-err-back">${I18nService.t('os_back_to_menu')}</button>
+            <h3 class="font-bold text-lg">Sin Pedido Activo</h3>
+            <p class="text-xs text-secondary mt-2">No se encontró ningún pedido reciente registrado en este dispositivo.</p>
+            <button class="btn btn-secondary btn-sm mt-4 w-full" id="btn-err-back">Volver al menú</button>
           </div>
         </div>
       `;
@@ -107,7 +106,7 @@ export class OrderStatusView extends Component {
     if (this.state.loading) {
       root.innerHTML = `
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
-          <p class="text-secondary text-sm">${I18nService.t('os_loading_status')}</p>
+          <p class="text-secondary text-sm">Cargando estado del pedido...</p>
         </div>
       `;
       return;
@@ -118,9 +117,9 @@ export class OrderStatusView extends Component {
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
           <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
             <div style="font-size: 3rem; margin-bottom: 15px;">❌</div>
-            <h3 class="font-bold text-lg">${I18nService.t('os_not_found_title')}</h3>
-            <p class="text-xs text-secondary mt-2">${I18nService.t('os_not_found_desc')}</p>
-            <button class="btn btn-secondary btn-sm mt-4 w-full" id="btn-not-found-back">${I18nService.t('os_go_to_menu')}</button>
+            <h3 class="font-bold text-lg">Pedido No Encontrado</h3>
+            <p class="text-xs text-secondary mt-2">El pedido puede haber sido completado o cancelado.</p>
+            <button class="btn btn-secondary btn-sm mt-4 w-full" id="btn-not-found-back">Ir al Menú</button>
           </div>
         </div>
       `;
@@ -148,31 +147,16 @@ export class OrderStatusView extends Component {
 
     const status = order.status || 'PENDIENTE_VERIFICACION';
     const table = this.state.table || {};
-    const waiterRoleName = table.assignedWaiterRole || order.assignedWaiterRole || (isBar ? I18nService.t('os_role_bartender') : I18nService.t('os_role_waiter'));
+    const waiterRoleName = table.assignedWaiterRole || order.assignedWaiterRole || (isBar ? 'Bartender' : 'Mesero');
     
     const steps = [
-      {
-        key: 'PENDIENTE_VERIFICACION',
-        label: isBar ? I18nService.t('os_status_verification_label_bar') : I18nService.t('os_status_verification_label'),
-        desc: I18nService.t('os_status_verification_desc', { role: waiterRoleName.toLowerCase() }),
-        icon: '📥'
-      },
-      {
-        key: 'EN_COCINA',
-        label: isBar ? I18nService.t('os_status_kitchen_label_bar') : I18nService.t('os_status_kitchen_label'),
-        desc: isBar ? I18nService.t('os_status_kitchen_desc_bar') : I18nService.t('os_status_kitchen_desc'),
-        icon: isBar ? '🍹' : '🍳'
-      },
-      {
-        key: 'EN_PREPARACION',
-        label: isBar ? I18nService.t('os_status_preparing_label_bar') : I18nService.t('os_status_preparing_label'),
-        desc: isBar ? I18nService.t('os_status_preparing_desc_bar') : I18nService.t('os_status_preparing_desc'),
-        icon: '🔥'
-      },
-      { key: 'READY', label: I18nService.t('os_status_ready_label'), desc: I18nService.t('os_status_ready_desc'), icon: '🔔' },
-      { key: 'ENTREGADO', label: I18nService.t('os_status_delivered_label'), desc: I18nService.t('os_status_delivered_desc'), icon: '🍽️' },
-      { key: 'ESPERANDO_PAGO', label: I18nService.t('os_status_billing_label'), desc: I18nService.t('os_status_billing_desc'), icon: '🧾' },
-      { key: 'COMPLETED', label: I18nService.t('os_status_completed_label'), desc: I18nService.t('os_status_completed_desc'), icon: '🎉' }
+      { key: 'PENDIENTE_VERIFICACION', label: isBar ? 'Cola de Barra' : 'Verificación', desc: `El ${waiterRoleName.toLowerCase()} está corroborando tu orden`, icon: '📥' },
+      { key: 'EN_COCINA', label: isBar ? 'En Barra' : 'En Cocina', desc: isBar ? 'El bartender recibió tu pedido' : 'Cocina recibió la comanda', icon: isBar ? '🍹' : '🍳' },
+      { key: 'EN_PREPARACION', label: isBar ? 'Preparando' : 'En Preparación', desc: isBar ? 'El bartender está preparando tus bebidas' : 'Tu comida está siendo preparada', icon: '🔥' },
+      { key: 'READY', label: '¡Listo!', desc: '¡Tu pedido está listo para servirse!', icon: '🔔' },
+      { key: 'ENTREGADO', label: 'Entregado', desc: '¡Que disfrutes tu servicio!', icon: '🍽️' },
+      { key: 'ESPERANDO_PAGO', label: 'Cerrando cuenta', desc: 'El personal se acerca a cobrar', icon: '🧾' },
+      { key: 'COMPLETED', label: 'Completado', desc: '¡Gracias por visitarnos!', icon: '🎉' }
     ];
 
     const currentIdx = steps.findIndex(s => s.key === status);
@@ -273,8 +257,8 @@ export class OrderStatusView extends Component {
         <!-- Header -->
         <div class="text-center py-4">
           <span style="font-size: 2.5rem;">${isBar ? '🍹' : '🔥'}</span>
-          <h2 class="font-bold mt-2" style="font-size: 1.3rem; color: var(--pub-text);">${isBar ? I18nService.t('os_title_drink') : I18nService.t('os_title_order')}</h2>
-          <p class="text-xs text-secondary mt-1">${I18nService.t('os_code_label')}: #${this.orderId.slice(-6).toUpperCase()} · ${I18nService.t('os_table_label')}: ${this.tableId.replace('mesa-', '')}</p>
+          <h2 class="font-bold mt-2" style="font-size: 1.3rem; color: var(--pub-text);">${isBar ? 'Estado de tu Bebida' : 'Estado de tu Pedido'}</h2>
+          <p class="text-xs text-secondary mt-1">Código: #${this.orderId.slice(-6).toUpperCase()} · Mesa: ${this.tableId.replace('mesa-', '')}</p>
         </div>
 
         <!-- Progress Bar -->
@@ -303,10 +287,10 @@ export class OrderStatusView extends Component {
         <!-- Order details -->
         <div class="card p-5" style="background:var(--pub-surface); border-color:var(--pub-border);">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="font-bold text-sm" style="color:var(--pub-text); margin:0;">${I18nService.t('os_detail_title')}</h3>
+            <h3 class="font-bold text-sm" style="color:var(--pub-text); margin:0;">Detalle de este Pedido</h3>
             ${accumulatedTotal > 0 ? `
               <button class="btn btn-secondary btn-xs" id="btn-status-cons" style="font-size:0.7rem; border-radius:6px; font-weight:700; border-color:var(--pub-border);">
-                🧾 ${I18nService.t('os_total_consumption')}
+                🧾 Consumo Total
               </button>
             ` : ''}
           </div>
@@ -314,16 +298,16 @@ export class OrderStatusView extends Component {
             ${(order.items || []).map(item => `
               <div class="order-summary-row">
                 <span style="color:var(--pub-text);">${item.qty}x ${item.name}</span>
-                <strong style="color:var(--pub-primary);">${I18nService.t('pos_unit_price')}: $${item.total.toFixed(2)}</strong>
+                <strong style="color:var(--pub-primary);">$${item.total.toFixed(2)}</strong>
               </div>
             `).join('')}
             <div class="d-flex justify-content-between mt-4 font-bold" style="font-size: 0.95rem;">
-              <span style="color:var(--pub-text);">${I18nService.t('os_total_order')}</span>
+              <span style="color:var(--pub-text);">Total Pedido:</span>
               <strong style="color:var(--pub-primary); font-size:1.15rem;">$${Number(order.total || 0).toFixed(2)}</strong>
             </div>
             ${accumulatedTotal > 0 && activeConsumption.length > 1 ? `
               <div class="d-flex justify-content-between mt-2 font-bold" style="font-size: 0.85rem; color:var(--pub-text-sec); border-top:1px solid var(--pub-border); padding-top:6px;">
-                <span>${I18nService.t('os_accumulated_total')}</span>
+                <span>Total Acumulado (Mesa):</span>
                 <strong>$${accumulatedTotal.toFixed(2)}</strong>
               </div>
             ` : ''}
@@ -333,12 +317,12 @@ export class OrderStatusView extends Component {
         <!-- Call to Action -->
         <div class="d-flex gap-3">
           <button class="btn btn-secondary w-full py-3 font-semibold" id="btn-order-more" style="border-radius:10px; font-size:0.88rem; height:46px;">
-            ${I18nService.t('os_order_more')}
+            Pedir algo más ➕
           </button>
           
           ${(status === 'ENTREGADO' || status === 'READY') ? `
             <button class="btn btn-primary w-full py-3 font-semibold" id="btn-ask-bill" style="background:#fb923c; border:none; border-radius:10px; font-size:0.88rem; height:46px;" ${this.state.requestingBill ? 'disabled' : ''}>
-              ${this.state.requestingBill ? I18nService.t('os_requesting') : I18nService.t('os_ask_bill')}
+              ${this.state.requestingBill ? 'Solicitando... ⏳' : 'Pedir Cuenta 🧾'}
             </button>
           ` : ''}
         </div>
@@ -372,7 +356,7 @@ export class OrderStatusView extends Component {
 
     const bodyHTML = `
       <div class="d-flex flex-column gap-3" style="max-height: 60vh; overflow-y: auto; color: var(--pub-text);">
-        <h4 class="font-bold text-sm mb-2" style="border-bottom:1px solid var(--pub-border); padding-bottom:8px;">${I18nService.t('os_consumption_modal_title')}</h4>
+        <h4 class="font-bold text-sm mb-2" style="border-bottom:1px solid var(--pub-border); padding-bottom:8px;">Consumo Total Acumulado</h4>
         
         ${activeOrders.map(o => {
           const itemsHTML = (o.items || []).map(i => `
@@ -385,12 +369,12 @@ export class OrderStatusView extends Component {
           return `
             <div class="p-3 mb-2" style="background: rgba(255,255,255,0.01); border: 1px solid var(--pub-border); border-radius:8px;">
               <div class="d-flex justify-content-between font-bold text-xs mb-2">
-                <span>${I18nService.t('os_order_id_label')} ${o.id.slice(-6).toUpperCase()}</span>
+                <span>Pedido #${o.id.slice(-6).toUpperCase()}</span>
                 <span class="badge" style="background:#fb923c22; color:#fb923c; font-size:0.65rem;">${o.status}</span>
               </div>
               ${itemsHTML}
               <div class="d-flex justify-content-between text-xs font-bold mt-2" style="border-top: 1px dotted var(--pub-border); padding-top:4px;">
-                <span>${I18nService.t('os_subtotal_order')}</span>
+                <span>Subtotal Pedido</span>
                 <span style="color:var(--pub-primary);">$${Number(o.total || 0).toFixed(2)}</span>
               </div>
             </div>
@@ -398,16 +382,16 @@ export class OrderStatusView extends Component {
         }).join('')}
 
         <div class="d-flex justify-content-between font-bold text-md mt-3" style="border-top: 1px solid var(--pub-border); padding-top:10px; font-size:1.1rem;">
-          <span>${I18nService.t('os_total_partial')}</span>
+          <span>Consumo Total Parcial:</span>
           <span style="color:var(--pub-primary); font-size:1.25rem;">$${total.toFixed(2)}</span>
         </div>
       </div>
     `;
 
     const consumptionModal = new Modal({
-      title: `🧾 ${I18nService.t('os_consumption_modal_title')}`,
+      title: '🧾 Mi Consumo Acumulado',
       bodyHTML,
-      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-cons-close">${I18nService.t('close')}</button>`
+      footerHTML: `<button class="btn btn-secondary btn-sm" id="btn-cons-close">Cerrar</button>`
     });
 
     document.body.appendChild(consumptionModal.mount());
@@ -435,11 +419,11 @@ export class OrderStatusView extends Component {
       });
 
       const table = this.state.table || {};
-      const waiterRoleName = table.assignedWaiterRole || (isBar ? I18nService.t('os_role_bartender') : I18nService.t('os_role_waiter'));
-      NotificationService.success(I18nService.t('os_bill_requested_toast', { role: waiterRoleName.toLowerCase() }));
+      const waiterRoleName = table.assignedWaiterRole || 'Mesero';
+      NotificationService.success(`La cuenta ha sido solicitada. El ${waiterRoleName.toLowerCase()} se acercará pronto.`);
     } catch (e) {
       console.error('[OrderStatusView] Bill request failed:', e);
-      NotificationService.error(I18nService.t('os_bill_error'));
+      NotificationService.error('Error al solicitar la cuenta.');
     } finally {
       this.state.requestingBill = false;
       this.renderStatus(this.element);

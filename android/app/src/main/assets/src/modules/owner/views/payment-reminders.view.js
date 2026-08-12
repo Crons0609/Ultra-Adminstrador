@@ -12,6 +12,7 @@ import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
 import { PaymentRemindersService } from '../../../services/payment-reminders.service.js';
 import { TimeService } from '../../../services/time.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class PaymentRemindersView extends Component {
   constructor(params = {}) {
@@ -32,12 +33,12 @@ export class PaymentRemindersView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '🔔 Recordatorios Automáticos de Pagos',
-      subtitle: 'Automatiza y gestiona el envío de recordatorios de cobro a tus clientes vía WhatsApp y Telegram antes y después del vencimiento.',
+      title: `🔔 ${I18nService.t('pr_title') || 'Recordatorios Automáticos de Pagos'}`,
+      subtitle: I18nService.t('pr_subtitle') || 'Automatiza y gestiona el envío de recordatorios de cobro a tus clientes vía WhatsApp y Telegram antes y después del vencimiento.',
       actionHTML: `
         <div class="d-flex gap-2 align-items-center">
           <button class="btn btn-secondary btn-sm" id="btn-eval-reminders-now">
-            🔄 Ejecutar Evaluación de Cobros
+            🔄 ${I18nService.t('pr_run_eval') || 'Ejecutar Evaluación de Cobros'}
           </button>
         </div>
       `,
@@ -66,10 +67,10 @@ export class PaymentRemindersView extends Component {
 
         <!-- Tab Bar -->
         <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-5); overflow-x:auto; padding-bottom:4px;">
-          <button class="pr-tab-btn active" data-tab="monitor">📋 Monitor de Deudas</button>
-          <button class="pr-tab-btn" data-tab="rules">⚡ Reglas de Automatización</button>
-          <button class="pr-tab-btn" data-tab="templates">📝 Plantillas de Mensajes</button>
-          <button class="pr-tab-btn" data-tab="history">📜 Historial de Envíos</button>
+          <button class="pr-tab-btn active" data-tab="monitor">📋 ${I18nService.t('pr_tab_monitor') || 'Monitor de Deudas'}</button>
+          <button class="pr-tab-btn" data-tab="rules">⚡ ${I18nService.t('pr_tab_rules') || 'Reglas de Automatización'}</button>
+          <button class="pr-tab-btn" data-tab="templates">📝 ${I18nService.t('pr_tab_templates') || 'Plantillas de Mensajes'}</button>
+          <button class="pr-tab-btn" data-tab="history">📜 ${I18nService.t('pr_tab_history') || 'Historial de Envíos'}</button>
         </div>
 
         <div id="pr-tab-content"></div>

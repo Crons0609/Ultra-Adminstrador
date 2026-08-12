@@ -34,25 +34,25 @@ export class SuppliesView extends Component {
       columns: [
         { 
           key: 'name', 
-          label: I18nService.t('ing_name'),
+          label: 'Insumo',
           render: (val, row) => `
             <div style="display: flex; align-items: center; gap: 10px;">
               <div style="width:40px;height:40px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🧪</div>
               <div style="display: flex; flex-direction: column;">
                 <span class="font-semibold text-primary">${val}</span>
-                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">${I18nService.t('category')}: ${row.category || I18nService.t('nav_general')}</span>
+                <span class="text-xs text-secondary" style="font-size: 0.7rem; margin-top: 2px;">Categoría: ${row.category || 'General'}</span>
               </div>
             </div>
           `
         },
         { 
           key: 'code', 
-          label: I18nService.t('pos_barcode_label'),
-          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : `<span class="text-xs text-secondary">${I18nService.t('unassigned')}</span>`
+          label: 'Código de Barra/QR',
+          render: (val) => val ? `<span class="scan-code-badge">📊 ${val}</span>` : '<span class="text-xs text-secondary">Sin asignar</span>'
         },
         { 
           key: 'stock', 
-          label: I18nService.t('ale_current_stock'),
+          label: 'Stock Actual',
           render: (val, row) => `
             <span class="font-medium ${Number(val) === 0 ? 'text-danger font-bold' : (Number(val) <= Number(row.minStock || 0) ? 'text-warning font-semibold' : 'text-success')}">
               ${val} ${row.unit || 'uds'}
@@ -61,17 +61,17 @@ export class SuppliesView extends Component {
         },
         { 
           key: 'minStock', 
-          label: I18nService.t('ing_min_stock'),
+          label: 'Stock Mín.',
           render: (val, row) => `<span class="text-secondary">${val} ${row.unit || 'uds'}</span>`
         },
         { 
           key: 'cost', 
-          label: I18nService.t('pur_unit_cost'),
+          label: 'Costo Unitario',
           render: (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0)
         },
         {
           key: 'id',
-          label: I18nService.t('actions'),
+          label: 'Acciones',
           render: (val) => `
             <div class="d-flex gap-2">
               <button class="btn btn-secondary btn-sm py-1 px-2 btn-edit-supply" data-id="${val}" style="font-size: 0.7rem;">✏️</button>
@@ -84,11 +84,11 @@ export class SuppliesView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: I18nService.t('nav_supplies'),
-      subtitle: I18nService.t('supplies_subtitle'),
+      title: I18nService.t('supplies_mgmt_title', 'Control de Insumos'),
+      subtitle: I18nService.t('supplies_mgmt_subtitle', 'Administra materias primas, materiales consumibles de oficina o limpieza y control de niveles mínimos.'),
       actionHTML: `
         <button class="btn btn-primary btn-sm" id="btn-add-supply">
-          ${I18nService.t('ing_add')}
+          + Registrar Insumo
         </button>
       `,
       contentHTML: `
@@ -96,38 +96,38 @@ export class SuppliesView extends Component {
         <div class="grid-stats animate-fade-in" id="supplies-kpis">
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ing_total_kpi')}</span>
+              <span class="kpi-label">Insumos Registrados</span>
               <div class="kpi-icon kpi-icon-accent">🧪</div>
             </div>
             <h3 class="kpi-value" id="kpi-total-supplies">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('supplies_total_desc')}</span>
+            <span class="text-xs text-secondary">Artículos en catálogo</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('supplies_total_value_kpi')}</span>
+              <span class="kpi-label">Valor en Insumos</span>
               <div class="kpi-icon kpi-icon-success">💰</div>
             </div>
             <h3 class="kpi-value text-success" id="kpi-total-cost">$0.00</h3>
-            <span class="text-xs text-secondary">${I18nService.t('supplies_total_value_desc')}</span>
+            <span class="text-xs text-secondary">Valor del stock</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ale_critical_kpi')}</span>
+              <span class="kpi-label">Stock Crítico (Agotados)</span>
               <div class="kpi-icon kpi-icon-danger">⚠️</div>
             </div>
             <h3 class="kpi-value text-danger" id="kpi-critical-supplies">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('supplies_critical_desc')}</span>
+            <span class="text-xs text-secondary">Requieren compra urgente</span>
           </div>
 
           <div class="kpi-card hover-lift">
             <div class="kpi-card-header">
-              <span class="kpi-label">${I18nService.t('ale_warning_kpi')}</span>
+              <span class="kpi-label">Stock Mínimo (Bajo)</span>
               <div class="kpi-icon kpi-icon-warning">📉</div>
             </div>
             <h3 class="kpi-value text-warning" id="kpi-low-supplies">0</h3>
-            <span class="text-xs text-secondary">${I18nService.t('supplies_warning_desc')}</span>
+            <span class="text-xs text-secondary">Por debajo del límite establecido</span>
           </div>
         </div>
 
@@ -136,18 +136,18 @@ export class SuppliesView extends Component {
           <div class="inv-toolbar">
             <div class="inv-search">
               <span class="inv-search-icon">🔍</span>
-              <input type="text" id="inp-search-supply" class="input input-md" placeholder="${I18nService.t('supplies_search_placeholder')}" />
+              <input type="text" id="inp-search-supply" class="input input-md" placeholder="Buscar por nombre, código, categoría..." />
             </div>
 
             <select id="sel-filter-category" class="inv-filter-select">
-              <option value="">${I18nService.t('inv_all_categories')}</option>
+              <option value="">Todas las categorías</option>
             </select>
 
             <select id="sel-filter-status" class="inv-filter-select">
-              <option value="">${I18nService.t('inv_all_statuses')}</option>
-              <option value="OK">${I18nService.t('supplies_status_ok')}</option>
-              <option value="LOW">${I18nService.t('ale_low_stock')}</option>
-              <option value="OUT">${I18nService.t('ale_out_of_stock')}</option>
+              <option value="">Todos los estados</option>
+              <option value="OK">Stock Correcto</option>
+              <option value="LOW">Stock Bajo</option>
+              <option value="OUT">Agotados</option>
             </select>
           </div>
         </div>
@@ -228,13 +228,13 @@ export class SuppliesView extends Component {
         const deleteBtn = e.target.closest('.btn-delete-supply');
         if (deleteBtn) {
           const supplyId = deleteBtn.getAttribute('data-id');
-          if (confirm(I18nService.t('ing_confirm_delete'))) {
+          if (confirm('¿Estás seguro de que deseas eliminar este insumo del catálogo?')) {
             try {
               await FirestoreService.delete('insumos', supplyId);
-              NotificationService.success(I18nService.t('ing_deleted_success'));
+              NotificationService.success('Insumo eliminado.');
             } catch (err) {
               console.error('[SuppliesView] Error deleting:', err);
-              NotificationService.error(I18nService.t('ing_delete_error'));
+              NotificationService.error('Error al eliminar el insumo.');
             }
           }
         }
@@ -266,7 +266,7 @@ export class SuppliesView extends Component {
     const dropdown = root?.querySelector('#sel-filter-category');
     if (dropdown) {
       const selected = this.state.selectedCategory;
-      dropdown.innerHTML = `<option value="">${I18nService.t('inv_all_categories')}</option>` +
+      dropdown.innerHTML = `<option value="">Todas las categorías</option>` +
         this.state.categories.map(cat => `<option value="${cat}" ${cat === selected ? 'selected' : ''}>${cat}</option>`).join('');
     }
   }
@@ -341,43 +341,43 @@ export class SuppliesView extends Component {
       <form id="supply-form" class="d-flex flex-column gap-3" style="color: var(--color-text-primary);">
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="sup-name">${I18nService.t('ing_name_label')}</label>
-            <input type="text" id="sup-name" class="input input-md" placeholder="${I18nService.t('supplies_name_placeholder')}" value="${isEdit ? supply.name : ''}" required />
+            <label class="form-label" for="sup-name">Nombre del Insumo</label>
+            <input type="text" id="sup-name" class="input input-md" placeholder="Ej. Papel Bond A4" value="${isEdit ? supply.name : ''}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="sup-unit">${I18nService.t('inv_unit')}</label>
+            <label class="form-label" for="sup-unit">Unidad de Medida</label>
             <select id="sup-unit" class="input input-md" style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 var(--space-3); color: var(--color-text-primary);">
-              <option value="uds" ${isEdit && supply.unit === 'uds' ? 'selected' : ''}>${I18nService.t('inv_unit_units')}</option>
-              <option value="kg" ${isEdit && supply.unit === 'kg' ? 'selected' : ''}>${I18nService.t('inv_unit_kg')}</option>
-              <option value="L" ${isEdit && supply.unit === 'L' ? 'selected' : ''}>${I18nService.t('inv_unit_liters')}</option>
-              <option value="paq" ${isEdit && supply.unit === 'paq' ? 'selected' : ''}>${I18nService.t('inv_unit_package')}</option>
+              <option value="uds" ${isEdit && supply.unit === 'uds' ? 'selected' : ''}>Unidades (uds)</option>
+              <option value="kg" ${isEdit && supply.unit === 'kg' ? 'selected' : ''}>Kilogramos (kg)</option>
+              <option value="L" ${isEdit && supply.unit === 'L' ? 'selected' : ''}>Litros (L)</option>
+              <option value="paq" ${isEdit && supply.unit === 'paq' ? 'selected' : ''}>Paquetes (paq)</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">${I18nService.t('supplies_barcode_label')}</label>
+          <label class="form-label">Asociar Código de Barras / QR para Insumo</label>
           <div id="sup-barcode-container"></div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="sup-stock">${I18nService.t('supplies_stock_label')}</label>
+            <label class="form-label" for="sup-stock">Cantidad en Stock</label>
             <input type="number" id="sup-stock" class="input input-md" placeholder="0" min="0" step="any" value="${isEdit ? supply.stock : '0'}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="sup-min-stock">${I18nService.t('inv_min_stock')}</label>
+            <label class="form-label" for="sup-min-stock">Stock Mínimo (Alerta)</label>
             <input type="number" id="sup-min-stock" class="input input-md" placeholder="5" min="0" step="any" value="${isEdit ? (supply.minStock || '5') : '5'}" required />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
           <div class="form-group">
-            <label class="form-label" for="sup-category">${I18nService.t('category')}</label>
-            <input type="text" id="sup-category" class="input input-md" placeholder="${I18nService.t('supplies_category_placeholder')}" value="${isEdit ? (supply.category || '') : ''}" />
+            <label class="form-label" for="sup-category">Categoría</label>
+            <input type="text" id="sup-category" class="input input-md" placeholder="Ej. Papelería, Limpieza" value="${isEdit ? (supply.category || '') : ''}" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="sup-cost">${I18nService.t('supplies_cost_label')}</label>
+            <label class="form-label" for="sup-cost">Costo de Adquisición Unitario</label>
             <input type="number" id="sup-cost" class="input input-md" placeholder="0.00" min="0" step="0.01" value="${isEdit ? supply.cost : ''}" />
           </div>
         </div>
@@ -385,12 +385,12 @@ export class SuppliesView extends Component {
     `;
 
     const footerHTML = `
-      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">${I18nService.t('cancel')}</button>
-      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? I18nService.t('save_changes') : I18nService.t('ing_add')}</button>
+      <button class="btn btn-secondary btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="modal-submit-btn">${isEdit ? 'Guardar Cambios' : 'Registrar Insumo'}</button>
     `;
 
     this.modalInstance = new Modal({
-      title: isEdit ? I18nService.t('ing_edit_title') : I18nService.t('supplies_add_title'),
+      title: isEdit ? 'Editar Insumo' : 'Registrar Nuevo Insumo / Material',
       bodyHTML: formHTML,
       footerHTML: footerHTML,
       size: 'md',
@@ -410,8 +410,8 @@ export class SuppliesView extends Component {
       this.modalBarcodeInput = new BarcodeInput({
         id: 'sup-code',
         compact: true,
-        placeholder: I18nService.t('supplies_scan_placeholder'),
-        value: isEdit ? (asset.code || '') : '',
+        placeholder: 'Escanea el código del insumo...',
+        value: isEdit ? (supply.code || '') : '',
         onScan: (code) => {
           this.modalBarcodeInput.setValue(code);
         }
@@ -437,7 +437,7 @@ export class SuppliesView extends Component {
     const submitBtn = this.modalInstance.$('#modal-submit-btn');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = I18nService.t('saving');
+      submitBtn.textContent = 'Guardando...';
     }
 
     const name = this.modalInstance.$('#sup-name').value.trim();
@@ -453,7 +453,7 @@ export class SuppliesView extends Component {
       unit,
       stock,
       minStock,
-      category: category || I18nService.t('inv_category_others'),
+      category: category || 'Otros',
       cost,
       code,
       updatedAt: Date.now(),
@@ -475,7 +475,7 @@ export class SuppliesView extends Component {
     try {
       if (supply) {
         await FirestoreService.update('insumos', supply.id, payload);
-        NotificationService.success(I18nService.t('ing_updated_success'));
+        NotificationService.success('Insumo actualizado correctamente.');
         if (code) {
           await BarcodeRegistryService.associateCode(code, supply.id, 'insumo', name).catch(() => {});
         }
@@ -483,7 +483,7 @@ export class SuppliesView extends Component {
         payload.createdAt = Date.now();
         payload.createdAtLocal = TimeService.timestamp();
         const newId = await FirestoreService.create('insumos', payload);
-        NotificationService.success(I18nService.t('ing_saved_success'));
+        NotificationService.success('Insumo registrado correctamente.');
         if (code && newId) {
           await BarcodeRegistryService.associateCode(code, newId, 'insumo', name).catch(() => {});
         }
@@ -491,10 +491,10 @@ export class SuppliesView extends Component {
       this.modalInstance.close();
     } catch (err) {
       console.error('[SuppliesView] Error saving supply:', err);
-      alert(I18nService.t('error_occurred') + ': ' + err.message);
+      alert(`Error al guardar: ${err.message}`);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = supply ? I18nService.t('save_changes') : I18nService.t('ing_add');
+        submitBtn.textContent = supply ? 'Guardar Cambios' : 'Registrar Insumo';
       }
     }
   }

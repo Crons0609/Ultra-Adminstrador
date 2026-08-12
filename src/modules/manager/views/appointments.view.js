@@ -10,6 +10,7 @@ import { Modal } from '../../../components/ui/modal.js';
 import { GlobalStore } from '../../../core/state.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 // Statuses with colors
 const STATUS_CONFIG = {
@@ -38,8 +39,8 @@ export class AppointmentsView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: '📅 Citas y Reservas',
-      subtitle: `${this.currentCompany.name || 'Mi Barbería'} — Gestión completa de citas y servicios.`,
+      title: `📅 ${I18nService.t('appointments_title', 'Citas y Reservas')}`,
+      subtitle: `${this.currentCompany.name || 'Mi Barbería'} — ${I18nService.t('appointments_subtitle', 'Gestión completa de citas y servicios.')}`,
       actionHTML: `
         <button class="btn btn-secondary btn-sm" id="btn-view-toggle">🗓 Vista Calendario</button>
         <button class="btn btn-primary btn-sm" id="btn-new-appointment">+ Nueva Cita</button>

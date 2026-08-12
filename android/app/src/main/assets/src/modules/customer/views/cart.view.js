@@ -7,7 +7,6 @@
 import { Component } from '../../../core/component.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { NotificationService } from '../../../services/notification.service.js';
-import { I18nService } from '../../../services/i18n.service.js';
 
 export class CartView extends Component {
   constructor(params = {}) {
@@ -37,8 +36,8 @@ export class CartView extends Component {
         <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
           <div class="card p-8 text-center" style="max-width: 400px; border-top: 4px solid var(--color-danger);">
             <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
-            <h3 class="font-bold text-lg">${I18nService.t('cart_access_error_title')}</h3>
-            <p class="text-xs text-secondary mt-2">${I18nService.t('cart_access_error_desc')}</p>
+            <h3 class="font-bold text-lg">Error de Acceso</h3>
+            <p class="text-xs text-secondary mt-2">No se encontró una sesión activa de mesa. Por favor escanea el código QR de tu mesa nuevamente.</p>
           </div>
         </div>
       `;
@@ -109,10 +108,10 @@ export class CartView extends Component {
       <div class="cart-container animate-fade-in">
         <!-- Header -->
         <div class="cart-header">
-          <button class="btn-back-menu" id="btn-back">${I18nService.t('cart_back_to_menu')}</button>
+          <button class="btn-back-menu" id="btn-back">← Menú</button>
           <div>
-            <h2 class="font-bold" style="font-size: 1.25rem; color: var(--pub-text);">${I18nService.t('cart_title')}</h2>
-            <p class="text-xs text-secondary">${I18nService.t('os_table_label')}: ${this.tableId.replace(/^[a-z]+-/i, '')} · ${I18nService.t('menu_account_label', { type: this.accountType === 'CONJUNTA' ? I18nService.t('menu_account_joint_short') : I18nService.t('menu_account_separate_short', { name: this.clientName }) })}</p>
+            <h2 class="font-bold" style="font-size: 1.25rem; color: var(--pub-text);">Tu Pedido</h2>
+            <p class="text-xs text-secondary">Mesa: ${this.tableId.replace(/^[a-z]+-/i, '')} · ${this.accountType === 'CONJUNTA' ? 'Cuenta Conjunta' : `Cuenta Separada (${this.clientName})`}</p>
           </div>
         </div>
 
@@ -121,8 +120,8 @@ export class CartView extends Component {
           ${this.state.cart.length === 0 ? `
             <div class="text-center py-10 text-secondary">
               <span style="font-size: 3rem; display:block; margin-bottom:10px;">🛒</span>
-              <p class="font-semibold">${I18nService.t('cart_empty_title')}</p>
-              <p class="text-xs text-secondary mt-1">${I18nService.t('cart_empty_desc')}</p>
+              <p class="font-semibold">Tu carrito está vacío</p>
+              <p class="text-xs text-secondary mt-1">Regresa al menú para agregar productos o servicios.</p>
             </div>
           ` : `
             <div class="d-flex flex-column">
@@ -130,7 +129,7 @@ export class CartView extends Component {
                 <div class="cart-item">
                   <div>
                     <h4 class="font-bold text-sm" style="color:var(--pub-text);">${item.name}</h4>
-                    <span class="text-xs text-secondary">$${item.price.toFixed(2)} ${I18nService.t('pos_each_short')}</span>
+                    <span class="text-xs text-secondary">$${item.price.toFixed(2)} c/u</span>
                   </div>
                   <div class="d-flex align-items-center gap-4">
                     <div class="qty-control">
@@ -144,7 +143,7 @@ export class CartView extends Component {
               `).join('')}
 
               <div class="d-flex justify-content-between align-items-center mt-5" style="border-top:1px solid var(--pub-border); padding-top:var(--space-4);">
-                <strong class="text-md" style="color:var(--pub-text);">${I18nService.t('cart_total_label')}</strong>
+                <strong class="text-md" style="color:var(--pub-text);">Total a pagar:</strong>
                 <strong class="text-lg" style="color:var(--pub-primary); font-size:1.4rem;">$${total.toFixed(2)}</strong>
               </div>
             </div>
@@ -154,12 +153,12 @@ export class CartView extends Component {
         <!-- Special Notes (Only show if cart has items) -->
         ${this.state.cart.length > 0 ? `
           <div class="form-group">
-            <label class="form-label" for="order-notes" style="font-size: 0.82rem; font-weight:600; color:var(--pub-text);">${I18nService.t('cart_notes_label')}</label>
-            <textarea id="order-notes" class="input input-md" placeholder="${I18nService.t('cart_notes_placeholder')}" rows="2" style="background:var(--pub-surface); color:var(--pub-text); border-color:var(--pub-border); font-size:0.85rem;">${this.state.notes}</textarea>
+            <label class="form-label" for="order-notes" style="font-size: 0.82rem; font-weight:600; color:var(--pub-text);">Instrucciones / Notas Especiales</label>
+            <textarea id="order-notes" class="input input-md" placeholder="Ej. Sin cebolla, aderezo aparte, bien cocido..." rows="2" style="background:var(--pub-surface); color:var(--pub-text); border-color:var(--pub-border); font-size:0.85rem;">${this.state.notes}</textarea>
           </div>
 
           <button class="btn btn-primary w-full py-3 font-semibold" id="btn-send-order" style="background:var(--pub-primary); border:none; border-radius:10px; font-size:0.95rem; height:48px;" ${this.state.sending ? 'disabled' : ''}>
-            ${this.state.sending ? I18nService.t('cart_sending_order') : I18nService.t('cart_send_order')}
+            ${this.state.sending ? 'Enviando Pedido... ⏳' : 'Confirmar y Enviar Pedido 🍳'}
           </button>
         ` : ''}
       </div>
@@ -228,7 +227,7 @@ export class CartView extends Component {
     const orderPayload = {
       id: orderId,
       tableId: this.tableId,
-      tableName: I18nService.t('cart_table_name_prefix', { table: this.tableId.replace('mesa-', '') }),
+      tableName: `Mesa ${this.tableId.replace('mesa-', '')}`,
       branchId: this.branchId,
       accountType: this.accountType,
       clientName: this.clientName,
@@ -268,11 +267,11 @@ export class CartView extends Component {
       // 4. Guardar orderId en sesión, limpiar carrito y redirigir al estado del pedido
       sessionStorage.setItem('ua_customer_orderId', orderId);
       sessionStorage.removeItem('ua_customer_cart');
-      NotificationService.success(I18nService.t('cart_success_toast'));
+      NotificationService.success('¡Pedido enviado con éxito!');
       window.location.hash = '/customer/order-status';
     } catch (e) {
       console.error('[CartView] Failed to send order:', e);
-      NotificationService.error(I18nService.t('cart_error_toast'));
+      NotificationService.error('Error al enviar el pedido. Por favor intenta de nuevo.');
       this.state.sending = false;
       this.renderCart(this.element);
     }

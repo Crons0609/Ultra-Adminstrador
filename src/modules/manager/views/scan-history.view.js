@@ -9,6 +9,7 @@ import { DataTable } from '../../../components/ui/table.js';
 import { FirestoreService } from '../../../services/firestore.service.js';
 import { BarcodeScannerService } from '../../../services/barcode-scanner.service.js';
 import { BarcodeRegistryService } from '../../../services/barcode-registry.service.js';
+import { I18nService } from '../../../services/i18n.service.js';
 
 export class ScanHistoryView extends Component {
   constructor(params = {}) {
@@ -70,8 +71,8 @@ export class ScanHistoryView extends Component {
     });
 
     this.layout = new PageLayout({
-      title: 'Auditoría e Historial de Escaneos',
-      subtitle: 'Consulta el registro permanente de todos los códigos de barra y QR leídos por los dispositivos del negocio.',
+      title: I18nService.t('scan_history_title', 'Auditoría e Historial de Escaneos'),
+      subtitle: I18nService.t('scan_history_subtitle', 'Consulta el registro permanente de todos los códigos de barra y QR leídos por los dispositivos del negocio.'),
       contentHTML: `
         <!-- KPI Cards Row -->
         <div class="grid-stats animate-fade-in" id="history-kpis">

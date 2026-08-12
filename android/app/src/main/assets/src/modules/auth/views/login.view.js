@@ -143,7 +143,7 @@ export class LoginView extends Component {
                       type="password"
                       id="login-password"
                       class="enterprise-input"
-                      placeholder="${I18nService.t('auth_password_placeholder')}"
+                      placeholder="••••••••"
                       autocomplete="current-password"
                       required
                       style="padding-right: 44px;"
@@ -167,7 +167,7 @@ export class LoginView extends Component {
                         user-select: none;
                         transition: color 0.2s;
                       "
-                      title="${I18nService.t('auth_show_password')}"
+                      title="Mostrar contraseña"
                     >
                       👁️
                     </button>
@@ -192,7 +192,7 @@ export class LoginView extends Component {
               <button
                 id="btn-toggle-owner-request"
                 class="enterprise-secondary-btn"
-                title="${I18nService.t('auth_request_account')}"
+                title="Solicitar registro para tu negocio"
               >
                 <span>🏢</span>
                 <span>${I18nService.t('auth_request_account')}</span>
@@ -229,7 +229,7 @@ export class LoginView extends Component {
                       type="text"
                       id="req-owner-name"
                       class="enterprise-input"
-                      placeholder="${I18nService.t('auth_owner_name_placeholder')}"
+                      placeholder="Ej. Juan Pérez"
                       style="padding-left: 14px;"
                       required
                     />
@@ -269,7 +269,7 @@ export class LoginView extends Component {
                       type="email"
                       id="req-email"
                       class="enterprise-input"
-                      placeholder="${I18nService.t('auth_contact_email_placeholder')}"
+                      placeholder="propietario@empresa.com"
                       autocomplete="username"
                       style="padding-left: 14px;"
                       required
@@ -284,7 +284,7 @@ export class LoginView extends Component {
                       type="tel"
                       id="req-phone"
                       class="enterprise-input"
-                      placeholder="${I18nService.t('auth_contact_phone_placeholder')}"
+                      placeholder="Ej. +505 8888 8888"
                       style="padding-left: 14px;"
                       required
                     />
@@ -299,7 +299,7 @@ export class LoginView extends Component {
                         type="password"
                         id="req-password"
                         class="enterprise-input"
-                        placeholder="${I18nService.t('auth_password_placeholder')}"
+                        placeholder="••••••••"
                         minlength="6"
                         autocomplete="new-password"
                         required
@@ -318,7 +318,7 @@ export class LoginView extends Component {
                           padding: 6px;
                           font-size: 1rem;
                         "
-                        title="${I18nService.t('auth_show_password')}"
+                        title="Mostrar contraseña"
                       >
                         👁️
                       </button>
@@ -332,7 +332,7 @@ export class LoginView extends Component {
                     class="enterprise-submit-btn"
                     style="background: linear-gradient(135deg, #7c3aed, #8b5cf6);"
                   >
-                    ${I18nService.t('auth_submit_request')}
+                    📩 Enviar Solicitud a Programador
                   </button>
                 </form>
               </div>
@@ -340,8 +340,8 @@ export class LoginView extends Component {
 
             <!-- Footer -->
             <div class="enterprise-footer">
-              <p style="margin: 0;">&copy; ${new Date().getFullYear()} <strong>${I18nService.t('app_name')}</strong>. ${I18nService.t('auth_rights_reserved')}</p>
-              <p style="margin: 4px 0 0; opacity: 0.8;">${I18nService.t('auth_developed_by')} <strong style="color: #a78bfa;">ProLine System</strong></p>
+              <p style="margin: 0;">&copy; ${new Date().getFullYear()} <strong>Ultra Administrador</strong>. Todos los derechos reservados.</p>
+              <p style="margin: 4px 0 0; opacity: 0.8;">Desarrollado por <strong style="color: #a78bfa;">ProLine System</strong></p>
             </div>
 
           </div>
@@ -403,7 +403,7 @@ export class LoginView extends Component {
         const isPassword = loginPassInput.type === 'password';
         loginPassInput.type = isPassword ? 'text' : 'password';
         toggleLoginPass.textContent = isPassword ? '🙈' : '👁️';
-        toggleLoginPass.title = isPassword ? I18nService.t('auth_hide_password') : I18nService.t('auth_show_password');
+        toggleLoginPass.title = isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña';
       });
     }
 
@@ -414,7 +414,7 @@ export class LoginView extends Component {
         const isPassword = reqPassInput.type === 'password';
         reqPassInput.type = isPassword ? 'text' : 'password';
         toggleReqPass.textContent = isPassword ? '🙈' : '👁️';
-        toggleReqPass.title = isPassword ? I18nService.t('auth_hide_password') : I18nService.t('auth_show_password');
+        toggleReqPass.title = isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña';
       });
     }
 
@@ -427,8 +427,8 @@ export class LoginView extends Component {
         const isHidden = ownerReqPanel.style.display === 'none';
         ownerReqPanel.style.display = isHidden ? 'block' : 'none';
         toggleOwnerReqBtn.innerHTML = isHidden
-          ? `<span>✖</span> <span>${I18nService.t('auth_request_close')}</span>`
-          : `<span>🏢</span> <span>${I18nService.t('auth_request_account')}</span>`;
+          ? '<span>✖</span> <span>Cerrar Formulario</span>'
+          : '<span>🏢</span> <span>¿Quieres registrar tu negocio? Solicitar Cuenta</span>';
       });
     }
 
@@ -507,12 +507,12 @@ export class LoginView extends Component {
         loginAlert.innerHTML = `
           <div style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); border-radius: 10px; padding: 14px; text-align: center; color: #f87171;">
             <div style="font-size: 1.8rem; margin-bottom: 4px;">🔒</div>
-            <strong style="font-size: 0.95rem; display: block; margin-bottom: 6px;">${I18nService.t('auth_lockout_title')}</strong>
+            <strong style="font-size: 0.95rem; display: block; margin-bottom: 6px;">Cuenta Bloqueada Temporalmente</strong>
             <p style="margin: 0 0 10px 0; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1;">
-              ${I18nService.t('auth_lockout_desc')}
+              Se han agotado los 8 intentos de acceso permitidos. Por favor, <strong>contacta al programador</strong> para restablecer tu acceso.
             </p>
             <button type="button" id="btn-recheck-lockout" class="enterprise-secondary-btn" style="margin-top: 6px; font-size: 0.75rem; padding: 8px 12px; width: 100%;">
-              ${I18nService.t('auth_lockout_recheck')}
+              🔄 ¿Ya te cambiaron la contraseña? Haz clic para desbloquear
             </button>
           </div>
         `;
@@ -521,22 +521,22 @@ export class LoginView extends Component {
         if (recheckBtn) {
           recheckBtn.addEventListener('click', async () => {
             recheckBtn.disabled = true;
-            recheckBtn.textContent = I18nService.t('auth_lockout_verifying');
+            recheckBtn.textContent = '⏳ Verificando...';
             this.clearLockoutState(email);
             await AuthService.unlockUserAccount(email);
             if (passwordInput) passwordInput.disabled = false;
             if (submitBtn) {
               submitBtn.disabled = false;
-              submitBtn.textContent = I18nService.t('auth_login_btn');
+              submitBtn.textContent = 'Iniciar Sesión';
             }
             this.checkLockoutStatus(email);
-            NotificationService.success(I18nService.t('auth_lockout_unlocked'));
+            NotificationService.success('Cuenta desbloqueada. Ya puedes ingresar tu nueva contraseña.');
           });
         }
       }
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = I18nService.t('auth_lockout_btn');
+        submitBtn.textContent = '🔒 Cuenta Bloqueada';
       }
       if (passwordInput) passwordInput.disabled = true;
       return { blocked: true, reason: 'locked' };
@@ -554,14 +554,14 @@ export class LoginView extends Component {
       if (passwordInput) passwordInput.disabled = false;
       if (submitBtn && !this.state.loading) {
         submitBtn.disabled = false;
-        submitBtn.textContent = I18nService.t('auth_login_btn');
+        submitBtn.textContent = 'Iniciar Sesión';
       }
       const remainingPhase2 = 3 - state.attemptsPhase2;
       if (loginAlert) {
         loginAlert.style.display = 'block';
         loginAlert.innerHTML = `
           <div style="background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); border-radius: 10px; padding: 12px; text-align: center; color: #fbbf24; font-size: 0.82rem;">
-            ℹ️ ${I18nService.t('auth_lockout_timer_ended', { attempts: remainingPhase2 })}
+            ℹ️ Tiempo de espera finalizado. Te quedan <strong style="font-size: 0.9rem;">${remainingPhase2} intento(s) final(es)</strong>.
           </div>
         `;
       }
@@ -572,7 +572,7 @@ export class LoginView extends Component {
     if (passwordInput) passwordInput.disabled = false;
     if (submitBtn && !this.state.loading) {
       submitBtn.disabled = false;
-      submitBtn.textContent = I18nService.t('auth_login_btn');
+      submitBtn.textContent = 'Iniciar Sesión';
     }
 
     return { blocked: false };
@@ -598,15 +598,15 @@ export class LoginView extends Component {
         if (passwordInput) passwordInput.disabled = true;
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.textContent = I18nService.t('auth_lockout_wait_timer', { seconds: remainingSec });
+          submitBtn.textContent = `Esperar ${remainingSec}s...`;
         }
         if (loginAlert) {
           loginAlert.style.display = 'block';
           loginAlert.innerHTML = `
             <div style="background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.4); border-radius: 10px; padding: 12px; text-align: center; color: #fbbf24; font-size: 0.82rem;">
-              ${I18nService.t('auth_lockout_limit_reached')}<br/>
-              ${I18nService.t('auth_lockout_wait_desc', { seconds: remainingSec })}<br/>
-              <span style="font-size: 0.72rem; opacity: 0.85;">${I18nService.t('auth_lockout_secondary_info')}</span>
+              ⚠️ <strong>Límite de 5 intentos alcanzado</strong><br/>
+              Por favor espera <strong style="font-size: 1.05rem; color: #fbbf24;">${remainingSec}s</strong> para intentar de nuevo.<br/>
+              <span style="font-size: 0.72rem; opacity: 0.85;">(Tendrás 3 intentos finales tras la espera)</span>
             </div>
           `;
         }
@@ -616,7 +616,7 @@ export class LoginView extends Component {
         if (passwordInput) passwordInput.disabled = false;
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.textContent = I18nService.t('auth_login_btn');
+          submitBtn.textContent = 'Iniciar Sesión';
         }
         this.checkLockoutStatus(email);
       }
@@ -651,14 +651,14 @@ export class LoginView extends Component {
     let isValid = true;
 
     if (!isValidEmail(email)) {
-      emailError.textContent    = I18nService.t('auth_error_email_invalid');
+      emailError.textContent    = 'Ingresa un correo electrónico válido';
       emailError.style.display  = 'block';
       emailInput?.classList.add('input-error');
       isValid = false;
     }
 
     if (!password || password.length < 6) {
-      passwordError.textContent   = I18nService.t('auth_error_password_short');
+      passwordError.textContent   = 'La contraseña debe tener al menos 6 caracteres';
       passwordError.style.display = 'block';
       passwordInput?.classList.add('input-error');
       isValid = false;
@@ -675,7 +675,7 @@ export class LoginView extends Component {
     // ── 2. STEP B: ENTER LOADING STATE ──────────────────────────────────────
     this.state.loading = true;
     submitBtn.disabled  = true;
-    submitBtn.innerHTML = `<span class="animate-spin" style="display:inline-block">⏳</span> ${I18nService.t('auth_logging_in')}`;
+    submitBtn.innerHTML = '<span class="animate-spin" style="display:inline-block">⏳</span> Validando credenciales...';
 
     // ── 3. STEP C: EXECUTE AUTHENTICATION ──────────────────────────────────
     try {
@@ -694,7 +694,7 @@ export class LoginView extends Component {
         if (this.vortexEngine) {
           this.vortexEngine.stop();
         }
-        NotificationService.success(I18nService.t('auth_welcome_user', { name: user.displayName || user.email }));
+        NotificationService.success(`Bienvenido, ${user.displayName || user.email}`);
         redirectUserDashboard(user.role, { navigate: (path) => { window.location.hash = path; } });
       };
 
@@ -758,7 +758,7 @@ export class LoginView extends Component {
           onComplete: () => {
             this.state.loading = false;
             submitBtn.disabled  = false;
-            submitBtn.textContent = I18nService.t('auth_login_btn');
+            submitBtn.textContent = 'Iniciar Sesión';
 
             if (state.isLockedOut || state.lockoutUntil > Date.now()) {
               this.checkLockoutStatus(email);
@@ -773,7 +773,7 @@ export class LoginView extends Component {
       } else {
         this.state.loading = false;
         submitBtn.disabled  = false;
-        submitBtn.textContent = I18nService.t('auth_login_btn');
+        submitBtn.textContent = 'Iniciar Sesión';
         passwordError.textContent   = friendlyMsg;
         passwordError.style.display = 'block';
         passwordInput?.classList.add('input-error');
@@ -812,34 +812,34 @@ export class LoginView extends Component {
     let isValid = true;
 
     if (!ownerName) {
-      if (ownerNameErr) { ownerNameErr.textContent = I18nService.t('auth_request_error_name'); ownerNameErr.style.display = 'block'; }
+      if (ownerNameErr) { ownerNameErr.textContent = 'Ingresa tu nombre completo'; ownerNameErr.style.display = 'block'; }
       isValid = false;
     }
 
     if (!companyName) {
-      if (companyNameErr) { companyNameErr.textContent = I18nService.t('auth_request_error_company'); companyNameErr.style.display = 'block'; }
+      if (companyNameErr) { companyNameErr.textContent = 'Ingresa el nombre del negocio'; companyNameErr.style.display = 'block'; }
       isValid = false;
     }
 
     if (!isValidEmail(email)) {
-      if (emailErr) { emailErr.textContent = I18nService.t('auth_error_email_invalid'); emailErr.style.display = 'block'; }
+      if (emailErr) { emailErr.textContent = 'Ingresa un correo electrónico válido'; emailErr.style.display = 'block'; }
       isValid = false;
     }
 
     if (!phone) {
-      if (phoneErr) { phoneErr.textContent = I18nService.t('auth_request_error_phone'); phoneErr.style.display = 'block'; }
+      if (phoneErr) { phoneErr.textContent = 'Ingresa tu número de teléfono de contacto'; phoneErr.style.display = 'block'; }
       isValid = false;
     }
 
     if (!password || password.length < 6) {
-      if (passErr) { passErr.textContent = I18nService.t('auth_error_password_short'); passErr.style.display = 'block'; }
+      if (passErr) { passErr.textContent = 'La contraseña debe tener al menos 6 caracteres'; passErr.style.display = 'block'; }
       isValid = false;
     }
 
     if (!isValid) return;
 
     submitBtn.disabled  = true;
-    submitBtn.innerHTML = `<span class="animate-spin" style="display:inline-block">⏳</span> ${I18nService.t('auth_request_submitting')}`;
+    submitBtn.innerHTML = '<span class="animate-spin" style="display:inline-block">⏳</span> Enviando solicitud...';
 
     try {
       await FirestoreService.createPendingOwnerRequest({
@@ -852,7 +852,7 @@ export class LoginView extends Component {
       });
 
       if (successAlert) successAlert.style.display = 'block';
-      NotificationService.success(I18nService.t('auth_request_success_toast'));
+      NotificationService.success('✅ Solicitud enviada exitosamente. El programador la revisará pronto.');
 
       // Clear form
       if (ownerNameInput)   ownerNameInput.value   = '';
@@ -864,12 +864,12 @@ export class LoginView extends Component {
     } catch (err) {
       console.error('[LoginView] Error al enviar solicitud de dueño:', err);
       if (passErr) {
-        passErr.textContent   = err.message || I18nService.t('auth_request_error_generic');
+        passErr.textContent   = err.message || 'Error al enviar la solicitud. Intenta nuevamente.';
         passErr.style.display = 'block';
       }
     } finally {
       submitBtn.disabled    = false;
-      submitBtn.textContent = I18nService.t('auth_submit_request');
+      submitBtn.textContent = '📩 Enviar Solicitud a Programador';
     }
   }
 

@@ -29,16 +29,16 @@ export class ItemInfoView extends Component {
     };
 
     this.layout = new PageLayout({
-      title: I18nService.t('ii_title'),
-      subtitle: I18nService.t('ii_subtitle'),
+      title: I18nService.t('item_info_title', 'Identificación de Artículo'),
+      subtitle: I18nService.t('item_info_subtitle', 'Consulta de especificaciones, póliza de garantía y soporte de servicio técnico.'),
       hideHeader: true, // We want a clean public portal experience without sidebars/headers
       contentHTML: `
         <div id="item-info-portal-container" style="min-height: 100vh; background: var(--color-bg-primary); display: flex; align-items: center; justify-content: center; padding: 20px;">
           <div class="card p-8 animate-fade-in" id="portal-card" style="max-width: 550px; width: 100%; border: 1px solid var(--color-border); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); background: var(--color-bg-secondary);">
             <div style="text-align: center; padding: 20px;">
               <span style="font-size: 2.5rem; display: block; animation: rotate 2s linear infinite;">⏳</span>
-              <h3 class="font-bold text-lg mt-3">${I18nService.t('ii_searching_db')}</h3>
-              <p class="text-secondary text-xs mt-1">${I18nService.t('ii_verifying_id')}</p>
+              <h3 class="font-bold text-lg mt-3">Consultando base de datos...</h3>
+              <p class="text-secondary text-xs mt-1">Verificando identificador de producto único.</p>
             </div>
           </div>
         </div>
@@ -57,7 +57,7 @@ export class ItemInfoView extends Component {
 
   async loadItemAndSettings() {
     if (!db || !this.companyId || !this.itemId) {
-      this.renderError(I18nService.t('ii_no_id_error'));
+      this.renderError('Identificador de negocio o de artículo no provisto.');
       return;
     }
 
@@ -65,7 +65,7 @@ export class ItemInfoView extends Component {
       // 1. Fetch item data
       const itemSnap = await get(ref(db, `${this.companyId}/item_qrs/${this.itemId}`));
       if (!itemSnap.exists()) {
-        this.renderError(I18nService.t('ii_not_found_msg'));
+        this.renderError('El código QR escaneado no coincide con ningún artículo registrado en nuestro sistema.');
         return;
       }
       const item = itemSnap.val();
@@ -88,7 +88,7 @@ export class ItemInfoView extends Component {
 
     } catch (err) {
       console.error(err);
-      this.renderError(I18nService.t('ii_server_error', { error: err.message }));
+      this.renderError(`Error al conectar con el servidor: ${err.message}`);
     }
   }
 
@@ -110,15 +110,15 @@ export class ItemInfoView extends Component {
         productName: item.productName || '',
         serialNumber: item.serialNumber || '',
         scannedAt: Date.now(),
-        device: navigator.userAgent || I18nService.t('ii_unknown'),
-        location: I18nService.t('ii_approx_location')
+        device: navigator.userAgent || 'Desconocido',
+        location: 'Aproximada (Navegador)'
       });
 
       // Audit Log
       await FirestoreService.logAudit({
         action: 'ITEM_QR_SCANNED',
         companyId: this.companyId,
-        description: I18nService.t('ii_scan_audit', { name: item.productName, sn: item.serialNumber || I18nService.t('ii_no_serial'), id: this.itemId })
+        description: `Artículo "${item.productName}" (Serie: ${item.serialNumber || 'Sin serie'}, ID: ${this.itemId}) fue escaneado por un cliente.`
       });
     } catch(e) {
       console.warn('[ItemInfo] Scan tracking failed:', e.message);
@@ -158,7 +158,7 @@ export class ItemInfoView extends Component {
       case 'custom': return s.customUrl || '';
       case 'whatsapp': 
         if (!cleanPhone) return '';
-        const msg = encodeURIComponent(I18nService.t('ii_wa_sales_msg', { name: this.state.item.productName, sn: this.state.item.serialNumber || '—' }));
+        const msg = encodeURIComponent(`Hola, acabo de escanear el QR del producto "${this.state.item.productName}" (Serie: ${this.state.item.serialNumber || '—'}). Necesito consultar con ventas.`);
         return `https://wa.me/${cleanPhone.replace('+', '')}?text=${msg}`;
       default: return '';
     }
@@ -169,15 +169,15 @@ export class ItemInfoView extends Component {
     this.portalContainer.innerHTML = `
       <div class="card p-8 animate-fade-in" style="max-width: 500px; width: 100%; text-align: center; border: 1px solid var(--color-border); background: var(--color-bg-secondary);">
         <div style="font-size: 3.5rem; display:block; margin-bottom: 12px;">🗺️</div>
-        <h3 class="font-bold text-lg">${I18nService.t('ii_redirecting')}</h3>
+        <h3 class="font-bold text-lg">Redirigiendo al sitio del negocio...</h3>
         <p class="text-secondary text-xs mt-2">
-          ${I18nService.t('ii_redirect_desc')}
+          El propietario ha configurado este código QR para enviarte a su portal oficial de manera automática.
         </p>
         
         <div style="font-size: 2.5rem; font-weight: 800; color: var(--color-accent); margin: 20px 0;" id="countdown-number">3</div>
         
         <button class="btn btn-secondary btn-sm w-100" id="btn-cancel-redirect">
-          ${I18nService.t('ii_cancel_redirect')}
+          Cancelar y Ver Ficha de Producto
         </button>
       </div>
     `;
@@ -227,38 +227,38 @@ export class ItemInfoView extends Component {
         const remainDays = Math.ceil((expTime - Date.now()) / (1000 * 60 * 60 * 24));
 
         if (remainDays > 0) {
-          warrantyBadgeHTML = `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700; font-size:0.8rem; border:1px solid rgba(16,185,129,0.3);">${I18nService.t('ii_warranty_active')}</span>`;
+          warrantyBadgeHTML = `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700; font-size:0.8rem; border:1px solid rgba(16,185,129,0.3);">🟢 Garantía Activa</span>`;
           warrantyTimerHTML = `
             <div style="font-size:0.75rem; color:var(--color-text-secondary); margin-top:4px;">
-              ${I18nService.t('ii_warranty_expires', { date: TimeService.formatDate(expTime), days: remainDays })}
+              Vence el <strong>${TimeService.formatDate(expTime)}</strong> (${remainDays} días restantes).
             </div>
           `;
         } else {
-          warrantyBadgeHTML = `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-weight:700; font-size:0.8rem; border:1px solid rgba(239,68,68,0.3);">${I18nService.t('ii_warranty_expired_badge')}</span>`;
+          warrantyBadgeHTML = `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-weight:700; font-size:0.8rem; border:1px solid rgba(239,68,68,0.3);">🔴 Garantía Vencida</span>`;
           warrantyTimerHTML = `
             <div style="font-size:0.75rem; color:var(--color-text-secondary); margin-top:4px;">
-              ${I18nService.t('ii_warranty_expired_msg', { date: TimeService.formatDate(expTime) })}
+              Expiró el <strong>${TimeService.formatDate(expTime)}</strong>.
             </div>
           `;
         }
       } else {
-        warrantyBadgeHTML = `<span class="badge" style="background:rgba(156,163,175,0.15); color:#9ca3af; font-weight:700; font-size:0.8rem; border:1px solid rgba(156,163,175,0.3);">${I18nService.t('ii_warranty_none')}</span>`;
+        warrantyBadgeHTML = `<span class="badge" style="background:rgba(156,163,175,0.15); color:#9ca3af; font-weight:700; font-size:0.8rem; border:1px solid rgba(156,163,175,0.3);">⚪ Sin Garantía Registrada</span>`;
       }
     }
 
     const stateBadgeHTML = {
-      Disponible: `<span class="badge" style="background:rgba(16,185,129,0.1); color:#34d399;">${I18nService.t('ii_status_available')}</span>`,
-      'En exhibición': `<span class="badge" style="background:rgba(59,130,246,0.1); color:#60a5fa;">${I18nService.t('ii_status_display')}</span>`,
-      'En reparación': `<span class="badge" style="background:rgba(245,158,11,0.1); color:#fbbf24;">${I18nService.t('ii_status_repair')}</span>`,
-      Devuelto: `<span class="badge" style="background:rgba(156,163,175,0.1); color:#9ca3af;">${I18nService.t('ii_status_returned')}</span>`,
-      Vendido: `<span class="badge" style="background:rgba(139,92,246,0.1); color:#a78bfa;">${I18nService.t('ii_status_sold')}</span>`
+      Disponible: `<span class="badge" style="background:rgba(16,185,129,0.1); color:#34d399;">Disponible</span>`,
+      'En exhibición': `<span class="badge" style="background:rgba(59,130,246,0.1); color:#60a5fa;">En Exhibición</span>`,
+      'En reparación': `<span class="badge" style="background:rgba(245,158,11,0.1); color:#fbbf24;">En Reparación</span>`,
+      Devuelto: `<span class="badge" style="background:rgba(156,163,175,0.1); color:#9ca3af;">Devuelto</span>`,
+      Vendido: `<span class="badge" style="background:rgba(139,92,246,0.1); color:#a78bfa;">Vendido</span>`
     }[item.status] || `<span class="badge">${item.status}</span>`;
 
     // FAQ list config
     const faqHTML = settings.faqContent
       ? `
         <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; margin-top:8px;">
-          <h4 class="font-bold text-xs uppercase tracking-wider mb-2" style="color:var(--color-accent);">${I18nService.t('ii_faq_title')}</h4>
+          <h4 class="font-bold text-xs uppercase tracking-wider mb-2" style="color:var(--color-accent);">Manuales y Preguntas Frecuentes</h4>
           <div style="font-size:0.78rem; color:var(--color-text-secondary); line-height:1.5; white-space:pre-line;">
             ${settings.faqContent}
           </div>
@@ -285,7 +285,7 @@ export class ItemInfoView extends Component {
 
         historyTimelineHTML = `
           <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; margin-top:8px;">
-            <h4 class="font-bold text-xs uppercase tracking-wider mb-3" style="color:var(--color-accent);">${I18nService.t('ii_history_title')}</h4>
+            <h4 class="font-bold text-xs uppercase tracking-wider mb-3" style="color:var(--color-accent);">🔧 Historial de Servicios del Artículo</h4>
             <div style="display:flex; flex-direction:column; gap:4px;">
               ${historyList}
             </div>
@@ -295,10 +295,10 @@ export class ItemInfoView extends Component {
     }
 
     // Call / Contact CTAs
-    const msg = encodeURIComponent(I18nService.t('ii_wa_support_msg', { name: item.productName, sn: item.serialNumber || '—' }));
+    const msg = encodeURIComponent(`Hola soporte, solicito asistencia para mi artículo "${item.productName}" (Serie: ${item.serialNumber || '—'}).`);
     const whatsappBtnHTML = cleanPhone 
       ? `<a class="btn btn-secondary w-100" href="https://wa.me/${cleanPhone.replace('+', '')}?text=${msg}" target="_blank" rel="noopener" style="background:#25d366; color:#fff; font-weight:700; border:none; display:flex; align-items:center; justify-content:center; gap:8px;">
-          ${I18nService.t('ii_wa_support_btn')}
+          💬 Soporte por WhatsApp
          </a>`
       : '';
 
@@ -312,8 +312,8 @@ export class ItemInfoView extends Component {
             : `<div style="width:45px;height:45px;border-radius:6px;background:var(--color-bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🏢</div>`
           }
           <div>
-            <h3 class="font-bold text-md" style="margin:0; color:var(--color-text-primary);">${companyInfo.nombre || company.name || I18nService.t('ii_official_business')}</h3>
-            <span class="text-secondary" style="font-size:0.7rem;">${I18nService.t('ii_authorized_support')}</span>
+            <h3 class="font-bold text-md" style="margin:0; color:var(--color-text-primary);">${companyInfo.nombre || company.name || 'Negocio Oficial'}</h3>
+            <span class="text-secondary" style="font-size:0.7rem;">Soporte Técnico Autorizado</span>
           </div>
         </div>
 
@@ -322,7 +322,7 @@ export class ItemInfoView extends Component {
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
               <strong style="font-size:1.1rem; color:var(--color-text-primary);">${item.productName}</strong>
-              <span class="text-secondary" style="font-size:0.75rem; display:block; margin-top:2px;">${I18nService.t('ii_brand_label')}${item.brand || '—'} ${item.model ? `· ${I18nService.t('ii_model_label')}${item.model}` : ''}</span>
+              <span class="text-secondary" style="font-size:0.75rem; display:block; margin-top:2px;">Marca: ${item.brand || '—'} ${item.model ? `· Modelo: ${item.model}` : ''}</span>
             </div>
             <div>
               ${stateBadgeHTML}
@@ -331,14 +331,14 @@ export class ItemInfoView extends Component {
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; border-top:1px solid rgba(255,255,255,0.03); padding-top:8px; font-size:0.75rem; font-family:monospace; color:var(--color-text-secondary);">
             <div>SKU: <strong style="color:var(--color-text-primary);">${item.sku || '—'}</strong></div>
-            <div>${I18nService.t('sh_format_custom')}: <strong style="color:var(--color-text-primary);">${item.serialNumber || I18nService.t('ii_no_serial')}</strong></div>
+            <div>Serie: <strong style="color:var(--color-text-primary);">${item.serialNumber || 'Sin serie'}</strong></div>
           </div>
         </div>
 
         <!-- Warranty Section (Vendido only) -->
         ${isSold ? `
           <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); padding:12px; border-radius:8px; margin-bottom:12px;">
-            <strong style="font-size:0.78rem; color:var(--color-text-primary); display:block; margin-bottom:4px;">${I18nService.t('ii_warranty_coverage')}</strong>
+            <strong style="font-size:0.78rem; color:var(--color-text-primary); display:block; margin-bottom:4px;">🛡️ Cobertura de Garantía:</strong>
             ${warrantyBadgeHTML}
             ${warrantyTimerHTML}
           </div>
@@ -353,25 +353,25 @@ export class ItemInfoView extends Component {
         <!-- Action CTAs -->
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
           ${isSold ? `
-            <button class="btn btn-primary w-100" id="btn-request-service">${I18nService.t('ii_request_support_btn')}</button>
+            <button class="btn btn-primary w-100" id="btn-request-service">🔧 Solicitar Reparación / Soporte</button>
             ${whatsappBtnHTML}
           ` : `
-            <a class="btn btn-primary w-100" href="#/customer/menu/${this.companyId}/main">${I18nService.t('ii_buy_catalog_btn')}</a>
+            <a class="btn btn-primary w-100" href="#/customer/menu/${this.companyId}/main">🛍️ Comprar / Consultar Catálogo</a>
           `}
         </div>
 
         <!-- Form overlay request (Vendido only) -->
         <div id="service-request-form-overlay" style="display:none; border-top:1px dashed rgba(255,255,255,0.1); padding-top:12px; margin-top:12px;">
-          <h4 class="font-bold text-xs uppercase tracking-wider mb-2" style="color:var(--color-accent);">${I18nService.t('ii_report_fault_title')}</h4>
+          <h4 class="font-bold text-xs uppercase tracking-wider mb-2" style="color:var(--color-accent);">Reportar Falla o Solicitar Servicio</h4>
           
           <div id="service-form-status-container">
             <div class="form-group" style="margin-bottom:8px;">
-              <label class="form-label" for="inp-service-desc">${I18nService.t('ii_fault_desc_label')} <span class="form-label-required"></span></label>
-              <textarea id="inp-service-desc" class="input input-md" style="height:70px; padding:8px; font-size:0.75rem;" placeholder="${I18nService.t('ii_fault_desc_placeholder')}" required></textarea>
+              <label class="form-label" for="inp-service-desc">Describe el inconveniente o avería <span class="form-label-required"></span></label>
+              <textarea id="inp-service-desc" class="input input-md" style="height:70px; padding:8px; font-size:0.75rem;" placeholder="Ej. El compresor no enciende y emite un pitido..." required></textarea>
             </div>
             <div style="display:flex; justify-content:space-between; gap:6px;">
-              <button class="btn btn-secondary btn-xs" id="btn-close-service-form">${I18nService.t('cancel')}</button>
-              <button class="btn btn-primary btn-xs" id="btn-submit-service-form">${I18nService.t('ii_submit_request')}</button>
+              <button class="btn btn-secondary btn-xs" id="btn-close-service-form">Cancelar</button>
+              <button class="btn btn-primary btn-xs" id="btn-submit-service-form">Enviar Solicitud</button>
             </div>
           </div>
         </div>
@@ -402,12 +402,12 @@ export class ItemInfoView extends Component {
         const description = descInput ? descInput.value.trim() : '';
 
         if (!description) {
-          alert(I18nService.t('ii_describe_error'));
+          alert('Por favor describe la falla.');
           return;
         }
 
         submitFormBtn.disabled = true;
-        submitFormBtn.textContent = I18nService.t('ii_submitting');
+        submitFormBtn.textContent = 'Enviando...';
 
         try {
           const serviceId = await FirestoreService.createPublicServiceRequest(this.companyId, {
@@ -415,8 +415,8 @@ export class ItemInfoView extends Component {
             productId: item.productId || '',
             productName: item.productName,
             sku: item.sku || '',
-            serialNumber: item.serialNumber || I18nService.t('ii_no_serial'),
-            description: `${I18nService.t('ii_request_prefix')}${description}`,
+            serialNumber: item.serialNumber || 'Sin serie',
+            description: `[Reporte QR] ${description}`,
             priority: 'Media',
             status: 'PENDIENTE',
             source: 'QR_TAG'
@@ -426,13 +426,13 @@ export class ItemInfoView extends Component {
           await FirestoreService.logAudit({
             action: 'ITEM_SERVICE_REQUESTED',
             companyId: this.companyId,
-            description: I18nService.t('ii_request_audit', { name: item.productName, sn: item.serialNumber || '—', id: serviceId })
+            description: `Se registró una solicitud de servicio técnico pública para el artículo "${item.productName}" (Serie: ${item.serialNumber || '—'}, ID de solicitud: ${serviceId}).`
           });
 
           // Display success state inside form overlay
           this.portalContainer.querySelector('#service-form-status-container').innerHTML = `
             <div style="text-align:center; padding:10px 0; color:#34d399; font-size:0.78rem;">
-              ${I18nService.t('ii_request_success', { id: serviceId.substring(0,8).toUpperCase() })}
+              🎉 Solicitud enviada correctamente con el folio <strong>${serviceId.substring(0,8).toUpperCase()}</strong>. Un asesor te contactará pronto.
             </div>
           `;
 
@@ -443,9 +443,9 @@ export class ItemInfoView extends Component {
 
         } catch (e) {
           console.error(e);
-          alert(I18nService.t('ii_send_error', { error: e.message }));
+          alert('Error al enviar la solicitud: ' + e.message);
           submitFormBtn.disabled = false;
-          submitFormBtn.textContent = I18nService.t('ii_submit_request');
+          submitFormBtn.textContent = 'Enviar Solicitud';
         }
       });
     }
@@ -455,12 +455,12 @@ export class ItemInfoView extends Component {
     this.portalContainer.innerHTML = `
       <div class="card p-8 text-center animate-fade-in" style="max-width: 500px; width: 100%; border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.02);">
         <div style="font-size: 3.5rem; display:block; margin-bottom: 12px;">⚠️</div>
-        <h3 class="font-bold text-lg" style="color:var(--color-error);">${I18nService.t('ii_qr_not_found_title')}</h3>
+        <h3 class="font-bold text-lg" style="color:var(--color-error);">Código QR No Encontrado</h3>
         <p class="text-secondary text-sm mt-2">
           ${msg}
         </p>
         <div style="margin-top: 20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
-          <a class="btn btn-secondary btn-sm" href="#/login">${I18nService.t('ii_go_to_login')}</a>
+          <a class="btn btn-secondary btn-sm" href="#/login">Ir al Portal de Acceso</a>
         </div>
       </div>
     `;
